@@ -223,7 +223,9 @@ void overlayLegacyOthers(const container::ParsedContainer& parsed,
 }
 
 ImportResult readImpl(const std::uint8_t* data, std::size_t size,
-    const std::optional<std::filesystem::path>& sourcePath)
+    const std::optional<std::filesystem::path>& sourcePath,
+    std::shared_ptr<musx::dom::Document> (*documentCreator)(
+        std::string_view, const std::optional<std::filesystem::path>&))
 {
     if (!data || size == 0) {
         throw std::invalid_argument("MUS input is empty");
@@ -256,7 +258,7 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
             + std::to_string(parsed.trailingByteCount) + " trailing bytes.");
     }
 
-    result.document = defaults::createMacOSOptionsDocument(sourcePath);
+    result.document = documentCreator(defaults::macOSOptionsXml(), sourcePath);
     result.document->getHeader() = recoverHeader(data, size, result.report);
     initializeSupportedFields(result.document, result.report);
     overlayLegacyOthers(parsed, result.document, result.report);
@@ -279,7 +281,8 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
 
 } // namespace
 
-ImportResult Reader::read(const std::filesystem::path& path)
+ImportResult Reader::readWithCreator(
+    const std::filesystem::path& path, DocumentCreator documentCreator)
 {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
@@ -301,17 +304,13 @@ ImportResult Reader::read(const std::filesystem::path& path)
     if (!input) {
         throw std::runtime_error("Unable to read complete MUS input: " + path.string());
     }
-    return readImpl(data.data(), data.size(), path);
+    return readImpl(data.data(), data.size(), path, documentCreator);
 }
 
-ImportResult Reader::read(const std::vector<std::uint8_t>& data)
+ImportResult Reader::readWithCreator(
+    const std::uint8_t* data, std::size_t size, DocumentCreator documentCreator)
 {
-    return read(data.data(), data.size());
-}
-
-ImportResult Reader::read(const std::uint8_t* data, std::size_t size)
-{
-    return readImpl(data, size, std::nullopt);
+    return readImpl(data, size, std::nullopt, documentCreator);
 }
 
 } // namespace finale_mus_reader

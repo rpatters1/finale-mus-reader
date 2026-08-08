@@ -64,28 +64,8 @@ if(NOT TARGET ZLIB::ZLIB)
 endif()
 message(STATUS "Legacy Finale MUS Reader zlib target: ${FINALE_MUS_READER_ZLIB_TARGET}")
 
-if(TARGET pugixml)
-    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
-elseif(TARGET pugixml::pugixml)
-    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml::pugixml)
-else()
-    set(PUGIXML_BUILD_TESTS OFF CACHE BOOL "Do not build pugixml tests")
-    FetchContent_Declare(pugixml
-        URL https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz
-        URL_HASH SHA256=655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-    FetchContent_MakeAvailable(pugixml)
-    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
-endif()
-message(STATUS
-    "Legacy Finale MUS Reader pugixml target: ${FINALE_MUS_READER_PUGIXML_TARGET}")
-
 if(NOT TARGET musx)
     set(musx_BUILD_TESTING OFF CACHE BOOL "Do not build musxdom tests" FORCE)
-    set(MUSX_USE_TINYXML2 OFF CACHE BOOL "Do not enable musxdom TinyXML2 support" FORCE)
-    set(MUSX_USE_RAPIDXML OFF CACHE BOOL "Do not enable musxdom RapidXML support" FORCE)
-    set(MUSX_USE_PUGIXML OFF CACHE BOOL "Do not propagate musxdom pugixml support" FORCE)
-    set(MUSX_USE_QTXML OFF CACHE BOOL "Do not enable musxdom QtXML support" FORCE)
 
     if(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR)
         get_filename_component(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR
@@ -124,9 +104,7 @@ target_include_directories(finale_mus_reader
 
 target_link_libraries(finale_mus_reader
     PUBLIC musx
-    PRIVATE
-        ${FINALE_MUS_READER_PUGIXML_TARGET}
-        ${FINALE_MUS_READER_ZLIB_TARGET})
+    PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
 
 if(MSVC)
     target_compile_options(finale_mus_reader PRIVATE /W4 /WX)
@@ -135,6 +113,19 @@ else()
 endif()
 
 if(FINALE_MUS_READER_BUILD_TESTING)
+    if(TARGET pugixml)
+        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml)
+    elseif(TARGET pugixml::pugixml)
+        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml::pugixml)
+    else()
+        set(PUGIXML_BUILD_TESTS OFF CACHE BOOL "Do not build pugixml tests")
+        FetchContent_Declare(pugixml
+            URL https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz
+            URL_HASH SHA256=655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+        FetchContent_MakeAvailable(pugixml)
+        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml)
+    endif()
     enable_testing()
     add_subdirectory(tests)
 endif()

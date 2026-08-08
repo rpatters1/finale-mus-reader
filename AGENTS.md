@@ -153,10 +153,12 @@ The build uses CMake. Keep these properties intact when extending it:
 - Require zlib for gzip and zlib-era decoding. Reuse a zlib target supplied by
   a parent project, otherwise fetch the pinned source by default; retain the
   option to use an installed system zlib.
-- Use pugixml exclusively for musxdom parsing. Do not enable RapidXML,
-  TinyXML2, or QtXML. Keep `MUSX_USE_PUGIXML` isolated to the implementation
-  translation unit that instantiates the concrete XML reader; do not propagate
-  an XML-backend definition to library clients.
+- Keep the library independent of XML implementations. Do not select, fetch,
+  link, or enable pugixml, RapidXML, TinyXML2, QtXML, or another backend for the
+  library target. Accept a concrete `musx::xml::IXmlDocument` implementation
+  through the public reader template, parallel to musxdom's `DocumentFactory`.
+  Tests may fetch and instantiate pugixml without propagating its backend
+  definition to the library.
 - Keep committed generated resource sources synchronized with their gzip inputs
   and verify them with `scripts/generate_embedded_defaults.py --check`.
 - Follow the surrounding musxdom C++ conventions where this repository has not

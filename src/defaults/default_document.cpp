@@ -14,19 +14,6 @@
 #include <zlib.h>
 
 #include "embedded_default.h"
-#include "musx/musx.h"
-
-#ifndef MUSX_USE_PUGIXML
-#define MUSX_USE_PUGIXML
-#define FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
-#endif
-
-#include "musx/xml/PugiXmlImpl.h"
-
-#ifdef FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
-#undef MUSX_USE_PUGIXML
-#undef FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
-#endif
 
 namespace finale_mus_reader {
 namespace defaults {
@@ -112,7 +99,9 @@ std::vector<std::string_view> extractLayerAttributes(std::string_view xml)
     return result;
 }
 
-const std::string& optionsOnlyXml()
+} // namespace
+
+const std::string& macOSOptionsXml()
 {
     static const std::string result = [] {
         const auto source = inflateDefault();
@@ -134,21 +123,6 @@ const std::string& optionsOnlyXml()
         return xml;
     }();
     return result;
-}
-
-} // namespace
-
-std::shared_ptr<musx::dom::Document> createMacOSOptionsDocument(
-    const std::optional<std::filesystem::path>& sourcePath)
-{
-    if (sourcePath) {
-        musx::factory::DocumentFactory::CreateOptions createOptions(
-            *sourcePath, {}, {});
-        return musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
-            optionsOnlyXml(), std::move(createOptions));
-    }
-    return musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
-        optionsOnlyXml());
 }
 
 } // namespace defaults

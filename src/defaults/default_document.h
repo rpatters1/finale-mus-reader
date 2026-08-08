@@ -3,21 +3,12 @@
 
 #pragma once
 
-#include <filesystem>
-#include <memory>
-#include <optional>
-
-namespace musx {
-namespace dom {
-class Document;
-} // namespace dom
-} // namespace musx
+#include <string>
 
 namespace finale_mus_reader {
 namespace defaults {
 
-[[nodiscard]] std::shared_ptr<musx::dom::Document> createMacOSOptionsDocument(
-    const std::optional<std::filesystem::path>& sourcePath = std::nullopt);
+[[nodiscard]] const std::string& macOSOptionsXml();
 
 } // namespace defaults
 } // namespace finale_mus_reader

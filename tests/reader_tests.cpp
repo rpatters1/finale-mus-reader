@@ -18,6 +18,18 @@
 #include "finale_mus_reader/reader.h"
 #include "musx/musx.h"
 
+#ifndef MUSX_USE_PUGIXML
+#define MUSX_USE_PUGIXML
+#define FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
+#endif
+
+#include "musx/xml/PugiXmlImpl.h"
+
+#ifdef FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
+#undef MUSX_USE_PUGIXML
+#undef FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
+#endif
+
 namespace {
 
 using finale_mus_reader::BlockInfo;
@@ -28,6 +40,7 @@ using finale_mus_reader::ImportResult;
 using finale_mus_reader::Reader;
 using finale_mus_reader::SourcePlatform;
 using finale_mus_reader::ValueOrigin;
+using TestXmlDocument = musx::xml::pugi::Document;
 
 void expect(bool condition, const std::string& message)
 {
@@ -251,7 +264,7 @@ void testControlledDclFile()
 {
     const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
         / "evidence/F2002/F2002-baseline.mus";
-    const auto result = Reader::read(path);
+    const auto result = Reader::read<TestXmlDocument>(path);
     expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
         "F2002 fixture was not classified as DCL");
     expect(result.report.byteOrder == ByteOrder::BigEndian,
@@ -291,7 +304,7 @@ void testControlledDclVersions()
     for (const auto& [version, savingProduct] : versions) {
         const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence" / version / (std::string(version) + "-baseline.mus");
-        const auto result = Reader::read(path);
+        const auto result = Reader::read<TestXmlDocument>(path);
         expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
             std::string(version) + " fixture was not classified as DCL");
         expect(result.report.byteOrder == ByteOrder::BigEndian,
@@ -308,7 +321,7 @@ void testControlledDclVersions()
 
 void testUncompressedEpochAndOverlays()
 {
-    const auto result = Reader::read(makeUncompressedMus());
+    const auto result = Reader::read<TestXmlDocument>(makeUncompressedMus());
     expect(result.report.formatEpoch == FormatEpoch::UncompressedLegacy,
         "Synthetic Finale 2000 file was not classified as uncompressed legacy");
     expect(result.report.byteOrder == ByteOrder::LittleEndian,
@@ -332,7 +345,7 @@ void testPreBannerEpoch()
     std::vector<std::uint8_t> data(0x220);
     data[3] = 0x2e;
     data[6] = 0x02;
-    const auto result = Reader::read(data);
+    const auto result = Reader::read<TestXmlDocument>(data);
     expect(result.report.formatEpoch == FormatEpoch::PreBanner,
         "Synthetic pre-banner file was not classified");
     expect(result.report.byteOrder == ByteOrder::Unknown,
@@ -347,7 +360,7 @@ void testPreBannerEpoch()
 
 void testZlibEpoch()
 {
-    const auto result = Reader::read(makeZlibMus());
+    const auto result = Reader::read<TestXmlDocument>(makeZlibMus());
     expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
         "Synthetic Finale 2012 file was not classified as zlib legacy");
     expect(result.report.blocks.size() == 5, "Synthetic zlib block count is incorrect");
@@ -364,7 +377,8 @@ void testMalformedInput()
 {
     bool threw = false;
     try {
-        static_cast<void>(Reader::read(std::vector<std::uint8_t>{1, 2, 3, 4}));
+        static_cast<void>(
+            Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4}));
     } catch (const std::invalid_argument&) {
         threw = true;
     }

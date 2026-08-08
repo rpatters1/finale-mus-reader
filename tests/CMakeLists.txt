@@ -2,6 +2,7 @@ add_executable(finale_mus_reader_tests reader_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader
+    ${FINALE_MUS_READER_TEST_PUGIXML_TARGET}
     ZLIB::ZLIB)
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE
