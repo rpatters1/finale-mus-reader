@@ -83,6 +83,16 @@ musxdom's `DocumentFactory` constructs that reduced document once. This avoids
 reparenting DOM objects and prevents fallback measures, staves, entries, text,
 parts, layouts, or derived instrument state from leaking into the result.
 
+The embedded byte array is generated only when its authoritative gzip resource
+changes. Regenerate it with:
+
+```bash
+python3 scripts/generate_embedded_defaults.py
+```
+
+Use `python3 scripts/generate_embedded_defaults.py --check` in validation or CI
+to verify that the committed generated files are current.
+
 ## Building
 
 The default build fetches the pinned musxdom revision:
@@ -100,9 +110,17 @@ cmake -S . -B build \
   -DFINALE_MUS_READER_MUSXDOM_SOURCE_DIR=../musxdom
 ```
 
-The project requires C++20 and zlib. Set
-`FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without its
-tests.
+The project requires C++20 and zlib. By default it fetches the pinned zlib 1.3.1
+source and builds its static target. Set
+`FINALE_MUS_READER_USE_SYSTEM_ZLIB=ON` to use an installed zlib instead.
+
+When a parent build already provides `ZLIB::ZLIB`, `zlibstatic`, or `zlib`, the
+reader reuses that target before considering either option. Its FetchContent
+dependency is also named `zlib` and uses the same release and hash as denigma,
+so a parent that fetches both projects builds zlib only once.
+
+Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
+its tests.
 
 ## API
 

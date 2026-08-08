@@ -34,7 +34,7 @@ coverage as a universal reader.
 - `research/`: findings, confidence labels, provenance, evidence inventories,
   and open questions. Start with `research/README.md` and
   `research/FORMAT_NOTES.md` before changing a decoder.
-- `scripts/`: reproducible, corpus-read-only analysis tools.
+- `scripts/`: reproducible maintenance and corpus-read-only analysis tools.
 - `private/`: ignored local evidence and path mappings. Never publish it.
 - `third_party/`: permitted location for pinned, license-compatible codec code.
 
@@ -99,12 +99,15 @@ do not make the library load research CSV files at runtime.
 Keep the raw `.enigmaxml` files as authoritative, inspectable source artifacts.
 They are Finale-generated files with intentional CRLF endings; preserve their
 exact bytes even though `git diff --check` reports carriage returns as trailing
-whitespace. Use the committed deterministic `gzip -n -9` files as build inputs.
+whitespace. Use the committed deterministic `gzip -n -9` files as the inputs to
+the resource-generation script.
 
-Generate C++ byte arrays into the build tree; do not commit generated arrays and
-do not wrap the XML in ZIP or MUSX containers. Tests should cover inflation,
-expected byte counts or hashes, platform selection, musxdom parsing, and the
-presence of required option instances.
+Generate and commit the C++ byte arrays under `src/defaults/` with
+`scripts/generate_embedded_defaults.py`; do not generate them during a normal
+CMake build and do not edit them by hand. Run the script with `--check` to detect
+stale output. Do not wrap the XML in ZIP or MUSX containers. Tests should cover
+inflation, expected byte counts or hashes, platform selection, musxdom parsing,
+and the presence of required option instances.
 
 Expected SHA-256 values:
 
@@ -147,13 +150,19 @@ The build uses CMake. Keep these properties intact when extending it:
 - Provide a normal CMake library target and deliberate musxdom dependency
   integration suitable for downstream clients.
 - Require C++20. `std::format` is permitted where it improves clarity.
-- Require zlib for gzip and zlib-era decoding.
-- Keep generated resource sources in the build directory.
+- Require zlib for gzip and zlib-era decoding. Reuse a zlib target supplied by
+  a parent project, otherwise fetch the pinned source by default; retain the
+  option to use an installed system zlib.
+- Keep committed generated resource sources synchronized with their gzip inputs
+  and verify them with `scripts/generate_embedded_defaults.py --check`.
 - Follow the surrounding musxdom C++ conventions where this repository has not
   yet established a local style.
 - Match musxdom's code naming: use `camelCase` for methods, properties, and
   variables, and `PascalCase` for classes and enums. Match denigma's filename
   convention by using `snake_case` rather than kebab-case for new source files.
+- Begin every project-owned C++ header and source file with
+  `Copyright (c) 2026 Robert G. Patterson` and the SPDX identifier `MIT`.
+  Preserve original copyright and license notices in third-party sources.
 - Use explicit nested namespace blocks rather than concatenated namespace
   declarations.
 - Keep public APIs small and keep wire-format details out of public interfaces

@@ -12,10 +12,57 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(FINALE_MUS_READER_BUILD_TESTING "Build Legacy Finale MUS Reader tests" ON)
+option(FINALE_MUS_READER_USE_SYSTEM_ZLIB
+    "Use an installed zlib when a parent project has not already provided one" OFF)
 set(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR "" CACHE PATH
     "Use an existing musxdom source tree instead of fetching the pinned revision")
 
-find_package(ZLIB REQUIRED)
+include(FetchContent)
+
+if(TARGET ZLIB::ZLIB)
+    set(FINALE_MUS_READER_ZLIB_TARGET ZLIB::ZLIB)
+elseif(TARGET zlibstatic)
+    set(FINALE_MUS_READER_ZLIB_TARGET zlibstatic)
+elseif(TARGET zlib)
+    set(FINALE_MUS_READER_ZLIB_TARGET zlib)
+elseif(FINALE_MUS_READER_USE_SYSTEM_ZLIB)
+    find_package(ZLIB REQUIRED)
+    set(FINALE_MUS_READER_ZLIB_TARGET ZLIB::ZLIB)
+else()
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "Do not build zlib examples")
+    FetchContent_Declare(zlib
+        URL https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+        URL_HASH SHA256=9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+    set(FINALE_MUS_READER_SAVED_DEV_WARNINGS
+        "${CMAKE_SUPPRESS_DEVELOPER_WARNINGS}")
+    set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE INTERNAL "")
+    FetchContent_MakeAvailable(zlib)
+    set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS
+        "${FINALE_MUS_READER_SAVED_DEV_WARNINGS}" CACHE INTERNAL "")
+
+    if(TARGET zlib)
+        set_target_properties(zlib PROPERTIES
+            EXCLUDE_FROM_ALL TRUE
+            EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+    endif()
+
+    if(TARGET zlibstatic)
+        set(FINALE_MUS_READER_ZLIB_TARGET zlibstatic)
+    elseif(TARGET zlib)
+        set(FINALE_MUS_READER_ZLIB_TARGET zlib)
+    elseif(TARGET ZLIB::ZLIB)
+        set(FINALE_MUS_READER_ZLIB_TARGET ZLIB::ZLIB)
+    else()
+        message(FATAL_ERROR "Unable to determine the zlib target")
+    endif()
+endif()
+
+if(NOT TARGET ZLIB::ZLIB)
+    add_library(ZLIB::ZLIB ALIAS ${FINALE_MUS_READER_ZLIB_TARGET})
+endif()
+message(STATUS "Legacy Finale MUS Reader zlib target: ${FINALE_MUS_READER_ZLIB_TARGET}")
 
 if(NOT TARGET musx)
     set(musx_BUILD_TESTING OFF CACHE BOOL "Do not build musxdom tests" FORCE)
@@ -33,7 +80,6 @@ if(NOT TARGET musx)
         add_subdirectory("${FINALE_MUS_READER_MUSXDOM_ROOT}"
             "${CMAKE_CURRENT_BINARY_DIR}/_deps/musxdom-build")
     else()
-        include(FetchContent)
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
             GIT_TAG 56241cc67eff340b1899be029aaae6927824593b
@@ -53,34 +99,13 @@ else()
         BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
-set(FINALE_MUS_READER_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
-set(FINALE_MUS_READER_EMBEDDED_HEADER
-    "${FINALE_MUS_READER_GENERATED_DIR}/embedded_default.h")
-set(FINALE_MUS_READER_EMBEDDED_SOURCE
-    "${FINALE_MUS_READER_GENERATED_DIR}/embedded_default.cpp")
-
-add_custom_command(
-    OUTPUT
-        "${FINALE_MUS_READER_EMBEDDED_HEADER}"
-        "${FINALE_MUS_READER_EMBEDDED_SOURCE}"
-    COMMAND "${CMAKE_COMMAND}"
-        -DINPUT_FILE=${CMAKE_CURRENT_SOURCE_DIR}/resources/defaults/finale27-macos-new-document-without-libraries.enigmaxml.gz
-        -DOUTPUT_HEADER=${FINALE_MUS_READER_EMBEDDED_HEADER}
-        -DOUTPUT_SOURCE=${FINALE_MUS_READER_EMBEDDED_SOURCE}
-        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_binary.cmake"
-    DEPENDS
-        resources/defaults/finale27-macos-new-document-without-libraries.enigmaxml.gz
-        cmake/embed_binary.cmake
-    COMMENT "Embedding the pinned Finale 27 macOS default"
-    VERBATIM)
-
 add_library(finale_mus_reader STATIC
     src/container/mus_container.cpp
     src/defaults/default_document.cpp
+    src/defaults/embedded_default.cpp
     src/import/reader.cpp
     src/records/legacy_others.cpp
-    third_party/blast/blast.c
-    "${FINALE_MUS_READER_EMBEDDED_SOURCE}")
+    third_party/blast/blast.c)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 
 target_include_directories(finale_mus_reader
@@ -89,10 +114,9 @@ target_include_directories(finale_mus_reader
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/blast"
-        "${FINALE_MUS_READER_GENERATED_DIR}"
         "${FINALE_MUS_READER_MUSXDOM_ROOT}/third_party/rapidxml")
 
-target_link_libraries(finale_mus_reader PUBLIC musx PRIVATE ZLIB::ZLIB)
+target_link_libraries(finale_mus_reader PUBLIC musx PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
 target_compile_definitions(finale_mus_reader PRIVATE MUSX_USE_RAPIDXML)
 
 if(MSVC)

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Robert G. Patterson
+// SPDX-License-Identifier: MIT
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
