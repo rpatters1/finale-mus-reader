@@ -171,6 +171,9 @@ The build uses CMake. Keep these properties intact when extending it:
   Preserve original copyright and license notices in third-party sources.
 - Use explicit nested namespace blocks rather than concatenated namespace
   declarations.
+- Do not require `NOMINMAX`. Protect standard-library `min` and `max` tokens
+  from the Windows macros with parentheses, such as `(std::min)(a, b)` and
+  `(std::numeric_limits<T>::max)()`.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging

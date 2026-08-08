@@ -79,7 +79,7 @@ void writeFixed(std::vector<std::uint8_t>& output, std::size_t offset,
     std::string_view value, std::size_t capacity)
 {
     expect(offset + capacity <= output.size(), "Synthetic fixed field exceeds its buffer");
-    const auto count = std::min(value.size(), capacity);
+    const auto count = (std::min)(value.size(), capacity);
     std::copy_n(value.begin(), static_cast<std::ptrdiff_t>(count),
         output.begin() + static_cast<std::ptrdiff_t>(offset));
 }

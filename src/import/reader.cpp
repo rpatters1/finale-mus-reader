@@ -293,9 +293,9 @@ ImportResult Reader::readWithCreator(
         throw std::invalid_argument("MUS input is empty: " + path.string());
     }
     const auto unsignedSize = static_cast<std::uintmax_t>(end);
-    if (unsignedSize > std::numeric_limits<std::size_t>::max()
+    if (unsignedSize > (std::numeric_limits<std::size_t>::max)()
         || unsignedSize > static_cast<std::uintmax_t>(
-            std::numeric_limits<std::streamsize>::max())) {
+            (std::numeric_limits<std::streamsize>::max)())) {
         throw std::length_error("MUS input is too large for this platform");
     }
     std::vector<std::uint8_t> data(static_cast<std::size_t>(unsignedSize));
