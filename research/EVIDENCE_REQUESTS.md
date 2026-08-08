@@ -1,10 +1,10 @@
 # Evidence Requests
 
-The first ETF evidence set is now present locally under `mus_feasibility/private/evidence/` (ignored by git).
+The first ETF evidence set is now present locally under `private/evidence/` (ignored by git).
 Requests remain deliberately small and hypothesis-driven. When multiple Finale versions are available, use the
 **earliest compatible version** for the export and record the exact application version and maintenance/build number.
 Source locations are intentionally omitted from this public document. Resolve each `corpus_id` through the local-only
-`mus_feasibility/private/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the filename and hash.
+`private/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the filename and hash.
 
 ## Priority requests
 

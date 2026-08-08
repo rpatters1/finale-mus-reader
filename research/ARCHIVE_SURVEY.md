@@ -1,6 +1,6 @@
 # Archive Survey
 
-Scanned all 230 ZIP and 275 StuffIt archives and found 4,898 candidate `.mus` or extensionless members. Archive paths are intentionally omitted; use the local ignored `mus_feasibility/private/archive_locations.csv` mapping for archive/member locations. The `unar`/`lsar` 1.10.7 tools successfully listed and extracted the StuffIt set, including resource forks.
+Scanned all 230 ZIP and 275 StuffIt archives and found 4,898 candidate `.mus` or extensionless members. Archive paths are intentionally omitted; use the local ignored `private/archive_locations.csv` mapping for archive/member locations. The `unar`/`lsar` 1.10.7 tools successfully listed and extracted the StuffIt set, including resource forks.
 
 Enigma-banner members: 2271.
 Extensionless candidates: 2990.

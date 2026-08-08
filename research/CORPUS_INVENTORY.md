@@ -1,6 +1,6 @@
 # Corpus Inventory
 
-This table includes every `.mus` data-fork candidate examined. Saving product comes from the file banner; `unknown` is reserved for pre-banner files and one AppleDouble artifact. SHA-256 hashes cover complete files. An em dash means no exact adjacent Finale 27 export was found. The public table intentionally shows only basenames and content-derived IDs. Original paths are local evidence only; keep them in the ignored `mus_feasibility/private/corpus_locations.csv` file described in the README. Detailed raw CSV outputs are also local-only and ignored by git; regenerate them when reproducing the study.
+This table includes every `.mus` data-fork candidate examined. Saving product comes from the file banner; `unknown` is reserved for pre-banner files and one AppleDouble artifact. SHA-256 hashes cover complete files. An em dash means no exact adjacent Finale 27 export was found. The public table intentionally shows only basenames and content-derived IDs. Original paths are local evidence only; keep them in the ignored `private/corpus_locations.csv` file described in the README. Detailed raw CSV outputs are also local-only and ignored by git; regenerate them when reproducing the study.
 
 Version confidence is high when the banner is explicit and low for pre-banner path-based classification. ETF likelihood is an eligibility estimate, not a verified open/export result. `Created app` is the creator tuple preserved by Finale 27 and helps identify upgraded documents. `Parts` is based on converted `partDef` records; conversion may expand sharing.
 
@@ -31,7 +31,7 @@ separate compatibility concern.
 
 ## Archive-derived candidates
 
-The expanded archive pass is cataloged separately in [`data/archive_members.csv`](data/archive_members.csv), keyed by `member_id`. It covers 230 ZIP and 275 StuffIt archives and adds 4,898 candidate members. The table below summarizes the deep binary probe (body entropy, zlib validation, and generic zero-trailed framing); archive paths are private and resolve through `mus_feasibility/private/archive_locations.csv`.
+The expanded archive pass is cataloged separately in [`data/archive_members.csv`](data/archive_members.csv), keyed by `member_id`. It covers 230 ZIP and 275 StuffIt archives and adds 4,898 candidate members. The table below summarizes the deep binary probe (body entropy, zlib validation, and generic zero-trailed framing); archive paths are private and resolve through `private/archive_locations.csv` from the repository root.
 
 | Saving product | Members | Unique hashes | Mean body entropy | Validated zlib members | Members with generic framed records | Notes |
 |---|---:|---:|---:|---:|---:|---|
@@ -51,7 +51,7 @@ The expanded archive pass is cataloged separately in [`data/archive_members.csv`
 Archive members have no assumed Finale 27 counterpart. The deep probe confirms that the early explicit 1.8.7–2.6 files are structurally distinct from the 2007+ typed-zlib/framed-record era; it does not establish a fixed 16-word structure for them.
 
 Fifteen ETF evidence files are now available locally: seven archival/targeted exports remain in ignored `private/evidence/`,
-and the controlled F2002–F2005 pairs are tracked in `evidence/`. They include the Finale 2005 nested-tuplet sample,
+and the controlled F2002–F2005 pairs are tracked in `tests/evidence/`. They include the Finale 2005 nested-tuplet sample,
 the Finale 2000 template exported by Finale 2000 and Finale 2005, and archive-derived 1.8.7, 2.0.1, and 2.6 samples.
 They are semantic companions rather than new corpus binaries; their hashes, sizes, and observed section counts are
 documented in `FORMAT_NOTES.md` and `EXPERIMENT_LOG.md`. The ZIP-derived 2.6 Quartet `Score` was not usable by

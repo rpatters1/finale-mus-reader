@@ -42,6 +42,9 @@ second public document model.
 | `scripts/` | Small reproducible analysis and maintenance tools. |
 | `private/` | Ignored private corpus, mappings, evidence, and working material. |
 
+The historical feasibility study moved from musxdom with its public commit
+history preserved. Its entry point is [research/README.md](research/README.md).
+
 ## Evidence and provenance
 
 Tracked research must be reproducible from publishable evidence whenever
@@ -60,4 +63,3 @@ The build system and library targets have not yet been added.
 ## License
 
 Finale MUS Reader is available under the [MIT License](LICENSE).
-

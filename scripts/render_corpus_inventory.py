@@ -49,7 +49,7 @@ def main() -> None:
         "`unknown` is reserved for pre-banner files and one AppleDouble artifact. SHA-256 hashes cover complete files. "
         "An em dash means no exact adjacent Finale 27 export was found. The public table intentionally shows only "
         "basenames and content-derived IDs. Original paths are local evidence only; keep them in the ignored "
-        "`mus_feasibility/private/corpus_locations.csv` file described in the README.",
+        "`private/corpus_locations.csv` file described in the README.",
         "",
         "Version confidence is high when the banner is explicit and low for pre-banner path-based classification. "
         "ETF likelihood is an eligibility estimate, not a verified open/export result. `Created app` is the creator tuple "

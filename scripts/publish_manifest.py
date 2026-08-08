@@ -3,7 +3,7 @@
 
 The public manifest is suitable for version control.  The private map is
 intentionally opt-in and should be written to the ignored
-``mus_feasibility/private/corpus_locations.csv`` path.
+``private/corpus_locations.csv`` path.
 """
 
 from __future__ import annotations

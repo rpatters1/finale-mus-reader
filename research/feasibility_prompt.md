@@ -87,10 +87,10 @@ Use a location-neutral public corpus manifest instead. Each source file should r
 Maintain the original path correspondence only in the local, ignored file:
 
 ```text
-mus_feasibility/private/corpus_locations.csv
+private/corpus_locations.csv
 ```
 
-For archive members, use the corresponding ignored `mus_feasibility/private/archive_locations.csv` mapping, keyed by the public archive ID and member ID.
+For archive members, use the corresponding ignored `private/archive_locations.csv` mapping, keyed by the public archive ID and member ID.
 
 That mapping should associate each public corpus identifier with the original source and export paths. Public documents should explicitly name this file so a future maintainer knows how to resolve an identifier when the private corpus is available, but the file itself must never be committed. Raw path-bearing inventory and intermediate analysis files should likewise remain local or be sanitized before publication. Evidence requests should identify files by corpus ID and basename, not by absolute path.
 
@@ -470,7 +470,7 @@ Mark requests as:
 
 ## Expected Deliverables
 
-All deliverables should be stored inside the mus_feasibility directory. Use subdirectories if appropriate.
+Store research documents and public generated data under `research/`, disposable analysis tools under `scripts/`, and publishable controlled fixtures under `tests/evidence/` in the finale-mus-reader repository. Keep path-bearing mappings, private corpus material, and private evidence under the ignored `private/` directory.
 
 ### `README.md`
 

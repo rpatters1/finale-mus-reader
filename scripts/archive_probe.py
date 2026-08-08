@@ -123,7 +123,7 @@ def main() -> None:
     args.summary.write_text(
         "# Archive Survey\n\n"
         f"Scanned {archive_count} ZIP/StuffIt archives and found {len(rows)} candidate `.mus` or extensionless members. "
-        "Archive paths are intentionally omitted; use the local ignored `mus_feasibility/private/archive_locations.csv` "
+        "Archive paths are intentionally omitted; use the local ignored `private/archive_locations.csv` "
         "mapping for archive/member locations. The `unar`/`lsar` 1.10.7 tools can process StuffIt 5 archives, "
         "including resource forks; a complete StuffIt pass may take substantially longer than the ZIP pass.\n\n"
         f"Enigma-banner members: {sum(r['is_enigma_binary'] == 'True' for r in rows)}.\n"

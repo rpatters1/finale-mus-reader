@@ -42,7 +42,7 @@ conversion. Finale 1.0 remains untested.
 
 **Confirmed.** Fifteen locally retained ETF exports now provide a semantic record-level reference for the older
 families. The original six archival exports remain under ignored `private/evidence/`; the controlled F2002–F2005 pairs
-are tracked under `evidence/` because they contain no private source layout. Their hashes and provenance are recorded
+are tracked under `tests/evidence/` because they contain no private source layout. Their hashes and provenance are recorded
 in the experiment log.
 
 | Evidence | Source era | ETF size | Observed sections | Selected observations |
