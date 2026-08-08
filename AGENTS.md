@@ -174,6 +174,9 @@ The build uses CMake. Keep these properties intact when extending it:
 - Do not require `NOMINMAX`. Protect standard-library `min` and `max` tokens
   from the Windows macros with parentheses, such as `(std::min)(a, b)` and
   `(std::numeric_limits<T>::max)()`.
+- Compile every C and C++ object with `/bigobj` under MSVC. Keep this as a
+  directory-wide build invariant so template-heavy musxdom factory
+  instantiations cannot exceed the default COFF section limit in any target.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging

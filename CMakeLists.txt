@@ -11,6 +11,13 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(MSVC)
+    # musxdom's template-heavy factories can exceed the default COFF section
+    # limit in any translation unit that instantiates them. Apply this to the
+    # entire directory tree so no MSVC object is built without it.
+    add_compile_options(/bigobj)
+endif()
+
 option(FINALE_MUS_READER_BUILD_TESTING "Build Legacy Finale MUS Reader tests" ON)
 option(FINALE_MUS_READER_USE_SYSTEM_ZLIB
     "Use an installed zlib when a parent project has not already provided one" OFF)
@@ -86,21 +93,26 @@ if(NOT TARGET musx)
     endif()
 endif()
 
+add_library(finale_mus_reader_blast OBJECT
+    third_party/blast/blast.c)
+
+if(MSVC)
+    # C4244 remains enabled at /W3. Suppress it for the unmodified upstream
+    # source while retaining useful third-party diagnostics below /W4.
+    target_compile_options(finale_mus_reader_blast PRIVATE /W3 /WX- /wd4244)
+else()
+    target_compile_options(finale_mus_reader_blast PRIVATE
+        -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 add_library(finale_mus_reader STATIC
     src/container/mus_container.cpp
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/reader.cpp
     src/records/legacy_others.cpp
-    third_party/blast/blast.c)
+    $<TARGET_OBJECTS:finale_mus_reader_blast>)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
-
-if(MSVC)
-    # Keep upstream C warnings visible without making the unmodified vendored
-    # blast source subject to the project's warnings-as-errors policy.
-    set_source_files_properties(third_party/blast/blast.c PROPERTIES
-        COMPILE_OPTIONS /WX-)
-endif()
 
 target_include_directories(finale_mus_reader
     PUBLIC
