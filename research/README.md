@@ -4,23 +4,18 @@ This is a public-source, independently verified exploratory study of legacy Fina
 
 The inventory found 1,218 legacy files and 2,042 Finale 27 exports. An exact adjacent `-exports/<name>.fin27.musx` counterpart exists for 1,189 legacy files; 29 do not have that exact counterpart. Finale 27 exports are semantic references, not byte-for-byte representations: conversion changes the modified header, normalizes data, and can synthesize or expand records.
 
-## Public versus private corpus metadata
+## Corpus identifiers
 
 Published findings identify each source by a stable content-derived `corpus_id`, such as `mus-65aa1de01997b781`, plus its basename, size, and SHA-256. This permits future maintainers to recognize the same evidence without publishing the drive name or directory layout. The public manifest is [data/corpus_manifest.csv](data/corpus_manifest.csv).
 
-The original path mapping is deliberately not tracked. If the corpus is available locally, create `private/corpus_locations.csv` with `scripts/publish_manifest.py --private-output ...`; the repository `.gitignore` excludes that directory. This exact filename is the canonical local key for resolving a public `corpus_id` back to the evidence file. Do not commit it. Existing raw inventory outputs containing paths are working data and should likewise remain local.
-
-Archive members use the same public `member_id` convention. Their ignored local archive/member path mapping is `private/archive_locations.csv`, produced with `archive_probe.py --private-output ...`.
-
 For StuffIt archives, install the `unar` package so that both `unar` and `lsar` are available. Use `lsar` for a non-destructive member listing and `unar -o <temporary-directory> <archive>` for extraction; never extract over the source corpus.
 
-The initial ETF evidence set is now present locally under the ignored `private/evidence/` directory. It has since
-been extended with tracked controlled MUS/ETF pairs for Finale 2002–2005 under `tests/evidence/F2002/` through
+The evidence set includes controlled MUS/ETF pairs for Finale 2002–2005 under `tests/evidence/F2002/` through
 `tests/evidence/F2005/`. There are now fifteen ETF exports plus eight controlled-test MUS files in total. The public notes record
-provenance and hashes; the archival source files and their private layout remain uncommitted.
+provenance and hashes.
 
-Three targeted Finale 27 conversions of the ETF-backed 1.8.7, 2.0.1, and 2.6 sources are also retained privately.
-Finale 27 opened each after `.mus` was appended to its extensionless filename; the 2.6 document had non-blocking font
+Finale 27 opened three targeted ETF-backed 1.8.7, 2.0.1, and 2.6 sources after `.mus` was appended to each
+extensionless filename; the 2.6 document had non-blocking font
 issues. These conversions disprove the suspected 2.6.x parser cutoff for the tested files while demonstrating that
 classic Mac type/creator discovery and modern filename-extension recognition are separate from format support.
 
@@ -57,75 +52,23 @@ and sharing remain incomplete. Finale 1.8.7–2.6 is now known to share the 16-b
 32-byte entry bodies, tag vocabulary, and raw text with Finale 3.0, but its index/directory spans and generic pool
 boundaries remain unresolved. A universal reader is not yet justified, but a version/format-era strategy is.
 
-## Reproduce
+## Reproduction
 
-From the finale-mus-reader repository root:
-
-```bash
-python3 scripts/inventory.py \
-  '<local-corpus-root>' \
-  --output-dir private
-
-python3 scripts/archive_probe.py \
-  '<local-corpus-root>' \
-  --output research/data/archive_members.csv \
-  --summary research/ARCHIVE_SURVEY.md \
-  --private-output private/archive_locations.csv
-
-python3 scripts/publish_manifest.py \
-  private/corpus_inventory.csv \
-  --public-output research/data/corpus_manifest.csv \
-  --private-output private/corpus_locations.csv
-
-python3 scripts/structure_probe.py \
-  private/corpus_inventory.csv \
-  --output-dir private
-
-python3 scripts/dcl_probe.py \
-  private/corpus_locations.csv \
-  research/data/corpus_manifest.csv \
-  --blast '<path-to-blast-compatible-executable>' \
-  --output private/dcl_probe.json
-
-python3 scripts/uncompressed_probe.py \
-  private/corpus_locations.csv \
-  research/data/corpus_manifest.csv \
-  --output private/uncompressed_probe.json
-
-python3 scripts/musx_semantics.py \
-  private/corpus_inventory.csv \
-  --output private/musx_semantics.csv
-
-python3 scripts/correlate_records.py \
-  private/corpus_inventory.csv \
-  private/musx_semantics.csv \
-  --output research/data/record_correlations.csv
-
-python3 scripts/render_record_catalog.py \
-  private/record_catalog.csv \
-  research/data/record_correlations.csv \
-  --inventory private/corpus_inventory.csv \
-  --output research/RECORD_CATALOG.md
-
-python3 scripts/render_corpus_inventory.py \
-  private/corpus_inventory.csv \
-  private/structure_probe.csv \
-  private/musx_semantics.csv \
-  --output research/CORPUS_INVENTORY.md
-```
-
-The scripts are read-only with respect to the evidence corpus. `musx_semantics.py` uses the public symmetric `score.dat` recoding algorithm documented in the MIT-licensed sibling denigma project and keeps decoded XML in memory.
+The survey workflow and commands are documented in
+[REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md).
 
 ## Research documents
 
 - [CORPUS_INVENTORY.md](CORPUS_INVENTORY.md): all examined files, sizes, hashes, header products, and counterpart matches.
 - [ARCHIVE_SURVEY.md](ARCHIVE_SURVEY.md): archive and extensionless-member findings, including the Finale 2.6 samples.
 - [FORMAT_NOTES.md](FORMAT_NOTES.md): headers, format eras, blocks, record framing, entries, text, options, and sharing.
+- [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md): distilled legacy global-to-option mappings, provenance, confidence, and validation plan.
 - [RECORD_CATALOG.md](RECORD_CATALOG.md): every numeric record identifier observed in successfully framed 2007+ blocks.
 - [VERSION_MATRIX.md](VERSION_MATRIX.md): corpus versions and proposed format eras.
 - [EVIDENCE_REQUESTS.md](EVIDENCE_REQUESTS.md): precise ETF and controlled-difference requests.
 - [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md): commands, observations, failed hypotheses, and follow-ups.
 - [FEASIBILITY_ASSESSMENT.md](FEASIBILITY_ASSESSMENT.md): direct recommendation, risks, architecture, and next steps.
+- [REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md): corpus mapping conventions and reproducible commands.
 
 Public references used in the initial clean-room search include Mark Adler's permissively licensed `blast` decoder, the
 Library of Congress description of legacy MUS and ETF,

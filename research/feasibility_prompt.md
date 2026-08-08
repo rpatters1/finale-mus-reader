@@ -48,6 +48,10 @@ restart from it as though the question were still open:
 * ETF-backed Finale 1.8.7–2.6 files share 16-byte ordinary/detail cadence, byte-exact implicit-ID 32-byte entries,
   literal/compact tag sequences, and raw text with Finale 3.0. Their index spans and generic pool boundaries remain
   unresolved. Finale 27 opens all three tested files after `.mus` is added; Finale 1.0 is still untested.
+* Authorized read-only inspection of private PDK Framework histories yielded a 437-row original/current union from legacy
+  option/global records to semantic fields. Treat it as `private-framework-derived`; consult
+  `LEGACY_OPTION_MAPPINGS.md`, do not copy framework source, and promote individual rows only after independent
+  MUS/ETF/MUSX verification.
 
 Treat these as reproducible baseline results documented in `FORMAT_NOTES.md` and `EXPERIMENT_LOG.md`. Further work
 should verify and extend them, not silently replace them with the original exploratory assumptions.
@@ -167,6 +171,10 @@ This is a public-source provenance boundary rather than strict clean-room isolat
 7. Never assume that public exposure grants an open-source license to the included third-party material.
 
 There may separately be access to private plugin-development directories containing proprietary MakeMusic material. **Do not inspect private proprietary material by default.** If it appears necessary after the public source and corpus evidence are exhausted, document the exact unresolved question, why public evidence is insufficient, what narrowly scoped information would help, and the provenance implications before requesting authorization.
+
+The PDK Framework option-map exception has already been explicitly authorized and analyzed. Its distilled findings
+are stored in `LEGACY_OPTION_MAPPINGS.md` and `data/legacy_option_mappings.csv`; the source itself must not be
+copied. This authorization does not automatically extend to unrelated private PDK or MakeMusic material.
 
 ## Versioning Challenges
 

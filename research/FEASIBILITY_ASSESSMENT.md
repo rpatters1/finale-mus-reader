@@ -29,7 +29,7 @@ version-specific pre-banner semantics remain unresolved.
 |---|---|---|
 | Header/version inventory for 3.0–2012 | clearly feasible | explicit banner, dates, creator/saver tuples, platform |
 | 3.x–2000 container and physical records | clearly feasible | 189/190 files: four uncompressed pools; 16-byte other/detail rows, 38-byte entries, raw text; platform byte order |
-| 3.x–2000 partial musical recovery | feasible now with substantial mapping work | exact Finale 2000 MUS/ETF pair plus contemporary public PDK field layouts |
+| 3.x–2000 partial musical recovery | feasible now with substantial mapping work | exact Finale 2000 MUS/ETF pair, contemporary public PDK layouts, and a private-framework-derived partial options map |
 | 2007–2012 container and record extraction | clearly feasible | typed zlib, length, CRC, two framed pools |
 | 2007–2012 partial musical recovery | feasible now with substantial mapping work | entry/text formats separate; many other/detail IDs known |
 | 2007–2012 high-fidelity conversion | feasible but high risk | sharing, options, normalized Finale 27 evidence, version fields |
@@ -45,7 +45,10 @@ version-specific pre-banner semantics remain unresolved.
 1. **Early pool indexes.** Finale 1.8.7–2.6 core rows correlate strongly with Finale 3.0, but the intervening index/directory spans and generic method for finding every pool boundary remain unresolved.
 2. **Later entry pool.** Finale 2001–2006 entries use solved 38-byte rows, but Finale 2007+ block `0x0016` uses a different dense representation.
 3. **Sharing/linked parts.** Part scope and shared overrides cut across ordinary record types. Finale 27 may expand references, so naïvely importing converted multiplicities could duplicate or lose relationships.
-4. **Options and variable records.** Options are structured in later files but their numeric codes and fields are unmapped. Some payloads are thousands of bytes.
+4. **Options and variable records.** The pre-26.2 compatibility representation now has a 437-row union of
+   private-framework-derived field locations across 24 groups, plus five direct multi-incidence blocks; available ETFs
+   confirm most selectors. Field semantics, conversions,
+   version selection, 35 additional ETF globals, and some large variable payloads remain unresolved.
 5. **Version semantics.** Type codes are stable across the later corpus, but payload meanings and sizes can change. A release name alone does not choose endian layout in 2007–2008.
 6. **Conversion as an imperfect oracle.** Finale 27 reassigns/normalizes/synthesizes data. The new ETF pairs help, but later-version exports can also synthesize records, as shown by the Finale 2000 template saved by Finale 2005.
 7. **Pre-banner provenance.** Filename paths identify apparent Finale 2 files, but the binary lacks the later product banner.
@@ -97,6 +100,10 @@ No PDK header or source may be added to this repository. Notes must distinguish 
 `independently binary-verified` claims, cite the public source at an immutable commit, restate facts independently,
 and verify them against MUS/ETF/MUSX evidence wherever practical. This is no longer a strict clean-room study; it is
 an independently implemented interoperability study with explicit public-source provenance.
+
+Separately, authorized read-only inspection of private PDK Framework histories supplied a substantial option/global
+map. Those facts are labeled `private-framework-derived`, not public-PDK-derived. No private source is stored here;
+the distilled mapping and its limits are documented in `LEGACY_OPTION_MAPPINGS.md`.
 
 ## Recommended next steps
 

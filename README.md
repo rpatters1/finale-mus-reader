@@ -1,10 +1,10 @@
-# Finale MUS Reader
+# Legacy Finale MUS Reader
 
-Finale MUS Reader is an exploratory C++ library for reading legacy Finale
+Legacy Finale MUS Reader is an exploratory C++ library for reading legacy Finale
 `.mus` files and constructing [`musxdom`](https://github.com/rpatters1/musxdom)
 documents.
 
-The project is intentionally separate from musxdom. Finale MUS Reader is a
+The project is intentionally separate from musxdom. Legacy Finale MUS Reader is a
 client of musxdom; musxdom does not depend on this library and contains no
 legacy `.mus` decoding code.
 
@@ -40,21 +40,20 @@ second public document model.
 | `tests/evidence/` | Publishable controlled MUS, ETF, and MUSX fixtures. |
 | `research/` | Format notes, experiment logs, inventories, and feasibility findings. |
 | `scripts/` | Small reproducible analysis and maintenance tools. |
-| `private/` | Ignored private corpus, mappings, evidence, and working material. |
 
 The historical feasibility study moved from musxdom with its public commit
 history preserved. Its entry point is [research/README.md](research/README.md).
 
 ## Evidence and provenance
 
-Tracked research must be reproducible from publishable evidence whenever
-possible. Private source material, private corpus paths, proprietary source
-excerpts, and unverified source-derived tables must not be committed.
+Research claims distinguish source-derived information from results verified
+against `.mus`, ETF, MUSX, or controlled Finale output. The research notes
+record provenance and confidence explicitly.
 
-Private reference material may motivate a test, but public format claims
-should be independently checked against `.mus`, ETF, MUSX, or controlled
-Finale output. When provenance affects confidence, the research notes should
-say so explicitly.
+The repository includes a distilled option/global mapping derived from
+authorized read-only inspection of historical PDK Framework versions. It
+labels every unverified result accordingly; see
+[research/LEGACY_OPTION_MAPPINGS.md](research/LEGACY_OPTION_MAPPINGS.md).
 
 ## Building
 
@@ -62,4 +61,4 @@ The build system and library targets have not yet been added.
 
 ## License
 
-Finale MUS Reader is available under the [MIT License](LICENSE).
+Legacy Finale MUS Reader is available under the [MIT License](LICENSE).

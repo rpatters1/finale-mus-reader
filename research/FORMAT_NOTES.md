@@ -381,7 +381,27 @@ row or the later generic zero-trailed frame. Its decoded size tracks document co
 
 ## Options
 
-**Partly structured.** Options are at the beginning of `0x001a`, identified by primary key `0xfffe`; many are fixed 12-byte records, while some have large variable payloads. This contradicts “completely free-form” for 2007+. Option code names and byte layouts remain unknown. Earlier versions may differ.
+**Substantially mapped for the pre-26.2 compatibility representation, but mostly source-derived.** Options are at the
+beginning of the 2007+ `0x001a` block, identified by primary key `0xfffe`; many are fixed 12-byte records, while some
+have large variable payloads. ETF represents the corresponding older globals as `^NN(65534)` records.
+
+Authorized read-only inspection of privately supplied PDK Framework histories yielded a 437-row union across
+24 logical preference groups: 435 current mappings plus two original-branch locations needed for older Finale
+behavior. The table identifies tags, comparators, incidents, word slots, widths, conversion rules,
+semantic fields, and some version gates. Available ETFs independently contain the selectors used by 386 rows, but
+field meanings and offsets remain `private-framework-derived` until controlled binary comparisons verify them. See
+[`LEGACY_OPTION_MAPPINGS.md`](LEGACY_OPTION_MAPPINGS.md) and
+[`data/legacy_option_mappings.csv`](data/legacy_option_mappings.csv).
+
+Five additional structures use direct multi-incidence blocks rather than the field map: slur contours at
+`^52(65534)`, tie placement at `^85(65534)`, tie contours at `^86(65534)`, grids/guides at `^88(65534)`, and stem
+connections at `^40(65534)`. All selectors are ETF-observed; see
+[`data/legacy_direct_option_blocks.csv`](data/legacy_direct_option_blocks.csv).
+
+The mapping is incomplete: it covers 61 numeric globals while current ETFs contain 35 additional numeric globals not
+mapped by the framework. Historical and Finale 26.2 replacement locations also prove that mappings can be
+version-dependent. Earlier statements that option code names and layouts were wholly unknown are superseded by this
+partial map.
 
 ## Text and variable-length data
 

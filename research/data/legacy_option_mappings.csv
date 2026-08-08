@@ -1,0 +1,438 @@
+mapping_lineage,option_group,semantic_field,legacy_tag,legacy_global_number,cmper,incident,word_slot,width_bytes,conversion,minimum_finale_version,variant,replaced_index,selector_observed_in_available_etf,candidate_musxdom_target
+current_only,ChordPrefs,CFLATLIFT,37,37,65534,0,4,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,CNATURALLIFT,37,37,65534,0,5,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,CSHARPLIFT,37,37,65534,0,3,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,ChordStyle,45,45,65534,0,0,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,DefChordAlignment,44,44,65534,0,5,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,UseSimpleChordSpelling,45,45,65534,0,1,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,chordPercent,41,41,65534,2,4,4,MACFOURBYTE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,chordPlayback,76,76,65534,0,5,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,fretInstID,41,41,65534,1,1,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,fretPercent,41,41,65534,1,3,4,MACFOURBYTE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,fretStyleID,41,41,65534,1,0,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,italicizeCapoChords,41,41,65534,2,0,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,multiFretItemsPerStr,41,41,65534,1,5,2,NONE,,baseline,,yes,ChordOptions
+current_only,ChordPrefs,showFretboards,41,41,65534,0,2,2,NONE,,baseline,,yes,ChordOptions
+current_only,DistancePrefs,acciCrossLayerPositioning,22,22,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,acciMultCharSpace,21,21,65534,0,5,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,acciMultiSpaces,59,59,65534,0,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+current_26_2_override,DistancePrefs,acciMultiSpaces,OA,,0,0,5,2,NONE,,finale_26_2_compatibility_override,3,no,multiple geometry-related option classes
+original_and_current,DistancePrefs,acciNoteSpace,59,59,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+current_26_2_override,DistancePrefs,acciNoteSpace,OA,,0,0,4,2,NONE,,finale_26_2_compatibility_override,2,no,multiple geometry-related option classes
+original_and_current,DistancePrefs,acciVertSpace,21,21,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,alterDblWholeDiamondBaseline,22,22,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,alterHalfDiamondBaseline,22,22,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,alterWholeDiamondBaseline,22,22,65534,0,2,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,barlineDashSpace,68,68,65534,0,4,4,MACFOURBYTE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,barlineDblSpace,67,67,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,barlineFinalSpace,67,67,65534,0,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,beamMaxDistance,20,20,65534,0,2,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,beamSecondarySepar,20,20,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,clefAfter,19,19,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,clefBefore,19,19,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,clefDefaultOffset,13,13,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,clefKeySpace,38,38,65534,0,5,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,clefTimeSpace,39,39,65534,0,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,dotFlagAdjust,21,21,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,dotNoteSpace,68,68,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,dotSpaceBetweenDots,21,21,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,dotVerticalAdjust,68,68,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,graceNoteSpacing,27,27,65534,0,5,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,groupbracketdefaulthorizontaldistance,14,14,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,keysigSpaceAfter,18,18,65534,0,2,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,keysigSpaceAfterCancel,18,18,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,keysigSpaceBefore,18,18,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,keysigSpaceBetween,21,21,65534,0,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,keysigTimeSpace,39,39,65534,0,5,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,musicSpaceAfter,39,39,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,musicSpaceBefore,39,39,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,stemNoteheadOffset,65,65,65534,0,0,4,MACFOURBYTE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigAbbrSymbolVert,67,67,65534,0,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigBottomSymbolVert,67,67,65534,0,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigPartsAbbrSymbolVert,18,18,65534,1,2,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigPartsBottomSymbolVert,18,18,65534,1,1,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigPartsSpaceAfter,18,18,65534,1,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigPartsSpaceBefore,18,18,65534,1,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigPartsTopSymbolVert,18,18,65534,1,0,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigSpaceAfter,18,18,65534,0,4,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigSpaceBefore,18,18,65534,0,3,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,DistancePrefs,timesigTopSymbolVert,18,18,65534,0,5,2,NONE,,baseline,,yes,multiple geometry-related option classes
+original_and_current,ExtraTupletPrefs,bracketThickness,69,69,65534,0,0,2,NONE,,baseline,,yes,TupletOptions
+original_and_current,ExtraTupletPrefs,horizDownstem,14,14,65534,0,5,2,NONE,,baseline,,yes,TupletOptions
+original_and_current,ExtraTupletPrefs,horizUpstem,14,14,65534,0,4,2,NONE,,baseline,,yes,TupletOptions
+original_and_current,ExtraTupletPrefs,maxSlope,23,23,65534,0,5,2,NONE,,baseline,,yes,TupletOptions
+original_and_current,GroupNamePosPrefsAbbrv,flag,80,80,65534,0,2,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,GroupNamePosPrefsAbbrv,horzOff,80,80,65534,0,0,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,GroupNamePosPrefsAbbrv,vertOff,80,80,65534,0,1,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,GroupNamePosPrefsFull,flag,79,79,65534,0,2,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,GroupNamePosPrefsFull,horzOff,79,79,65534,0,0,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,GroupNamePosPrefsFull,vertOff,79,79,65534,0,1,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,LayoutDistancePrefs,partsFirstSysDistance,77,77,65534,4,0,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LayoutDistancePrefs,partsStaffHeight,93,93,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LayoutDistancePrefs,partsSystemScaling,76,76,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LayoutDistancePrefs,scoreFirstSysDistance,01,01,65534,0,5,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LayoutDistancePrefs,scoreStaffHeight,93,93,65534,0,2,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LayoutDistancePrefs,scoreSystemScaling,76,76,65534,0,3,2,NONE,,baseline,,yes,PageFormatOptions or MiscOptions
+original_and_current,LyricsPrefs,firstSyllAlign,87,87,65534,1,0,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,firstSyllFlags,87,87,65534,1,2,2,NONE,,baseline,,yes,LyricOptions
+current_26_2_override,LyricsPrefs,firstSyllFlags,OL,,2,1,2,2,NONE,,finale_26_2_compatibility_override,12,no,LyricOptions
+original_and_current,LyricsPrefs,firstSyllJusti,87,87,65534,1,1,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,flag,87,87,65534,0,2,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,hyphenSystemStart,57,57,65534,0,0,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,othersSyllAlign,87,87,65534,0,0,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,othersSyllJusti,87,87,65534,0,1,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,spaceBetweenHyphens,15,15,65534,0,1,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,startSysSyllAlign,87,87,65534,1,3,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,startSysSyllFlags,87,87,65534,1,5,2,NONE,,baseline,,yes,LyricOptions
+current_26_2_override,LyricsPrefs,startSysSyllFlags,OL,,2,1,5,2,NONE,,finale_26_2_compatibility_override,15,no,LyricOptions
+original_and_current,LyricsPrefs,startSysSyllJusti,87,87,65534,1,4,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,useSmartHyphens,35,35,65534,0,5,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,wordExtensionSyllAlign,87,87,65534,0,3,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,wordExtensionSyllFlags,87,87,65534,0,5,2,NONE,,baseline,,yes,LyricOptions
+current_26_2_override,LyricsPrefs,wordExtensionSyllFlags,OL,,2,0,5,2,NONE,,finale_26_2_compatibility_override,9,no,LyricOptions
+original_and_current,LyricsPrefs,wordExtensionSyllJusti,87,87,65534,0,4,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,LyricsPrefs,wordExtensionThickness,67,67,65534,0,5,2,NONE,,baseline,,yes,LyricOptions
+original_and_current,MMRestDefaultsPrefs,AAAA,25,25,65534,0,1,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,BBBB,25,25,65534,1,4,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,flags,25,25,65534,1,5,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,horizNumAdj,25,25,65534,1,1,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,measWidth,25,25,65534,0,0,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,mmautoupdate,83,83,65534,0,4,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,shapeID,25,25,65534,0,3,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,shpAdjustEnd,25,25,65534,1,3,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,shpAdjustStart,25,25,65534,1,2,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,spaceBetweenSymbols,25,25,65534,1,0,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,startNumberingAt,25,25,65534,0,4,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,symbolMeasures,25,25,65534,0,5,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MMRestDefaultsPrefs,vertNumAdj,25,25,65534,0,2,2,NONE,,baseline,,yes,MultimeasureRestOptions
+original_and_current,MiscDocPrefs,PSUnderlineDepth,62,62,65534,0,0,4,MACFOURBYTE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,PSUnderlineThickness,62,62,65534,0,2,4,MACFOURBYTE,,baseline,,yes,MiscOptions and related option classes
+current_only,MiscDocPrefs,alignMeasureNumbersWithBarlines,OM,,0,2,0,2,NONE,27.4,baseline,,no,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineClosePiece,03,03,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineCloseSys,03,03,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineDisplayAll,36,36,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineDoubleAtKeySig,22,22,65534,0,4,2,NONE,2014.5,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineFinalAtEnd,09,09,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineLeftMultStaves,36,36,65534,0,3,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,barlineLeftSingleStaff,36,36,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,beamFlags,41,41,65534,0,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,beamMaxSlope,20,20,65534,0,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,beamStyle,41,41,65534,0,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,chordEnablePlayback,76,76,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,chordFretboardFlag,41,41,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,chordFretboardResize,41,41,65534,1,3,4,MACFOURBYTE,,baseline,,yes,MiscOptions and related option classes
+current_26_2_override,MiscDocPrefs,chordFretboardResize,OY,,0,0,0,4,WINFOURBYTE,,finale_26_2_compatibility_override,42,no,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,chordItalicizeCapo,41,41,65534,2,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,clefDefault,01,01,65534,0,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,clefOnlyOnFirstSys,27,27,65534,0,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,clefReduction,13,13,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,consolidaterests,FI,,10,0,5,2,NONE,2014,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,courtesyFlags,44,44,65534,0,3,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,crossStaffInOriginal,12,12,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,curveResolution,15,15,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,dateFormat,05,05,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,displayPartExpressions,16,16,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,dotAdjustForMultipleVoices,27,27,65534,0,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,graceAlwaysSlash,44,44,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,gracePlaybackDur,27,27,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keepOctaveTranspositionInConcertPitch,FI,,10,0,3,2,NONE,25.2,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigCancelOutgoing,12,12,65534,0,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigCancelSwitchSharpsFlats,12,12,65534,1,0,2,NONE,25.4,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigModeChange,12,12,65534,0,3,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigNaturalsInC,12,12,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigOnlyOfFirstSys,27,27,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,keysigPreserveOctave,41,41,65534,2,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,layoutFlags,FI,,10,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+current_only,MiscDocPrefs,legacyDotPostionOnFlippedStems,OD,,0,0,5,2,NONE,27.4,baseline,,no,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,pickupMeasure,17,17,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,scaleManualPos,41,41,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,secondsInTimeStamp,05,05,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,showactivelayeronly,FI,,10,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_only,MiscDocPrefs,specialExtractedPartCmper,23,23,65534,0,4,2,NONE,,baseline,,yes,MiscOptions and related option classes
+current_only,MiscDocPrefs,specialExtractedPartCmper,PG,,65534,0,3,2,NONE,,baseline,,no,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,stemUseConnections,31,31,65534,0,5,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,textTabChars,13,13,65534,0,0,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,timesigAbbrCommonTime,19,19,65534,0,2,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,timesigAbbrCutTime,19,19,65534,0,3,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,timesigCompMeterDeci,23,23,65534,0,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MiscDocPrefs,useNoteShapes,01,01,65534,0,1,2,NONE,,baseline,,yes,MiscOptions and related option classes
+original_and_current,MusicCharsPrefsDistances,brevisslashbaseline,22,22,65534,0,3,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,MusicCharsPrefsDistances,halfslashbaseline,22,22,65534,0,1,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,MusicCharsPrefsDistances,wholeslashbaseline,22,22,65534,0,2,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,MusicSpacingPrefs,accidentalsGutter,41,41,65534,2,2,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,flag,94,94,65534,0,5,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,graceNoteMinDistance,94,94,65534,2,2,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,graceNoteSpacingMode,94,94,65534,2,4,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,maxWidth,94,94,65534,0,2,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,minDistTiedNotes,94,94,65534,0,4,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,minDistance,94,94,65534,0,3,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,minWidth,94,94,65534,0,1,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,referenceDurationHigh,94,94,65534,1,2,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,referenceDurationLow,94,94,65534,1,1,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,referenceWidthHigh,94,94,65534,1,4,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,referenceWidthLow,94,94,65534,1,3,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,scalingFactorHigh,94,94,65534,2,0,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,scalingFactorLow,94,94,65534,1,5,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,tiesGutter,41,41,65534,2,3,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,type,94,94,65534,0,0,2,NONE,,baseline,,yes,MusicSpacingOptions
+original_and_current,MusicSpacingPrefs,useAllotmentTables,94,94,65534,1,0,2,NONE,,baseline,,yes,MusicSpacingOptions
+current_only,PageFormatPrefsParts,bFacingPages,77,77,65534,3,0,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,bFirstPageTop,77,77,65534,3,2,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,bFirstSysMargin,77,77,65534,3,1,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,firstPageTop,77,77,65534,3,3,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,firstSysLeft,77,77,65534,3,5,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,firstSysTop,77,77,65534,3,4,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,leftBottom,77,77,65534,1,1,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,leftLeft,77,77,65534,1,0,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,leftRight,77,77,65534,1,2,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,leftTop,77,77,65534,0,5,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,pageHeight,77,77,65534,0,0,4,WINFOURBYTE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,pageScaling,77,77,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,pageWidth,77,77,65534,0,2,4,WINFOURBYTE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,rightBottom,77,77,65534,1,5,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,rightLeft,77,77,65534,1,4,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,rightRight,77,77,65534,2,0,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,rightTop,77,77,65534,1,3,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,sysBottom,77,77,65534,2,3,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,sysDistBetween,77,77,65534,2,5,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,sysLeft,77,77,65534,2,2,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,sysRight,77,77,65534,2,4,2,NONE,,baseline,,yes,PageFormatOptions.parts
+current_only,PageFormatPrefsParts,sysTop,77,77,65534,2,1,2,NONE,,baseline,,yes,PageFormatOptions.parts
+original_and_current,PageFormatPrefsScore,bFacingPages,02,02,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,bFirstPageTop,13,13,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,bFirstSysMargin,13,13,65534,0,5,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,firstPageTop,02,02,65534,0,5,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,firstSysLeft,03,03,65534,0,1,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,firstSysTop,03,03,65534,0,0,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,leftBottom,16,16,65534,0,2,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,leftLeft,16,16,65534,0,1,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,leftRight,16,16,65534,0,3,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,leftTop,16,16,65534,0,0,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,pageHeight,14,14,65534,0,0,4,MACFOURBYTE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,pageScaling,39,39,65534,0,2,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,pageWidth,15,15,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,rightBottom,02,02,65534,0,2,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,rightLeft,02,02,65534,0,1,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,rightRight,02,02,65534,0,3,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,rightTop,02,02,65534,0,0,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,sysBottom,17,17,65534,0,3,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,sysDistBetween,01,01,65534,0,4,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,sysLeft,17,17,65534,0,1,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,sysRight,17,17,65534,0,2,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PageFormatPrefsScore,sysTop,17,17,65534,0,0,2,NONE,,baseline,,yes,PageFormatOptions.score
+original_and_current,PartExtractPrefs,createPartNameHeader,77,77,65534,6,2,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,fitMeasures,77,77,65534,5,4,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,measuresPerSystem,77,77,65534,5,5,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,newStaffDistance,77,77,65534,5,0,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,newStaffPlacement,77,77,65534,4,4,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,newTopStaff,77,77,65534,4,5,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,openExtractedParts,77,77,65534,8,0,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderAAAA,77,77,65534,7,4,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderBBBB,77,77,65534,7,5,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderFontEfx,77,77,65534,7,2,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderFontID,77,77,65534,7,0,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderFontSize,77,77,65534,7,1,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderFromPage,77,77,65534,6,4,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderHoriz,77,77,65534,4,2,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderResize,77,77,65534,6,3,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderToPage,77,77,65534,6,5,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderUseFontID,77,77,65534,7,3,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,partNameHeaderVert,77,77,65534,4,3,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,promptForEachName,77,77,65534,6,0,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,removeMultiPageBlocks,77,77,65534,6,1,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,removePageOneBlocks,77,77,65534,5,1,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,removePageTwoPlusBlocks,77,77,65534,5,2,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,removeStaffGroupNames,77,77,65534,5,3,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,spaceSystemsEvenly,77,77,65534,8,1,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_and_current,PartExtractPrefs,spacingMethod,77,77,65534,4,1,2,NONE,,baseline,,yes,PageFormatOptions or unsupported extraction settings
+original_only,PartScopePrefs,score_in_c,PG,,0,0,0,2,INVERTBOOL,,baseline,,no,MiscOptions or part metadata
+current_only,PartScopePrefs,score_in_c,PG,,65534,0,0,2,INVERTBOOL,,baseline,,no,MiscOptions or part metadata
+original_and_current,PianoBracePrefs,centerThickness,45,45,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,innerBodyHoriz,65,65,65534,0,4,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,innerBodyVert,60,60,65534,0,4,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,innerTipHoriz,65,65,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,innerTipVert,60,60,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,outerBodyHoriz,61,61,65534,0,4,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,outerBodyVert,60,60,65534,0,0,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,outerTipHoriz,61,61,65534,0,0,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,outerTipVert,61,61,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,tipThickness,45,45,65534,0,4,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PianoBracePrefs,width,64,64,65534,0,2,4,MACFOURBYTE,,baseline,,yes,PianoBraceBracketOptions
+original_and_current,PlaybackPrefs,baseKeyVelocity,36,36,65534,0,5,2,NONE,,baseline,,yes,unsupported playback/document settings
+current_26_2_override,PlaybackPrefs,baseKeyVelocity,OP,,0,0,4,2,NONE,,finale_26_2_compatibility_override,3,no,unsupported playback/document settings
+current_only,PlaybackPrefs,clickSourceType,48,48,65534,6,5,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,clickWhenPlaying,48,48,65534,6,4,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,clickWhenRecording,48,48,65534,6,3,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,countOffBars,48,48,65534,6,0,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,countOffWhenPlaying,48,48,65534,6,2,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,countOffWhenRecording,48,48,65534,6,1,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,doPlaybackRepeats,FI,,11,0,3,2,NONE,,baseline,,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,endPass,47,47,65534,0,5,2,NONE,,baseline,,no,unsupported playback/document settings
+current_26_2_override,PlaybackPrefs,exprMode,pd,,0,0,0,2,NONE,2014,finale_26_2_compatibility_override,21,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,exprMode,pd,,0,0,3,2,NONE,2014,baseline,,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOff.data0,48,48,65534,2,4,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOff.data1,48,48,65534,2,5,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOff.status,48,48,65534,2,3,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOn.data0,48,48,65534,2,1,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOn.data1,48,48,65534,2,2,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.clickOn.status,48,48,65534,2,0,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.duration,48,48,65534,3,1,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarData.virtChannel,48,48,65534,3,0,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarNote.clickOn.data0,48,48,65534,5,0,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarNote.clickOn.data1,48,48,65534,5,1,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarNote.duration,48,48,65534,5,2,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBarNote.virtChannel,48,48,65534,5,3,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOff.data0,48,48,65534,0,4,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOff.data1,48,48,65534,0,5,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOff.status,48,48,65534,0,3,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOn.data0,48,48,65534,0,1,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOn.data1,48,48,65534,0,2,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.clickOn.status,48,48,65534,0,0,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.duration,48,48,65534,1,1,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatData.virtChannel,48,48,65534,1,0,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatNote.clickOn.data0,48,48,65534,4,0,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatNote.clickOn.data1,48,48,65534,4,1,1,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatNote.duration,48,48,65534,4,2,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickBeatNote.virtChannel,48,48,65534,4,3,2,NONE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,hyperClickDataType,48,48,65534,3,2,2,NONE,,baseline,,no,unsupported playback/document settings
+original_and_current,PlaybackPrefs,metronomeBeat,13,13,65534,0,1,2,NONE,,baseline,,yes,unsupported playback/document settings
+original_and_current,PlaybackPrefs,metronomeSpeed,39,39,65534,0,3,2,NONE,,baseline,,yes,unsupported playback/document settings
+current_26_2_override,PlaybackPrefs,playbackRecordFlags,pd,,0,0,1,2,NONE,2014,finale_26_2_compatibility_override,23,yes,unsupported playback/document settings
+original_and_current,PlaybackPrefs,playbackRecordFlags,pd,,0,0,5,2,NONE,2014,baseline,,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,sendClickOff,48,48,65534,1,2,2,NONE,,baseline,,no,unsupported playback/document settings
+current_26_2_override,PlaybackPrefs,smpteStartTime,OP,,0,2,4,4,WINFOURBYTE,2014,finale_26_2_compatibility_override,20,no,unsupported playback/document settings
+current_only,PlaybackPrefs,smpteStartTime,pd,,0,0,0,4,WINFOURBYTE,2014,baseline,,yes,unsupported playback/document settings
+current_26_2_override,PlaybackPrefs,smpteTimeType,OP,,0,2,3,2,NONE,2014,finale_26_2_compatibility_override,22,no,unsupported playback/document settings
+current_only,PlaybackPrefs,smpteTimeType,pd,,0,0,4,2,NONE,2014,baseline,,yes,unsupported playback/document settings
+original_and_current,PlaybackPrefs,startAtMeas,37,37,65534,0,0,2,NONE,,baseline,,yes,unsupported playback/document settings
+original_and_current,PlaybackPrefs,startAtMode,37,37,65534,0,1,2,NONE,,baseline,,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,startEdu,47,47,65534,0,0,4,MACFOURBYTE,,baseline,,no,unsupported playback/document settings
+current_only,PlaybackPrefs,startPass,47,47,65534,0,4,2,NONE,,baseline,,no,unsupported playback/document settings
+original_and_current,PlaybackPrefs,stopAtMeas,37,37,65534,0,2,2,NONE,,baseline,,yes,unsupported playback/document settings
+current_only,PlaybackPrefs,stopEdu,47,47,65534,0,2,4,MACFOURBYTE,,baseline,,no,unsupported playback/document settings
+original_and_current,PlaybackPrefs,swing,36,36,65534,0,0,2,NONE,,baseline,,yes,unsupported playback/document settings
+original_and_current,Pre2012MusicCharsPrefs,symbol15ma,69,69,65534,0,4,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbol15mb,69,69,65534,0,5,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbol8va,12,12,65534,0,5,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbol8vb,11,11,65534,0,5,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbolTrill,69,69,65534,0,2,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbolWiggle,69,69,65534,0,3,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbolcommontimesigscore,19,19,65534,0,4,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,Pre2012MusicCharsPrefs,symbolcuttimesigscore,19,19,65534,0,5,2,NONE,,baseline,,yes,MusicSymbolOptions
+original_and_current,RepeatPrefs,afterClefSpace,71,71,65534,0,3,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,afterKeySpace,71,71,65534,0,4,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,afterTimeSpace,71,71,65534,0,5,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,backToBackStyle,70,70,65534,0,3,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,backwardSpace,70,70,65534,0,5,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,dotafternumber,69,69,65534,0,1,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingBackHook,76,76,65534,0,2,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingBracketHeight,05,05,65534,0,3,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingFrontHook,72,72,65534,0,0,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingInsetEnd,72,72,65534,0,3,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingInsetStart,72,72,65534,0,2,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingLineThickness,72,72,65534,0,1,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingTextHoriz,72,72,65534,0,4,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,endingTextVert,72,72,65534,0,5,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,forwardSpace,70,70,65534,0,4,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,heavyLine,70,70,65534,0,0,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,lowerVertAdjust,71,71,65534,0,1,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,maxpasses,20,20,65534,0,3,2,NONE,,baseline,,yes,RepeatOptions
+current_only,RepeatPrefs,showOnStaffListNumber,72,72,65534,1,2,2,NONE,,baseline,,yes,RepeatOptions
+current_only,RepeatPrefs,showOnTopStaffOnly,72,72,65534,1,1,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,spaceBetweenLines,70,70,65534,0,2,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,thinInnerBracketReference,72,72,65534,1,0,2,NONE,25.1,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,thinLine,70,70,65534,0,1,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,upperVertAdjust,71,71,65534,0,0,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,RepeatPrefs,wingStyle,71,71,65534,0,2,2,NONE,,baseline,,yes,RepeatOptions
+original_and_current,SizePrefs,barlineDashLength,68,68,65534,0,2,4,MACFOURBYTE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,barlineHeavyThickness,67,67,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,barlineThinThickness,58,58,65534,0,4,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,beamBrokenLength,03,03,65534,0,3,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,beamThickness,62,62,65534,0,4,4,MACFOURBYTE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,enclosureThickness,27,27,65534,0,3,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,graceNoteSize,23,23,65534,0,0,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,graceSlashThickness,64,64,65534,0,1,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,graceTablatureNoteSize,14,14,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,ledgerLeftHalf,59,59,65534,0,1,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,ledgerLeftHalfRest,01,01,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,ledgerRightHalf,59,59,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,ledgerRightHalfRest,01,01,65534,0,3,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,ledgerThickness,59,59,65534,0,0,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,shapeDesignerSlurTip,97,97,65534,0,0,4,MACFOURBYTE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,staffLineThickness,58,58,65534,0,5,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,stemHalfLength,03,03,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,stemNormalLength,20,20,65534,0,4,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,stemReverseAdjust,21,21,65534,0,2,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,stemShortLength,20,20,65534,0,5,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SizePrefs,stemThickness,64,64,65534,0,5,2,NONE,,baseline,,yes,multiple size-related option classes
+original_and_current,SmartShapePrefs,bCrescDimHorizontal,FI,,12,0,4,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bOctavaAsText,FI,,11,0,5,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bUseEngraverSlurs,51,51,65534,0,5,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bendAutoGenerateText,97,97,65534,1,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bendHideNumber,97,97,65534,1,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bendParentheses,97,97,65534,1,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,bendReplaceWithFull,97,97,65534,1,3,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,crescDimMaxShortSpanLength,FI,,12,0,5,2,NONE,25.3,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,crescDimOpening,FI,,11,0,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,crescDimShortOpening,FI,,13,0,0,2,NONE,25.3,baseline,,no,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,crescDimWidth,FI,,11,0,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,customLineStyle,92,92,65534,0,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,dashLength,FI,,12,0,0,4,MACFOURBYTE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,dashSpace,FI,,12,0,2,4,MACFOURBYTE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrAcciMode,50,50,65534,0,4,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrAcciSpace,53,53,65534,1,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrMaxAngle,53,53,65534,0,5,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrMaxLift,51,51,65534,0,2,4,MACFOURBYTE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrMaxStretchFixed,51,51,65534,0,0,4,MACFOURBYTE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrMaxStretchPrecent,53,53,65534,1,3,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrSpace,53,53,65534,0,4,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrStretchFirst,53,53,65534,1,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrStretchMode,53,53,65534,1,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,engrSymmetry,51,51,65534,0,4,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,glissandoStyle,92,92,65534,0,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,guitarBendStyle,92,92,65534,0,3,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,hookLength,FI,,11,0,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,lineThickness,FI,,11,0,4,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurThicknessHorizLeft,50,50,65534,0,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurThicknessHorizRight,50,50,65534,0,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurThicknessVertLeft,50,50,65534,0,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurThicknessVertRight,50,50,65534,0,3,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurbrEndAdjust,53,53,65534,0,1,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurbrStaffLineAvoid,53,53,65534,0,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurbrStartAdjust,53,53,65534,0,0,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurtipAvoidStaff,53,53,65534,0,3,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurtipAvoidStaffVal,50,50,65534,0,5,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,slurtipWidth,93,93,65534,0,0,4,MACFOURBYTE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,SmartShapePrefs,tabSlideStyle,92,92,65534,0,2,2,NONE,,baseline,,yes,SmartShapeOptions or LineCurveOptions
+original_and_current,StaffNamePosPrefsAbbrv,flag,66,66,65534,0,5,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,StaffNamePosPrefsAbbrv,horizAdjust,66,66,65534,0,0,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,StaffNamePosPrefsAbbrv,vertAdjust,66,66,65534,0,1,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,StaffNamePosPrefsFull,flag,04,04,65534,0,5,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,StaffNamePosPrefsFull,horizAdjust,04,04,65534,0,0,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,StaffNamePosPrefsFull,vertAdjust,04,04,65534,0,1,2,NONE,,baseline,,yes,StaffOptions
+original_and_current,TiePrefs,afterMultipleDots,84,84,65534,2,4,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,afterSingleDot,84,84,65534,2,3,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,avoidStaffLinesDistance,84,84,65534,3,1,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,avoidStaffLinesOnly,84,84,65534,3,5,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,beforeAcciSingleNote,84,84,65534,2,5,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakForKeySigs,84,84,65534,0,3,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakForTimeSigs,84,84,65534,0,2,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakKeySigLeftHOffset,84,84,65534,1,0,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakKeySigRightHOffset,84,84,65534,1,1,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakTimeSigLeftHOffset,84,84,65534,0,4,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,breakTimeSigRightHOffset,84,84,65534,0,5,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,chordTieDirOpposingSeconds,84,84,65534,2,1,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,chordTieDirType,84,84,65534,2,0,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,gutterTies,41,41,65534,2,3,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,insetStyle,84,84,65534,3,2,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,mixedStemDirection,84,84,65534,2,2,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,secondsPlacement,84,84,65534,1,5,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,specialPosMode,84,84,65534,3,0,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,sysBreakLeftHAdj,84,84,65534,1,2,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,sysBreakRightHAdj,84,84,65534,1,3,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,thicknessLeft,84,84,65534,0,1,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,thicknessRight,84,84,65534,0,0,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,tipWidth,97,97,65534,0,2,4,MACFOURBYTE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,useInterpolation,84,84,65534,3,3,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,useOuterPlacement,84,84,65534,1,4,2,NONE,,baseline,,yes,TieOptions
+original_and_current,TiePrefs,useTieEndCtlStyle,84,84,65534,3,4,2,NONE,,baseline,,yes,TieOptions

@@ -1,0 +1,6 @@
+option_group,legacy_tag,cmper,incidence_organization,selector_observed_in_available_etf,candidate_musxdom_target,mapping_lineage,confidence_note
+SlurContourPrefs,52,65534,2 fixed incidences,yes,SmartShapeOptions or LineCurveOptions,original branch and current,field layout remains source-derived
+TiePlacementPrefs,85,65534,4 fixed incidences,yes,TieOptions,original branch and current,field layout remains source-derived
+TieContourPrefs,86,65534,5 fixed incidences,yes,TieOptions,original branch and current,field layout remains source-derived
+GridsGuidesPrefs,88,65534,11 fixed incidences,yes,unsupported document guide settings,original branch and current,field layout remains source-derived
+StemConnectionTable,40,65534,variable incidence collection,yes,StemOptions,original branch and current,element layout changes before Finale 2012 versus Finale 2012 and later

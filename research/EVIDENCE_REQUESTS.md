@@ -93,6 +93,23 @@ preserve the MUS file and record that fact rather than exporting it through a la
 suffixed copy in Finale 27 and record the result. This is the highest-value test of whether the 1.8.7–2.6 fixed-row/
 indexed model and verified Finale 27 compatibility extend to the first release.
 
+### C6 — Proposed — essential for option-map verification
+
+In Finale 2000 or Finale 2005, create one no-libraries baseline document and save both MUS and ETF. From the same
+baseline, create five copies that each change exactly one visible option, then save MUS and ETF without allowing other
+automatic layout changes:
+
+1. music-spacing minimum width (`^94(65534)`, incident 0, word slot 1);
+2. right tie thickness (`^84(65534)`, incident 0, word slot 0);
+3. score page width (`^15(65534)`, incident 0, word slots 2–3, Mac high-word first);
+4. forward-repeat spacing (`^70(65534)`, incident 0, word slot 4); and
+5. show fretboards (`^41(65534)`, incident 0, word slot 2).
+
+Use distinctive nondefault values and record the exact UI value, Finale version/build, and platform for each copy.
+Store publishable pairs under `tests/evidence/options/<version>/`. This is the smallest high-value test of the
+private-framework-derived mappings and exercises two-byte, four-byte, numeric, boolean, and five separate musxdom
+destinations.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.
