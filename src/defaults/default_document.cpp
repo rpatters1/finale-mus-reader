@@ -16,6 +16,18 @@
 #include "embedded_default.h"
 #include "musx/musx.h"
 
+#ifndef MUSX_USE_PUGIXML
+#define MUSX_USE_PUGIXML
+#define FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
+#endif
+
+#include "musx/xml/PugiXmlImpl.h"
+
+#ifdef FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
+#undef MUSX_USE_PUGIXML
+#undef FINALE_MUS_READER_UNDEFINE_MUSX_USE_PUGIXML
+#endif
+
 namespace finale_mus_reader {
 namespace defaults {
 namespace {
@@ -132,10 +144,10 @@ std::shared_ptr<musx::dom::Document> createMacOSOptionsDocument(
     if (sourcePath) {
         musx::factory::DocumentFactory::CreateOptions createOptions(
             *sourcePath, {}, {});
-        return musx::factory::DocumentFactory::create<musx::xml::rapidxml::Document>(
+        return musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
             optionsOnlyXml(), std::move(createOptions));
     }
-    return musx::factory::DocumentFactory::create<musx::xml::rapidxml::Document>(
+    return musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
         optionsOnlyXml());
 }
 

@@ -64,9 +64,28 @@ if(NOT TARGET ZLIB::ZLIB)
 endif()
 message(STATUS "Legacy Finale MUS Reader zlib target: ${FINALE_MUS_READER_ZLIB_TARGET}")
 
+if(TARGET pugixml)
+    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
+elseif(TARGET pugixml::pugixml)
+    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml::pugixml)
+else()
+    set(PUGIXML_BUILD_TESTS OFF CACHE BOOL "Do not build pugixml tests")
+    FetchContent_Declare(pugixml
+        URL https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz
+        URL_HASH SHA256=655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_MakeAvailable(pugixml)
+    set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
+endif()
+message(STATUS
+    "Legacy Finale MUS Reader pugixml target: ${FINALE_MUS_READER_PUGIXML_TARGET}")
+
 if(NOT TARGET musx)
     set(musx_BUILD_TESTING OFF CACHE BOOL "Do not build musxdom tests" FORCE)
-    set(MUSX_USE_RAPIDXML ON CACHE BOOL "Use musxdom's bundled RapidXML backend" FORCE)
+    set(MUSX_USE_TINYXML2 OFF CACHE BOOL "Do not enable musxdom TinyXML2 support" FORCE)
+    set(MUSX_USE_RAPIDXML OFF CACHE BOOL "Do not enable musxdom RapidXML support" FORCE)
+    set(MUSX_USE_PUGIXML OFF CACHE BOOL "Do not propagate musxdom pugixml support" FORCE)
+    set(MUSX_USE_QTXML OFF CACHE BOOL "Do not enable musxdom QtXML support" FORCE)
 
     if(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR)
         get_filename_component(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR
@@ -76,8 +95,7 @@ if(NOT TARGET musx)
             message(FATAL_ERROR
                 "FINALE_MUS_READER_MUSXDOM_SOURCE_DIR is not a musxdom source tree")
         endif()
-        set(FINALE_MUS_READER_MUSXDOM_ROOT "${FINALE_MUS_READER_MUSXDOM_SOURCE_DIR}")
-        add_subdirectory("${FINALE_MUS_READER_MUSXDOM_ROOT}"
+        add_subdirectory("${FINALE_MUS_READER_MUSXDOM_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}/_deps/musxdom-build")
     else()
         FetchContent_Declare(musxdom
@@ -85,18 +103,7 @@ if(NOT TARGET musx)
             GIT_TAG 56241cc67eff340b1899be029aaae6927824593b
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
-        set(FINALE_MUS_READER_MUSXDOM_ROOT "${musxdom_SOURCE_DIR}")
     endif()
-elseif(MUSX_ROOT_DIR)
-    set(FINALE_MUS_READER_MUSXDOM_ROOT "${MUSX_ROOT_DIR}")
-elseif(NOT FINALE_MUS_READER_MUSXDOM_SOURCE_DIR)
-    message(FATAL_ERROR
-        "A pre-existing musx target must expose MUSX_ROOT_DIR or be accompanied by "
-        "FINALE_MUS_READER_MUSXDOM_SOURCE_DIR so RapidXML headers can be located")
-else()
-    get_filename_component(FINALE_MUS_READER_MUSXDOM_ROOT
-        "${FINALE_MUS_READER_MUSXDOM_SOURCE_DIR}" ABSOLUTE
-        BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
 add_library(finale_mus_reader STATIC
@@ -113,11 +120,13 @@ target_include_directories(finale_mus_reader
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/blast"
-        "${FINALE_MUS_READER_MUSXDOM_ROOT}/third_party/rapidxml")
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/blast")
 
-target_link_libraries(finale_mus_reader PUBLIC musx PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
-target_compile_definitions(finale_mus_reader PRIVATE MUSX_USE_RAPIDXML)
+target_link_libraries(finale_mus_reader
+    PUBLIC musx
+    PRIVATE
+        ${FINALE_MUS_READER_PUGIXML_TARGET}
+        ${FINALE_MUS_READER_ZLIB_TARGET})
 
 if(MSVC)
     target_compile_options(finale_mus_reader PRIVATE /W4 /WX)

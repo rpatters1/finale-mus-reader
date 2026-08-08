@@ -119,6 +119,12 @@ reader reuses that target before considering either option. Its FetchContent
 dependency is also named `zlib` and uses the same release and hash as denigma,
 so a parent that fetches both projects builds zlib only once.
 
+The reader uses pugixml exclusively for musxdom parsing. It reuses denigma's
+`pugixml` target or fetches the same pugixml 1.15 release. The
+`MUSX_USE_PUGIXML` backend definition is confined to the implementation
+translation unit that parses the fallback document; it is not propagated to
+clients of this library. RapidXML, TinyXML2, and QtXML remain disabled.
+
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.
 

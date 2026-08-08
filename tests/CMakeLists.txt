@@ -4,9 +4,6 @@ target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader
     ZLIB::ZLIB)
 
-target_include_directories(finale_mus_reader_tests PRIVATE
-    "${FINALE_MUS_READER_MUSXDOM_ROOT}/third_party/rapidxml")
-
 target_compile_definitions(finale_mus_reader_tests PRIVATE
     FINALE_MUS_READER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
