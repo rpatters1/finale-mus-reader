@@ -95,6 +95,13 @@ add_library(finale_mus_reader STATIC
     third_party/blast/blast.c)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 
+if(MSVC)
+    # Keep upstream C warnings visible without making the unmodified vendored
+    # blast source subject to the project's warnings-as-errors policy.
+    set_source_files_properties(third_party/blast/blast.c PROPERTIES
+        COMPILE_OPTIONS /WX-)
+endif()
+
 target_include_directories(finale_mus_reader
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
