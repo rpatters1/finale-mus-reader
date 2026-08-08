@@ -1,0 +1,94 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux / GCC
+            os: ubuntu-latest
+            cCompiler: gcc
+            cxxCompiler: g++
+          - name: macOS / AppleClang
+            os: macos-latest
+            cCompiler: clang
+            cxxCompiler: clang++
+          - name: Windows / MSVC
+            os: windows-latest
+            cCompiler: cl
+            cxxCompiler: cl
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y g++ ninja-build
+
+      - name: Install Ninja on macOS
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Ninja on Windows
+        if: runner.os == 'Windows'
+        run: choco install ninja -y
+
+      - name: Display build tools
+        run: |
+          cmake --version
+          ninja --version
+
+      - name: Verify embedded defaults
+        run: python scripts/generate_embedded_defaults.py --check
+
+      - name: Configure CMake
+        if: runner.os != 'Windows'
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=${{ matrix.cCompiler }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
+
+      - name: Configure CMake on Windows
+        if: runner.os == 'Windows'
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=${{ matrix.cCompiler }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure

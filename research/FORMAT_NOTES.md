@@ -210,6 +210,11 @@ empty `0x0013`. Therefore the earlier interpretation of `0x0012` itself as a ter
 `0x0012` members are variable-length and follow the entry pool; text/lyrics are the leading interpretation, but
 their internal organization remains open.
 
+**Confirmed in the controlled Finale 2002–2005 baselines.** Each empty final pool marker is followed by the same
+eight-byte trailer, `ff ff ff ff 01 04 01 ff`. The trailer is outside the marker's declared six-byte size. Its
+meaning is open; readers should preserve/report it as trailing framing data rather than treating it as another typed
+block or requiring the empty marker itself to end at EOF.
+
 ## Public Finale 2000 PDK evidence
 
 **Public-PDK-derived, with the physical framing independently binary-verified.** On 2026-08-08 the project adopted
