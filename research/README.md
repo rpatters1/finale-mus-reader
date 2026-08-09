@@ -68,6 +68,7 @@ The survey workflow and commands are documented in
 - [EVIDENCE_REQUESTS.md](EVIDENCE_REQUESTS.md): precise ETF and controlled-difference requests.
 - [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md): commands, observations, failed hypotheses, and follow-ups.
 - [FEASIBILITY_ASSESSMENT.md](FEASIBILITY_ASSESSMENT.md): direct recommendation, risks, architecture, and next steps.
+- [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md): prioritized blockers and gaps between the current vertical slice and a production importer.
 - [REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md): corpus mapping conventions and reproducible commands.
 
 Public references used in the initial clean-room search include Mark Adler's permissively licensed `blast` decoder, the

@@ -71,17 +71,27 @@ and recovered header rather than being mislabeled as a known epoch.
 ## Default-document design
 
 The library does not parse the full default document and then clear its score
-pools. Instead, it inflates the embedded macOS baseline and assembles a small
-EnigmaXML document in memory from:
+pools, and it does not construct a fallback document at all. It owns its own
+document factory, built on musxdom's client construction interface:
 
-- the complete `<options>` element;
-- an empty header that is replaced with recovered MUS header data; and
-- an explicit allowlist of option-like `<others>`, currently the four
-  `layerAtts` elements.
+1. `DocumentFactory::begin` starts a construction session for an empty document.
+2. The pinned baseline matching the recovered source platform is inflated and
+   parsed once with the caller's XML backend; an unknown source platform falls
+   back to macOS, and `ImportReport::defaultsPlatform` reports which baseline was
+   actually used. Its complete `<options>` element seeds the options pool, and its
+   `<others>` element seeds the others pool under a `musx::factory::NodeFilter`
+   that accepts an explicit allowlist of option-like nodes, currently the four
+   `layerAtts` elements. The reader never processes EnigmaXML as text: the
+   remaining 123 children of `<others>` are simply never created.
+3. The header recovered from the MUS banner replaces the empty session header.
+4. Every confidently decoded legacy value is overlaid onto the seeded objects.
+5. `finish` hands the document to musxdom, which validates the pools and runs
+   its resolvers once, after the overlays are in place.
 
-musxdom's `DocumentFactory` constructs that reduced document once. This avoids
-reparenting DOM objects and prevents fallback measures, staves, entries, text,
-parts, layouts, or derived instrument state from leaking into the result.
+Because the imported document is the only document the reader ever builds, no
+fallback owner exists for the options it carries, and fallback measures, staves,
+entries, text, parts, layouts, or derived instrument state cannot leak into the
+result.
 
 The embedded byte array is generated only when its authoritative gzip resource
 changes. Regenerate it with:
@@ -121,8 +131,10 @@ so a parent that fetches both projects builds zlib only once.
 
 The library does not select, fetch, link, or enable an XML implementation.
 `Reader::read` is templated on a concrete implementation of
-`musx::xml::IXmlDocument`, in parallel with musxdom's `DocumentFactory`. Only
-the tests fetch pugixml and instantiate the reader with its musxdom adapter.
+`musx::xml::IXmlDocument`, in parallel with musxdom's `DocumentFactory`. The
+template supplies only a parser for the pinned default EnigmaXML fragments; the
+reader's own document factory performs construction. Only the tests fetch
+pugixml and instantiate the reader with its musxdom adapter.
 
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.

@@ -7,20 +7,19 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <string>
-#include <string_view>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
-// DocumentFactory's transitive DOM headers use these constants without
-// including their defining header.
-#include "music_theory/music_theory.hpp"
-#include "musx/factory/DocumentFactory.h"
+#include "musx/dom/Document.h"
 #include "musx/xml/XmlInterface.h"
 
 namespace finale_mus_reader {
+
+/// @brief Parses an EnigmaXML fragment with the XML backend selected by the caller.
+/// @details The reader owns document construction and only needs the caller's backend
+/// to turn pinned default EnigmaXML into elements the musxdom pool factories accept.
+using XmlParser = std::unique_ptr<musx::xml::IXmlDocument> (*)(const char* data, std::size_t size);
 
 enum class FormatEpoch
 {
@@ -75,6 +74,10 @@ struct ImportReport
     FormatEpoch formatEpoch = FormatEpoch::Unknown;
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform sourcePlatform = SourcePlatform::Unknown;
+    /// @brief The pinned Finale 27 baseline that supplied the synthesized defaults.
+    /// @details Never `Unknown`: a baseline is always selected, matching
+    /// #sourcePlatform when that is known.
+    SourcePlatform defaultsPlatform = SourcePlatform::MacOS;
     std::size_t sourceSize{};
     std::string banner;
     std::string savingProduct;
@@ -95,46 +98,36 @@ public:
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::filesystem::path& path)
     {
-        return readWithCreator(path, &createDocument<XmlDocumentType>);
+        return readWithParser(path, &parseXml<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data)
     {
-        return readWithCreator(data.data(), data.size(), &createDocument<XmlDocumentType>);
+        return readWithParser(data.data(), data.size(), &parseXml<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size)
     {
-        return readWithCreator(data, size, &createDocument<XmlDocumentType>);
+        return readWithParser(data, size, &parseXml<XmlDocumentType>);
     }
 
 private:
-    using DocumentCreator = std::shared_ptr<musx::dom::Document> (*)(
-        std::string_view, const std::optional<std::filesystem::path>&);
-
     template <typename XmlDocumentType>
-    static std::shared_ptr<musx::dom::Document> createDocument(
-        std::string_view xml, const std::optional<std::filesystem::path>& sourcePath)
+    static std::unique_ptr<musx::xml::IXmlDocument> parseXml(const char* data, std::size_t size)
     {
         static_assert(std::is_base_of_v<musx::xml::IXmlDocument, XmlDocumentType>,
             "XmlDocumentType must derive from musx::xml::IXmlDocument");
 
-        if (sourcePath) {
-            musx::factory::DocumentFactory::CreateOptions createOptions(
-                *sourcePath, {}, {});
-            return musx::factory::DocumentFactory::create<XmlDocumentType>(
-                xml.data(), xml.size(), std::move(createOptions));
-        }
-        return musx::factory::DocumentFactory::create<XmlDocumentType>(
-            xml.data(), xml.size());
+        auto xmlDocument = std::make_unique<XmlDocumentType>();
+        xmlDocument->loadFromBuffer(data, size);
+        return xmlDocument;
     }
 
-    static ImportResult readWithCreator(
-        const std::filesystem::path& path, DocumentCreator documentCreator);
-    static ImportResult readWithCreator(
-        const std::uint8_t* data, std::size_t size, DocumentCreator documentCreator);
+    static ImportResult readWithParser(const std::filesystem::path& path, XmlParser parseXml);
+    static ImportResult readWithParser(
+        const std::uint8_t* data, std::size_t size, XmlParser parseXml);
 };
 
 } // namespace finale_mus_reader

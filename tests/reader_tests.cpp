@@ -254,6 +254,18 @@ void expectNoScoreContent(const ImportResult& result)
         "Output contains fallback pages");
     expect(result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID).empty(),
         "Output contains fallback part definitions");
+    // The pinned <others> element has 127 direct children; only the four layerAtts are
+    // allowlisted. These are the most numerous of the rest.
+    expect(result.document->getOthers()->getArray<others::FontDefinition>(SCORE_PARTID).empty(),
+        "Output contains fallback font definitions");
+    expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).empty(),
+        "Output contains fallback marking categories");
+    expect(result.document->getOthers()->getArray<others::ShapeDef>(SCORE_PARTID).empty(),
+        "Output contains fallback shape definitions");
+    expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(),
+        "Output contains fallback text blocks");
+    expect(result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(),
+        "Output contains fallback measure number regions");
     expect(!result.document->getEntries()->get(1), "Output contains fallback entries");
     expect(result.document->getInstruments().empty(), "Output contains fallback instruments");
     expect(result.document->getOthers()->getArray<others::LayerAttributes>(SCORE_PARTID).size() == 4,
@@ -271,6 +283,8 @@ void testControlledDclFile()
         "F2002 fixture byte order was not recovered");
     expect(result.report.sourcePlatform == SourcePlatform::MacOS,
         "F2002 fixture platform was not recovered");
+    expect(result.report.defaultsPlatform == SourcePlatform::MacOS,
+        "F2002 fixture was not seeded from the macOS baseline");
     expect(result.report.savingProduct == "2002", "F2002 product was not recovered");
     expect(result.report.blocks.size() == 4, "F2002 block count is incorrect");
     expect(std::all_of(result.report.blocks.begin(), result.report.blocks.begin() + 3,
@@ -295,6 +309,33 @@ void testControlledDclFile()
         "F2002 music spacing overlay was not reported as recovered");
     expectCompleteOptions(result);
     expectNoScoreContent(result);
+}
+
+void testIndependentImportedDocuments()
+{
+    // The reader builds each document with its own construction session, so no pinned
+    // fallback document can remain the owner of options placed in an imported document.
+    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F2002/F2002-baseline.mus";
+    const auto first = Reader::read<TestXmlDocument>(path);
+    const auto second = Reader::read<TestXmlDocument>(path);
+    expect(first.document != second.document, "Both reads returned the same document");
+
+    const auto firstSpacing = first.document->getOptions()
+        ->get<musx::dom::options::MusicSpacingOptions>();
+    const auto secondSpacing = second.document->getOptions()
+        ->get<musx::dom::options::MusicSpacingOptions>();
+    expect(firstSpacing && secondSpacing, "Music spacing options were not seeded");
+    expect(firstSpacing.get() != secondSpacing.get(),
+        "Imported documents share a music spacing options instance");
+
+    const auto firstLayer = first.document->getOthers()
+        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
+    const auto secondLayer = second.document->getOthers()
+        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
+    expect(firstLayer && secondLayer, "Layer attributes were not seeded");
+    expect(firstLayer.get() != secondLayer.get(),
+        "Imported documents share a layer attributes instance");
 }
 
 void testControlledDclVersions()
@@ -328,6 +369,8 @@ void testUncompressedEpochAndOverlays()
         "Synthetic Windows byte order was not detected");
     expect(result.report.sourcePlatform == SourcePlatform::Windows,
         "Synthetic Windows platform was not recovered");
+    expect(result.report.defaultsPlatform == SourcePlatform::Windows,
+        "Windows-sourced file was not seeded from the Windows baseline");
     const auto layer = result.document->getOthers()
         ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 3);
     expect(layer && layer->restOffset == -14, "Legacy layer attribute overlay failed");
@@ -337,6 +380,7 @@ void testUncompressedEpochAndOverlays()
         "Uncompressed music spacing overlay failed");
     expect(field(result, "others.layerAtts[3].restOffset").origin == ValueOrigin::LegacyMus,
         "Layer overlay was not reported as recovered");
+    expectCompleteOptions(result);
     expectNoScoreContent(result);
 }
 
@@ -350,6 +394,9 @@ void testPreBannerEpoch()
         "Synthetic pre-banner file was not classified");
     expect(result.report.byteOrder == ByteOrder::Unknown,
         "Unresolved pre-banner byte order was overstated");
+    expect(result.report.sourcePlatform == SourcePlatform::Unknown
+        && result.report.defaultsPlatform == SourcePlatform::MacOS,
+        "An unknown source platform did not fall back to the macOS baseline");
     expect(!result.report.warnings.empty(), "Pre-banner limitation was not reported");
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
@@ -391,6 +438,7 @@ int main()
 {
     try {
         testControlledDclFile();
+        testIndependentImportedDocuments();
         testControlledDclVersions();
         testUncompressedEpochAndOverlays();
         testPreBannerEpoch();

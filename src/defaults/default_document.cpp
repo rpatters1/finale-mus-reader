@@ -8,30 +8,56 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <string_view>
-#include <vector>
+#include <utility>
 
 #include <zlib.h>
 
 #include "embedded_default.h"
+#include "musx/dom/Others.h"
 
 namespace finale_mus_reader {
 namespace defaults {
 namespace {
 
-constexpr std::size_t expectedMacOSXmlSize = 91059;
 constexpr std::size_t maximumDefaultXmlSize = 1024U * 1024U;
 
-std::string inflateDefault()
+// One pinned platform baseline: its embedded gzip bytes and the exact size the
+// inflated EnigmaXML must have.
+struct EmbeddedBaseline
 {
-    if (generated::macosDefaultGzipSize > UINT_MAX) {
+    const std::uint8_t* gzip;
+    std::size_t gzipSize;
+    std::size_t expectedXmlSize;
+    const char* name;
+};
+
+constexpr EmbeddedBaseline macOSBaseline{
+    generated::macosDefaultGzip, 0, 91059, "macOS"};
+constexpr EmbeddedBaseline windowsBaseline{
+    generated::windowsDefaultGzip, 0, 86844, "Windows"};
+
+EmbeddedBaseline selectBaseline(SourcePlatform platform)
+{
+    // A source-platform match is preferred. An unknown platform falls back to macOS
+    // because that is the baseline the reader was first validated against.
+    auto baseline = platform == SourcePlatform::Windows ? windowsBaseline : macOSBaseline;
+    if (platform == SourcePlatform::Windows) {
+        baseline.gzipSize = generated::windowsDefaultGzipSize;
+    } else {
+        baseline.gzipSize = generated::macosDefaultGzipSize;
+    }
+    return baseline;
+}
+
+std::string inflateDefault(const EmbeddedBaseline& baseline)
+{
+    if (baseline.gzipSize > UINT_MAX) {
         throw std::runtime_error("Embedded default gzip exceeds zlib's input limit");
     }
 
     z_stream stream{};
-    stream.next_in = const_cast<Bytef*>(
-        reinterpret_cast<const Bytef*>(generated::macosDefaultGzip));
-    stream.avail_in = static_cast<uInt>(generated::macosDefaultGzipSize);
+    stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(baseline.gzip));
+    stream.avail_in = static_cast<uInt>(baseline.gzipSize);
     if (inflateInit2(&stream, 15 + 16) != Z_OK) {
         throw std::runtime_error("Unable to initialize gzip inflation for the embedded default");
     }
@@ -53,75 +79,68 @@ std::string inflateDefault()
 
     const bool valid = result == Z_STREAM_END && stream.avail_in == 0;
     inflateEnd(&stream);
-    if (!valid || output.size() != expectedMacOSXmlSize) {
-        throw std::runtime_error("Embedded Finale 27 macOS default failed integrity validation");
+    if (!valid || output.size() != baseline.expectedXmlSize) {
+        throw std::runtime_error(std::string("Embedded Finale 27 ") + baseline.name
+            + " default failed integrity validation");
     }
     return output;
 }
 
-std::string_view extractElement(std::string_view xml, std::string_view nodeName)
+const std::string& defaultXml(SourcePlatform platform)
 {
-    const std::string opening = "<" + std::string(nodeName) + ">";
-    const std::string closing = "</" + std::string(nodeName) + ">";
-    const auto begin = xml.find(opening);
-    if (begin == std::string_view::npos) {
-        throw std::runtime_error("Embedded default is missing <" + std::string(nodeName) + ">");
-    }
-    const auto close = xml.find(closing, begin + opening.size());
-    if (close == std::string_view::npos) {
-        throw std::runtime_error("Embedded default has an unterminated <" + std::string(nodeName) + ">");
-    }
-    return xml.substr(begin, close + closing.size() - begin);
+    static const std::string macOS = inflateDefault(selectBaseline(SourcePlatform::MacOS));
+    static const std::string windows = inflateDefault(selectBaseline(SourcePlatform::Windows));
+    return platform == SourcePlatform::Windows ? windows : macOS;
 }
 
-std::vector<std::string_view> extractLayerAttributes(std::string_view xml)
+musx::xml::XmlElementPtr requireChild(
+    const musx::xml::XmlElementPtr& parent, const std::string& nodeName)
 {
-    const auto others = extractElement(xml, "others");
-    constexpr std::string_view opening = "<layerAtts ";
-    constexpr std::string_view closing = "</layerAtts>";
-    std::vector<std::string_view> result;
-    std::size_t offset = 0;
-    while (true) {
-        const auto begin = others.find(opening, offset);
-        if (begin == std::string_view::npos) {
-            break;
-        }
-        const auto close = others.find(closing, begin + opening.size());
-        if (close == std::string_view::npos) {
-            throw std::runtime_error("Embedded default has an unterminated <layerAtts>");
-        }
-        result.push_back(others.substr(begin, close + closing.size() - begin));
-        offset = close + closing.size();
+    auto child = parent->getFirstChildElement(nodeName);
+    if (!child) {
+        throw std::runtime_error("Embedded default is missing <" + nodeName + ">");
     }
-    if (result.size() != 4) {
-        throw std::runtime_error("Embedded default must contain exactly four layer attributes");
+    return child;
+}
+
+std::size_t countAccepted(
+    const musx::xml::XmlElementPtr& parent, const musx::factory::NodeFilter& filter)
+{
+    std::size_t result = 0;
+    for (auto child = parent->getFirstChildElement(); child; child = child->getNextSibling()) {
+        if (filter(child)) {
+            ++result;
+        }
     }
     return result;
 }
 
 } // namespace
 
-const std::string& macOSOptionsXml()
+ParsedDefaultDocument parseDefault(XmlParser parseXml, SourcePlatform platform)
 {
-    static const std::string result = [] {
-        const auto source = inflateDefault();
-        const auto options = extractElement(source, "options");
-        const auto layers = extractLayerAttributes(source);
+    constexpr std::size_t expectedLayerAttributes = 4;
 
-        std::string xml;
-        xml.reserve(options.size() + 4096);
-        xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        xml += "<finale version=\"27.4\" xmlns=\"http://www.makemusic.com/2012/finale\">\n";
-        xml += "<header><headerData/></header>\n";
-        xml.append(options);
-        xml += "\n<others>\n";
-        for (const auto layer : layers) {
-            xml.append(layer);
-            xml += '\n';
-        }
-        xml += "</others>\n</finale>\n";
-        return xml;
-    }();
+    ParsedDefaultDocument result;
+    result.platform = platform == SourcePlatform::Windows
+        ? SourcePlatform::Windows : SourcePlatform::MacOS;
+    const auto& xml = defaultXml(result.platform);
+    result.xmlDocument = parseXml(xml.data(), xml.size());
+    const auto root = result.xmlDocument ? result.xmlDocument->getRootElement() : nullptr;
+    if (!root || root->getTagName() != "finale") {
+        throw std::runtime_error("Embedded default is missing its <finale> element");
+    }
+
+    result.options = requireChild(root, "options");
+    result.others = requireChild(root, "others");
+    // This allowlist is what keeps the fallback measures, staves, entries, text, parts,
+    // and layouts of the baseline out of an imported document.
+    result.optionLikeOthers = [](const musx::xml::XmlElementPtr& node) {
+        return node->getTagName() == musx::dom::others::LayerAttributes::XmlNodeName;
+    };
+    if (countAccepted(result.others, result.optionLikeOthers) != expectedLayerAttributes) {
+        throw std::runtime_error("Embedded default must contain exactly four layer attributes");
+    }
     return result;
 }
 

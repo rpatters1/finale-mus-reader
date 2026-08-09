@@ -87,7 +87,7 @@ if(NOT TARGET musx)
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 56241cc67eff340b1899be029aaae6927824593b
+            GIT_TAG 3df76025fd764478c1b7c99d4e97b10b4d8b5653
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
     endif()
@@ -109,6 +109,7 @@ add_library(finale_mus_reader STATIC
     src/container/mus_container.cpp
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
+    src/import/document_factory.cpp
     src/import/reader.cpp
     src/records/legacy_others.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
