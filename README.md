@@ -151,9 +151,39 @@ const auto& report = result.report;
 ```
 
 `ImportReport` identifies the selected epoch, byte order, source platform,
-validated blocks, warnings, and the origin of each currently supported option
-overlay. The physical record index and overlay layer are separate so additional
-record mappings can be added without changing container decoding.
+recovered Finale version, validated blocks, warnings, and the origin of each
+currently supported option overlay. The physical record index and overlay layer
+are separate so additional record mappings can be added without changing
+container decoding.
+
+## Field mappings
+
+Legacy values are not read by hand-written per-field code. Through Finale 2006
+the option and other pools resolve to fixed 16-byte Enigma rows, so the reader
+presents each `(tag, cmper)` record family as a word stream and describes every
+mapped field in a table:
+
+```cpp
+const FieldMapping spacingFields[] = {
+    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, minWidth),
+    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, maxWidth),
+};
+```
+
+One table corresponds to one musxdom class. A generic engine applies them all,
+records where each recovered value came from, and reports every unmapped field at
+its synthesized default. Adding a mapping means adding a row.
+
+Word indices are absolute across incidences, so a four-byte value whose two words
+straddle an incidence boundary resolves without special handling. Tables declare
+which format epochs and Finale versions they apply to; several tables may target
+the same class, and a later one supersedes an earlier row for the same field, so
+a field that moves in a later version costs a one-row override rather than a
+restated table.
+
+Only mappings verified against controlled fixtures are compiled in. The distilled
+but unverified locations in `research/data/legacy_option_mappings.csv` are
+evidence, not a runtime schema.
 
 ## License
 

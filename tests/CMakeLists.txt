@@ -1,9 +1,14 @@
-add_executable(finale_mus_reader_tests reader_tests.cpp)
+add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader
     ${FINALE_MUS_READER_TEST_PUGIXML_TARGET}
     ZLIB::ZLIB)
+
+# The mapping framework is internal, so its tests reach into the private source tree
+# rather than driving every case through a synthetic MUS file.
+target_include_directories(finale_mus_reader_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE
     FINALE_MUS_READER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

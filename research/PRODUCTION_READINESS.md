@@ -208,7 +208,29 @@ records later. Clear the references instead, so the document does not claim
 shapes it lacks, or leave them until shapes are decoded from the source. Lower
 priority than fonts only because nothing throws.
 
-### P2.3 musxdom dependency pin
+### P2.3 Early version ordering is ambiguous, and pre-banner files have no version
+
+**Status:** open. **Confidence:** confirmed for the mechanism, `open` for the boundaries.
+
+Mapping rows are gated on the version embedded in the file, which is decoded from the
+banner header tuple as major.minor.maint.build. Two limits are known:
+
+- **Major alone does not order Finale's history.** Finale 98 is believed to be major 4
+  and Finale 97 major 3, which collides with the Finale 3.x line. The gate therefore
+  orders on major *then minor*, but the actual early boundaries are unverified. Confirm
+  what Finale 97 and 98 record before writing any gate below major 5. The corpus holds
+  Finale 97 files; Finale 98 may be absent entirely.
+- **Pre-banner files carry no recoverable version.** They have no banner, so
+  `ImportReport::sourceVersion` is absent and only ungated rows can apply to them.
+  Whether a version lives elsewhere in those files is unknown and needs its own
+  investigation.
+
+A third limit is untested rather than unknown: every controlled fixture is big-endian,
+so whether a little-endian file stores the header tuple byte-reversed has never been
+exercised. The reader warns when the major version falls outside 0-27 and notes when the
+low byte holds a plausible major instead, which is the signature that case would produce.
+
+### P2.4 musxdom dependency pin
 
 **Status:** done 2026-08-09. **Confidence:** confirmed.
 

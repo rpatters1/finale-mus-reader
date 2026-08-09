@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -50,6 +51,24 @@ enum class ValueOrigin
     Finale27Default
 };
 
+/// @brief A Finale version recorded in the file header.
+/// @details The header stores each version as a 32-bit value packed one byte per
+/// component: major, minor, maint, build. Finale 2002 records `0x07010401` as its
+/// application version, which Finale 27 renders as 7.1.4.1 when it converts a legacy
+/// file. Major versions run 0-27 across Finale's history.
+///
+/// The runtime version Finale reports to plug-ins packs the same components
+/// differently, placing the minor version in bits 23-20. Do not compare a value from
+/// this struct against a runtime version constant.
+struct SourceVersion
+{
+    std::uint32_t raw{};
+    std::uint8_t major{};
+    std::uint8_t minor{};
+    std::uint8_t maint{};
+    std::uint8_t build{};
+};
+
 struct BlockInfo
 {
     std::uint16_t type{};
@@ -78,6 +97,12 @@ struct ImportReport
     /// @details Never `Unknown`: a baseline is always selected, matching
     /// #sourcePlatform when that is known.
     SourcePlatform defaultsPlatform = SourcePlatform::MacOS;
+    /// @brief The Enigma version recorded by the last application to save the file.
+    /// @details Absent when the file has no banner, or when the recovered major version
+    /// falls outside Finale's 0-27 range, which means the header layout was not what was
+    /// expected. Mapping rows that are gated to a version range apply only when this is
+    /// present.
+    std::optional<SourceVersion> sourceVersion;
     std::size_t sourceSize{};
     std::string banner;
     std::string savingProduct;

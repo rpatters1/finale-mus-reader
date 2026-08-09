@@ -12,7 +12,8 @@
 #include <utility>
 
 #include "defaults/default_document.h"
-#include "records/legacy_others.h"
+#include "import/legacy_mapping.h"
+#include "records/legacy_record_index.h"
 #include "musx/factory/DocumentFactory.h"
 #include "musx/factory/PoolFactory.h"
 #include "musx/musx.h"
@@ -72,12 +73,39 @@ musx::dom::header::Platform toDomPlatform(SourcePlatform platform)
     return musx::dom::header::Platform::Other;
 }
 
-void populateVersion(const std::uint8_t* raw, musx::dom::header::FinaleVersion& version)
+// Finale's complete history spans major versions 0 through 27. A first byte outside
+// that range means the tuple is not where it was expected.
+constexpr std::uint8_t maximumMajorVersion = 27;
+
+// Each header version is a 32-bit value packed one byte per component. Finale 2002
+// records 0x07010401 as its application version, which Finale 27 renders as 7.1.4.1
+// when it converts a legacy file.
+SourceVersion decodeVersion(const std::uint8_t* raw)
 {
-    // The first two bytes are consistently the internal major/minor pair. The
-    // remaining tuple packing is still open, so do not label it maint/build.
+    SourceVersion version;
+    version.raw = (static_cast<std::uint32_t>(raw[0]) << 24U)
+        | (static_cast<std::uint32_t>(raw[1]) << 16U)
+        | (static_cast<std::uint32_t>(raw[2]) << 8U)
+        | raw[3];
     version.major = raw[0];
     version.minor = raw[1];
+    version.maint = raw[2];
+    version.build = raw[3];
+    return version;
+}
+
+void populateVersion(const std::uint8_t* raw, musx::dom::header::FinaleVersion& version)
+{
+    const auto decoded = decodeVersion(raw);
+    version.major = decoded.major;
+    version.minor = decoded.minor;
+    // Finale omits these from EnigmaXML when they are zero, so match that convention.
+    if (decoded.maint != 0) {
+        version.maint = decoded.maint;
+    }
+    if (decoded.build != 0) {
+        version.build = decoded.build;
+    }
 }
 
 musx::dom::header::FileInfo parseFileInfo(
@@ -142,97 +170,6 @@ void seedPinnedDefaults(
         pinned.others, document, pinned.optionLikeOthers);
 }
 
-FieldInfo makeDefaultField(const std::string& target, std::int64_t value)
-{
-    FieldInfo result;
-    result.target = target;
-    result.rawValue = value;
-    return result;
-}
-
-void initializeSupportedFields(const musx::dom::DocumentPtr& document, ImportReport& report)
-{
-    for (musx::dom::Cmper layerId = 0; layerId < 4; ++layerId) {
-        const auto layer = document->getOthers()->get<musx::dom::others::LayerAttributes>(
-            musx::dom::SCORE_PARTID, layerId);
-        if (!layer) {
-            throw std::runtime_error("Pinned default is missing a layer attribute");
-        }
-        report.fields.push_back(makeDefaultField(
-            "others.layerAtts[" + std::to_string(layerId) + "].restOffset",
-            layer->restOffset));
-    }
-
-    const auto spacing = document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
-    if (!spacing) {
-        throw std::runtime_error("Pinned default is missing music spacing options");
-    }
-    report.fields.push_back(makeDefaultField("options.musicSpacing.minWidth", spacing->minWidth));
-    report.fields.push_back(makeDefaultField("options.musicSpacing.maxWidth", spacing->maxWidth));
-    report.fields.push_back(makeDefaultField("options.musicSpacing.minDistance", spacing->minDistance));
-    report.fields.push_back(makeDefaultField(
-        "options.musicSpacing.minDistTiedNotes", spacing->minDistTiedNotes));
-}
-
-void markRecovered(ImportReport& report, const std::string& target,
-    const records::LegacyOther& record, std::int64_t value)
-{
-    const auto found = std::find_if(report.fields.begin(), report.fields.end(),
-        [&](const FieldInfo& field) { return field.target == target; });
-    if (found == report.fields.end()) {
-        throw std::logic_error("Recovered field was not registered as a supported overlay");
-    }
-    found->origin = ValueOrigin::LegacyMus;
-    found->blockOffset = record.blockOffset;
-    found->decodedOffset = record.decodedOffset;
-    found->rawValue = value;
-}
-
-void overlayLegacyOthers(const container::ParsedContainer& parsed,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
-{
-    const auto others = records::decodeLegacyOthers(parsed);
-    auto spacingInstance = document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
-    if (!spacingInstance) {
-        throw std::runtime_error("Pinned default is missing music spacing options");
-    }
-    auto* spacing = const_cast<musx::dom::options::MusicSpacingOptions*>(spacingInstance.get());
-
-    for (const auto& record : others) {
-        if (record.tag == "LA" && record.incident == 0 && record.cmper < 4) {
-            auto layerInstance = document->getOthers()->get<musx::dom::others::LayerAttributes>(
-                musx::dom::SCORE_PARTID, record.cmper);
-            if (!layerInstance) {
-                throw std::runtime_error("Pinned default is missing a layer attribute");
-            }
-            const auto value = records::readPayloadWord(record, 0, parsed.byteOrder);
-            auto* layer = const_cast<musx::dom::others::LayerAttributes*>(layerInstance.get());
-            layer->restOffset = value;
-            markRecovered(report,
-                "others.layerAtts[" + std::to_string(record.cmper) + "].restOffset",
-                record, value);
-            continue;
-        }
-
-        if (record.tag == "94" && record.cmper == 0xfffe
-            && record.incident == 0) {
-            const auto minWidth = records::readPayloadWord(record, 1, parsed.byteOrder);
-            const auto maxWidth = records::readPayloadWord(record, 2, parsed.byteOrder);
-            const auto minDistance = records::readPayloadWord(record, 3, parsed.byteOrder);
-            const auto minDistTiedNotes = records::readPayloadWord(record, 4, parsed.byteOrder);
-            spacing->minWidth = minWidth;
-            spacing->maxWidth = maxWidth;
-            spacing->minDistance = minDistance;
-            spacing->minDistTiedNotes = minDistTiedNotes;
-            markRecovered(report, "options.musicSpacing.minWidth", record, minWidth);
-            markRecovered(report, "options.musicSpacing.maxWidth", record, maxWidth);
-            markRecovered(report, "options.musicSpacing.minDistance", record, minDistance);
-            markRecovered(report, "options.musicSpacing.minDistTiedNotes", record,
-                minDistTiedNotes);
-        }
-    }
-}
-
 } // namespace
 
 bool hasBanner(const std::uint8_t* data, std::size_t size)
@@ -253,6 +190,27 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     const auto createdPlatform = parsePlatform(fixedString(data + 0x074, 4));
     report.sourcePlatform = modifiedPlatform != SourcePlatform::Unknown
         ? modifiedPlatform : createdPlatform;
+
+    // Prefer the version of the application that last saved the file, since that is what
+    // determined the layout on disk.
+    const auto modified = decodeVersion(data + 0x092);
+    const auto created = decodeVersion(data + 0x06c);
+    const auto& selected = modified.major != 0 ? modified : created;
+    if (selected.major <= maximumMajorVersion) {
+        report.sourceVersion = selected;
+    } else {
+        // Every fixture available is big-endian, so whether a little-endian file stores
+        // this tuple reversed is untested. A major version out of range with a plausible
+        // one in the low byte is what that would look like.
+        std::string warning = "Recovered Finale major version "
+            + std::to_string(selected.major) + " is outside the valid range 0-"
+            + std::to_string(maximumMajorVersion) + "; version-gated mappings are skipped.";
+        if (selected.build <= maximumMajorVersion && selected.build != 0) {
+            warning += " The low byte holds " + std::to_string(selected.build)
+                + ", so the header tuple may be byte-reversed for this file.";
+        }
+        report.warnings.push_back(std::move(warning));
+    }
 }
 
 musx::dom::DocumentPtr createDocument(
@@ -270,8 +228,14 @@ musx::dom::DocumentPtr createDocument(
 
     seedPinnedDefaults(document, parseXml, report);
     document->getHeader() = recoverHeader(data, size, report);
-    initializeSupportedFields(document, report);
-    overlayLegacyOthers(parsed, document, report);
+
+    mapping::SourceProfile profile;
+    profile.epoch = report.formatEpoch;
+    profile.version = report.sourceVersion;
+    profile.byteOrder = report.byteOrder;
+    profile.platform = report.sourcePlatform;
+    mapping::applyLegacyMappings(
+        records::LegacyRecordIndex::build(parsed), profile, document, report);
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every
     // legacy overlay has been applied.

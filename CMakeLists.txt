@@ -110,8 +110,12 @@ add_library(finale_mus_reader STATIC
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/document_factory.cpp
+    src/import/legacy_mapping.cpp
+    src/import/mappings/layer_attributes.cpp
+    src/import/mappings/music_spacing_options.cpp
     src/import/reader.cpp
     src/records/legacy_others.cpp
+    src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 

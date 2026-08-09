@@ -434,9 +434,14 @@ void testMalformedInput()
 
 } // namespace
 
+namespace finale_mus_reader_tests {
+void runMappingTests();
+} // namespace finale_mus_reader_tests
+
 int main()
 {
     try {
+        finale_mus_reader_tests::runMappingTests();
         testControlledDclFile();
         testIndependentImportedDocuments();
         testControlledDclVersions();
