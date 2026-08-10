@@ -3,10 +3,10 @@
 
 #include <algorithm>
 #include <array>
+#include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -678,30 +678,24 @@ void testMalformedInput()
 
 } // namespace
 
-namespace finale_mus_reader_tests {
-void runMappingTests();
-} // namespace finale_mus_reader_tests
-
-int main()
+TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
+TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
+TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
+TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }
+TEST_CASE("Big-endian class records", "[reader]") { testBigEndianClassRecords(); }
+TEST_CASE("Finale 2006 remains fixed-row", "[reader]")
 {
-    try {
-        finale_mus_reader_tests::runMappingTests();
-        testControlledDclFile();
-        testFontDefinitions();
-        testUncompressedFixtures();
-        testClassRecordEra();
-        testBigEndianClassRecords();
-        testFinale2006RemainsFixedRow();
-        testIndependentImportedDocuments();
-        testControlledDclVersions();
-        testUncompressedEpochAndOverlays();
-        testCodaBannerEpoch();
-        testZlibEpoch();
-        testMalformedInput();
-        std::cout << "All Legacy Finale MUS Reader tests passed.\n";
-        return 0;
-    } catch (const std::exception& error) {
-        std::cerr << "Test failure: " << error.what() << '\n';
-        return 1;
-    }
+    testFinale2006RemainsFixedRow();
 }
+TEST_CASE("Independent imported documents", "[reader]")
+{
+    testIndependentImportedDocuments();
+}
+TEST_CASE("Controlled DCL versions", "[reader]") { testControlledDclVersions(); }
+TEST_CASE("Uncompressed epoch and overlays", "[reader]")
+{
+    testUncompressedEpochAndOverlays();
+}
+TEST_CASE("Coda banner epoch", "[reader]") { testCodaBannerEpoch(); }
+TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
+TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
