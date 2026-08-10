@@ -6,7 +6,7 @@
 - **Method:** recursive `find`, then deterministic `scripts/inventory.py`; full-file SHA-256 for legacy sources and exact matched exports.
 - **Observation:** 1,218 `.mus`, 2,042 `.fin27.musx`, 1,189 exact adjacent matches, 29 unmatched sources. Legacy data totals 165,758,809 bytes; matched exports total 178,990,189 bytes.
 - **Conclusion:** The corpus is much larger than an initial shallow listing suggested and supports statistical comparison. The assertion that every source has an export is nearly, but not completely, true.
-- **Follow-up:** preserve full rows in `private/corpus_inventory.csv` and sanitized findings in `CORPUS_INVENTORY.md`.
+- **Follow-up:** preserve full rows in `private/generated/corpus_inventory.csv` and sanitized findings in `CORPUS_INVENTORY.md`.
 
 ## 2026-08-05 — Explicit saving version
 

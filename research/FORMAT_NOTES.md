@@ -35,6 +35,43 @@ The last-save date matched the filesystem modification day for 1,147 of 1,163 fi
 
 The banner is the best direct saving-product classifier. The adjacent version tuples distinguish original creator metadata from the last saver. Their packing is now decoded and recorded in [VERSION_MATRIX.md](VERSION_MATRIX.md#decoded-version-packing): a 32-bit value in the file's own byte order, carrying major, minor, maintenance, a development-status code, and build. Finale 27 MUSX conversion preserves the legacy `created` tuple but rewrites `modified` to the conversion event; this was verified on corpus ID `mus-8565d1cad82178ae`.
 
+### Document metadata in the header text region
+
+**Confirmed.** The header carries the document's File Info text at fixed offsets,
+NUL-terminated, in the first `0x200` bytes:
+
+| offset | field | files in `rpatters1-main` | longest observed |
+|---|---|---:|---:|
+| `0x0D8` | title | 355 | 33 |
+| `0x118` | composer | 366 | 20 |
+| `0x138` | a further short field, a four-digit year in the fixture | 365 | 38 |
+| `0x178` | free description text | 20 | 64+ |
+
+Demonstrable against public fixtures: `tests/evidence/F97/F97-fileinfo-short.mus`
+carries a distinct value at each of those four offsets, matching what was typed
+into the File Info dialog, and `F97-fileinfo-long.mus` is the same document with
+longer text. Open either fixture at the offsets above to check the mapping.
+
+The fields are not a uniform grid: `0x138` sits `0x20` after `0x118`, while the
+others are `0x40` apart. The `0x178` description is the one that runs long — in
+`F97-fileinfo-long.mus` it continues past `0x200` into the body region, so the
+region's end is **`open`** and should not be assumed to stop at `0x200`.
+
+Two consequences for the reader. Legacy documents carry authorship metadata that
+a future importer should map rather than discard. And no part of the header is
+published in survey evidence bundles: 433 of 1,290 files in `rpatters1-main`
+contain free text here, including author names, work titles, and in some files
+third-party email addresses. Publishing a metadata-free subset of the header
+becomes possible once these fields and their neighbours are named well enough to
+excise by field rather than by scanning for readable text. No survey deliverable
+publishes header bytes.
+
+The field sequence beyond these four is **`open`**. The counts at `0x0D8`,
+`0x118`, and `0x138` track each other closely, which is consistent with one
+block of consecutive NUL-terminated strings rather than independent fields at
+unrelated offsets; determining that sequence is what would allow metadata to be
+excised by field.
+
 ### Determining byte order
 
 The reader does not read the byte order from anywhere. It trials both orders against the container
@@ -55,15 +92,33 @@ would also give the Coda-banner era a real test in place of its current assertio
 
 Previously described here as "pre-banner", which is inaccurate: these files do have a banner.
 
-**Confirmed.** Fifty-four substantive files—nearly all under directories named `Finale 2 Files`—lack the `ENIGMA BINARY FILE` signature but open at offset 0 with a plain-text product banner reading `Finale(TM) 2.6 Copyright 1987 by Coda. All rights reserved.`. Every one of the 54 is Finale 2.6, and the banner is the only place their version appears: bytes 0x60-0x200 are entirely zero apart from a constant `01 03` at 0x80, which is a candidate format version rather than an application version.
+**Confirmed.** These files lack the `ENIGMA BINARY FILE` signature but open at offset 0 with a plain-text product banner reading `Finale(TM) <version> Copyright 1987 by Coda. All rights reserved.`. The banner is the only place their version appears: bytes 0x60-0x200 are entirely zero apart from a constant `01 03` at 0x80, which is a candidate format version rather than an application version.
 
-The `(TM)` spelling is what separates the era. All 1,163 signature-bearing files spell it `Finale(R)`, and later banners name Coda as well, so the copyright holder does not distinguish the two.
+**Contradicted: the era is not Finale 2.6 alone.** This section previously read "every one of the 54 is Finale 2.6", measured when the survey saw only loose files. Including archive members raised the sample to 229 files, and 52 of them state a version older than 2.6 in their own banner:
 
-These files reserve the same 0x200 header as later eras, and the region at 0x200 begins with a page count followed by the page size, as in `000000ab000002000000444100300000`. That second word, not anything at the top of the file, is the structural confirmation: all 54 satisfy it and the one `._ScoreI-Fin08.mus` AppleDouble metadata artifact satisfies neither test. Corpus ID `mus-6d3b75475a2ca67b` is also Coda-banner but has weaker provenance.
+| banner version | files |
+|---|---:|
+| 2.6 | 177 |
+| 2.0.1 | 33 |
+| 1.8.7 | 19 |
+
+The earlier claim was not wrong about what it measured; the loose corpus genuinely held only 2.6. Finale 1.8.7 and 2.0.1 survive in this collection only inside archives, which is worth remembering whenever an era looks uniform.
+
+Two claims made against the original 54 were re-tested across all 229 and **both hold**: the region 0x60-0x200 is zero apart from `01 03` at 0x80 in every file of all three versions, and every file satisfies the chained-pool test below. Confidence stays **strong** rather than rising: 229 files are one collection, and independent corroboration would need a second survey.
+
+Other claims about this era elsewhere in these notes were measured over the 54 loose files known before archives
+were surveyed, and are marked "then known" where they state a count. They have not been re-tested against the
+full 229 and should not be read as covering it. Re-measuring them is **open** work.
+
+Because the version is explicit and machine-readable, `scripts/inventory.py` reads both banner spellings and reports these as `1.8.7`, `2.0.1`, and `2.6` rather than `unknown`. Matching only `Finale(R)` had filed the whole era as unclassified.
+
+The `(TM)` spelling is what separates the era. All signature-bearing files spell it `Finale(R)`, and later banners name Coda as well, so the copyright holder does not distinguish the two.
+
+These files reserve the same 0x200 header as later eras, and the region at 0x200 begins with a page count followed by the page size, as in `000000ab000002000000444100300000`. That second word, not anything at the top of the file, is the structural confirmation: all 229 satisfy it, while the AppleDouble metadata artifact in the corpus satisfies neither test. Corpus ID `mus-6d3b75475a2ca67b` is also Coda-banner but has weaker provenance.
 
 #### Chained pools
 
-**Confirmed** across all 54 direct Coda-banner files. There is no per-block framing in this era. Instead the file is a chain of pools starting at 0x200, each laid out as:
+**Confirmed** across all 229 Coda-banner files, spanning versions 1.8.7, 2.0.1, and 2.6. There is no per-block framing in this era. Instead the file is a chain of pools starting at 0x200, each laid out as:
 
 | Field | Width | Meaning |
 |---|---|---|
@@ -85,17 +140,17 @@ inference rather than measurement.
 Rows are 16 bytes in the shared others shape, and incidence is implicit in encounter order with no
 incidence field, exactly as in the later fixed-row eras.
 
-Trailing space in the final page is zero-filled, so an all-zero row marks the end of populated records. This holds for 51 of the 54 files; the other three fill their pages exactly. A row of `ffffffff` can appear *within* the populated region and is not a terminator: the Finale 1.8.7 file `mus-7aa45639c14b3864` carries one at a point where valid rows continue afterward. Populated row counts across the 54 files run from 602 to 11,299, median 5,797.
+Trailing space in the final page is zero-filled, so an all-zero row marks the end of populated records. This holds for 51 of the 54 then known files; the other three fill their pages exactly. A row of `ffffffff` can appear *within* the populated region and is not a terminator: the Finale 1.8.7 file `mus-7aa45639c14b3864` carries one at a point where valid rows continue afterward. Populated row counts across the 54 files run from 602 to 11,299, median 5,797.
 
 Comparator 65534, which later eras use for synthetic preference records, is already in use here. `mus-7aa45639c14b3864` carries 150 such rows under numeric tags `01`-`43`, `50`-`55`, `62`-`65`, plus `40` and `fi`. The `^NN(65534)` preference mechanism therefore predates the Enigma signature. Selector `94`, which the distilled mapping uses for music spacing, is **not** present in that file.
 
 Two tags that the distilled PDK mapping relies on, `FI` and `HE`, do not occur anywhere in pool 0 of
-any of the 54 files. Both searches predate the correction below about tag byte order, but this era
+any of the 54 files then known. Both searches predate the correction below about tag byte order, but this era
 is uniformly big-endian, so they are unaffected.
 
 #### Enigma string region
 
-**Confirmed** across all 54 files. After the third pool the remainder of the file holds exactly two length-prefixed chunks, each a 4-byte big-endian byte count followed by that many bytes of text. Walking them lands precisely on end-of-file in every case. The first chunk always begins with `^` and carries `^text()` followed by `^block(n)` sections; the second is `^lyrics()`.
+**Confirmed** across all 54 files then known. After the third pool the remainder of the file holds exactly two length-prefixed chunks, each a 4-byte big-endian byte count followed by that many bytes of text. Walking them lands precisely on end-of-file in every case. The first chunk always begins with `^` and carries `^text()` followed by `^block(n)` sections; the second is `^lyrics()`.
 
 Enigma string markup therefore already exists in Finale 1.8.7: `mus-7aa45639c14b3864` contains `^font`, `^size`, and `^efx` commands inside its text chunk. This region is better delimited than the banner era's mixed `0x0017` block, because the pool chain locates it exactly with no scanning.
 
@@ -110,7 +165,7 @@ Text in these records is **Mac OS Roman**, not Latin-1: `0xa9` renders as `©` i
 ## Record pools and row shapes through Finale 2006
 
 **Confirmed** on 2026-08-09 against the controlled fixtures, seven large corpus files of the
-2002-2006 era, three uncompressed-era files, and all 54 Coda-banner files.
+2002-2006 era, three uncompressed-era files, and all 54 Coda-banner files then known.
 
 Every epoch through Finale 2006 stores its records in four pools in the same order, and only the
 container framing differs. Pool identity was established by measuring, for each pool, the fraction
@@ -163,7 +218,7 @@ Two cautions for anyone reproducing this:
   real content.
 - **Coda-banner pools are page-padded, so a naive fraction understates them.** Measured over whole
   pools including padding the details score looks as low as 0.47. Excluding all-zero padding rows
-  it is 0.965 across all 54 files, in line with the banner eras. The remaining 3.5% are not ASCII
+  it is 0.965 across all 54 files then known, in line with the banner eras. The remaining 3.5% are not ASCII
   tags at all but sequential high-bit values, `0x8001`, `0x8002`, `0x8003` and so on, whose meaning
   is **open**. The Coda details pool also carries ten tags the ETF does not print with two
   arguments (`AC`, `BH`, `CD`, `DE`, `DO`, `MM`, `Te`, `UE`, `sB`, `ve`), which is **open** as well.
@@ -573,7 +628,7 @@ Fields 2–4 are not fully named. For ordinary “other” records, field 2 trac
 
 For details, codes around `0x03ef`–`0x0455` correlate with EnigmaXml detail names. The multiple key fields are consistent with `entnum` plus `inci` and possibly part/sharing scope.
 
-See [RECORD_CATALOG.md](RECORD_CATALOG.md) for all observed identifiers. Examples of exact corpus-wide matches include:
+See [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md) for all observed identifiers. Examples of exact corpus-wide matches include:
 
 | Code | EnigmaXml structure | Evidence |
 |---:|---|---|

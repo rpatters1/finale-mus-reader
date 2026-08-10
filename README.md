@@ -45,6 +45,15 @@ second public document model.
 The historical feasibility study moved from musxdom with its public commit
 history preserved. Its entry point is [research/README.md](research/README.md).
 
+## Surveying your own corpus
+
+If you have your own collection of legacy `.mus` files, you can inventory it and
+contribute the findings. [research/SURVEY_PROMPT.md](research/SURVEY_PROMPT.md)
+is written to be pasted into a coding agent: it asks you how your files are
+organized and runs the survey from there. Your paths are never published — every
+file is identified by a hash of its contents, and results are namespaced per
+corpus so several surveys coexist.
+
 ## Evidence and provenance
 
 Research claims distinguish source-derived information from results verified

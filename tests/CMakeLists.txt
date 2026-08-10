@@ -2,7 +2,7 @@ add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader
-    ${FINALE_MUS_READER_TEST_PUGIXML_TARGET}
+    ${FINALE_MUS_READER_PUGIXML_TARGET}
     ZLIB::ZLIB)
 
 # The mapping framework is internal, so its tests reach into the private source tree

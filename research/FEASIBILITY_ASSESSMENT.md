@@ -37,7 +37,7 @@ version-specific pre-banner semantics remain unresolved.
 | 2001–2006 physical records | clearly feasible | 16-byte other/detail rows and 38-byte entries hold without exception across 375 framed direct-corpus files |
 | 2001–2006 partial musical recovery | feasible now with substantial mapping work | exact ETF pairs plus public Finale 2000 tag/layout facts; logical assembly and fields remain |
 | archive-derived Finale 1.8.7–2.6 | feasible with substantial reverse engineering | exact detail tags, byte-exact 32-byte entries, raw text, and 16-byte cadence correlate with Finale 3.0; Finale 27 opens tested files after suffix repair; indexes/boundaries unresolved |
-| apparent Finale 2 | uncertain | distinct layout, no explicit version banner, sparse clean provenance |
+| Coda banner (1.8.7-2.6) | uncertain | distinct layout; version is explicit in the banner but the directory spans are unresolved |
 | one universal parser | not recommended | at least four structural/codec families and transition endian variants |
 
 ## Largest technical risks
@@ -51,7 +51,7 @@ version-specific pre-banner semantics remain unresolved.
    version selection, 35 additional ETF globals, and some large variable payloads remain unresolved.
 5. **Version semantics.** Type codes are stable across the later corpus, but payload meanings and sizes can change. A release name alone does not choose endian layout in 2007–2008.
 6. **Conversion as an imperfect oracle.** Finale 27 reassigns/normalizes/synthesizes data. The new ETF pairs help, but later-version exports can also synthesize records, as shown by the Finale 2000 template saved by Finale 2005.
-7. **Pre-banner provenance.** Filename paths identify apparent Finale 2 files, but the binary lacks the later product banner.
+7. **Coda-banner provenance.** These files carry an explicit `Finale(TM) <version>` banner at offset 0, so provenance no longer depends on filename paths; what they lack is the later `ENIGMA BINARY FILE` signature.
 8. **Platform bias.** Nearly all examined files originate from Macintosh Finale installations or Macintosh archive workflows. Four Windows files prove that the 3.x–2000 pool and row byte order is platform-sensitive, but Windows string, option, resource-fork-independent, and later-era behavior remains insufficiently tested.
 
 ## Significance of sharing

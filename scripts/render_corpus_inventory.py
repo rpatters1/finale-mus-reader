@@ -11,7 +11,12 @@ from pathlib import Path
 
 def era(product: str) -> tuple[str, str, str]:
     if product == "unknown":
-        return "pre-banner/apparent Finale 2", "low", "uncertain"
+        return "unclassified", "low", "uncertain"
+    if product in {"1.8.7", "2.0.1", "2.6"}:
+        # Coda-banner era. The version is explicit in the banner, which is the
+        # only place it appears, so confidence is high even though the era's
+        # directory spans are unresolved.
+        return "Coda banner", "high", "uncertain"
     if product in {"3.0", "3.2", "3.5", "3.7", "97", "2000"}:
         return "low-entropy legacy", "high", "likely"
     if product in {"2001", "2002", "2003", "2004", "2004b", "2005"}:
@@ -20,7 +25,13 @@ def era(product: str) -> tuple[str, str, str]:
         return "high-entropy legacy", "high", "unlikely/unknown"
     if product in {"2007", "2008"}:
         return "typed-zlib transition", "high", "no"
-    return "typed-zlib stable", "high", "no"
+    if product in {"2009", "2010", "2011", "2012"}:
+        return "typed-zlib stable", "high", "no"
+    # Anything unlisted is unclassified, not assumed to be the newest era. A
+    # catch-all that names an era will confidently mislabel the next product
+    # string the corpus turns up, which is exactly what happened when the
+    # Coda-banner versions stopped reading as "unknown".
+    return "unclassified", "low", "uncertain"
 
 
 def corpus_id(sha256: str) -> str:
@@ -45,19 +56,21 @@ def main() -> None:
     lines = [
         "# Corpus Inventory",
         "",
-        "This table includes every `.mus` data-fork candidate examined. Saving product comes from the file banner; "
-        "`unknown` is reserved for pre-banner files and one AppleDouble artifact. SHA-256 hashes cover complete files. "
-        "An em dash means no exact adjacent Finale 27 export was found. The public table intentionally shows only "
-        "basenames and content-derived IDs. Original paths are local evidence only; keep them in the ignored "
-        "`private/corpus_locations.csv` file described in the README.",
+        "This table includes every `.mus` data-fork candidate examined. Saving product comes from the file banner, "
+        "in either spelling: `Finale(R)` at 0x20 for signature-bearing files, `Finale(TM)` at offset 0 for the "
+        "Coda-banner era. `unknown` now means no banner was recognized at all. SHA-256 hashes cover complete files. "
+        "An em dash means no exact adjacent Finale 27 export was found. The public table shows content-derived IDs "
+        "only. Filenames and paths are local evidence and are never published, because a filename can name a work, "
+        "a client, or a person; resolve an ID through the ignored `private/generated/corpus_locations.csv` file "
+        "described in the README.",
         "",
         "Version confidence is high when the banner is explicit and low for pre-banner path-based classification. "
         "ETF likelihood is an eligibility estimate, not a verified open/export result. `Created app` is the creator tuple "
         "preserved by Finale 27 and helps identify upgraded documents. `Parts` is based on converted `partDef` records; "
         "conversion may expand sharing.",
         "",
-        "| # | Corpus ID | Filename | Bytes | Source SHA-256 | Save product / era | Created app | ETF | Parts / notable converted features | Export | Export SHA-256 |",
-        "|---:|---|---|---:|---|---|---|---|---|---|---|",
+        "| # | Corpus ID | Bytes | Source SHA-256 | Save product / era | Created app | ETF | Parts / notable converted features | Export match | Export SHA-256 |",
+        "|---:|---|---:|---|---|---|---|---|---|---|",
     ]
     for item in inventory:
         semantic = semantics.get(item["source_relative"], {})
@@ -75,13 +88,12 @@ def main() -> None:
             features = "no exact MUSX reference"
         if structure.get("validated_wrapper_endian", "none") != "none":
             features += f"; wrapper={structure['validated_wrapper_endian']}"
-        source = item["source_relative"].rsplit("/", 1)[-1].replace("|", "\\|")
-        export = item["export_relative"].rsplit("/", 1)[-1].replace("|", "\\|") or "—"
+        export_match = item["export_match"] or "—"
         export_hash = f"`{item['export_sha256']}`" if item["export_sha256"] else "—"
         lines.append(
-            f"| {item['index']} | `{corpus_id(item['source_sha256'])}` | `{source}` | {item['source_size']} | `{item['source_sha256']}` | "
+            f"| {item['index']} | `{corpus_id(item['source_sha256'])}` | {item['source_size']} | `{item['source_sha256']}` | "
             f"{item['saving_product']} / {format_era} ({confidence}) | {created} | {etf} | {features} | "
-            f"`{export}` | {export_hash} |"
+            f"{export_match} | {export_hash} |"
         )
     args.output.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

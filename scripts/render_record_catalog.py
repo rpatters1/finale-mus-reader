@@ -46,9 +46,9 @@ def main() -> None:
         "come from corpus-wide count correlation with Finale 27 exports; conversion differences and count "
         "collisions remain possible. All candidate rankings are preserved in "
         "[`data/record_correlations.csv`](data/record_correlations.csv), and per-version raw observations in "
-        "`private/record_catalog.csv` (local-only).",
+        "`private/generated/record_catalog.csv` (local-only).",
         "",
-        "Frame fields are described in [FORMAT_NOTES.md](FORMAT_NOTES.md). `Example offset` is relative to the "
+        "Frame fields are described in [FORMAT_NOTES.md](../../FORMAT_NOTES.md). `Example offset` is relative to the "
         "decompressed zlib member, not the file.",
         "",
         "## Finale 2000 PDK tag reference",
@@ -113,7 +113,7 @@ def main() -> None:
             confidence = "open"
         example = rows[0]
         # Keep the public catalog location-neutral and unambiguous.
-        path = source_ids.get(example["example_source"], "file-" + example["example_source"].rsplit("/", 1)[-1])
+        path = source_ids.get(example["example_source"], "unresolved-source")
         lines.append(
             f"| `{code}` | {proposed} | {pool} | {confidence} | {', '.join(versions)} | "
             f"{', '.join(map(str, sorted(sizes)))} | `{path}` ({example['example_member']}:{example['example_decoded_offset']}) |"

@@ -2,11 +2,17 @@
 
 This is a public-source, independently verified exploratory study of legacy Finale `.mus` files. It assesses whether a future reader could populate the existing musxdom model; it is not a reader implementation.
 
-The inventory found 1,218 legacy files and 2,042 Finale 27 exports. An exact adjacent `-exports/<name>.fin27.musx` counterpart exists for 1,189 legacy files; 29 do not have that exact counterpart. Finale 27 exports are semantic references, not byte-for-byte representations: conversion changes the modified header, normalizes data, and can synthesize or expand records.
+The inventory found 1,290 legacy files, 1,151 of them distinct by content, and 2,042 Finale 27 exports. An exact adjacent `-exports/<name>.fin27.musx` counterpart exists for 1,189 legacy files; a further 36 match by basename search alone and 29 ambiguously, and 36 have no counterpart. Finale 27 exports are semantic references, not byte-for-byte representations: conversion changes the modified header, normalizes data, and can synthesize or expand records.
 
 ## Corpus identifiers
 
-Published findings identify each source by a stable content-derived `corpus_id`, such as `mus-65aa1de01997b781`, plus its basename, size, and SHA-256. This permits future maintainers to recognize the same evidence without publishing the drive name or directory layout. The public manifest is [data/corpus_manifest.csv](data/corpus_manifest.csv).
+Published findings identify each source by a stable content-derived `corpus_id`, such as `mus-65aa1de01997b781`, plus its size and SHA-256. Filenames, paths, and drive names are never published: a filename can name a work, a client, or a person, and the hash identifies the evidence better. This permits future maintainers to recognize the same evidence without publishing anything about where it lives or what it is called. The public manifest is
+[corpora/rpatters1-main/data/corpus_manifest.csv](corpora/rpatters1-main/data/corpus_manifest.csv), one directory per
+surveyed corpus; [data/surveys.csv](data/surveys.csv) registers them.
+
+To survey your own corpus, paste [SURVEY_PROMPT.md](SURVEY_PROMPT.md) into a coding agent; the procedure it follows
+is [`.agents/skills/survey-a-corpus/SKILL.md`](../.agents/skills/survey-a-corpus/SKILL.md), and
+[REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md) gives the underlying commands.
 
 For StuffIt archives, install the `unar` package so that both `unar` and `lsar` are available. Use `lsar` for a non-destructive member listing and `unar -o <temporary-directory> <archive>` for extraction; never extract over the source corpus.
 
@@ -67,11 +73,11 @@ The survey workflow and commands are documented in
 
 ## Research documents
 
-- [CORPUS_INVENTORY.md](CORPUS_INVENTORY.md): all examined files, sizes, hashes, header products, and counterpart matches.
-- [ARCHIVE_SURVEY.md](ARCHIVE_SURVEY.md): archive and extensionless-member findings, including the Finale 2.6 samples.
+- [CORPUS_INVENTORY.md](corpora/rpatters1-main/CORPUS_INVENTORY.md): all examined files, sizes, hashes, header products, and counterpart matches.
+- [ARCHIVE_SURVEY.md](corpora/rpatters1-main/ARCHIVE_SURVEY.md): archive and extensionless-member findings, including the Finale 2.6 samples.
 - [FORMAT_NOTES.md](FORMAT_NOTES.md): headers, format eras, blocks, record framing, entries, text, options, and sharing.
 - [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md): distilled legacy global-to-option mappings, provenance, confidence, and validation plan.
-- [RECORD_CATALOG.md](RECORD_CATALOG.md): every numeric record identifier observed in successfully framed 2007+ blocks.
+- [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md): every numeric record identifier observed in successfully framed 2007+ blocks.
 - [VERSION_MATRIX.md](VERSION_MATRIX.md): corpus versions and proposed format eras.
 - [EVIDENCE_REQUESTS.md](EVIDENCE_REQUESTS.md): precise ETF and controlled-difference requests.
 - [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md): commands, observations, failed hypotheses, and follow-ups.
