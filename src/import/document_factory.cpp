@@ -11,6 +11,7 @@
 #include <string_view>
 #include <utility>
 
+#include "container/product_banner.h"
 #include "defaults/default_document.h"
 #include "import/legacy_mapping.h"
 #include "records/legacy_record_index.h"
@@ -29,24 +30,6 @@ std::string fixedString(const std::uint8_t* data, std::size_t size)
     const auto* end = std::find(data, data + size, std::uint8_t{0});
     return std::string(reinterpret_cast<const char*>(data),
         static_cast<std::size_t>(end - data));
-}
-
-std::string savingProductFromBanner(const std::string& banner)
-{
-    constexpr std::string_view prefix = "Finale(R) ";
-    const auto begin = banner.find(prefix);
-    if (begin == std::string::npos) {
-        return {};
-    }
-    const auto productBegin = begin + prefix.size();
-    auto productEnd = banner.find(" Copyright", productBegin);
-    if (productEnd == std::string::npos) {
-        productEnd = banner.find(" File Converter", productBegin);
-    }
-    if (productEnd == std::string::npos) {
-        productEnd = banner.size();
-    }
-    return banner.substr(productBegin, productEnd - productBegin);
 }
 
 SourcePlatform parsePlatform(const std::string& platform)
@@ -72,10 +55,6 @@ musx::dom::header::Platform toDomPlatform(SourcePlatform platform)
     }
     return musx::dom::header::Platform::Other;
 }
-
-// Finale's complete history spans major versions 0 through 27. A major outside that
-// range means the tuple was not read the way the file wrote it.
-constexpr std::uint8_t maximumMajorVersion = 27;
 
 // A header version is a 32-bit value in the file's own byte order, packed as major in
 // bits 31-24, minor in 23-20, maintenance in 19-16, a development-status code in 15-8,
@@ -112,7 +91,7 @@ SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
     }
     // With no classified byte order, prefer the reading whose major version is possible.
     const auto candidate = decodeVersionValue(bigEndian);
-    if (candidate.major <= maximumMajorVersion) {
+    if (candidate.major <= maximumFinaleMajorVersion) {
         return candidate;
     }
     return decodeVersionValue(littleEndian);
@@ -208,48 +187,21 @@ void seedPinnedDefaults(
         pinned.others, document, pinned.optionLikeOthers);
 }
 
-// A Coda-banner file carries no version tuple: its whole 0x60-0x200 header region is
-// zero apart from a constant pair at 0x80. The version is the number in the product
-// banner itself, as in `Finale(TM) 2.6 Copyright 1987 by Coda.`, so that text is the
-// only place it can be recovered from.
+// A pre-signature file carries no version tuple: its whole 0x60-0x200 header region is
+// zero apart from a constant word at 0x80. The version is the number in the product banner
+// itself, as in `Finale(TM) 2.6 Copyright 1987 by Coda.`, so that text is the only place it
+// can be recovered from. This covers Finale 1.0.0's spelling too, because banner::parse
+// does.
 bool describeCodaBannerIdentity(
     const std::uint8_t* data, std::size_t size, ImportReport& report)
 {
-    constexpr std::string_view prefix = "Finale(TM) ";
-    if (size <= prefix.size()
-        || std::memcmp(data, prefix.data(), prefix.size()) != 0) {
+    const auto parsed = banner::parse(data, size);
+    if (!parsed.isPreSignature() || parsed.offset != 0) {
         return false;
     }
-
-    report.banner = fixedString(data, (std::min)(size, headerSize));
-    const auto product = report.banner.substr(prefix.size());
-    const auto productEnd = product.find(" Copyright");
-    report.savingProduct = product.substr(0, productEnd);
-
-    SourceVersion version;
-    std::size_t consumed = 0;
-    std::uint8_t* const components[] = {&version.major, &version.minor, &version.maint};
-    for (auto* component : components) {
-        std::size_t digits = 0;
-        unsigned value = 0;
-        while (consumed + digits < report.savingProduct.size()
-            && std::isdigit(static_cast<unsigned char>(report.savingProduct[consumed + digits]))) {
-            value = value * 10 + static_cast<unsigned>(report.savingProduct[consumed + digits] - '0');
-            ++digits;
-        }
-        if (digits == 0 || value > (std::numeric_limits<std::uint8_t>::max)()) {
-            break;
-        }
-        *component = static_cast<std::uint8_t>(value);
-        consumed += digits;
-        if (consumed >= report.savingProduct.size() || report.savingProduct[consumed] != '.') {
-            break;
-        }
-        ++consumed;
-    }
-    if (version.major != 0 && version.major <= maximumMajorVersion) {
-        report.sourceVersion = version;
-    }
+    report.banner = parsed.text;
+    report.savingProduct = parsed.product;
+    report.sourceVersion = banner::versionFromProduct(parsed.product);
     return true;
 }
 
@@ -270,8 +222,9 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     if (!hasBanner(data, size) || size < headerSize) {
         return;
     }
-    report.banner = fixedString(data + 0x20, 0x40);
-    report.savingProduct = savingProductFromBanner(report.banner);
+    const auto parsed = banner::parse(data, size);
+    report.banner = parsed.text;
+    report.savingProduct = parsed.product;
     const auto modifiedPlatform = parsePlatform(fixedString(data + 0x09a, 4));
     const auto createdPlatform = parsePlatform(fixedString(data + 0x074, 4));
     report.sourcePlatform = modifiedPlatform != SourcePlatform::Unknown
@@ -282,12 +235,12 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     const auto modified = decodeVersion(data + 0x092, report.byteOrder);
     const auto created = decodeVersion(data + 0x06c, report.byteOrder);
     const auto& selected = modified.major != 0 ? modified : created;
-    if (selected.major <= maximumMajorVersion) {
+    if (selected.major <= maximumFinaleMajorVersion) {
         report.sourceVersion = selected;
     } else {
         report.warnings.push_back("Recovered Finale major version "
             + std::to_string(selected.major) + " is outside the valid range 0-"
-            + std::to_string(maximumMajorVersion)
+            + std::to_string(maximumFinaleMajorVersion)
             + "; version-gated mappings are skipped.");
     }
 }

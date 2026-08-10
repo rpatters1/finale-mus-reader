@@ -25,7 +25,6 @@ using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
 // Windows LOGFONT charset values, from wingdi.h.
 constexpr int windowsAnsiCharset = 0;
 constexpr int windowsDefaultCharset = 1;
-constexpr int windowsSymbolCharset = 2;
 constexpr int windowsShiftJisCharset = 128;
 constexpr int windowsHangeulCharset = 129;
 constexpr int windowsGb2312Charset = 134;
@@ -64,10 +63,6 @@ constexpr int macTurkishScript = 81;
 // the separate 0xfff sentinel. A font's *name* is still ordinary text whatever its content
 // is, so this resolves to the bank default like any other non-script value.
 constexpr int macUninterpretedScript = 32;
-
-// Finale's own marker for a Mac symbol font, distinct from smUninterp and by far the more
-// common of the two: 30,253 fonts against 2.
-constexpr int macSymbolCharset = 0xfff;
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 
@@ -396,13 +391,14 @@ CodePage codePageForCharset(Bank bank, int charsetVal)
             // the bank default until one appears.
         case windowsAnsiCharset:
         case windowsDefaultCharset:
-        case windowsSymbolCharset:
         case windowsOemCharset:
         default:
             // ANSI is pinned to Windows-1252 rather than resolved against the running
             // machine's active code page, so a file decodes the same way everywhere.
-            // DEFAULT, SYMBOL, OEM and any unlisted value name no script at all, so they
-            // fall to the same Windows default.
+            // DEFAULT, OEM, the symbol charset and any unlisted value name no script at
+            // all, so they fall to the same Windows default. Which values mean "symbol" is
+            // musxdom's to say, through FontDefinition::calcIsSymbolFont, and restating it
+            // here would only create a second answer to drift from the first.
             return CodePage::Windows1252;
         }
 
@@ -420,14 +416,13 @@ CodePage codePageForCharset(Bank bank, int charsetVal)
         case macCentralEuroScript:  return CodePage::MacCentralEurope;
         case macTurkishScript:      return CodePage::MacTurkish;
         case macUninterpretedScript:
-        case macSymbolCharset:
         case macRomanScript:
         default:
             // Mac Roman, not Windows-1252. The two agree below 0x80 and disagree above it,
             // so treating Roman as ANSI turns every accented character into mojibake:
-            // `C\x8elino` is `Célino` in Mac Roman and `CŽlino` in Windows-1252. The two
-            // symbol markers land here too: whatever a symbol font's *content* means, its
-            // name is ordinary Mac text.
+            // `C\x8elino` is `Célino` in Mac Roman and `CŽlino` in Windows-1252. Finale's
+            // Mac symbol marker lands here too: whatever a symbol font's *content* means,
+            // its name is ordinary Mac text, so no symbol test is needed.
             return CodePage::MacRoman;
         }
     }

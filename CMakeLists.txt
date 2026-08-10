@@ -114,6 +114,7 @@ endif()
 
 add_library(finale_mus_reader STATIC
     src/container/mus_container.cpp
+    src/container/product_banner.cpp
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/document_factory.cpp

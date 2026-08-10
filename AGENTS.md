@@ -62,6 +62,37 @@ that task rather than reconstructing the procedure:
 Some implementation directories may be absent until the initial CMake
 scaffolding creates them.
 
+## Nothing is implemented more than once
+
+In library and reader code, every fact and every behaviour has exactly one
+implementation. A second copy is a defect even when both copies are currently
+correct, because the two will diverge and the divergence will be silent.
+
+This is close to absolute. Treat an exception as needing extraordinary
+justification, stated in a comment at the site, rather than as a judgement call.
+Duplication is not paid for by being convenient, by being small, or by the copies
+being far apart — distance makes it worse.
+
+In practice:
+
+- If a constant, a spelling, a table, or a rule is needed in two places, give it
+  one home and include it. Do not restate it, not even in a `case` label.
+- If musxdom already implements something, call it. Do not reimplement it here,
+  and do not restate the values it is built on.
+- When a fact must be recorded twice for humans, record it once as code and once
+  as prose that points at the code. A comment is documentation, not a second
+  implementation.
+- Before adding a literal, grep for it. Three separately hardcoded spellings of
+  the product banner are what let Finale 1.0.0 go unread: the survey scripts
+  learned the third spelling and the reader did not, because the reader had two
+  copies and only one was updated.
+
+This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
+apply to `scripts/`, `tools/`, or test code, which may repeat themselves as
+freely as makes sense — a probe is meant to be written quickly while a question
+is live, and a test that spells out its own expectations is clearer than one that
+shares a helper with the code under test.
+
 ## Format and decoder rules
 
 Legacy MUS is a family of formats, not one stable binary layout. Classification
