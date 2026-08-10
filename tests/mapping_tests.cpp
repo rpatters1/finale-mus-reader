@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <iterator>
 #include <stdexcept>
@@ -447,17 +448,23 @@ void testOtherRowsRemainSearchable()
 
 namespace finale_mus_reader_tests {
 
-void runMappingTests()
+TEST_CASE("Detail row shape", "[mapping]") { testDetailRowShape(); }
+TEST_CASE("Other rows remain searchable", "[mapping]") { testOtherRowsRemainSearchable(); }
+TEST_CASE("Four-byte incidence straddling", "[mapping]")
 {
-    testDetailRowShape();
-    testOtherRowsRemainSearchable();
     testFourByteStraddlesIncidence();
-    testLongWordOrder();
-    testBitExtraction();
+}
+TEST_CASE("Long word order", "[mapping]") { testLongWordOrder(); }
+TEST_CASE("Bit extraction", "[mapping]") { testBitExtraction(); }
+TEST_CASE("Absent record keeps seeded default", "[mapping]")
+{
     testAbsentRecordKeepsSeededDefault();
-    testVersionGating();
-    testMinorVersionOrdering();
-    testTableLayering();
+}
+TEST_CASE("Version gating", "[mapping]") { testVersionGating(); }
+TEST_CASE("Minor version ordering", "[mapping]") { testMinorVersionOrdering(); }
+TEST_CASE("Table layering", "[mapping]") { testTableLayering(); }
+TEST_CASE("Uncovered epoch still reports", "[mapping]")
+{
     testUncoveredEpochStillReports();
 }
 
