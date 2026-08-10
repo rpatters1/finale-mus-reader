@@ -60,9 +60,9 @@ labels every unverified result accordingly; see
 
 | MUS epoch | Current useful output |
 | --- | --- |
-| Finale 1.x–2.x pre-banner | Strong structural classification; complete default options; explicit warning that pool directories remain unresolved. |
-| Finale 3.x–2000 uncompressed | Validated typed blocks, byte order, banner header, legacy other-record index, layer rest offsets, and selected music-spacing options. |
-| Finale 2001–2006 DCL | Validated typed blocks, PKWARE DCL inflation, CRC-32, banner header, layer rest offsets, and selected music-spacing options. |
+| Finale 1.x–2.6 Coda banner | Product and version from the `Finale(TM)` banner, chained record pools, and the document's font table. |
+| Finale 3.x–2000 uncompressed | Validated typed blocks, byte order, banner header, others and details record index, font table, layer rest offsets, and selected music-spacing options. |
+| Finale 2001–2006 DCL | Validated typed blocks, PKWARE DCL inflation, CRC-32, banner header, others and details record index, font table, layer rest offsets, and selected music-spacing options. |
 | Finale 2007–2012 zlib | Validated typed blocks, zlib inflation, CRC-32, byte order, and banner header; logical option overlays remain pending. |
 
 Unknown banner-era framing still produces an empty options-complete document
@@ -71,17 +71,27 @@ and recovered header rather than being mislabeled as a known epoch.
 ## Default-document design
 
 The library does not parse the full default document and then clear its score
-pools. Instead, it inflates the embedded macOS baseline and assembles a small
-EnigmaXML document in memory from:
+pools, and it does not construct a fallback document at all. It owns its own
+document factory, built on musxdom's client construction interface:
 
-- the complete `<options>` element;
-- an empty header that is replaced with recovered MUS header data; and
-- an explicit allowlist of option-like `<others>`, currently the four
-  `layerAtts` elements.
+1. `DocumentFactory::begin` starts a construction session for an empty document.
+2. The pinned baseline matching the recovered source platform is inflated and
+   parsed once with the caller's XML backend; an unknown source platform falls
+   back to macOS, and `ImportReport::defaultsPlatform` reports which baseline was
+   actually used. Its complete `<options>` element seeds the options pool, and its
+   `<others>` element seeds the others pool under a `musx::factory::NodeFilter`
+   that accepts an explicit allowlist of option-like nodes, currently the four
+   `layerAtts` elements. The reader never processes EnigmaXML as text: the
+   remaining 123 children of `<others>` are simply never created.
+3. The header recovered from the MUS banner replaces the empty session header.
+4. Every confidently decoded legacy value is overlaid onto the seeded objects.
+5. `finish` hands the document to musxdom, which validates the pools and runs
+   its resolvers once, after the overlays are in place.
 
-musxdom's `DocumentFactory` constructs that reduced document once. This avoids
-reparenting DOM objects and prevents fallback measures, staves, entries, text,
-parts, layouts, or derived instrument state from leaking into the result.
+Because the imported document is the only document the reader ever builds, no
+fallback owner exists for the options it carries, and fallback measures, staves,
+entries, text, parts, layouts, or derived instrument state cannot leak into the
+result.
 
 The embedded byte array is generated only when its authoritative gzip resource
 changes. Regenerate it with:
@@ -121,8 +131,10 @@ so a parent that fetches both projects builds zlib only once.
 
 The library does not select, fetch, link, or enable an XML implementation.
 `Reader::read` is templated on a concrete implementation of
-`musx::xml::IXmlDocument`, in parallel with musxdom's `DocumentFactory`. Only
-the tests fetch pugixml and instantiate the reader with its musxdom adapter.
+`musx::xml::IXmlDocument`, in parallel with musxdom's `DocumentFactory`. The
+template supplies only a parser for the pinned default EnigmaXML fragments; the
+reader's own document factory performs construction. Only the tests fetch
+pugixml and instantiate the reader with its musxdom adapter.
 
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.
@@ -139,9 +151,39 @@ const auto& report = result.report;
 ```
 
 `ImportReport` identifies the selected epoch, byte order, source platform,
-validated blocks, warnings, and the origin of each currently supported option
-overlay. The physical record index and overlay layer are separate so additional
-record mappings can be added without changing container decoding.
+recovered Finale version, validated blocks, warnings, and the origin of each
+currently supported option overlay. The physical record index and overlay layer
+are separate so additional record mappings can be added without changing
+container decoding.
+
+## Field mappings
+
+Legacy values are not read by hand-written per-field code. Through Finale 2006
+the option and other pools resolve to fixed 16-byte Enigma rows, so the reader
+presents each `(tag, cmper)` record family as a word stream and describes every
+mapped field in a table:
+
+```cpp
+const FieldMapping spacingFields[] = {
+    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, minWidth),
+    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, maxWidth),
+};
+```
+
+One table corresponds to one musxdom class. A generic engine applies them all,
+records where each recovered value came from, and reports every unmapped field at
+its synthesized default. Adding a mapping means adding a row.
+
+Word indices are absolute across incidences, so a four-byte value whose two words
+straddle an incidence boundary resolves without special handling. Tables declare
+which format epochs and Finale versions they apply to; several tables may target
+the same class, and a later one supersedes an earlier row for the same field, so
+a field that moves in a later version costs a one-row override rather than a
+restated table.
+
+Only mappings verified against controlled fixtures are compiled in. The distilled
+but unverified locations in `research/data/legacy_option_mappings.csv` are
+evidence, not a runtime schema.
 
 ## License
 

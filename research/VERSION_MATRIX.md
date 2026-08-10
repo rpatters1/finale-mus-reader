@@ -35,6 +35,80 @@ The header stores separate creator and last-saver version tuples. Finale 27 conv
 
 The exact meaning of all tuple members (Enigma version, application version, file version, status/build) is already represented in Finale 27 EnigmaXml and should be used as the semantic reference when the binary packing is decoded. The banner remains the reliable saving-product label for this study.
 
+### Decoded version packing
+
+**Confirmed** against all 1,163 signature-bearing corpus files. Each version is a 32-bit value stored in the file's own byte order and packed as:
+
+| Bits | Field |
+|---|---|
+| 31-24 | major |
+| 23-20 | minor |
+| 19-16 | maintenance |
+| 15-8 | development status code |
+| 7-0 | build |
+
+Three such values sit in each file-info block: the Enigma version at the tuple start, the application version at tuple+12, and the file version at tuple+16, with the application and platform strings between them.
+
+The decoding reproduces this document's own aggregate creator-version figures exactly. Finale 97 stores application version `0x03820401`, which decodes to 3.8.2 build 1, matching the reported `3.8.2.1`; Finale 2000 stores `0x05020401` for `5.0.2.1`; a Finale 2012 file stores `0x0d040311` little-endian for `17.0.3.13`. The same packing places the minor version at bits 23-20 as the running application reports it to plug-ins, so a file version and a runtime version are directly comparable.
+
+Byte order tracks the container. Finale 2007 splits 81 big-endian against 27 little-endian and Finale 2008 splits 180 little-endian against 2 big-endian, matching the wrapper counts in the table above exactly. Reading the tuple in file order regardless of byte order reports a little-endian file's build as its major version.
+
+### Saving product to internal major version
+
+**Confirmed** from the last-saver Enigma tuple across the corpus. Major alone does not order Finale's history: the entire 3.x line and Finale 97 share major 3.
+
+| Saving product | Internal | Saving product | Internal |
+|---|---|---|---|
+| 3.0 | 3.0 | 2004 / 2004b | 9.0 |
+| 3.2 | 3.2 | 2005 | 10.0 |
+| 3.5 | 3.5 | 2006 | 11.x |
+| 3.7 | 3.7 | 2007 | 12.x |
+| 97 | 3.8 | 2008 | 13.x |
+| 2000 | 5.0 | 2009 | 14.x |
+| 2001 | 6.0 | 2010 | 15.0 |
+| 2002 | 7.0 | 2012 | 17.0 |
+| 2003 | 8.0 | | |
+
+Finale 98 is absent from the corpus and is presumed to be major 4; Finale 2011 is likewise absent and would be major 16. Neither is verified.
+
+### Back-saved files
+
+**Confirmed** on the tracked fixture `tests/evidence/F2012/F2012-upstem-flags.mus`.
+
+Finale 2014 through Finale 27 can write a musx document out as a Finale 2012 MUS file. Such a
+file is a genuine Finale 2012 document by format, and its banner says so, commonly reading
+`Finale(R) 2012 File Converter` rather than plain `Finale(R) 2012`. The saving-product table
+above already counts those separately: of the 248 files in the Finale 2012 row, 10 carry the
+File Converter banner.
+
+The two header tuples then record different things, which is the useful part:
+
+| Tuple | Records | Example |
+|---|---|---|
+| creator | the application that authored the document | internal 18.0, Finale 2014 |
+| last saver | the format actually written | internal 17.0, Finale 2012 |
+
+This is why the reader gates on the last-saver tuple. On a back-save it yields the version that
+governs the layout on disk rather than the version of the program that happened to produce it.
+It also establishes internal major 18 for Finale 2014, extending the mapping above.
+
+A consequence for reading corpus statistics: a saving-product count is a count of *formats*, not
+of authoring applications. Any file in the Finale 2012 row may have been written by any release
+from Finale 2012 through Finale 27.
+
+### Controlled fixture versions
+
+Decoded from `tests/evidence`, and asserted by the reader's tests.
+
+| Fixture | Saving product | Enigma version | Application version |
+|---|---|---|---|
+| F2002 | 2002 | 7.0.1 build 2 | 7.0.1 build 1 |
+| F2003 | 2003 | 8.0.0 build 5 | 8.0.1 build 1 |
+| F2004 | 2004b | 9.0.0 build 58 | 9.0.3 build 1 |
+| F2005 | 2005 | 10.0.0 build 10 | 10.0.2 build 1 |
+
+The creator and last-saver blocks agree in every fixture.
+
 ## Compatibility families
 
 Evidence currently supports at least four parsers/codecs, not one parser per Finale release:

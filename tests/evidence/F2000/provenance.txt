@@ -1,0 +1,11 @@
+Finale 2000 (internal version 5.0), uncompressed fixed-row era, big-endian.
+
+Origin: a test case authored for the Mass Copy plug-in and released for
+publication by its author.
+
+F2000-multilayer.mus
+    sha256 bfbfdabc42ac2d94bc746ef1d1a993a970052c96250b6292cb2a2ea3e930bb9e
+    A multi-layer document. It is the tracked fixture for the uncompressed era,
+    which previously had no public evidence: every uncompressed-era result was
+    verified only against an unpublished corpus or against synthetic files
+    written by the tests themselves.

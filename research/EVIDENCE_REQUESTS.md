@@ -6,6 +6,41 @@ Requests remain deliberately small and hypothesis-driven. When multiple Finale v
 Source locations are intentionally omitted from this public document. Resolve each `corpus_id` through the local-only
 `private/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the filename and hash.
 
+## Coverage gaps
+
+### No Windows document earlier than Finale 3.0
+
+Every file in the corpus from before Finale 3.x is Mac-origin and big-endian: all 54 Coda-banner
+files, and the archive-derived Finale 1.8.7, 2.0.1, and 2.6 members. There is no Windows document
+of that era at all, so nothing verifies how the reader would treat one.
+
+That may reflect the era rather than the corpus. Binaries of that period are not believed to have
+been transportable between platforms; a document moved between Mac and Windows had to travel as
+ETF. Byte order is the likely reason, since Mac documents of the era are uniformly big-endian and
+Windows documents uniformly little-endian. The two platforms were also on separate release
+schedules, so a Windows release may not correspond to any Mac version already catalogued here.
+When the schedules unified is not established: possibly as early as Finale 3.0, and certainly by
+Finale 97, which is internal 3.8.
+
+The Finale 3.0 files in the corpus are Windows-origin and little-endian while the 3.2 through 3.7
+files are Mac-origin and big-endian, so by the 3.x line a single format was demonstrably written on
+both platforms with byte order tracking the platform.
+
+Consequences for the reader, none of them yet exercised:
+
+- **Coda-banner byte order is asserted, not detected.** Those files have no block framing to
+  trial-decode, so the container declares them big-endian on the strength of all 54 corpus files.
+  A Windows document of the era, if such a thing exists, would break that assertion silently.
+- **The pre-3.2 font table would be affected.** Font names are read as bytes and are byte-order
+  independent, but nothing else about such a file has been tested.
+- **A Windows document might not use this record vocabulary at all**, given the separate release
+  schedules.
+
+What would close it: any Windows-origin `.mus` predating Finale 3.2, however small. A Finale 98
+document would additionally settle the two open version questions recorded in
+[LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md) and
+[FORMAT_NOTES.md](FORMAT_NOTES.md#font-definitions).
+
 ## Priority requests
 
 ### P1 — Analyzed — essential

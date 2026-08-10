@@ -12,7 +12,8 @@ Confidence labels: **confirmed** means reproduced across the stated sample; **st
 |---:|---:|---|
 | `0x000` | 19 bytes plus zero fill | `ENIGMA BINARY FILE` signature |
 | `0x020` | up to 64 bytes | Saving-product/copyright banner, e.g. `Finale(R) 2005 ...` |
-| `0x060` | 6 bytes | Unknown header flags/revision data |
+| `0x060` | 2 bytes | Offset of the record body, subject to the file's byte order |
+| `0x062` | 4 bytes | Unknown header flags/revision data |
 | `0x066` | 3 bytes | Creation date: year byte + 1900, month, day |
 | `0x06c` | 20 bytes | Creator Enigma/application/file version tuples plus `FIN` and `MAC`/`WIN` |
 | `0x08c` | 3 bytes | Last-save date in the same encoding |
@@ -20,17 +21,231 @@ Confidence labels: **confirmed** means reproduced across the stated sample; **st
 | `0x0b0`–`0x1ff` | variable/zero fill | title, composer, copyright, file-info, or ancillary header data |
 | `0x200` | — | first body/block boundary in all examined banner-era examples |
 
+**Confirmed: the record body offset is a header field, not the constant `0x200`.** It is a
+16-bit value at `0x60` read in the file's byte order. Across the 1,163 banner files it reads
+`0x200` in 1,162 of them, which is why a constant worked, but the title, composer, copyright, and
+file-info strings occupying `0x0b0` onwards can overrun that boundary and push the body later. The
+controlled pair `tests/evidence/F97/F97-fileinfo-short.mus` and `F97-fileinfo-long.mus` differ only
+in the length of their file-info text: the first begins its body at `0x200` and the second at
+`0x1167`, and both record their own offset in this field. Treating `0x200` as constant leaves the
+second unframed, and the failure presents as an unknown container variant rather than as a misread
+header.
+
 The last-save date matched the filesystem modification day for 1,147 of 1,163 files with a valid date (98.6%). The mismatches are consistent with later filesystem copies. Creation was not assumed from the filename. In 1,039 files where both dates decoded, creation was not later than last save.
 
-The banner is the best direct saving-product classifier. The adjacent version tuples distinguish original creator metadata from the last saver and appear to contain internal major/minor/build/status data, but their platform-dependent packing is not fully decoded. Finale 27 MUSX conversion preserves the legacy `created` tuple but rewrites `modified` to the conversion event; this was verified on corpus ID `mus-8565d1cad82178ae`.
+The banner is the best direct saving-product classifier. The adjacent version tuples distinguish original creator metadata from the last saver. Their packing is now decoded and recorded in [VERSION_MATRIX.md](VERSION_MATRIX.md#decoded-version-packing): a 32-bit value in the file's own byte order, carrying major, minor, maintenance, a development-status code, and build. Finale 27 MUSX conversion preserves the legacy `created` tuple but rewrites `modified` to the conversion event; this was verified on corpus ID `mus-8565d1cad82178ae`.
 
-### Pre-banner files
+### Determining byte order
 
-**Strong.** Fifty-four substantive files—nearly all under directories named `Finale 2 Files`—lack `ENIGMA BINARY FILE` and commonly begin their body with forms such as `000000ab000002000000444100300000`. One additional `._ScoreI-Fin08.mus` is a 4 KiB AppleDouble metadata artifact, not a score data fork. The Finale 2 classification is path-supported, not explicitly encoded as a readable banner. Corpus ID `mus-6d3b75475a2ca67b` is also pre-banner but has weaker provenance.
+The reader does not read the byte order from anywhere. It trials both orders against the container
+framing and keeps whichever validates: for the uncompressed era, a block chain that consumes the
+file exactly and yields types 1, 2, 3, 4 in order; for the compressed eras, a first block type that
+matches the era plus successful decompression and a matching CRC-32 for every block. The compressed
+test is strong evidence. The uncompressed test is structural but circumstantial, and the
+Coda-banner era is not detected at all, only asserted, because it has no block framing to trial.
+
+**Suspected but not found: a definitive byte-order marker exists by the 3.x era.** A format that is
+written on two platforms with opposite byte order, as the 3.x line demonstrably is, would ordinarily
+record which one it used rather than leaving a reader to infer it. The header holds candidates: the
+six bytes at `0x062` are still uninterpreted, and the Coda-banner era carries a constant `01 03` at
+`0x80` whose meaning is unknown. Finding such a marker would replace a heuristic with a fact, and
+would also give the Coda-banner era a real test in place of its current assertion. This is **open**.
+
+### Coda-banner files
+
+Previously described here as "pre-banner", which is inaccurate: these files do have a banner.
+
+**Confirmed.** Fifty-four substantive files—nearly all under directories named `Finale 2 Files`—lack the `ENIGMA BINARY FILE` signature but open at offset 0 with a plain-text product banner reading `Finale(TM) 2.6 Copyright 1987 by Coda. All rights reserved.`. Every one of the 54 is Finale 2.6, and the banner is the only place their version appears: bytes 0x60-0x200 are entirely zero apart from a constant `01 03` at 0x80, which is a candidate format version rather than an application version.
+
+The `(TM)` spelling is what separates the era. All 1,163 signature-bearing files spell it `Finale(R)`, and later banners name Coda as well, so the copyright holder does not distinguish the two.
+
+These files reserve the same 0x200 header as later eras, and the region at 0x200 begins with a page count followed by the page size, as in `000000ab000002000000444100300000`. That second word, not anything at the top of the file, is the structural confirmation: all 54 satisfy it and the one `._ScoreI-Fin08.mus` AppleDouble metadata artifact satisfies neither test. Corpus ID `mus-6d3b75475a2ca67b` is also Coda-banner but has weaker provenance.
+
+#### Chained pools
+
+**Confirmed** across all 54 direct Coda-banner files. There is no per-block framing in this era. Instead the file is a chain of pools starting at 0x200, each laid out as:
+
+| Field | Width | Meaning |
+|---|---|---|
+| page count | 4 bytes | number of 512-byte pages of record data |
+| page size | 4 bytes | always `0x00000200` |
+| records | page count × 512 | record rows, zero-padded to the page boundary |
+
+Each pool begins immediately after the previous one ends. Every file contains **exactly three pools**, and the walk terminates in the same place every time. The page count is a count of pages, not of records: a file whose first pool declares 46 pages carries far more than 46 rows.
+
+Pool 0 is the tagged others pool and pool 1 is the details pool; both are described under
+[record pools and row shapes](#record-pools-and-row-shapes-through-finale-2006), which covers every
+epoch through Finale 2006. Pool 1 was initially reported here as having no tags, because it was
+measured at the others tag offset; a detail's second comparator displaces its tag by two bytes.
+Pool 2 shows no tag at any offset or stride and is presumed to hold entries, which remains
+inference rather than measurement.
+
+#### Pool 0 rows
+
+Rows are 16 bytes in the shared others shape, and incidence is implicit in encounter order with no
+incidence field, exactly as in the later fixed-row eras.
+
+Trailing space in the final page is zero-filled, so an all-zero row marks the end of populated records. This holds for 51 of the 54 files; the other three fill their pages exactly. A row of `ffffffff` can appear *within* the populated region and is not a terminator: the Finale 1.8.7 file `mus-7aa45639c14b3864` carries one at a point where valid rows continue afterward. Populated row counts across the 54 files run from 602 to 11,299, median 5,797.
+
+Comparator 65534, which later eras use for synthetic preference records, is already in use here. `mus-7aa45639c14b3864` carries 150 such rows under numeric tags `01`-`43`, `50`-`55`, `62`-`65`, plus `40` and `fi`. The `^NN(65534)` preference mechanism therefore predates the Enigma signature. Selector `94`, which the distilled mapping uses for music spacing, is **not** present in that file.
+
+Two tags that the distilled PDK mapping relies on, `FI` and `HE`, do not occur anywhere in pool 0 of
+any of the 54 files. Both searches predate the correction below about tag byte order, but this era
+is uniformly big-endian, so they are unaffected.
+
+#### Enigma string region
+
+**Confirmed** across all 54 files. After the third pool the remainder of the file holds exactly two length-prefixed chunks, each a 4-byte big-endian byte count followed by that many bytes of text. Walking them lands precisely on end-of-file in every case. The first chunk always begins with `^` and carries `^text()` followed by `^block(n)` sections; the second is `^lyrics()`.
+
+Enigma string markup therefore already exists in Finale 1.8.7: `mus-7aa45639c14b3864` contains `^font`, `^size`, and `^efx` commands inside its text chunk. This region is better delimited than the banner era's mixed `0x0017` block, because the pool chain locates it exactly with no scanning.
+
+#### Header text records
+
+The `HT` tag in pool 0 carries page text rather than document metadata. Each logical text block occupies **four consecutive incidences**, that is 48 payload bytes, holding a NUL-terminated string followed by numeric fields. Every `HT` family observed across 20 files has an incidence count that is a multiple of four, in 32 of 32 families. In `mus-7aa45639c14b3864` the comparator-1 family holds five blocks in twenty incidences: a composer credit, a dedication, a copyright line, a typesetting credit, and the title.
+
+These are page titles, not document metadata. Whether this era stores document metadata at all is **open**.
+
+Text in these records is **Mac OS Roman**, not Latin-1: `0xa9` renders as `©` in the copyright line and `0xaa` as `®` in a `Finale®` credit. Any import of this text needs the encoding conversion step before the strings are usable.
+
+## Record pools and row shapes through Finale 2006
+
+**Confirmed** on 2026-08-09 against the controlled fixtures, seven large corpus files of the
+2002-2006 era, three uncompressed-era files, and all 54 Coda-banner files.
+
+Every epoch through Finale 2006 stores its records in four pools in the same order, and only the
+container framing differs. Pool identity was established by measuring, for each pool, the fraction
+of 16-byte rows whose bytes at a given offset are alphanumeric.
+
+| Logical pool | Coda banner | Uncompressed | DCL | Row test |
+|---|---|---|---|---|
+| others | pool 0 | `0x0001` | `0x000f` | 0.97-1.00 alphanumeric at offset 2 |
+| details | pool 1 | `0x0002` | `0x0010` | 0.95-1.00 alphanumeric at offset 4 |
+| entries | pool 2 | `0x0003` | `0x0011` | ~0.00 at both, size frequently not a multiple of 16 |
+| text | length-prefixed chunks | `0x0004` | `0x0012` | ~0.55 at both, the signature of mixed ASCII |
+
+The others and details tests are mutually exclusive in every file examined: a pool scoring high at
+offset 2 scores near zero at offset 4 and the reverse. That is a direct consequence of the two row
+shapes, which are the only two needed to normalize the whole pre-2007 range:
+
+| Shape | Layout | Payload |
+|---|---|---|
+| other | comparator (2), tag (2), payload (12) | six 16-bit words |
+| detail | comparator 1 (2), comparator 2 (2), tag (2), payload (10) | five 16-bit words |
+
+**Confirmed: the tag is a 16-bit value, not a character pair, and is subject to byte order like
+every other field of the row.** A little-endian file stores `FN` as the bytes `NF` and `LA` as
+`AL`. Reading the two bytes literally mismatches every tag in such a file, and the failure is
+silent: the pool decodes, the rows look structurally valid, and no lookup ever matches. A Finale
+3.0 file read that way appears to contain an unfamiliar vocabulary of `NF`, `AL`, `RF`, `SM`, `bs`,
+`co` records, which is simply `FN`, `LA`, `FR`, `MS`, `sb`, `oc` reversed, alongside numeric tags
+that read as `10`, `40`, `50` instead of `01`, `04`, `05`.
+
+This is worth stating plainly because it is easy to mistake for a format difference. Before the
+byte order was applied to tags, every little-endian file in the corpus recovered nothing, and the
+failures looked like unframed variants or an older record vocabulary rather than a decoding error.
+Correcting it took the Finale 2001-2006 recovery rate from 410 of 426 files to 426 of 426.
+
+A detail carries a second comparator, which displaces its tag by two bytes. This is the same
+distinction the ETF makes by argument count: in the 2.6-era ETF `mus-2c0a5e8897b436d5`, all
+thirteen tags printed with two arguments (`AS`, `BL`, `CL`, `CN`, `ED`, `GF`, `IM`, `LL`, `MT`,
+`ST`, `TN`, `TP`, `Ts`) appear in the binary details pool at offset 4, and none appear in the
+others pool.
+
+Entries are neither shape. Their pools are often not a multiple of 16 bytes, consistent with the
+32-byte implicit-ID entry rows reported for the early family, so a reader must not apply the
+others row stride to them.
+
+Two cautions for anyone reproducing this:
+
+- **The controlled fixtures cannot demonstrate the details pool.** Their `0x0010` block is roughly
+  half a kilobyte and scores 0.09, because the fixtures contain almost no detail-bearing content.
+  Real corpus files of the same era score 0.98-1.00. Any test of details framing needs a file with
+  real content.
+- **Coda-banner pools are page-padded, so a naive fraction understates them.** Measured over whole
+  pools including padding the details score looks as low as 0.47. Excluding all-zero padding rows
+  it is 0.965 across all 54 files, in line with the banner eras. The remaining 3.5% are not ASCII
+  tags at all but sequential high-bit values, `0x8001`, `0x8002`, `0x8003` and so on, whose meaning
+  is **open**. The Coda details pool also carries ten tags the ETF does not print with two
+  arguments (`AC`, `BH`, `CD`, `DE`, `DO`, `MM`, `Te`, `UE`, `sB`, `ve`), which is **open** as well.
+
+### Font definitions
+
+**Confirmed** against the controlled Finale 2002 fixture and its ETF, and applied to all 669
+pre-zlib corpus files, which yield 12,759 definitions with no empty name.
+
+A font definition is one `FN` family in the others pool, comparator equal to the font id used
+throughout the document.
+
+| Incidence | Contents |
+|---|---|
+| 0 | header: character set word, then pitch and family word, then four unused words |
+| 1 onwards | the font name, as many rows as it needs |
+
+The header's first word packs the character set: the high nibble is the bank, 1 for a Mac font and
+2 for a Windows font, and the remaining twelve bits are the character set value. The bank describes
+where the *font* came from, not where the document was written. The values agree with musxdom's own
+documentation of the field, which records `0xfff` as the macOS symbol character set and 2 as the
+Windows one. The fixture stores `0x1fff` for Maestro and `0x1000` for Times, and its ETF prints the
+same headers as `^FN(0) 8191 0 0 0 0 0` and `4096`.
+
+The header's second word carries the pitch in its low nibble and the family in its high nibble.
+Across 7,622 header incidences it is non-zero only for Windows-bank fonts: all 7,355 Mac-bank fonts
+store zero, while Windows-bank fonts take pitch 1, 2, or 7 and family 0, 1, 2, 4, or 5. Family 4
+selects exactly the script and blackletter faces in the corpus, which is independent support for
+the nibble boundary. The remaining four header words are unused; not one is non-zero anywhere in
+the corpus.
+
+The name is read as bytes, not as words, because character payloads are not byte-order sensitive,
+and it ends at the first NUL. Rows are fixed width, so a name shorter than the row is padded and a
+longer one simply continues into the next incidence.
+
+**Before Finale 3.2 there is no header incidence**: the family opens with the name and no character
+set is recorded. Observed in every Coda-banner file and in the Finale 3.0 files, against Finale 3.2
+and later where the header is always present. The exact boundary is **open**: the corpus holds no
+Finale 3.1, and its only Finale 3.0 files are Windows-origin, so a platform explanation cannot be
+excluded.
+
+### The 2007-2012 record encoding
+
+**Confirmed** for the font record against Finale 27's own conversion of the same document, and
+**strong** for the general shape, which is inferred from that one record type.
+
+The 2007 serialization abandons the fixed 16-byte row. Records in block `0x001a` are
+variable-length and self-describing, little-endian:
+
+| Field | Width | Meaning |
+|---|---|---|
+| class id | 2 | numeric identifier standing in for what EnigmaXML names as an element |
+| cmper | 2 | comparator, as in every earlier era |
+| incidence | 2 | incidence, as in every earlier era |
+| length | 4 | payload size |
+| payload | length | per class |
+| padding | 4 | zero in every observed record |
+
+The logical model is therefore unchanged. What moved is the physical encoding: the
+two-character tag became a numeric class id, and the fixed six-word payload became a
+length-governed byte payload. `RECORD_CATALOG.md` already catalogs these numeric identifiers,
+and `0x0090` is the font definition, which that catalog lists as `fontName` at `weak`
+confidence.
+
+The font payload keeps the earlier character-set encoding unchanged: `0x1fff` for a Mac symbol
+font and `0x1000` for a Mac text font at payload offset 0, the pitch and family pair at offset 2,
+and the name from offset 12 to the end of the payload. A longer name simply grows the payload:
+`Maestro Percussion` carries length 36 where short names carry 24.
+
+Verified against `Score-Fin12.mus` and the Finale 27 conversion of the same document, which agree
+on every comparator, every gap in the comparator sequence, every name, and every character set
+value.
+
+**Hypothesis, not yet examined: the sharing data should be here too.** EnigmaXML carries part and
+sharing information as attributes on each element, and this encoding otherwise lines up field for
+field with that model. If the correspondence holds, the part comparator and share mode should
+appear in the record header or the payload prologue rather than being derived. This is **open**
+and no evidence has been gathered for it yet.
 
 ## Archive-derived early-version evidence
 
-The expanded archive survey changes the earliest-version picture. StuffIt extraction with `unar` 1.10.7 produced explicit pre-banner samples labeled Finale 1.8.7, 2.0.1, and 2.6, plus additional 3.0–3.7 files. The earliest explicit product currently observed is 1.8.7; no explicit Finale 1.0 sample has yet been found. These files should not be conflated with the 55 direct pre-banner/unknown files. Public IDs and hashes are in `data/archive_members.csv`; original archive/member locations are private.
+The expanded archive survey changes the earliest-version picture. StuffIt extraction with `unar` 1.10.7 produced explicit Coda-banner samples labeled Finale 1.8.7, 2.0.1, and 2.6, plus additional 3.0–3.7 files. The earliest explicit product currently observed is 1.8.7; no explicit Finale 1.0 sample has yet been found. These files should not be conflated with the 55 direct Coda-banner/unknown files. Public IDs and hashes are in `data/archive_members.csv`; original archive/member locations are private.
 
 Finale 27 successfully opened the selected 1.8.7, 2.0.1, and 2.6 files after `.mus` was appended to their
 filenames and produced private `.fin27.musx` references. Thus there is no parser compatibility cutoff among these
@@ -52,7 +267,7 @@ in the experiment log.
 | `template-Fin2000-from-Fin2005.etf` | Finale 2000 source, Finale 2005 saver | 34,029 bytes | header, others, details, entries, text, lyrics | Same source document but Finale 2005 header; adds `&f`, `PD`, `XA`, expressions, and other records. This is direct evidence that resaving can synthesize/upgrade records. |
 | `tremolos-from-Fin2000.etf` (`mus-3a8b724cf3adba80`) | Finale 2000 | 28,718 bytes | header, others, details, entries, text, lyrics | Exact source-version pair: 1,107 others, 64 details, eight entries, and raw text match the uncompressed binary pools; includes `CN`, `GF`, and `TP`. |
 | `guitar pc.etf` (`mus-7aa45639c14b3864`) | Finale 1.8.7 | 123,084 bytes | others, details, entries, text, lyrics | 1,094 `eE` entry lines and 891 detail lines; no modern binary-style header section. |
-| `Dream of Summer I-from-Fin2.6.3.etf` (`mus-2c0a5e8897b436d5`) | Finale 2.0.1 source, Finale 2.6.3 exporter | 74,040 bytes | others, details, entries, text, lyrics | 549 `eE` entry lines and 497 detail lines; old ETF uses the same broad logical sections despite the pre-banner binary family. |
+| `Dream of Summer I-from-Fin2.6.3.etf` (`mus-2c0a5e8897b436d5`) | Finale 2.0.1 source, Finale 2.6.3 exporter | 74,040 bytes | others, details, entries, text, lyrics | 549 `eE` entry lines and 497 detail lines; old ETF uses the same broad logical sections despite the Coda-banner binary family. |
 | `Score-from-sit-archive.etf` (`mus-bd0042f8e0354192` source class) | Finale 2.6 | 1,272,164 bytes | others, details, entries, text, lyrics | 9,446 `eE` entry lines and 6,814 detail lines; the large sample is suitable for testing whether early records scale regularly. The StuffIt copy was necessary because the ZIP copy lacked the resource fork. |
 | `F2002-baseline.etf` | Finale 2002a.r1 | 14,068 bytes | header, others, details, entries, text, lyrics | Three `eE` entries; exact pair with `F2002-baseline.mus`. |
 | `F2002-changed-C-to-D.etf` | Finale 2002a.r1 | 14,075 bytes | header, others, details, entries, text, lyrics | Same three entries, with localized pitch-related field changes; exact pair with `F2002-changed-C-to-D.mus`. |
@@ -428,7 +643,7 @@ Code `0x011a` maps exactly to `partDef`. Part scope and sharing are likely encod
 - 2007+: zlib plus explicit CRC-32 and stored block length, confirmed.
 - 2001–2006: PKWARE DCL streams, decoded with `blast`; explicit big-endian CRC-32 and stored block length, confirmed.
 - 3.x–2000: uncompressed typed pools with no identified checksum; fixed rows and text framing confirmed.
-- pre-banner/Finale 2: separate organization.
+- Coda-banner/Finale 2: separate organization.
 
 No evidence of whole-file encryption was found. No checksum was identified in the pre-2001 eras.
 

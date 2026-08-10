@@ -25,7 +25,18 @@ namespace finale_mus_reader {
 namespace container {
 namespace {
 
-constexpr std::size_t bodyOffset = 0x200;
+// The customary start of the record body, and the page size of a Coda-banner pool.
+constexpr std::size_t defaultBodyOffset = 0x200;
+
+// A banner-era header records where its record body actually begins, as a 16-bit value at
+// 0x60 subject to the file's byte order. It reads 0x200 in 1,162 of the 1,163 surveyed
+// banner files, which is why a constant worked for so long, but the file-info strings that
+// occupy 0x0b0 onwards can overrun that boundary and push the body later. Treating 0x200 as
+// a constant leaves such a file unframed, and the failure looks like an unknown variant
+// rather than a misread header.
+constexpr std::size_t bodyOffsetField = 0x60;
+
+std::size_t readBodyOffset(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder);
 constexpr std::size_t maximumDecodedBlockSize = 64U * 1024U * 1024U;
 
 std::uint16_t read16(const std::uint8_t* data, ByteOrder byteOrder)
@@ -48,6 +59,17 @@ std::uint32_t read32(const std::uint8_t* data, ByteOrder byteOrder)
         | (static_cast<std::uint32_t>(data[1]) << 8U)
         | (static_cast<std::uint32_t>(data[2]) << 16U)
         | (static_cast<std::uint32_t>(data[3]) << 24U);
+}
+
+// Falls back to the customary offset when the field is absent or implausible, so a file
+// that predates the field, or one whose header is truncated, behaves as it always did.
+std::size_t readBodyOffset(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
+{
+    if (size < bodyOffsetField + 2) {
+        return defaultBodyOffset;
+    }
+    const std::size_t recorded = read16(data + bodyOffsetField, byteOrder);
+    return recorded >= defaultBodyOffset && recorded < size ? recorded : defaultBodyOffset;
 }
 
 struct BlastOutput
@@ -140,6 +162,7 @@ bool crcMatches(const std::vector<std::uint8_t>& bytes, std::uint32_t expected)
 std::optional<ParsedContainer> tryUncompressed(
     const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
 {
+    const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
         return std::nullopt;
     }
@@ -180,6 +203,7 @@ std::optional<ParsedContainer> tryUncompressed(
 std::optional<ParsedContainer> tryCompressed(
     const std::uint8_t* data, std::size_t size, ByteOrder byteOrder, bool dcl)
 {
+    const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
         return std::nullopt;
     }
@@ -253,12 +277,69 @@ std::optional<ParsedContainer> tryCompressed(
     return parsed;
 }
 
+// A Coda-banner file has no per-block framing. Its records live in a chain of pools, each
+// an 8-byte prologue holding a 512-byte page count and the page size, followed by that many
+// pages. The pools appear in the same order the later eras use for their typed blocks, so
+// they are reported under the uncompressed-era type numbers and everything downstream can
+// treat all pre-2007 epochs alike. Every surveyed file of this era holds exactly three
+// pools; the text region that follows them uses different framing and is not decoded here.
+ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
+{
+    ParsedContainer parsed;
+    parsed.formatEpoch = FormatEpoch::CodaBanner;
+    // These are classic Mac documents and their words are big-endian. Every surveyed file
+    // of the era confirms it twice over: each pool prologue's page-size word reads as 0x200
+    // only in big-endian order, and the record tags read as text only in that order.
+    parsed.byteOrder = ByteOrder::BigEndian;
+
+    std::size_t offset = defaultBodyOffset;
+    std::uint16_t type = 1;
+    while (offset + 8 <= size) {
+        const auto pages = read32(data + offset, ByteOrder::BigEndian);
+        const auto pageSize = read32(data + offset + 4, ByteOrder::BigEndian);
+        if (pageSize != defaultBodyOffset || pages == 0) {
+            break;
+        }
+        const auto body = offset + 8;
+        const auto span = static_cast<std::size_t>(pages) * defaultBodyOffset;
+        if (span > maximumDecodedBlockSize || body + span > size) {
+            break;
+        }
+
+        DecodedBlock block;
+        block.info.type = type;
+        block.info.sourceOffset = body;
+        block.info.storedSize = span + 8;
+        block.data.assign(data + body, data + body + span);
+        block.info.decodedSize = block.data.size();
+        parsed.blocks.push_back(std::move(block));
+
+        offset = body + span;
+        ++type;
+    }
+
+    parsed.trailingByteCount = size - offset;
+    return parsed;
+}
+
 bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 {
     constexpr char signature[] = "ENIGMA BINARY FILE";
     return size >= sizeof(signature)
         && std::memcmp(data, signature, sizeof(signature) - 1) == 0
         && data[sizeof(signature) - 1] == 0;
+}
+
+// Files older than the signature open with a plain-text product banner instead, such as
+// `Finale(TM) 2.6 Copyright 1987 by Coda.`. Every signature-bearing file in the surveyed
+// corpus spells it `Finale(R)`, so the `(TM)` spelling identifies the era on its own.
+bool hasCodaBanner(const std::uint8_t* data, std::size_t size)
+{
+    constexpr char prefix[] = "Finale(TM) ";
+    constexpr std::size_t prefixLength = sizeof(prefix) - 1;
+    return size > prefixLength
+        && std::memcmp(data, prefix, prefixLength) == 0
+        && data[prefixLength] >= '0' && data[prefixLength] <= '9';
 }
 
 } // namespace
@@ -288,11 +369,14 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
         return {};
     }
 
-    if (size >= bodyOffset + 10
-        && read32(data + 4, ByteOrder::BigEndian) == bodyOffset) {
-        ParsedContainer parsed;
-        parsed.formatEpoch = FormatEpoch::PreBanner;
-        return parsed;
+    // The body of a Coda-banner file opens with a count followed by the body offset
+    // itself. That second word, not anything at the top of the file, is what confirms
+    // the era: all 54 substantive Coda-banner files in the corpus satisfy both checks,
+    // and the one file that satisfies neither is an AppleDouble metadata artifact.
+    if (hasCodaBanner(data, size)
+        && size >= defaultBodyOffset + 10
+        && read32(data + defaultBodyOffset + 4, ByteOrder::BigEndian) == defaultBodyOffset) {
+        return parseCodaBanner(data, size);
     }
 
     return {};

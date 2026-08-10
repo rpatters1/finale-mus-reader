@@ -140,6 +140,52 @@ The options problem is no longer wholly unmapped. A practical first implementati
 The mapping must be data-driven and versioned. It should not be compiled into assumptions that every table row works
 unchanged across Finale 2000, 2001–2006, 2007–2012, and the 26.2 compatibility API.
 
+## Corpus verification of promoted mappings
+
+**Confirmed** by running the reader over all 1,218 direct corpus files, last measured
+2026-08-09. Eight option mappings are promoted: four `MusicSpacingOptions` fields from selector
+`94(65534)` and the four `layerAtts.restOffset` values from `LA`. Font definitions are recovered
+separately and are not counted here; see
+[FORMAT_NOTES.md](FORMAT_NOTES.md#font-definitions).
+
+| Era | Files | Music spacing 4/4 | Layer offsets 4/4 |
+|---|---:|---:|---:|
+| Coda banner, 1.8.7-2.6 | 54 | 0 | 0 |
+| Finale 3.0-3.7 | 28 | 0 | 28 |
+| Finale 97 | 70 | 0 | 60 |
+| Finale 2000 | 92 | 90 | 92 |
+| Finale 2001-2006 | 426 | 426 | 426 |
+
+Three era facts follow:
+
+- **Every framed DCL file recovers all eight values.** The sixteen that previously did not were
+  failing on tag byte order, not on framing.
+- **`LA` is present from Finale 3.0 and absent from the Coda-banner era, because layers were
+  introduced in Finale 3.x.** The absence is therefore a fact about the era rather than a
+  shortfall in the reader: a document written before layers existed has no layer attributes to
+  recover, and the four `layerAtts` objects correctly keep their Finale 27 default rest offsets.
+  This is the fallback strategy working as intended, and `ImportReport` records those four values
+  as synthesized rather than recovered.
+- **Ten Finale 97 documents carry no `LA` records** even though layers existed by then. That is a
+  separate and unexplained case, and is **open**.
+- **Selector `94` is not observed before Finale 2000.** Finale 3.0 through 97 recover layer
+  offsets and no spacing values, and the Finale 1.8.7 file `mus-7aa45639c14b3864` carries
+  comparator 65534 records under many other selectors but not `94`. The introduction point lies
+  after Finale 97, internal 3.8, and no later than Finale 2000, internal 5.0. Finale 98, internal
+  major 4, would settle it but is absent from the corpus and its release notes are not online.
+  The likeliest explanation is that these spacing options were themselves introduced in Finale
+  2000, which was a large feature release; that is a **weak** hypothesis, consistent with the
+  observation but not independently established.
+
+No version gate was added for the spacing mappings. A gate protects against reading a field that
+*moved*; a field that is simply absent needs none, because the record lookup fails and the value
+correctly reports as a synthesized default. Adding one would encode an unverified boundary while
+changing no behavior. Font definitions are gated, because there the layout genuinely differs: files
+before Finale 3.2 carry no header incidence.
+
+This measures recovery, not accuracy. Only the fixtures with ETF counterparts independently confirm
+that the recovered values are correct.
+
 ## Confidence and validation plan
 
 | Claim | Status |
