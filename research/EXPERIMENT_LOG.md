@@ -230,6 +230,47 @@
 - **Finale 27 result:** Finale 27 opened all three sources—1.8.7, 2.0.1, and 2.6—after `.mus` was appended to the extensionless filenames. It produced valid MUSX containers with decoded pool counts of 2,018/787/1,320, 1,347/478/659, and 14,913/6,095/11,153 for others/details/entries. The 2.6 file had font issues but converted. This disproves a parser cutoff at 2.6.x for the tested data forks and identifies filename recognition as the original barrier.
 - **Follow-up:** Request exact minimal MUS/ETF pairs saved and exported by Finale 2.6.3 and, if supported, Finale 1.0; test Finale 1.0 separately because it remains outside the verified compatibility range.
 
+## 2026-08-10 — Second corpus: Finale application installations
+
+- **Question:** A cache of MacFin and WinFin installations was located. Do application installs contain legacy
+  material the document corpus does not, and does the existing pipeline actually see it?
+- **Method:** Registered it as survey `rpatters1-installs` and rebuilt private output per survey so two corpora can
+  coexist. `Finale PDK` was excluded throughout: it holds MakeMusic proprietary PDK sources and stays outside this
+  project's provenance boundary until a deliberate, separately scoped decision says otherwise. `*.lib` and `*.fan`
+  were excluded as ENIGMA-framed non-documents. Finale 2014.5 and later application bundles were excluded because
+  they save only MUSX.
+- **Observation — the pipeline was blind to most of it.** An extension-only scan finds 7,542 `.mus` files. Content
+  sniffing finds 2,518 more, because classic Mac Finale kept the file type in the resource fork and its documents
+  carry no extension. Products 1.0.0, 2.6, 3.0, 3.2, 3.5, 3.7, 3.8, 97, 98 and 99 would otherwise have reported a
+  confident zero. A third banner spelling was also unmatched: Finale 1.0.0 writes `Finale` + MacRoman 0xAA +
+  version + `ENIGA Structures`, so even the archive member sniffer rejected those files.
+- **Observation — new coverage.** 22 Finale 1.0.0 files (14 samples, 6 templates, 2 tool demos), 11 Finale 3.8,
+  56 Finale 98 and 4 Finale 99, none of which appear in `rpatters1-main`. Total 10,060 loose specimens,
+  4,535 distinct by content. The 32 legacy installer ZIPs yielded no cacheable members at all.
+- **Observation — two banners are not releases.** `Finale 3.8` files carry Enigma 3.8.0 build 7, byte-identical to
+  every Finale 97 file that yields a tuple; `Finale 99` files carry Enigma 5.0.0 build 15 against Finale 2000's 5.0
+  line. Coda replaced version-numbered product names with year-numbered ones, and files written around the rename
+  keep the older banner. Recorded in `VERSION_MATRIX.md` under *Renamed releases*.
+- **Observation — Finale 98 application major is 4.** 41 of the 44 macOS-origin files that yield a tuple decode
+  application version 4.0.x, settling a presumption `VERSION_MATRIX.md` had carried as unverified. The Enigma
+  version is not uniformly 4: 41 files carry 4.0.0 build 10 and 8 carry 3.8.0 build 7. Four Windows-origin files
+  decode nonsense at the same offset and are unclassified.
+- **Observation — entropy separates the eras cleanly.** Median body entropy is 2.21–3.99 with no compressed member
+  for every product through 2000, and 7.64–7.70 for 2001–2006. This is what places 1.0.0, 3.8, 98 and 99 in their
+  structural families on evidence rather than on where their names fall in sequence.
+- **Correction to method.** An initial exclusion of `*/Libraries*` was wrong and was withdrawn. No `.mus` lives
+  under those directories, but real documents do: at version 2007 Finale moved two stock font-default documents
+  into them, and the exclusion also removed the only Finale 3.0, 3.2, 3.5 and 99 material in the corpus.
+- **Reference-corpus effect.** Re-running `rpatters1-main` through the same tool dropped it from 1,290 to 1,289
+  files: a 4,096-byte AppleDouble `._` sidecar previously carried as an `unknown` product row is no longer treated
+  as a specimen. No file changed saving product, and the corpus fingerprint changed accordingly.
+- **Conclusion:** Installation media are a distinct and worthwhile evidence class — they supply version coverage
+  that authored documents cannot, especially at the earliest eras. The discovery gap they exposed was in the survey
+  tooling, not in the corpus.
+- **Follow-up:** Run `dcl_probe.py` against both surveys; the framing figures in `VERSION_MATRIX.md` predate this
+  run. Classify the four Windows-origin Finale 98 files. Decide separately and deliberately whether `Finale PDK`
+  is ever surveyed.
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

@@ -2,7 +2,11 @@
 
 This is a public-source, independently verified exploratory study of legacy Finale `.mus` files. It assesses whether a future reader could populate the existing musxdom model; it is not a reader implementation.
 
-The inventory found 1,290 legacy files, 1,151 of them distinct by content, and 2,042 Finale 27 exports. An exact adjacent `-exports/<name>.fin27.musx` counterpart exists for 1,189 legacy files; a further 36 match by basename search alone and 29 ambiguously, and 36 have no counterpart. Finale 27 exports are semantic references, not byte-for-byte representations: conversion changes the modified header, normalizes data, and can synthesize or expand records.
+Two corpora have been surveyed, both registered in [`data/surveys.csv`](data/surveys.csv).
+
+`rpatters1-main` is the reference corpus of authored documents: 1,289 legacy files, 1,150 of them distinct by content, and 2,042 Finale 27 exports. An exact adjacent `-exports/<name>.fin27.musx` counterpart exists for 1,189 legacy files; a further 36 match by basename search alone and 29 ambiguously, and 35 have no counterpart. Finale 27 exports are semantic references, not byte-for-byte representations: conversion changes the modified header, normalizes data, and can synthesize or expand records.
+
+`rpatters1-installs` is Finale application installations for macOS and Windows, 10,060 files across products 1.0.0 through 2010. It has no exports and therefore no semantic half, and it contributes version coverage rather than converted references: it holds the only Finale 1.0.0, 3.8, 98 and 99 material in any survey. A quarter of its files carry no extension, because classic Mac Finale kept the file type in the resource fork.
 
 ## Corpus identifiers
 
