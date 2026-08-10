@@ -16,6 +16,11 @@ if(MSVC)
     # limit in any translation unit that instantiates them. Apply this to the
     # entire directory tree so no MSVC object is built without it.
     add_compile_options(/bigobj)
+    # Sources carry UTF-8 string literals and no byte-order mark: the legacy text
+    # tests compare against real decoded names such as "Célino" and "ヒラギノ明朝".
+    # Without this MSVC reads them in the machine's active code page and silently
+    # produces different bytes, so this is a directory-wide invariant too.
+    add_compile_options(/utf-8)
 endif()
 
 option(FINALE_MUS_READER_BUILD_TESTING "Build Legacy Finale MUS Reader tests" ON)
@@ -117,6 +122,7 @@ add_library(finale_mus_reader STATIC
     src/import/mappings/layer_attributes.cpp
     src/import/mappings/music_spacing_options.cpp
     src/import/reader.cpp
+    src/import/text_encoding.cpp
     src/records/legacy_others.cpp
     src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
@@ -133,10 +139,30 @@ target_link_libraries(finale_mus_reader
     PUBLIC musx
     PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
 
-if(MSVC)
-    target_compile_options(finale_mus_reader PRIVATE /W4 /WX)
+# Legacy MUS stores text in whatever encoding the saving machine used, so the reader has to
+# convert it to the UTF-8 that musxdom expects. Each platform gets the most accurate
+# converter it has rather than a common subset: Windows uses its own APIs, macOS uses
+# CoreFoundation, which is the only one of the three that resolves the classic Mac encodings
+# natively, and everything else uses iconv. CoreFoundation is pure C, so no Objective-C
+# toolchain is involved.
+#
+# iconv is not linked, probed for, or compiled on Apple: macOS ships its own libiconv that
+# would otherwise be found and silently linked, and the source guards the iconv path behind
+# the same condition. That leaves iconv exercised only by the Linux CI, which is the
+# accepted cost of decoding classic Mac encodings accurately on the platform that wrote
+# most of them.
+if(WIN32)
+    # MultiByteToWideChar and WideCharToMultiByte are in the standard Win32 libraries.
+elseif(APPLE)
+    target_link_libraries(finale_mus_reader PRIVATE "-framework CoreFoundation")
 else()
-    target_compile_options(finale_mus_reader PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    find_package(Iconv)
+    if(Iconv_FOUND)
+        target_link_libraries(finale_mus_reader PRIVATE Iconv::Iconv)
+    else()
+        message(FATAL_ERROR
+            "iconv is required to convert legacy MUS text to UTF-8 on this platform.")
+    endif()
 endif()
 
 if(FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_TOOLS)

@@ -93,6 +93,26 @@ words, and multi-incidence rows may form one logical object.
 - When evidence conflicts with an assumption, preserve the evidence and update
   the hypothesis rather than forcing the sample through an expected layout.
 
+## Legacy text encoding
+
+Legacy MUS stores text in whatever encoding the machine that saved it used; EnigmaXML and
+musxdom are always UTF-8. Converting between the two is this project's job and not
+musxdom's, which is why `src/import/text_encoding.*` exists here.
+
+The encoding is named per font rather than per document: `charsetBank` selects the
+platform's charset numbering and `charsetVal` selects within it, so a Mac font in a document
+saved on Windows still decodes correctly. Before Finale 3.2 the font record carries no
+charset at all, and the bank is synthesized from the document's own platform instead.
+
+**Aim for the best result obtainable on the machine that is running.** Conversion need not
+be bit-identical across platforms, and insisting on that would mean giving up real accuracy:
+Windows can name encodings iconv cannot, so it gets the more faithful code page rather than
+being held to a common subset. Where a platform must fall back, say so next to the fallback
+and record what evidence shows the fallback is adequate.
+
+Choices that no observed file settles are starting positions, not findings. Label them as
+such and revise them when a file demands it, rather than defending them.
+
 ## Options fallback strategy
 
 musxdom expects a structurally complete options pool. Implement fallback options
@@ -198,6 +218,9 @@ The build uses CMake. Keep these properties intact when extending it:
 - Compile every C and C++ object with `/bigobj` under MSVC. Keep this as a
   directory-wide build invariant so template-heavy musxdom factory
   instantiations cannot exceed the default COFF section limit in any target.
+- Compile every object with `/utf-8` under MSVC, also directory-wide. Sources
+  carry UTF-8 string literals and no byte-order mark; without the flag MSVC reads
+  them in the machine's active code page and silently produces different bytes.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging

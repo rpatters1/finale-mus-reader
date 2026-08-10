@@ -5,6 +5,7 @@
 
 #include <iterator>
 
+#include "import/text_encoding.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -12,6 +13,46 @@ namespace mapping {
 namespace {
 
 using Target = musx::dom::others::FontDefinition;
+
+// Legacy MUS stores a font name in whatever encoding the machine that saved it used, and
+// names the encoding nowhere except in this same record: `charsetBank` selects the
+// platform's charset numbering and `charsetVal` selects within it. musxdom expects UTF-8,
+// because EnigmaXML is always UTF-8, so the name is converted here once both fields are in
+// hand.
+//
+// Every name goes through a converter, including one that is entirely 7-bit. Every encoding
+// here agrees with ASCII below 0x80, so the answer is the same either way, but skipping
+// ASCII would leave the conversion path untested against the bulk of real input. A name
+// whose bytes contradict the charset it claims is left exactly as it was found rather than
+// replaced or dropped: preserved mojibake can be re-decoded later, discarded bytes cannot.
+void convertNameToUtf8(void* instance, const SourceProfile&)
+{
+    auto* font = static_cast<Target*>(instance);
+    font->name = text::toUtf8(
+        font->name, text::codePageForCharset(font->charsetBank, font->charsetVal));
+}
+
+// Before Finale 3.2 the font record carries no charset at all, so `charsetBank` and
+// `charsetVal` would otherwise sit at their constructed defaults and say nothing about this
+// document. Rather than pick an encoding here, synthesize the bank from the file's own
+// operating system and then convert exactly as every other era does: `charsetVal` stays 0,
+// which already means Mac Roman under the Mac bank and ANSI under the Windows bank.
+//
+// The synthesized bank is a starting position, not a discovery. It is currently untestable:
+// all 11,842 font names in the surveyed pre-3.2 corpus are 7-bit, so no observed name is
+// affected either way. It stops being arbitrary the moment an 8-bit pre-3.2 name appears.
+//
+// An unclassified platform is treated as Mac. Coda-banner files carry no platform tuple at
+// all, and no file earlier than Finale 3.0 in any survey is Windows-origin, so Mac is the
+// only origin those documents can have.
+void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile)
+{
+    auto* font = static_cast<Target*>(instance);
+    font->charsetBank = profile.platform == SourcePlatform::Windows
+        ? Target::CharacterSetBank::Windows
+        : Target::CharacterSetBank::MacOS;
+    convertNameToUtf8(instance, profile);
+}
 
 // A font definition is one `FN` family. Its first incidence is the header and every
 // incidence after it carries the name.
@@ -59,13 +100,22 @@ const FieldMapping fontFields[] = {
 // Before Finale 3.2 there is no header incidence at all: the family opens with the name.
 // Observed in every Coda-banner file and in the Finale 3.0 files, against Finale 3.2 and
 // later where the header is always present. The character set is therefore unavailable for
-// these documents rather than merely unmapped, so this table carries only the name and
-// leaves the bank and value at their constructed defaults.
+// these documents rather than merely unmapped, so this table carries only the name; the
+// bank is synthesized from the file's operating system by the finalizer above.
 //
-// The exact boundary is unverified. Every corpus file without the header is either
-// Coda-banner or Finale 3.0, and every file with one is Finale 3.2 or later, but the corpus
-// holds no Finale 3.1 and its only 3.0 files are Windows-origin, so a platform explanation
-// cannot be ruled out from this evidence alone.
+// The split is by version, not by platform. Finale 3.0 files occur in both origins — 79
+// macOS and 3 Windows across the surveyed corpora — and every one of them reads correctly
+// under this table, yielding 353 font names with none blank and none degenerate. A file
+// carrying the header would truncate at the first NUL of its packed charset word if read
+// this way, so clean names are positive evidence that no header is present. Finale 3.2 and
+// later, in both origins, read correctly only under the table above.
+//
+// This supersedes an earlier note that the corpus held only Windows-origin 3.0 files and
+// that a platform explanation therefore could not be ruled out. It can be: both platforms
+// behave alike on either side of the boundary.
+//
+// What remains open is where between 3.0 and 3.2 the header arrived, because no survey has
+// yet turned up a Finale 3.1 file.
 constexpr std::uint8_t headerFirstVersion = 3;
 constexpr std::uint8_t headerFirstMinor = 2;
 
@@ -108,7 +158,8 @@ const MappingTable& classFontDefinitionsTable()
         .recordIdentity = fontDefinitionClass,
         .createTarget = &createOthersTarget<Target>,
         .fields = classFontFields,
-        .fieldCount = std::size(classFontFields)};
+        .fieldCount = std::size(classFontFields),
+        .finalizeTarget = &convertNameToUtf8};
     return table;
 }
 
@@ -122,7 +173,8 @@ const MappingTable& fontDefinitionsTable()
         .recordIdentity = records::packTag("FN"),
         .createTarget = &createOthersTarget<Target>,
         .fields = fontFields,
-        .fieldCount = std::size(fontFields)};
+        .fieldCount = std::size(fontFields),
+        .finalizeTarget = &convertNameToUtf8};
     return table;
 }
 
@@ -136,7 +188,8 @@ const MappingTable& earlyFontDefinitionsTable()
         .recordIdentity = records::packTag("FN"),
         .createTarget = &createOthersTarget<Target>,
         .fields = earlyFontFields,
-        .fieldCount = std::size(earlyFontFields)};
+        .fieldCount = std::size(earlyFontFields),
+        .finalizeTarget = &convertEarlyNameToUtf8};
     return table;
 }
 

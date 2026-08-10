@@ -259,6 +259,14 @@ struct MappingTable
     void* (*createTarget)(const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
     const FieldMapping* fields{};
     std::size_t fieldCount{};
+    /// @brief Optional pass over one target after every field of this table has been applied.
+    /// @details For work that needs more than one recovered field at once and therefore
+    /// cannot be expressed as a field mapping. Converting a legacy font name to UTF-8 is the
+    /// motivating case: the encoding is named by the charset fields of the same record, so
+    /// the name cannot be converted until both are in hand. Doing it here rather than inside
+    /// the name's own apply keeps the reader from depending on the order fields happen to be
+    /// declared in.
+    void (*finalizeTarget)(void* instance, const SourceProfile& profile){};
 };
 
 /// @brief Creates one others object of type T and adds it to the document pool.
