@@ -46,7 +46,7 @@ def main() -> None:
         "come from corpus-wide count correlation with Finale 27 exports; conversion differences and count "
         "collisions remain possible. All candidate rankings are preserved in "
         "[`data/record_correlations.csv`](data/record_correlations.csv), and per-version raw observations in "
-        "`private/generated/record_catalog.csv` (local-only).",
+        "`private/generated/<survey_id>/record_catalog.csv` (local-only).",
         "",
         "Frame fields are described in [FORMAT_NOTES.md](../../FORMAT_NOTES.md). `Example offset` is relative to the "
         "decompressed zlib member, not the file.",

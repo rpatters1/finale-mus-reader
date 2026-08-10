@@ -4,7 +4,7 @@ The first ETF evidence set is now present locally under `private/evidence/` (ign
 Requests remain deliberately small and hypothesis-driven. When multiple Finale versions are available, use the
 **earliest compatible version** for the export and record the exact application version and maintenance/build number.
 Source locations are intentionally omitted from this public document. Resolve each `corpus_id` through the local-only
-`private/generated/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the size and hash, never the filename.
+`private/generated/<survey_id>/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the size and hash, never the filename.
 
 ## Coverage gaps
 

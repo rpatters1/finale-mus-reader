@@ -52,7 +52,11 @@ that task rather than reconstructing the procedure:
   Location-agnostic by design: every path is a CLI argument, so corpus-specific
   conventions belong in the invocation and never in the code.
 - `private/`: ignored local evidence and path mappings. Never publish it.
-  Script output belongs in `private/generated/`.
+  Results are namespaced per surveyed corpus: conventions in
+  `private/corpora/<survey_id>.conf`, script output in
+  `private/generated/<survey_id>/`, fixtures in `private/evidence/<survey_id>/`.
+  `private/regenerate.sh <survey_id>` rebuilds one corpus, `--all` rebuilds every
+  configured one.
 - `third_party/`: permitted location for pinned, license-compatible codec code.
 
 Some implementation directories may be absent until the initial CMake
