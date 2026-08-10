@@ -1,6 +1,6 @@
 # Record Catalog
 
-This catalogs numeric identifiers observed after decompressing record-framed zlib blocks. It does not claim that pre-2007 encoded bytes use the same identifiers. The proposed XML names come from corpus-wide count correlation with Finale 27 exports; conversion differences and count collisions remain possible. All candidate rankings are preserved in [`data/record_correlations.csv`](data/record_correlations.csv), and per-version raw observations in `private/generated/record_catalog.csv` (local-only).
+This catalogs numeric identifiers observed after decompressing record-framed zlib blocks. It does not claim that pre-2007 encoded bytes use the same identifiers. The proposed XML names come from corpus-wide count correlation with Finale 27 exports; conversion differences and count collisions remain possible. All candidate rankings are preserved in [`data/record_correlations.csv`](data/record_correlations.csv), and per-version raw observations in `private/generated/<survey_id>/record_catalog.csv` (local-only).
 
 Frame fields are described in [FORMAT_NOTES.md](../../FORMAT_NOTES.md). `Example offset` is relative to the decompressed zlib member, not the file.
 
