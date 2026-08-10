@@ -50,9 +50,12 @@ Two further options exist for corpora that are not somebody's document folder:
   column of `suffix`, `sniffed`, or `archive-member`, so sniffed specimens stay separable from named ones.
 - `--exclude=GLOB` (repeatable) skips anything matching the glob or living beneath a directory that matches it,
   relative to the corpus root. It applies to sources, exports, and archives alike. Use it for material that is
-  ENIGMA-framed but is not a document — Finale library and font-annotation files — and for subtrees a survey must
-  not read. Exclusions are recorded in `inventory_summary.json`, because a survey run with them covers less than the
-  tree it names and its counts are only comparable with another run that used the same ones.
+  ENIGMA-framed but is not a document — Finale library and font-annotation files, or another application's files
+  that carry a Finale banner — and for subtrees a survey must not read. Matching is case-insensitive: a corpus
+  spanning classic Mac, DOS and Windows filesystems carries `.mus`, `.MUS`, `.lib`, `.LIB` and `.Lib` at once, and a
+  case-sensitive exclusion would quietly cover only part of what it names. Exclusions are recorded in
+  `inventory_summary.json`, because a survey run with them covers less than the tree it names and its counts are
+  only comparable with another run that used the same ones.
 
 Recognizing a specimen is a matter of the banner, and there are three spellings: `Finale(R)` at 0x20 for
 signature-bearing files, `Finale(TM)` at offset 0 for the Coda-banner era, and `Finale` followed by a MacRoman

@@ -50,6 +50,7 @@ def archive_id(data: bytes) -> str:
 
 
 SIGNATURE = b"ENIGMA BINARY FILE"
+ETF_SIGNATURE = b"ENIGMA TRANSPORTABLE FILE"
 # All three banner spellings: `Finale(R)`, the Coda-era `Finale(TM)`, and Finale
 # 1.0.0's MacRoman trademark sign (0xAA) with no parentheses.  Keep this in step
 # with BANNER_RE in inventory.py; a spelling missing here means those files are
@@ -78,7 +79,16 @@ def looks_like_mus(data: bytes) -> bool:
     carry a ``Finale(R)``/``Finale(TM)`` string near the start instead.  Checking
     content is what keeps READMEs and other extensionless members out of the
     cache.
+
+    ETF is excluded explicitly.  An ETF is Finale's *text* interchange format and
+    it quotes the same product banner on its fourth line, so a banner search
+    alone accepts it — including the extensionless ETFs that classic Mac Finale
+    wrote, which no extension rule would catch.  It is a real Finale file and
+    valuable evidence, but it is not a MUS binary, and admitting it to a MUS
+    inventory only produces rows that every reader must reject.
     """
+    if data.startswith(ETF_SIGNATURE):
+        return False
     return data.startswith(SIGNATURE) or BANNER_RE.search(data[:256]) is not None
 
 

@@ -60,17 +60,25 @@ def make_exclude_filter(patterns: list[str]):
 
     A pattern is tested against the path itself *and* against every directory
     above it, so one ``--exclude 'Finale PDK'`` drops that whole subtree instead
-    of needing a pattern per file.  Patterns are matched case-sensitively
-    against POSIX-style relative paths, which keeps behaviour identical on a
-    case-insensitive volume and a case-sensitive one.
+    of needing a pattern per file.
+
+    Matching is case-insensitive, and deliberately so.  A corpus that spans
+    classic Mac, DOS and Windows filesystems carries the same extension in
+    several cases at once — ``.mus``, ``.MUS``, ``.lib``, ``.LIB`` and ``.Lib``
+    all occur — so a case-sensitive ``--exclude='*.lib'`` silently excludes part
+    of what it names and leaves the rest in the survey.  That failure is invisible
+    in the output, which is what makes it worth spending a casefold on.  Suffix
+    discovery already casefolds; this keeps the two consistent.
     """
     if not patterns:
         return lambda relative: False
 
+    folded = [pattern.casefold() for pattern in patterns]
+
     def excluded(relative: str) -> bool:
-        path = PurePosixPath(relative)
+        path = PurePosixPath(relative.casefold())
         candidates = [str(path)] + [str(parent) for parent in path.parents if str(parent) != "."]
-        return any(fnmatch(candidate, pattern) for candidate in candidates for pattern in patterns)
+        return any(fnmatch(candidate, pattern) for candidate in candidates for pattern in folded)
 
     return excluded
 
