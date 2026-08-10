@@ -160,13 +160,22 @@ Three era facts follow:
 
 - **Every framed DCL file recovers all eight values.** The sixteen that previously did not were
   failing on tag byte order, not on framing.
-- **`LA` is present from at least Finale 3.0** and absent from the Coda-banner era. Ten Finale 97
-  documents carry no `LA` records at all.
+- **`LA` is present from Finale 3.0 and absent from the Coda-banner era, because layers were
+  introduced in Finale 3.x.** The absence is therefore a fact about the era rather than a
+  shortfall in the reader: a document written before layers existed has no layer attributes to
+  recover, and the four `layerAtts` objects correctly keep their Finale 27 default rest offsets.
+  This is the fallback strategy working as intended, and `ImportReport` records those four values
+  as synthesized rather than recovered.
+- **Ten Finale 97 documents carry no `LA` records** even though layers existed by then. That is a
+  separate and unexplained case, and is **open**.
 - **Selector `94` is not observed before Finale 2000.** Finale 3.0 through 97 recover layer
   offsets and no spacing values, and the Finale 1.8.7 file `mus-7aa45639c14b3864` carries
   comparator 65534 records under many other selectors but not `94`. The introduction point lies
   after Finale 97, internal 3.8, and no later than Finale 2000, internal 5.0. Finale 98, internal
   major 4, would settle it but is absent from the corpus and its release notes are not online.
+  The likeliest explanation is that these spacing options were themselves introduced in Finale
+  2000, which was a large feature release; that is a **weak** hypothesis, consistent with the
+  observation but not independently established.
 
 No version gate was added for the spacing mappings. A gate protects against reading a field that
 *moved*; a field that is simply absent needs none, because the record lookup fails and the value

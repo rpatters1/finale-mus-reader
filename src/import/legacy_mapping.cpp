@@ -20,6 +20,7 @@ const std::vector<const MappingTable*>& registeredTables()
     static const std::vector<const MappingTable*> result = {
         &fontDefinitionsTable(),
         &earlyFontDefinitionsTable(),
+        &classFontDefinitionsTable(),
         &musicSpacingOptionsTable(),
         &layerAttributesTable()};
     return result;
@@ -33,10 +34,62 @@ struct ResolvedValue
     std::size_t decodedOffset{};
 };
 
+// Reads a numeric value from a class-identified record, addressed by byte offset inside a
+// single record's payload rather than by word slot across an incidence stream.
+std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& index,
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder)
+{
+    const auto* row = index.getClassRecords().get(
+        source.identity, cmper, 0, source.incidence);
+    if (!row) {
+        return std::nullopt;
+    }
+    const auto payload = index.getClassRecords().payloadOf(*row);
+    const std::size_t width = source.width == ValueWidth::Long ? 4
+        : source.width == ValueWidth::Byte ? 1 : 2;
+    if (source.wordSlot + width > payload.size()) {
+        return std::nullopt;
+    }
+    // Payload numbers follow the file's byte order, as everything numeric does. Finale 2007
+    // in particular is mostly big-endian.
+    std::int64_t value = 0;
+    for (std::size_t i = 0; i < width; ++i) {
+        const auto shift = byteOrder == ByteOrder::BigEndian ? (width - 1 - i) : i;
+        value |= static_cast<std::int64_t>(payload[source.wordSlot + i]) << (8U * shift);
+    }
+    if (source.bits.bitCount != 0) {
+        const auto mask = (std::uint64_t{1} << source.bits.bitCount) - 1U;
+        value = static_cast<std::int64_t>(
+            (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
+    }
+    return ResolvedValue{value, row->blockOffset, row->decodedOffset};
+}
+
+// Reads text from a class-identified record: the payload runs to its own end, so the name
+// simply occupies whatever remains after the fields before it.
+std::optional<std::string> readClassText(const records::LegacyRecordIndex& index,
+    std::uint16_t cmper, const SourceLocation& source)
+{
+    const auto* row = index.getClassRecords().get(source.identity, cmper, 0, 0);
+    if (!row) {
+        return std::nullopt;
+    }
+    const auto payload = index.getClassRecords().payloadOf(*row);
+    if (source.wordSlot >= payload.size()) {
+        return std::nullopt;
+    }
+    std::string text(reinterpret_cast<const char*>(payload.data() + source.wordSlot),
+        payload.size() - source.wordSlot);
+    if (const auto end = text.find('\0'); end != std::string::npos) {
+        text.resize(end);
+    }
+    return text;
+}
+
 std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
-    const auto tag = records::packTag(std::string_view(source.tag, sizeof(source.tag)));
+    const auto tag = source.identity;
     const std::size_t wordIndex = source.incidence * records::otherWordCount + source.wordSlot;
     const auto first = index.word(tag, cmper, wordIndex);
     if (!first) {
@@ -80,8 +133,7 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
 std::optional<std::string> readText(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
-    const auto tag = records::packTag(std::string_view(source.tag, sizeof(source.tag)));
-    const auto family = index.getOthers().getArray(tag, cmper);
+    const auto family = index.getOthers().getArray(source.identity, cmper);
     std::string text;
     bool found = false;
     for (const auto& row : family) {
@@ -89,7 +141,8 @@ std::optional<std::string> readText(const records::LegacyRecordIndex& index,
             continue;
         }
         found = true;
-        text.append(reinterpret_cast<const char*>(row.bytes.data()), row.byteCount);
+        const auto bytes = index.getOthers().payloadOf(row);
+        text.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
     }
     if (!found) {
         return std::nullopt;
@@ -116,6 +169,9 @@ struct EffectiveTable
 {
     const MappingTable* table{};
     std::vector<EffectiveField> fields;
+    /// @brief Whether @ref table is one that applies to this file, rather than merely the
+    /// first registered for the prefix.
+    bool applicable{};
 };
 
 /// @details Every registered field is reported, whether or not this file can supply it,
@@ -134,7 +190,15 @@ std::vector<EffectiveTable> buildEffectiveTables(
             });
         auto& effective = found != result.end()
             ? *found
-            : result.emplace_back(EffectiveTable{table, {}});
+            : result.emplace_back(EffectiveTable{table, {}, false});
+        // Tables that share a prefix layer onto one destination, but they may differ in how
+        // their records are encoded and enumerated. The group must be represented by a table
+        // that actually applies to this file, otherwise a later era would be read through an
+        // earlier era's encoding and find nothing.
+        if (tableApplies && !effective.applicable) {
+            effective.table = table;
+            effective.applicable = true;
+        }
         for (std::size_t i = 0; i < table->fieldCount; ++i) {
             const auto* field = table->fields + i;
             const bool readable = tableApplies && field->versions.includes(profile.version);
@@ -207,8 +271,9 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
         if (table.targetKind == TargetKind::OthersFromRecords) {
             // The legacy file is the only source of these objects, so they are created from
             // the comparators the records themselves carry rather than found in the pool.
-            const auto tag = records::packTag(table.recordTag);
-            for (const auto cmper : index.getOthers().cmpersForTag(tag)) {
+            const auto& pool = table.encoding == RecordEncoding::ClassRecord
+                ? index.getClassRecords() : index.getOthers();
+            for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
                 targets.push_back({cmper, table.createTarget(document, cmper)});
             }
         } else {
@@ -230,8 +295,12 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     const auto selector =
                         table.targetKind == TargetKind::OptionsSingleton
                             ? field.readable->source.selector : target.cmper;
+                    const bool classRecord = table.encoding == RecordEncoding::ClassRecord;
                     if (field.readable->kind == FieldKind::Text) {
-                        if (const auto text = readText(index, selector, field.readable->source)) {
+                        const auto text = classRecord
+                            ? readClassText(index, selector, field.readable->source)
+                            : readText(index, selector, field.readable->source);
+                        if (text) {
                             field.readable->applyText(target.instance, *text);
                             info.origin = ValueOrigin::LegacyMus;
                             info.rawValue = static_cast<std::int64_t>(text->size());
@@ -239,7 +308,10 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                         report.fields.push_back(std::move(info));
                         continue;
                     }
-                    if (const auto resolved = readValue(index, selector, field.readable->source)) {
+                    const auto resolved = classRecord
+                        ? readClassValue(index, selector, field.readable->source, profile.byteOrder)
+                        : readValue(index, selector, field.readable->source);
+                    if (resolved) {
                         field.readable->apply(target.instance, resolved->value);
                         info.origin = ValueOrigin::LegacyMus;
                         info.blockOffset = resolved->blockOffset;

@@ -20,6 +20,7 @@ namespace mapping {
 [[nodiscard]] const MappingTable& layerAttributesTable();
 [[nodiscard]] const MappingTable& fontDefinitionsTable();
 [[nodiscard]] const MappingTable& earlyFontDefinitionsTable();
+[[nodiscard]] const MappingTable& classFontDefinitionsTable();
 
 } // namespace mapping
 } // namespace finale_mus_reader

@@ -71,6 +71,31 @@ Byte order tracks the container. Finale 2007 splits 81 big-endian against 27 lit
 
 Finale 98 is absent from the corpus and is presumed to be major 4; Finale 2011 is likewise absent and would be major 16. Neither is verified.
 
+### Back-saved files
+
+**Confirmed** on the tracked fixture `tests/evidence/F2012/F2012-upstem-flags.mus`.
+
+Finale 2014 through Finale 27 can write a musx document out as a Finale 2012 MUS file. Such a
+file is a genuine Finale 2012 document by format, and its banner says so, commonly reading
+`Finale(R) 2012 File Converter` rather than plain `Finale(R) 2012`. The saving-product table
+above already counts those separately: of the 248 files in the Finale 2012 row, 10 carry the
+File Converter banner.
+
+The two header tuples then record different things, which is the useful part:
+
+| Tuple | Records | Example |
+|---|---|---|
+| creator | the application that authored the document | internal 18.0, Finale 2014 |
+| last saver | the format actually written | internal 17.0, Finale 2012 |
+
+This is why the reader gates on the last-saver tuple. On a back-save it yields the version that
+governs the layout on disk rather than the version of the program that happened to produce it.
+It also establishes internal major 18 for Finale 2014, extending the mapping above.
+
+A consequence for reading corpus statistics: a saving-product count is a count of *formats*, not
+of authoring applications. Any file in the Finale 2012 row may have been written by any release
+from Finale 2012 through Finale 27.
+
 ### Controlled fixture versions
 
 Decoded from `tests/evidence`, and asserted by the reader's tests.

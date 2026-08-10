@@ -32,15 +32,12 @@ const FieldMapping spacingFields[] = {
 const MappingTable& musicSpacingOptionsTable()
 {
     static const MappingTable table{
-        "options.musicSpacing",
-        EpochMask::FixedRow,
-        VersionRange{},
-        TargetKind::OptionsSingleton,
-        &enumerateOptionsTarget<Target>,
-        nullptr,
-        nullptr,
-        spacingFields,
-        std::size(spacingFields)};
+        .reportPrefix = "options.musicSpacing",
+        .epochs = EpochMask::FixedRow,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<Target>,
+        .fields = spacingFields,
+        .fieldCount = std::size(spacingFields)};
     return table;
 }
 

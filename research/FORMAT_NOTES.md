@@ -35,6 +35,22 @@ The last-save date matched the filesystem modification day for 1,147 of 1,163 fi
 
 The banner is the best direct saving-product classifier. The adjacent version tuples distinguish original creator metadata from the last saver. Their packing is now decoded and recorded in [VERSION_MATRIX.md](VERSION_MATRIX.md#decoded-version-packing): a 32-bit value in the file's own byte order, carrying major, minor, maintenance, a development-status code, and build. Finale 27 MUSX conversion preserves the legacy `created` tuple but rewrites `modified` to the conversion event; this was verified on corpus ID `mus-8565d1cad82178ae`.
 
+### Determining byte order
+
+The reader does not read the byte order from anywhere. It trials both orders against the container
+framing and keeps whichever validates: for the uncompressed era, a block chain that consumes the
+file exactly and yields types 1, 2, 3, 4 in order; for the compressed eras, a first block type that
+matches the era plus successful decompression and a matching CRC-32 for every block. The compressed
+test is strong evidence. The uncompressed test is structural but circumstantial, and the
+Coda-banner era is not detected at all, only asserted, because it has no block framing to trial.
+
+**Suspected but not found: a definitive byte-order marker exists by the 3.x era.** A format that is
+written on two platforms with opposite byte order, as the 3.x line demonstrably is, would ordinarily
+record which one it used rather than leaving a reader to infer it. The header holds candidates: the
+six bytes at `0x062` are still uninterpreted, and the Coda-banner era carries a constant `01 03` at
+`0x80` whose meaning is unknown. Finding such a marker would replace a heuristic with a fact, and
+would also give the Coda-banner era a real test in place of its current assertion. This is **open**.
+
 ### Coda-banner files
 
 Previously described here as "pre-banner", which is inaccurate: these files do have a banner.
@@ -188,6 +204,44 @@ set is recorded. Observed in every Coda-banner file and in the Finale 3.0 files,
 and later where the header is always present. The exact boundary is **open**: the corpus holds no
 Finale 3.1, and its only Finale 3.0 files are Windows-origin, so a platform explanation cannot be
 excluded.
+
+### The 2007-2012 record encoding
+
+**Confirmed** for the font record against Finale 27's own conversion of the same document, and
+**strong** for the general shape, which is inferred from that one record type.
+
+The 2007 serialization abandons the fixed 16-byte row. Records in block `0x001a` are
+variable-length and self-describing, little-endian:
+
+| Field | Width | Meaning |
+|---|---|---|
+| class id | 2 | numeric identifier standing in for what EnigmaXML names as an element |
+| cmper | 2 | comparator, as in every earlier era |
+| incidence | 2 | incidence, as in every earlier era |
+| length | 4 | payload size |
+| payload | length | per class |
+| padding | 4 | zero in every observed record |
+
+The logical model is therefore unchanged. What moved is the physical encoding: the
+two-character tag became a numeric class id, and the fixed six-word payload became a
+length-governed byte payload. `RECORD_CATALOG.md` already catalogs these numeric identifiers,
+and `0x0090` is the font definition, which that catalog lists as `fontName` at `weak`
+confidence.
+
+The font payload keeps the earlier character-set encoding unchanged: `0x1fff` for a Mac symbol
+font and `0x1000` for a Mac text font at payload offset 0, the pitch and family pair at offset 2,
+and the name from offset 12 to the end of the payload. A longer name simply grows the payload:
+`Maestro Percussion` carries length 36 where short names carry 24.
+
+Verified against `Score-Fin12.mus` and the Finale 27 conversion of the same document, which agree
+on every comparator, every gap in the comparator sequence, every name, and every character set
+value.
+
+**Hypothesis, not yet examined: the sharing data should be here too.** EnigmaXML carries part and
+sharing information as attributes on each element, and this encoding otherwise lines up field for
+field with that model. If the correspondence holds, the part comparator and share mode should
+appear in the record header or the payload prologue rather than being derived. This is **open**
+and no evidence has been gathered for it yet.
 
 ## Archive-derived early-version evidence
 

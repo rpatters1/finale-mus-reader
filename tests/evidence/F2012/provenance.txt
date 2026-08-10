@@ -1,0 +1,21 @@
+Finale 2012 (internal version 17.0), zlib era, little-endian.
+
+Origin: a test case authored for the Note Spacing plug-in and released for
+publication by its author.
+
+This file is a back-save. Finale 2014 through Finale 27 can write a musx document
+out as a Finale 2012 MUS file, and that is what happened here, which is why the
+name in the original collection refers to Finale 2014 while the banner reads
+"Finale(R) 2012 File Converter". The two header tuples record the two roles: the
+creator tuple keeps the authoring application, internal 18.0 for Finale 2014, and
+the last-saver tuple records the format actually written, internal 17.0 for
+Finale 2012. Reading the last-saver tuple therefore yields the version that
+governs the file's layout, which is what the reader gates on.
+
+F2012-upstem-flags.mus
+    sha256 f95d2ea21b99022e41025012a57de6afef2f97184e85df62e15cc61e58fb7df6
+    The tracked fixture for the 2007-2012 record encoding, which shares the
+    logical model of class, comparator, and incidence with every earlier era but
+    none of the physical one: records are class-identified and length-governed
+    rather than fixed 16-byte rows. It carries sixteen font definitions and is
+    the regression test for that separate decoding pathway.

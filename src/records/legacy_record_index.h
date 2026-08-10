@@ -18,7 +18,11 @@
 namespace finale_mus_reader {
 namespace records {
 
-/// @brief A two-character record tag packed into one comparable value.
+/// @brief What identifies a record's type.
+/// @details Through Finale 2006 this is the two-character tag packed into 16 bits. From 2007
+/// it is the numeric class id that replaced the tag, standing in for what EnigmaXML names as
+/// an element. Both are 16-bit, so one field serves every era and a mapping table simply
+/// states the identity it wants.
 using LegacyTag = std::uint16_t;
 
 /// @brief Packs a two-character tag, so lookups compare an integer rather than a string.
@@ -58,13 +62,15 @@ struct LegacyRow
     /// @brief Payload words in source order, six for an other and five for a detail.
     /// @details Numeric fields are byte-order corrected, so these are logical values.
     std::array<std::int16_t, 6> words{};
-    /// @brief The same payload as raw bytes in file order.
-    /// @details Character payloads are not byte-order sensitive: a little-endian file
-    /// stores a font name as plain text, so reading it through @ref words would transpose
-    /// every character pair. Text fields must read these bytes instead.
-    std::array<std::uint8_t, 12> bytes{};
+    /// @brief The payload as raw bytes, held by the owning pool.
+    /// @details Character payloads are not byte-order sensitive: a little-endian file stores
+    /// a font name as plain text, so reading it through @ref words would transpose every
+    /// character pair. Text fields must read these bytes instead. The 2007 encoding has a
+    /// length-governed payload rather than six fixed words, so the bytes are the only
+    /// representation common to every era.
+    std::uint32_t payloadOffset{};
+    std::uint32_t payloadSize{};
     std::uint8_t wordCount{};
-    std::uint8_t byteCount{};
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
 };
@@ -81,7 +87,14 @@ class LegacyRowPool
 {
 public:
     /// @brief Sorts the rows and assigns incidences within each family.
-    static LegacyRowPool build(std::vector<LegacyRow> rows);
+    /// @param payload Backing bytes that the rows index into.
+    static LegacyRowPool build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload);
+
+    /// @brief Returns a row's payload bytes in file order.
+    [[nodiscard]] std::span<const std::uint8_t> payloadOf(const LegacyRow& row) const
+    {
+        return std::span<const std::uint8_t>(m_payload.data() + row.payloadOffset, row.payloadSize);
+    }
 
     /// @brief Returns every row of a family, in incidence order.
     [[nodiscard]] std::span<const LegacyRow> getArray(
@@ -99,6 +112,7 @@ public:
 
 private:
     std::vector<LegacyRow> m_rows;
+    std::vector<std::uint8_t> m_payload;
 };
 
 /// @brief One payload word together with the provenance of the row that held it.
@@ -118,8 +132,16 @@ class LegacyRecordIndex
 public:
     [[nodiscard]] static LegacyRecordIndex build(const container::ParsedContainer& parsed);
 
+    /// @brief Tagged 16-byte others rows, for every epoch through Finale 2006.
     [[nodiscard]] const LegacyRowPool& getOthers() const { return m_others; }
+    /// @brief Tagged 16-byte details rows, for every epoch through Finale 2006.
     [[nodiscard]] const LegacyRowPool& getDetails() const { return m_details; }
+    /// @brief Class-identified variable-length records, for Finale 2007 and later.
+    /// @details A separate pathway on purpose. The 2007 encoding shares the logical model of
+    /// class, comparator, and incidence, but nothing of the physical one: records are
+    /// length-governed byte payloads rather than six fixed words, so a mapping table
+    /// addresses them by byte offset and must say which encoding it targets.
+    [[nodiscard]] const LegacyRowPool& getClassRecords() const { return m_classRecords; }
 
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
@@ -133,6 +155,7 @@ public:
 private:
     LegacyRowPool m_others;
     LegacyRowPool m_details;
+    LegacyRowPool m_classRecords;
 };
 
 } // namespace records

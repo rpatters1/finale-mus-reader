@@ -449,6 +449,80 @@ void testUncompressedFixtures()
         "Finale 97 font character set bank was not recovered");
 }
 
+// The 2007 encoding is a separate pathway: class-identified, length-governed records rather
+// than fixed 16-byte rows. Nothing else in the suite exercises it.
+void testClassRecordEra()
+{
+    const auto result = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-upstem-flags.mus");
+    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
+        "The Finale 2012 fixture was not classified as zlib era");
+    expect(result.report.sourceVersion && result.report.sourceVersion->major == 17,
+        "Finale 2012 should record internal major version 17");
+
+    using musx::dom::others::FontDefinition;
+    const auto fonts = result.document->getOthers()
+        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    expect(fonts.size() == 16, "The zlib-era font table size is incorrect");
+    const auto maestro = result.document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, 0);
+    expect(maestro && maestro->name == "Maestro",
+        "A zlib-era font name was not recovered");
+    // The character set encoding survived the 2007 serialization change unchanged.
+    expect(maestro->charsetBank == FontDefinition::CharacterSetBank::MacOS
+            && maestro->charsetVal == 0xfff && maestro->calcIsSymbolFont(),
+        "The zlib-era character set was not decoded like the earlier eras");
+}
+
+// Most Finale 2007 documents are big-endian, and every numeric field of the class-record
+// encoding follows that byte order, including the payload length in the record header.
+void testBigEndianClassRecords()
+{
+    const auto result = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2007/F2007-lyric-hyphens.mus");
+    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
+        "The Finale 2007 fixture was not classified as zlib era");
+    expect(result.report.byteOrder == ByteOrder::BigEndian,
+        "The Finale 2007 fixture should be big-endian");
+    expect(result.report.sourceVersion && result.report.sourceVersion->major == 12,
+        "Finale 2007 should record internal major version 12");
+
+    using musx::dom::others::FontDefinition;
+    const auto fonts = result.document->getOthers()
+        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    expect(fonts.size() == 9, "The big-endian font table size is incorrect");
+    const auto maestro = result.document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, 0);
+    expect(maestro && maestro->name == "Maestro" && maestro->charsetVal == 0xfff,
+        "A big-endian class record was not decoded");
+    expect(result.document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, 5)->name == "Maestro Percussion",
+        "A long name in a big-endian class record was not decoded");
+}
+
+// Finale 2006 is the last release to write ETF, but it did not begin mixing the later
+// class-identified records into its blocks: the fixed-row model is unchanged.
+void testFinale2006RemainsFixedRow()
+{
+    const auto result = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2006/F2006-single-title.mus");
+    expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
+        "The Finale 2006 fixture was not classified as DCL");
+    expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
+        "Finale 2006 music spacing was not recovered through the fixed-row path");
+    expect(result.document->getOthers()
+        ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size() == 9,
+        "The Finale 2006 font table size is incorrect");
+    // The fifth block is present and empty, which is what distinguishes this era.
+    expect(result.report.blocks.size() == 5,
+        "Finale 2006 should carry a fifth block");
+    expect(result.report.blocks.back().decodedSize == 0,
+        "The Finale 2006 fifth block should be empty");
+}
+
 void testControlledDclVersions()
 {
     // The embedded Enigma version, decoded from the last-saver tuple. Finale's internal
@@ -604,6 +678,9 @@ int main()
         testControlledDclFile();
         testFontDefinitions();
         testUncompressedFixtures();
+        testClassRecordEra();
+        testBigEndianClassRecords();
+        testFinale2006RemainsFixedRow();
         testIndependentImportedDocuments();
         testControlledDclVersions();
         testUncompressedEpochAndOverlays();

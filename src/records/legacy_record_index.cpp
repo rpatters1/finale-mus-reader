@@ -32,6 +32,20 @@ std::uint16_t readCmper(const std::uint8_t* data, ByteOrder byteOrder)
     return static_cast<std::uint16_t>(readWord(data, byteOrder));
 }
 
+std::uint32_t readLong(const std::uint8_t* data, ByteOrder byteOrder)
+{
+    if (byteOrder == ByteOrder::BigEndian) {
+        return (static_cast<std::uint32_t>(data[0]) << 24U)
+            | (static_cast<std::uint32_t>(data[1]) << 16U)
+            | (static_cast<std::uint32_t>(data[2]) << 8U)
+            | data[3];
+    }
+    return data[0]
+        | (static_cast<std::uint32_t>(data[1]) << 8U)
+        | (static_cast<std::uint32_t>(data[2]) << 16U)
+        | (static_cast<std::uint32_t>(data[3]) << 24U);
+}
+
 // Through Finale 2006 the pools appear in a fixed order and only the framing differs, so a
 // block type selects a pool the same way in every epoch. Coda-banner pools are reported
 // under the uncompressed numbering by the container.
@@ -59,7 +73,7 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
 // An other is cmper, tag, six words. A detail carries a second cmper, which pushes the tag
 // two bytes along and leaves five words.
 std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
-    std::uint16_t blockType, bool isDetail)
+    std::uint16_t blockType, bool isDetail, std::vector<std::uint8_t>& payload)
 {
     std::vector<LegacyRow> result;
     for (const auto& block : parsed.blocks) {
@@ -87,12 +101,13 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
                 static_cast<char>(row[tagOffset + (bigEndian ? 1 : 0)])};
             decoded.tag = packTag(std::string_view(tagBytes.data(), tagBytes.size()));
             decoded.wordCount = isDetail ? detailWordCount : otherWordCount;
-            decoded.byteCount = static_cast<std::uint8_t>(decoded.wordCount * 2);
-            const auto* payload = row + tagOffset + 2;
+            const auto* source = row + tagOffset + 2;
             for (std::uint8_t i = 0; i < decoded.wordCount; ++i) {
-                decoded.words[i] = readWord(payload + i * 2, parsed.byteOrder);
+                decoded.words[i] = readWord(source + i * 2, parsed.byteOrder);
             }
-            std::copy_n(payload, decoded.byteCount, decoded.bytes.begin());
+            decoded.payloadOffset = static_cast<std::uint32_t>(payload.size());
+            decoded.payloadSize = static_cast<std::uint32_t>(decoded.wordCount * 2);
+            payload.insert(payload.end(), source, source + decoded.payloadSize);
             decoded.blockOffset = block.info.sourceOffset;
             decoded.decodedOffset = offset;
             result.push_back(decoded);
@@ -101,9 +116,56 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
     return result;
 }
 
+// The 2007 encoding replaces the fixed row with a stream of self-describing records:
+// a class id standing in for the element name, a comparator, an incidence, a payload
+// length, the payload, and four bytes of padding. Walking a block with this framing
+// consumes it exactly, to the byte, which is what distinguishes it from a guess.
+std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
+    std::vector<std::uint8_t>& payload)
+{
+    constexpr std::uint16_t recordBlockType = 0x001a;
+    constexpr std::size_t headerSize = 10;
+    constexpr std::size_t paddingSize = 4;
+
+    std::vector<LegacyRow> result;
+    for (const auto& block : parsed.blocks) {
+        if (block.info.type != recordBlockType) {
+            continue;
+        }
+        std::size_t offset = 0;
+        while (offset + headerSize <= block.data.size()) {
+            const auto* header = block.data.data() + offset;
+            const auto classId = static_cast<std::uint16_t>(readWord(header, parsed.byteOrder));
+            // The length is a 32-bit value, so its word order flips with the file's byte
+            // order too. Composing it from two 16-bit reads in a fixed order yields an
+            // enormous length on a big-endian file and aborts the walk at the first record,
+            // which is what most Finale 2007 documents are.
+            const auto length = readLong(header + 6, parsed.byteOrder);
+            if (classId == 0 || length > block.data.size() - offset - headerSize) {
+                break;
+            }
+
+            LegacyRow decoded;
+            decoded.tag = classId;
+            decoded.cmper1 = readCmper(header + 2, parsed.byteOrder);
+            decoded.inci = readCmper(header + 4, parsed.byteOrder);
+            decoded.payloadOffset = static_cast<std::uint32_t>(payload.size());
+            decoded.payloadSize = length;
+            const auto* body = header + headerSize;
+            payload.insert(payload.end(), body, body + length);
+            decoded.blockOffset = block.info.sourceOffset;
+            decoded.decodedOffset = offset;
+            result.push_back(decoded);
+
+            offset += headerSize + length + paddingSize;
+        }
+    }
+    return result;
+}
+
 } // namespace
 
-LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows)
+LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload)
 {
     // Sorting by family keeps each family contiguous, so an incidence is an offset from the
     // start of its range and a lookup is a binary search rather than a hashed allocation.
@@ -131,6 +193,7 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows)
 
     LegacyRowPool result;
     result.m_rows = std::move(rows);
+    result.m_payload = std::move(payload);
     return result;
 }
 
@@ -172,8 +235,17 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
 {
     LegacyRecordIndex result;
     if (const auto types = poolTypesFor(parsed.formatEpoch)) {
-        result.m_others = LegacyRowPool::build(decodeRows(parsed, types->others, false));
-        result.m_details = LegacyRowPool::build(decodeRows(parsed, types->details, true));
+        std::vector<std::uint8_t> othersPayload;
+        auto othersRows = decodeRows(parsed, types->others, false, othersPayload);
+        result.m_others = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload));
+
+        std::vector<std::uint8_t> detailsPayload;
+        auto detailRows = decodeRows(parsed, types->details, true, detailsPayload);
+        result.m_details = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload));
+    } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
+        std::vector<std::uint8_t> recordPayload;
+        auto records = decodeClassRecords(parsed, recordPayload);
+        result.m_classRecords = LegacyRowPool::build(std::move(records), std::move(recordPayload));
     }
     return result;
 }

@@ -111,11 +111,13 @@ metadata artifact, which is the correct outcome. Every pre-zlib file recovers it
 font table. Every framed DCL file recovers all eight of the promoted option
 values.
 
-The uncompressed shortfalls are era facts, not defects. Selector `94` does not
-appear before Finale 2000, so Finale 3.2 through 97 recover layer offsets and no
-spacing; the ten files without layer offsets are Finale 97 documents that carry no
-`LA` records. Coda-banner files have neither selector, which is why that row is
-zero. Per-era detail is in
+The shortfalls are era facts, not defects. Selector `94` does not appear before
+Finale 2000, so Finale 3.2 through 97 recover layer offsets and no spacing.
+Coda-banner files recover neither, because layers were introduced in Finale 3.x
+and that era has no layer attributes to recover: those four values correctly keep
+their Finale 27 defaults and are reported as synthesized. The ten uncompressed
+files without layer offsets are Finale 97 documents that carry no `LA` records
+despite layers existing by then, which is unexplained. Per-era detail is in
 [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md#corpus-verification-of-promoted-mappings).
 
 This measures recovery, not accuracy. Only the fixtures with ETF counterparts

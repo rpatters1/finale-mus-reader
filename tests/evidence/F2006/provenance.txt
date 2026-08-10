@@ -1,0 +1,13 @@
+Finale 2006 (internal version 11.x), PKWARE DCL era, big-endian.
+
+Origin: a test case authored for the Page-Attached Copy plug-in and released for
+publication by its author.
+
+F2006-single-title.mus
+    sha256 0f7ed5bd148a9ad43720dff8f761b4d5c74f1198a493fcb9828a2ae5f70eff65
+    Finale 2006 is the last release to write ETF, which raised the question of
+    whether it also began mixing the later class-identified records in with the
+    fixed 16-byte rows. It does not: its others, details, and third blocks are
+    all whole multiples of the row size and a class-record walk consumes none of
+    them. The only structural difference from Finale 2005 is a fifth, empty
+    0x0013 block, which this file carries.

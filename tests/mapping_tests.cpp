@@ -129,9 +129,14 @@ const finale_mus_reader::FieldInfo& field(const ImportReport& report, const std:
 MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size_t count,
     VersionRange versions = {}, EpochMask epochs = EpochMask::FixedRow)
 {
-    return MappingTable{prefix, epochs, versions, TargetKind::OptionsSingleton,
-        &finale_mus_reader::mapping::enumerateOptionsTarget<Spacing>, nullptr, nullptr,
-        fields, count};
+    return MappingTable{
+        .reportPrefix = prefix,
+        .epochs = epochs,
+        .versions = versions,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &finale_mus_reader::mapping::enumerateOptionsTarget<Spacing>,
+        .fields = fields,
+        .fieldCount = count};
 }
 
 // A four-byte value whose words straddle an incidence boundary: the low word is the last

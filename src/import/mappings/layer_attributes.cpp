@@ -28,15 +28,12 @@ const FieldMapping layerFields[] = {
 const MappingTable& layerAttributesTable()
 {
     static const MappingTable table{
-        "others.layerAtts",
-        EpochMask::FixedRow,
-        VersionRange{},
-        TargetKind::OthersByCmper,
-        &enumerateOthersTargets<Target>,
-        nullptr,
-        nullptr,
-        layerFields,
-        std::size(layerFields)};
+        .reportPrefix = "others.layerAtts",
+        .epochs = EpochMask::FixedRow,
+        .targetKind = TargetKind::OthersByCmper,
+        .enumerateTargets = &enumerateOthersTargets<Target>,
+        .fields = layerFields,
+        .fieldCount = std::size(layerFields)};
     return table;
 }
 

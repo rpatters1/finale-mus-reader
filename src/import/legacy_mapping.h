@@ -44,14 +44,28 @@ struct BitRange
     std::uint8_t bitCount{};
 };
 
+/// @brief Which record encoding a table reads, and therefore how its fields are addressed.
+enum class RecordEncoding : std::uint8_t
+{
+    /// @brief Tagged 16-byte rows, every epoch through Finale 2006. Fields address a word
+    /// slot in the family's incidence stream, so a value may straddle an incidence.
+    FixedRow,
+    /// @brief Class-identified variable-length records, Finale 2007 and later. Fields
+    /// address a byte offset inside a single record's payload.
+    ClassRecord
+};
+
 /// @brief Where one field lives in the legacy record stream.
 struct SourceLocation
 {
-    char tag[2]{};
+    /// @brief The record identity: a packed two-character tag, or a numeric class id.
+    records::LegacyTag identity{};
     /// @brief The record comparator. Ignored for @ref TargetKind::OthersByCmper tables,
     /// where the comparator of the target object is used instead.
     std::uint16_t selector{};
     std::uint16_t incidence{};
+    /// @brief Word slot for @ref RecordEncoding::FixedRow, byte offset for
+    /// @ref RecordEncoding::ClassRecord.
     std::uint8_t wordSlot{};
     ValueWidth width = ValueWidth::Word;
     LongWordOrder longOrder = LongWordOrder::HighFirst;
@@ -235,11 +249,12 @@ struct MappingTable
     const char* reportPrefix{};
     EpochMask epochs = EpochMask::FixedRow;
     VersionRange versions{};
+    RecordEncoding encoding = RecordEncoding::FixedRow;
     TargetKind targetKind = TargetKind::OptionsSingleton;
     std::vector<MappingTarget> (*enumerateTargets)(const musx::dom::DocumentPtr& document){};
-    /// @brief Tag whose comparators enumerate the objects, for @ref
+    /// @brief Record identity whose comparators enumerate the objects, for @ref
     /// TargetKind::OthersFromRecords.
-    const char* recordTag{};
+    records::LegacyTag recordIdentity{};
     /// @brief Creates and pools one object, for @ref TargetKind::OthersFromRecords.
     void* (*createTarget)(const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
     const FieldMapping* fields{};
@@ -310,7 +325,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
+            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
         (versionsValue), \
@@ -323,6 +338,64 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         nullptr \
     }
 
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
+#define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
+    ::finale_mus_reader::mapping::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::mapping::FieldKind::Number, \
+        ::finale_mus_reader::mapping::SourceLocation{ \
+            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            ::finale_mus_reader::mapping::ValueWidth::Word, \
+            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::mapping::BitRange{ \
+                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+        ::finale_mus_reader::mapping::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            ::finale_mus_reader::mapping::assignFrom( \
+                static_cast<Class*>(instance)->member, value); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::mapping::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
+/// @brief A bit range of a class-identified record, assigned through a conversion expression.
+#define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
+    ::finale_mus_reader::mapping::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::mapping::FieldKind::Number, \
+        ::finale_mus_reader::mapping::SourceLocation{ \
+            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            ::finale_mus_reader::mapping::ValueWidth::Word, \
+            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::mapping::BitRange{ \
+                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+        ::finale_mus_reader::mapping::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::mapping::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
+/// @brief Text running from a byte offset to the end of a class-identified record's payload.
+#define MUS_CLASS_TEXT(Class, classId, byteOffset, member) \
+    ::finale_mus_reader::mapping::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::mapping::FieldKind::Text, \
+        ::finale_mus_reader::mapping::SourceLocation{ \
+            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            ::finale_mus_reader::mapping::ValueWidth::Word, \
+            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
+            ::finale_mus_reader::mapping::BitRange{} }, \
+        ::finale_mus_reader::mapping::VersionRange{}, \
+        nullptr, \
+        nullptr, \
+        [](void* instance, std::string_view value) { \
+            static_cast<Class*>(instance)->member.assign(value); } \
+    }
+
 /// @brief A bit range assigned through an explicit conversion expression.
 /// @details Use where the stored encoding does not match the destination type, such as an
 /// enum whose values differ from the legacy encoding. `value` names the extracted bits.
@@ -332,7 +405,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
+            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
@@ -353,7 +426,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Text, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
+            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint16_t>(firstIncidence), 0, \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
