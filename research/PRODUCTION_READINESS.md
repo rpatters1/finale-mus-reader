@@ -35,7 +35,7 @@ The zlib era still produces none, because its records are not decoded. See P1.3.
 
 **Open: character set and font platform for files before Finale 3.2.** Those files carry
 no header incidence, so the bank and character set value are absent from the record
-entirely and the reader leaves them at their constructed defaults. Every font in the 54
+entirely and the reader leaves them at their constructed defaults. Every font in the 54 then known
 Coda-banner and 28 Finale 3.0-3.7 documents is therefore reported as a Mac-bank font with
 character set 0, which is a default rather than a reading. Recovering them will have to come
 from somewhere other than the `FN` record.
@@ -143,7 +143,7 @@ content.
 
 The Coda-banner half of this item is done. Its pools are decoded into typed
 blocks, its others and details pools are indexed like every other epoch, and all
-54 corpus files recover their font tables.
+54 corpus files then known recover their font tables.
 
 The 2007-2012 zlib era still overlays nothing: 527 files classify and inflate but
 produce no records, so they receive no fonts and no option values. Its record

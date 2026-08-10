@@ -1,6 +1,9 @@
 # Version Matrix
 
-The saving product comes from the binary banner, not filenames or timestamps. “ETF likely” means the file should be
+The saving product comes from the binary banner, not filenames or timestamps. Both spellings count: `Finale(R)` at
+0x20 for signature-bearing files and `Finale(TM)` at offset 0 for the Coda-banner era, which is why 1.8.7, 2.0.1,
+and 2.6 now appear as products in their own right rather than as one `unknown` bucket. Counts include archive
+members, which is where nearly all the pre-3.x material lives. “ETF likely” means the file should be
 tested with the earliest compatible application available; it is not a guarantee. Fifteen local ETF exports are now
 available across private and tracked evidence, including two saves of the same Finale 2000 template by Finale 2000
 and Finale 2005, the exact Finale 2000 `tremolos` pair, plus controlled Finale 2002–2005 pairs. Three targeted Finale
@@ -8,8 +11,10 @@ and Finale 2005, the exact Finale 2000 `tremolos` pair, plus controlled Finale 2
 
 | Saving product | Files | Structural family | Header/body characteristic | MUSX counterparts | ETF likely | Notes |
 |---|---:|---|---|---:|---|---|
-| apparent Finale 1.8.7–2.6 (archive-derived) | 136 unique archive members | early fixed-row/indexed | explicit `Finale(TM)` product strings; 16-byte ordinary/detail cadence, implicit-ID 32-byte entries, raw text | 3 targeted | three ETF exports analyzed | Finale 27 opens all selected files after adding `.mus`; detail tags and all 11,089 entry rows correlate exactly; indexes/boundaries unresolved; no Finale 1.0 yet |
-| apparent Finale 2 / unknown | 55 | pre-banner | no Enigma banner; distinct `DA`/numeric body family; includes one AppleDouble artifact | 53 exact | uncertain but valuable | path-supported classification only |
+| Finale 1.8.7 | 19 | early fixed-row/indexed | Coda banner at offset 0; no Enigma signature; 0x60-0x200 zero apart from `01 03` at 0x80 | 0 | three ETF exports analyzed across the era | archive-only in this corpus; indexes/boundaries unresolved |
+| Finale 2.0.1 | 33 | early fixed-row/indexed | as above | 0 | as above | archive-only in this corpus |
+| Finale 2.6 | 177 | early fixed-row/indexed | as above | 58 exact | as above | 63 loose, the rest archive-derived; Finale 27 opens selected files after adding `.mus`; detail tags and all 11,089 entry rows correlate exactly; no Finale 1.0 yet |
+| unknown | 3 | unclassified | no recognizable banner in either spelling; includes an AppleDouble artifact | 0 | uncertain | what is left once both banner spellings are read |
 | Finale 3.0 | 3 | uncompressed fixed-row | four little-endian typed pools; all three are Windows-origin | 3 | yes | 3/3 framed; earliest explicit product in direct corpus |
 | Finale 3.2 | 3 | uncompressed fixed-row | four big-endian typed pools | 3 | yes | 3/3 framed |
 | Finale 3.5 | 2 | uncompressed fixed-row | four big-endian typed pools | 2 | yes | 2/2 framed |

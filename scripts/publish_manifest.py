@@ -3,7 +3,7 @@
 
 The public manifest is suitable for version control.  The private map is
 intentionally opt-in and should be written to the ignored
-``private/corpus_locations.csv`` path.
+``private/generated/corpus_locations.csv`` path.
 """
 
 from __future__ import annotations
@@ -17,10 +17,6 @@ def corpus_id(sha256: str) -> str:
     return "mus-" + sha256[:16]
 
 
-def basename(value: str) -> str:
-    return value.rsplit("/", 1)[-1]
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("inventory_csv", type=Path)
@@ -32,8 +28,8 @@ def main() -> None:
         rows = list(csv.DictReader(handle))
 
     public_fields = [
-        "corpus_id", "filename", "source_size", "source_sha256", "saving_product",
-        "export_match", "export_filename", "export_size", "export_sha256",
+        "corpus_id", "origin", "archive_id", "source_size", "source_sha256", "saving_product",
+        "export_match", "export_size", "export_sha256",
     ]
     public = []
     private = []
@@ -41,12 +37,14 @@ def main() -> None:
         cid = corpus_id(row["source_sha256"])
         public.append({
             "corpus_id": cid,
-            "filename": basename(row["source_relative"]),
+            # Where the specimen came from. archive_id is content-derived like
+            # corpus_id, so it groups members without naming anyone's disk.
+            "origin": row.get("origin", "filesystem"),
+            "archive_id": row.get("archive_id", ""),
             "source_size": row["source_size"],
             "source_sha256": row["source_sha256"],
             "saving_product": row["saving_product"],
             "export_match": row["export_match"],
-            "export_filename": basename(row["export_relative"]) if row["export_relative"] else "",
             "export_size": row["export_size"],
             "export_sha256": row["export_sha256"],
         })
@@ -54,6 +52,8 @@ def main() -> None:
             "corpus_id": cid,
             "source_relative": row["source_relative"],
             "source_path": row["source_path"],
+            "archive_path": row.get("archive_path", ""),
+            "member_path": row.get("member_path", ""),
             "export_relative": row["export_relative"],
             "export_path": row["export_path"],
         })

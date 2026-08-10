@@ -4,13 +4,13 @@ The first ETF evidence set is now present locally under `private/evidence/` (ign
 Requests remain deliberately small and hypothesis-driven. When multiple Finale versions are available, use the
 **earliest compatible version** for the export and record the exact application version and maintenance/build number.
 Source locations are intentionally omitted from this public document. Resolve each `corpus_id` through the local-only
-`private/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the filename and hash.
+`private/generated/corpus_locations.csv` mapping (ignored by git); the public manifest supplies the size and hash, never the filename.
 
 ## Coverage gaps
 
 ### No Windows document earlier than Finale 3.0
 
-Every file in the corpus from before Finale 3.x is Mac-origin and big-endian: all 54 Coda-banner
+Every file in the corpus from before Finale 3.x is Mac-origin and big-endian: all 54 Coda-banner then known
 files, and the archive-derived Finale 1.8.7, 2.0.1, and 2.6 members. There is no Windows document
 of that era at all, so nothing verifies how the reader would treat one.
 
@@ -29,7 +29,7 @@ both platforms with byte order tracking the platform.
 Consequences for the reader, none of them yet exercised:
 
 - **Coda-banner byte order is asserted, not detected.** Those files have no block framing to
-  trial-decode, so the container declares them big-endian on the strength of all 54 corpus files.
+  trial-decode, so the container declares them big-endian on the strength of all 54 corpus files then known.
   A Windows document of the era, if such a thing exists, would break that assertion silently.
 - **The pre-3.2 font table would be affected.** Font names are read as bytes and are byte-order
   independent, but nothing else about such a file has been tested.

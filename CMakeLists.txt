@@ -19,6 +19,8 @@ if(MSVC)
 endif()
 
 option(FINALE_MUS_READER_BUILD_TESTING "Build Legacy Finale MUS Reader tests" ON)
+option(FINALE_MUS_READER_BUILD_TOOLS
+    "Build on-demand corpus probe tools in tools/" OFF)
 option(FINALE_MUS_READER_USE_SYSTEM_ZLIB
     "Use an installed zlib when a parent project has not already provided one" OFF)
 set(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR "" CACHE PATH
@@ -137,11 +139,11 @@ else()
     target_compile_options(finale_mus_reader PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-if(FINALE_MUS_READER_BUILD_TESTING)
+if(FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_TOOLS)
     if(TARGET pugixml)
-        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml)
+        set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
     elseif(TARGET pugixml::pugixml)
-        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml::pugixml)
+        set(FINALE_MUS_READER_PUGIXML_TARGET pugixml::pugixml)
     else()
         set(PUGIXML_BUILD_TESTS OFF CACHE BOOL "Do not build pugixml tests")
         FetchContent_Declare(pugixml
@@ -149,8 +151,15 @@ if(FINALE_MUS_READER_BUILD_TESTING)
             URL_HASH SHA256=655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
             DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
         FetchContent_MakeAvailable(pugixml)
-        set(FINALE_MUS_READER_TEST_PUGIXML_TARGET pugixml)
+        set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
     endif()
+endif()
+
+if(FINALE_MUS_READER_BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(FINALE_MUS_READER_BUILD_TOOLS)
+    add_subdirectory(tools)
 endif()

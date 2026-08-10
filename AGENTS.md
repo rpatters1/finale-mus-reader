@@ -20,8 +20,21 @@ The project is currently at the research and initial-implementation stage.
 Implement narrow, verified vertical slices and do not present partial format
 coverage as a universal reader.
 
+## Skills
+
+Task-specific procedures live in `.agents/skills/<name>/SKILL.md`, kept
+tool-neutral so any agent can use them. Read the relevant one before starting
+that task rather than reconstructing the procedure:
+
+- `.agents/skills/survey-a-corpus/`: inventory a local `.mus` corpus and publish
+  the results. Read this before running anything in `scripts/` against a corpus.
+  It covers the conventions you must ask the user for, how survey results are
+  namespaced per corpus, and the checks that keep local paths out of published
+  files.
+
 ## Repository map
 
+- `.agents/skills/`: procedures for agents working in this repository.
 - `include/finale_mus_reader/`: public C++ API.
 - `src/container/`: headers, format classification, byte order, compression,
   framing, checksums, and bounds validation.
@@ -33,9 +46,13 @@ coverage as a universal reader.
 - `tests/evidence/`: controlled, publishable MUS/ETF fixtures and provenance.
 - `research/`: findings, confidence labels, provenance, evidence inventories,
   and open questions. Start with `research/README.md` and
-  `research/FORMAT_NOTES.md` before changing a decoder.
+  `research/FORMAT_NOTES.md` before changing a decoder. Survey results are
+  registered in `research/data/surveys.csv`, one row per surveyed corpus.
 - `scripts/`: reproducible maintenance and corpus-read-only analysis tools.
+  Location-agnostic by design: every path is a CLI argument, so corpus-specific
+  conventions belong in the invocation and never in the code.
 - `private/`: ignored local evidence and path mappings. Never publish it.
+  Script output belongs in `private/generated/`.
 - `third_party/`: permitted location for pinned, license-compatible codec code.
 
 Some implementation directories may be absent until the initial CMake
