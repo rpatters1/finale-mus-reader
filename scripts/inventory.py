@@ -16,6 +16,13 @@ StuffIt archives, extracted once into a private cache.  They appear as ordinary
 rows distinguished by ``origin``, so every later step in the survey covers them
 without knowing that archives exist.  It is opt-in because extraction is by far
 the slowest part of a survey.
+
+``--sniff-content`` widens loose-file discovery from the ``.mus`` suffix to
+anything whose header is Finale content.  Classic Mac Finale kept the file type
+in the resource fork, so its documents commonly have no extension at all and an
+extension-only scan silently misses every one of them.  ``--exclude`` drops
+subtrees and name patterns that a particular corpus does not want surveyed;
+both are corpus conventions, so they are arguments rather than built-in rules.
 """
 
 from __future__ import annotations
@@ -28,19 +35,78 @@ import re
 import unicodedata
 from collections import Counter
 from datetime import datetime
-from pathlib import Path
+from fnmatch import fnmatch
+from pathlib import Path, PurePosixPath
 
-from archive_sources import build_cache
+from archive_sources import build_cache, looks_like_mus
 
 
-# Both banner spellings. Signature-bearing files carry `Finale(R)` at 0x20; the
-# Coda-banner era carries `Finale(TM)` at offset 0 and is the only place its
-# version appears, so matching only `(R)` files them all as "unknown".
-BANNER_RE = re.compile(rb"Finale\((?:R|TM)\)\s*([^\x00]{1,72}?)(?: Copyright| File Converter)")
+# All three banner spellings.  Signature-bearing files carry `Finale(R)` at 0x20;
+# the Coda-banner era carries `Finale(TM)` at offset 0 and is the only place its
+# version appears; Finale 1.0.0 uses a MacRoman trademark sign (0xAA) with no
+# parentheses and follows the version with `ENIGA Structures` (sic) instead of a
+# copyright notice.  Matching only `(R)` files them all as "unknown".
+BANNER_RE = re.compile(
+    rb"Finale(?:\((?:R|TM)\)|\xaa)\s*([^\x00]{1,72}?)(?: Copyright| File Converter| ENIGA Structures)"
+)
 
 
 def norm(value: str) -> str:
     return unicodedata.normalize("NFC", value).casefold()
+
+
+def make_exclude_filter(patterns: list[str]):
+    """Build a predicate over corpus-relative paths from glob patterns.
+
+    A pattern is tested against the path itself *and* against every directory
+    above it, so one ``--exclude 'Finale PDK'`` drops that whole subtree instead
+    of needing a pattern per file.  Patterns are matched case-sensitively
+    against POSIX-style relative paths, which keeps behaviour identical on a
+    case-insensitive volume and a case-sensitive one.
+    """
+    if not patterns:
+        return lambda relative: False
+
+    def excluded(relative: str) -> bool:
+        path = PurePosixPath(relative)
+        candidates = [str(path)] + [str(parent) for parent in path.parents if str(parent) != "."]
+        return any(fnmatch(candidate, pattern) for candidate in candidates for pattern in patterns)
+
+    return excluded
+
+
+def discover_sources(root: Path, excluded, sniff_content: bool) -> list[tuple[Path, str]]:
+    """Find loose specimens, reporting how each one was recognized.
+
+    ``suffix`` means the name ended in ``.mus``.  ``sniffed`` means the name said
+    nothing and the header did — the only way to see classic Mac documents,
+    whose type lived in the resource fork rather than the extension.
+    """
+    found: list[tuple[Path, str]] = []
+    for path in root.rglob("*"):
+        name = path.name
+        # AppleDouble sidecars hold the resource fork of the file beside them,
+        # never a document of their own, and .DS_Store is Finder state.
+        if name.startswith("._") or name == ".DS_Store":
+            continue
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if excluded(relative):
+            continue
+        if path.suffix.casefold() == ".mus":
+            found.append((path, "suffix"))
+            continue
+        if not sniff_content:
+            continue
+        try:
+            with path.open("rb") as handle:
+                header = handle.read(256)
+        except OSError:
+            continue
+        if looks_like_mus(header):
+            found.append((path, "sniffed"))
+    return sorted(found, key=lambda item: norm(str(item[0].relative_to(root))))
 
 
 def sha256(path: Path) -> str:
@@ -116,6 +182,19 @@ def main() -> None:
         help="Suffix identifying an export, e.g. '.fin27.musx'",
     )
     parser.add_argument(
+        "--sniff-content",
+        action="store_true",
+        help="Also inventory loose files whose header is Finale content but whose name is not *.mus",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="Skip paths matching this glob, or anything beneath a directory matching it. "
+             "Relative to the corpus root; repeatable. E.g. --exclude='*/Libraries*'",
+    )
+    parser.add_argument(
         "--include-archives",
         action="store_true",
         help="Also inventory candidate members of ZIP/StuffIt archives (slow on first run)",
@@ -137,11 +216,13 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    sources = sorted(
-        (path for path in root.rglob("*") if path.is_file() and path.suffix.casefold() == ".mus"),
+    excluded = make_exclude_filter(args.exclude)
+    sources = discover_sources(root, excluded, args.sniff_content)
+    exports = sorted(
+        (path for path in root.rglob(f"*{export_suffix}")
+         if not excluded(path.relative_to(root).as_posix())),
         key=lambda path: norm(str(path.relative_to(root))),
     )
-    exports = sorted(root.rglob(f"*{export_suffix}"), key=lambda path: norm(str(path.relative_to(root))))
     exports_by_stem: dict[str, list[Path]] = {}
     for export in exports:
         stem = export.name[: -len(export_suffix)]
@@ -151,15 +232,18 @@ def main() -> None:
     # member.  Both are real files by this point, so the loop below does not
     # care which is which except when pairing exports.
     specimens: list[dict[str, object]] = [
-        {"origin": "filesystem", "path": source, "relative": str(source.relative_to(root)),
+        {"origin": "filesystem", "discovery": discovery, "path": source,
+         "relative": str(source.relative_to(root)),
          "archive_id": "", "archive_path": "", "member_path": ""}
-        for source in sources
+        for source, discovery in sources
     ]
 
     archive_stats: dict[str, int] = {}
     if args.include_archives:
         cache_dir = (args.archive_cache or (output_dir / "archive_cache")).resolve()
-        members, archive_stats = build_cache(root, cache_dir, refresh=args.refresh_archive_cache)
+        members, archive_stats = build_cache(
+            root, cache_dir, refresh=args.refresh_archive_cache, excluded=excluded
+        )
         print(f"archives: {archive_stats['archives']} scanned, {archive_stats['extracted']} extracted, "
               f"{archive_stats['reused']} reused from cache, {archive_stats['unreadable']} unreadable")
         for member in sorted(members, key=lambda m: (norm(m["archive_filename"]), norm(m["member_path"]))):
@@ -168,6 +252,7 @@ def main() -> None:
                 continue
             specimens.append({
                 "origin": "archive",
+                "discovery": "archive-member",
                 "path": path,
                 # "!" separates container from member. Path().name still yields
                 # the member's basename, which is what gets published.
@@ -195,6 +280,7 @@ def main() -> None:
         row: dict[str, object] = {
             "index": index,
             "origin": specimen["origin"],
+            "discovery": specimen["discovery"],
             "source_relative": specimen["relative"],
             "source_path": str(source),
             "archive_id": specimen["archive_id"],
@@ -231,12 +317,19 @@ def main() -> None:
     products = Counter(str(row["saving_product"]) for row in rows)
     matches = Counter(str(row["export_match"]) for row in rows)
     origins = Counter(str(row["origin"]) for row in rows)
+    discoveries = Counter(str(row["discovery"]) for row in rows)
     loose = [row for row in rows if row["origin"] == "filesystem"]
     members = [row for row in rows if row["origin"] == "archive"]
     summary = {
         "corpus_root": str(root),
         "export_dir_name": export_dir_name,
         "export_suffix": export_suffix,
+        # Recorded because both change what "the corpus" means: a survey run
+        # with exclusions covers less than the tree it names, and one run
+        # without sniffing misses every extensionless document in it. Numbers
+        # from two runs are only comparable when these agree.
+        "sniff_content": bool(args.sniff_content),
+        "exclude": list(args.exclude),
         # source_* count loose files only, so these stay comparable with surveys
         # taken before archives could be included.
         "source_count": len(sources),
@@ -252,6 +345,7 @@ def main() -> None:
         "archive_scan": archive_stats,
         "specimen_count": len(rows),
         "origin_counts": dict(sorted(origins.items())),
+        "discovery_counts": dict(sorted(discoveries.items())),
         "saving_product_counts": dict(sorted(products.items())),
         "match_counts": dict(sorted(matches.items())),
     }
@@ -264,35 +358,47 @@ def main() -> None:
         "",
         f"Generated from `{root}` by `scripts/inventory.py`.",
         "",
-        f"- Legacy `.mus` files: **{len(sources)}**",
+        f"- Legacy loose sources: **{len(sources)}** "
+        f"({discoveries.get('suffix', 0)} by `.mus` suffix, {discoveries.get('sniffed', 0)} by content)",
         f"- `{export_suffix}` files present: **{len(exports)}**",
         f"- Legacy sources matched to an export: **{summary['matched_source_count']}**",
         "",
         "The saving product is read from the binary header. Timestamps and path names are supporting provenance only. "
         "SHA-256 values cover the complete data fork. Full machine-readable paths and header bytes are in "
-        "`private/generated/corpus_inventory.csv` (local-only).",
-        "",
+        "this directory's `corpus_inventory.csv` (local-only).",
+        "",]
+    if args.exclude:
+        markdown.extend([
+            "Excluded from the scan, so this describes less than the tree it names: "
+            + ", ".join(f"`{pattern}`" for pattern in args.exclude),
+            "",
+        ])
+    markdown.extend([
         "## Saving-product distribution",
         "",
         "| Header product | Files |",
         "|---|---:|",
-    ]
+    ])
     markdown.extend(f"| {key} | {value} |" for key, value in sorted(products.items()))
     markdown.extend([
         "",
         "## Files examined",
         "",
-        "| # | Source (relative to corpus root) | Bytes | SHA-256 | Header product | Export | Match |",
-        "|---:|---|---:|---|---|---|---|",
+        "| # | Source (relative to corpus root) | Bytes | SHA-256 | Header product | Found by | Export | Match |",
+        "|---:|---|---:|---|---|---|---|---|",
     ])
     for row in rows:
         source_rel = str(row["source_relative"]).replace("|", "\\|")
         export_rel = str(row["export_relative"]).replace("|", "\\|") or "—"
         markdown.append(
             f"| {row['index']} | `{source_rel}` | {row['source_size']} | `{row['source_sha256']}` | "
-            f"{row['saving_product']} | `{export_rel}` | {row['export_match']} |"
+            f"{row['saving_product']} | {row['discovery']} | `{export_rel}` | {row['export_match']} |"
         )
-    (output_dir.parent / "CORPUS_INVENTORY.md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
+    # Written inside the output directory rather than beside it, so two surveys
+    # rebuilt into their own private directories cannot overwrite each other's
+    # copy.  This is the path-bearing inventory; the publishable one comes from
+    # render_corpus_inventory.py.
+    (output_dir / "CORPUS_INVENTORY.md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -12,12 +12,19 @@ from pathlib import Path
 def era(product: str) -> tuple[str, str, str]:
     if product == "unknown":
         return "unclassified", "low", "uncertain"
-    if product in {"1.8.7", "2.0.1", "2.6"}:
+    if product in {"1.0.0", "1.8.7", "2.0.1", "2.6"}:
         # Coda-banner era. The version is explicit in the banner, which is the
         # only place it appears, so confidence is high even though the era's
-        # directory spans are unresolved.
+        # directory spans are unresolved. 1.0.0 spells the banner a third way,
+        # `Finale` + MacRoman trademark sign + version + `ENIGA Structures`, and
+        # its 22 specimens probe at median body entropy 2.80 with no compressed
+        # member, which places it with this group rather than apart from it.
         return "Coda banner", "high", "uncertain"
-    if product in {"3.0", "3.2", "3.5", "3.7", "97", "2000"}:
+    if product in {"3.0", "3.2", "3.5", "3.7", "3.8", "97", "98", "99", "2000"}:
+        # 3.8, 98 and 99 are placed here on observation, not on their position in
+        # the version sequence: median body entropy 3.54, 3.68 and 2.21, with no
+        # zlib member and no validated wrapper in any specimen, matching the rest
+        # of this group and nothing like the ~7.65 of the DCL-compressed era.
         return "low-entropy legacy", "high", "likely"
     if product in {"2001", "2002", "2003", "2004", "2004b", "2005"}:
         return "high-entropy legacy", "high", "likely"
@@ -43,25 +50,34 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("inventory_csv", type=Path)
     parser.add_argument("structure_csv", type=Path)
-    parser.add_argument("semantics_csv", type=Path)
+    # Optional: a corpus with no modern re-saves has no semantic half at all,
+    # and rendering the binary half alone is better than fabricating an empty
+    # semantics file so the argument can stay required.
+    parser.add_argument("semantics_csv", type=Path, nargs="?")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     with args.inventory_csv.open(newline="", encoding="utf-8") as handle:
         inventory = list(csv.DictReader(handle))
     with args.structure_csv.open(newline="", encoding="utf-8") as handle:
         structures = {row["source_relative"]: row for row in csv.DictReader(handle)}
-    with args.semantics_csv.open(newline="", encoding="utf-8") as handle:
-        semantics = {row["source_relative"]: row for row in csv.DictReader(handle)}
+    semantics: dict[str, dict[str, str]] = {}
+    if args.semantics_csv is not None:
+        with args.semantics_csv.open(newline="", encoding="utf-8") as handle:
+            semantics = {row["source_relative"]: row for row in csv.DictReader(handle)}
 
     lines = [
         "# Corpus Inventory",
         "",
-        "This table includes every `.mus` data-fork candidate examined. Saving product comes from the file banner, "
-        "in either spelling: `Finale(R)` at 0x20 for signature-bearing files, `Finale(TM)` at offset 0 for the "
-        "Coda-banner era. `unknown` now means no banner was recognized at all. SHA-256 hashes cover complete files. "
+        "This table includes every legacy data-fork candidate examined, whether it was found by its `.mus` suffix or, "
+        "where the survey enabled content sniffing, by its header alone — classic Mac Finale kept the file type in the "
+        "resource fork, so its documents commonly carry no extension. Saving product comes from the file banner, in any "
+        "of its three spellings: `Finale(R)` at 0x20 for signature-bearing files, `Finale(TM)` at offset 0 for the "
+        "Coda-banner era, and `Finale` followed by a MacRoman trademark sign for Finale 1.0.0, whose banner ends "
+        "`ENIGA Structures` rather than a copyright notice. `unknown` means no banner was recognized at all. "
+        "SHA-256 hashes cover complete files. "
         "An em dash means no exact adjacent Finale 27 export was found. The public table shows content-derived IDs "
         "only. Filenames and paths are local evidence and are never published, because a filename can name a work, "
-        "a client, or a person; resolve an ID through the ignored `private/generated/corpus_locations.csv` file "
+        "a client, or a person; resolve an ID through the ignored `private/generated/<survey_id>/corpus_locations.csv` file "
         "described in the README.",
         "",
         "Version confidence is high when the banner is explicit and low for pre-banner path-based classification. "
