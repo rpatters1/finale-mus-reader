@@ -84,7 +84,8 @@ struct VersionBound
 /// @brief An inclusive version range, both bounds optional.
 /// @details Gating is on the version embedded in the file, never on a number synthesized
 /// from the banner product text. A file whose version could not be recovered, which
-/// includes every pre-banner file, matches only an unrestricted range.
+/// includes any file whose header tuple could not be read, matches only an
+/// unrestricted range.
 struct VersionRange
 {
     std::optional<VersionBound> minVersion;
@@ -135,13 +136,13 @@ namespace versions {
 enum class EpochMask : std::uint8_t
 {
     None = 0,
-    PreBanner = 1U << 0,
+    CodaBanner = 1U << 0,
     Uncompressed = 1U << 1,
     Dcl = 1U << 2,
     Zlib = 1U << 3,
     /// @brief The eras whose pools resolve to fixed 16-byte Enigma rows.
     FixedRow = Uncompressed | Dcl,
-    Any = PreBanner | Uncompressed | Dcl | Zlib
+    Any = CodaBanner | Uncompressed | Dcl | Zlib
 };
 
 [[nodiscard]] constexpr EpochMask operator|(EpochMask left, EpochMask right)
@@ -175,16 +176,30 @@ template <typename T>
     return static_cast<std::int64_t>(source);
 }
 
+/// @brief What a mapped field reads out of the record stream.
+enum class FieldKind : std::uint8_t
+{
+    /// @brief One numeric value from a word slot, optionally a bit range of it.
+    Number,
+    /// @brief Text assembled from every incidence at or after @ref SourceLocation::incidence.
+    /// @details Legacy strings run across incidences rather than living in one row: a font
+    /// name occupies the rows after its header, and header text blocks span four rows each.
+    /// The payload is read as bytes and truncated at the first NUL.
+    Text
+};
+
 /// @brief One mapped field: where it comes from and where it goes.
 struct FieldMapping
 {
     const char* fieldName{};
+    FieldKind kind = FieldKind::Number;
     SourceLocation source{};
     VersionRange versions{};
     void (*apply)(void* instance, std::int64_t value){};
     /// @brief Reads the seeded default, so the report can record a synthesized value
     /// without a separately maintained list of supported fields.
     std::int64_t (*read)(const void* instance){};
+    void (*applyText)(void* instance, std::string_view value){};
 };
 
 /// @brief How a table finds the objects it writes to.
@@ -192,8 +207,14 @@ enum class TargetKind : std::uint8_t
 {
     /// @brief A single options object; rows use their own selector.
     OptionsSingleton,
-    /// @brief Pooled others objects; each target's comparator is used as the selector.
-    OthersByCmper
+    /// @brief Pooled others objects that the pinned baseline already seeded. Each target's
+    /// comparator is used as the selector, and a record with no seeded object is skipped.
+    OthersByCmper,
+    /// @brief Pooled others objects created from the records themselves, one per comparator
+    /// carried by the table's tag. Used where the legacy file is the only source of the
+    /// objects, so there is no seeded default to overlay and nothing to report as
+    /// synthesized.
+    OthersFromRecords
 };
 
 /// @brief One resolved destination object.
@@ -216,9 +237,26 @@ struct MappingTable
     VersionRange versions{};
     TargetKind targetKind = TargetKind::OptionsSingleton;
     std::vector<MappingTarget> (*enumerateTargets)(const musx::dom::DocumentPtr& document){};
+    /// @brief Tag whose comparators enumerate the objects, for @ref
+    /// TargetKind::OthersFromRecords.
+    const char* recordTag{};
+    /// @brief Creates and pools one object, for @ref TargetKind::OthersFromRecords.
+    void* (*createTarget)(const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
     const FieldMapping* fields{};
     std::size_t fieldCount{};
 };
+
+/// @brief Creates one others object of type T and adds it to the document pool.
+template <typename T>
+[[nodiscard]] void* createOthersTarget(
+    const musx::dom::DocumentPtr& document, std::uint16_t cmper)
+{
+    auto instance = std::make_shared<T>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+    auto* raw = instance.get();
+    document->getOthers()->add(T::XmlNodeName, instance);
+    return raw;
+}
 
 /// @brief Enumerates the single instance of an options class, if it was seeded.
 template <typename T>
@@ -265,11 +303,12 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 } // namespace mapping
 } // namespace finale_mus_reader
 
-/// @brief Declares a field mapping with every column stated explicitly.
+/// @brief Declares a numeric field mapping with every column stated explicitly.
 #define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
                   orderValue, bitsValue, versionsValue, member) \
     ::finale_mus_reader::mapping::FieldMapping { \
         #member, \
+        ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
             {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
@@ -280,7 +319,50 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
                 static_cast<Class*>(instance)->member, value); }, \
         [](const void* instance) -> std::int64_t { \
             return ::finale_mus_reader::mapping::readAs( \
-                static_cast<const Class*>(instance)->member); } \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
+/// @brief A bit range assigned through an explicit conversion expression.
+/// @details Use where the stored encoding does not match the destination type, such as an
+/// enum whose values differ from the legacy encoding. `value` names the extracted bits.
+#define MUS_BITS_AS(Class, tagText, selectorValue, incidenceValue, slotValue, firstBit, \
+                    bitCount, member, ...) \
+    ::finale_mus_reader::mapping::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::mapping::FieldKind::Number, \
+        ::finale_mus_reader::mapping::SourceLocation{ \
+            {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
+            static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
+            ::finale_mus_reader::mapping::ValueWidth::Word, \
+            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::mapping::BitRange{ \
+                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+        ::finale_mus_reader::mapping::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::mapping::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
+/// @brief Text assembled from every incidence at or after `firstIncidence`.
+#define MUS_TEXT(Class, tagText, selectorValue, firstIncidence, member) \
+    ::finale_mus_reader::mapping::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::mapping::FieldKind::Text, \
+        ::finale_mus_reader::mapping::SourceLocation{ \
+            {(tagText)[0], (tagText)[1]}, static_cast<std::uint16_t>(selectorValue), \
+            static_cast<std::uint16_t>(firstIncidence), 0, \
+            ::finale_mus_reader::mapping::ValueWidth::Word, \
+            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
+            ::finale_mus_reader::mapping::BitRange{} }, \
+        ::finale_mus_reader::mapping::VersionRange{}, \
+        nullptr, \
+        nullptr, \
+        [](void* instance, std::string_view value) { \
+            static_cast<Class*>(instance)->member.assign(value); } \
     }
 
 /// @brief A two-byte field.

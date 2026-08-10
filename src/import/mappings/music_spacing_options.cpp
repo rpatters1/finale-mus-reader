@@ -37,6 +37,8 @@ const MappingTable& musicSpacingOptionsTable()
         VersionRange{},
         TargetKind::OptionsSingleton,
         &enumerateOptionsTarget<Target>,
+        nullptr,
+        nullptr,
         spacingFields,
         std::size(spacingFields)};
     return table;

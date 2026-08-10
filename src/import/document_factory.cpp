@@ -73,33 +73,60 @@ musx::dom::header::Platform toDomPlatform(SourcePlatform platform)
     return musx::dom::header::Platform::Other;
 }
 
-// Finale's complete history spans major versions 0 through 27. A first byte outside
-// that range means the tuple is not where it was expected.
+// Finale's complete history spans major versions 0 through 27. A major outside that
+// range means the tuple was not read the way the file wrote it.
 constexpr std::uint8_t maximumMajorVersion = 27;
 
-// Each header version is a 32-bit value packed one byte per component. Finale 2002
-// records 0x07010401 as its application version, which Finale 27 renders as 7.1.4.1
-// when it converts a legacy file.
-SourceVersion decodeVersion(const std::uint8_t* raw)
+// A header version is a 32-bit value in the file's own byte order, packed as major in
+// bits 31-24, minor in 23-20, maintenance in 19-16, a development-status code in 15-8,
+// and build in 7-0. Finale 97 records application version 0x03820401, which is 3.8.2
+// build 1, exactly what Finale 27 reports as the creator version for such a file.
+SourceVersion decodeVersionValue(std::uint32_t value)
 {
     SourceVersion version;
-    version.raw = (static_cast<std::uint32_t>(raw[0]) << 24U)
-        | (static_cast<std::uint32_t>(raw[1]) << 16U)
-        | (static_cast<std::uint32_t>(raw[2]) << 8U)
-        | raw[3];
-    version.major = raw[0];
-    version.minor = raw[1];
-    version.maint = raw[2];
-    version.build = raw[3];
+    version.raw = value;
+    version.major = static_cast<std::uint8_t>(value >> 24U);
+    version.minor = static_cast<std::uint8_t>((value >> 20U) & 0x0fU);
+    version.maint = static_cast<std::uint8_t>((value >> 16U) & 0x0fU);
+    version.devStatus = static_cast<std::uint8_t>((value >> 8U) & 0xffU);
+    version.build = static_cast<std::uint8_t>(value & 0xffU);
     return version;
 }
 
-void populateVersion(const std::uint8_t* raw, musx::dom::header::FinaleVersion& version)
+SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
 {
-    const auto decoded = decodeVersion(raw);
+    const auto bigEndian = (static_cast<std::uint32_t>(raw[0]) << 24U)
+        | (static_cast<std::uint32_t>(raw[1]) << 16U)
+        | (static_cast<std::uint32_t>(raw[2]) << 8U)
+        | raw[3];
+    const auto littleEndian = (static_cast<std::uint32_t>(raw[3]) << 24U)
+        | (static_cast<std::uint32_t>(raw[2]) << 16U)
+        | (static_cast<std::uint32_t>(raw[1]) << 8U)
+        | raw[0];
+
+    if (byteOrder == ByteOrder::LittleEndian) {
+        return decodeVersionValue(littleEndian);
+    }
+    if (byteOrder == ByteOrder::BigEndian) {
+        return decodeVersionValue(bigEndian);
+    }
+    // With no classified byte order, prefer the reading whose major version is possible.
+    const auto candidate = decodeVersionValue(bigEndian);
+    if (candidate.major <= maximumMajorVersion) {
+        return candidate;
+    }
+    return decodeVersionValue(littleEndian);
+}
+
+void populateVersion(
+    const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
+{
+    const auto decoded = decodeVersion(raw, byteOrder);
     version.major = decoded.major;
     version.minor = decoded.minor;
     // Finale omits these from EnigmaXML when they are zero, so match that convention.
+    // The development-status code has no mapping to musxdom's names yet, so it is
+    // reported through ImportReport rather than guessed at here.
     if (decoded.maint != 0) {
         version.maint = decoded.maint;
     }
@@ -108,8 +135,8 @@ void populateVersion(const std::uint8_t* raw, musx::dom::header::FinaleVersion& 
     }
 }
 
-musx::dom::header::FileInfo parseFileInfo(
-    const std::uint8_t* data, std::size_t dateOffset, std::size_t tupleOffset)
+musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data,
+    std::size_t dateOffset, std::size_t tupleOffset, ByteOrder byteOrder)
 {
     musx::dom::header::FileInfo info;
     const int month = data[dateOffset + 1];
@@ -120,12 +147,12 @@ musx::dom::header::FileInfo parseFileInfo(
         info.day = day;
     }
 
-    populateVersion(data + tupleOffset, info.finaleVersion);
+    populateVersion(data + tupleOffset, byteOrder, info.finaleVersion);
     info.application = fixedString(data + tupleOffset + 4, 4);
     const auto platform = parsePlatform(fixedString(data + tupleOffset + 8, 4));
     info.platform = toDomPlatform(platform);
-    populateVersion(data + tupleOffset + 12, info.appVersion);
-    populateVersion(data + tupleOffset + 16, info.fileVersion);
+    populateVersion(data + tupleOffset + 12, byteOrder, info.appVersion);
+    populateVersion(data + tupleOffset + 16, byteOrder, info.fileVersion);
     return info;
 }
 
@@ -145,8 +172,8 @@ musx::dom::header::HeaderPtr recoverHeader(
     }
 
     if (hasBanner(data, size) && size >= 0x0a6) {
-        header->created = parseFileInfo(data, 0x066, 0x06c);
-        header->modified = parseFileInfo(data, 0x08c, 0x092);
+        header->created = parseFileInfo(data, 0x066, 0x06c, report.byteOrder);
+        header->modified = parseFileInfo(data, 0x08c, 0x092, report.byteOrder);
     }
     return header;
 }
@@ -170,6 +197,51 @@ void seedPinnedDefaults(
         pinned.others, document, pinned.optionLikeOthers);
 }
 
+// A Coda-banner file carries no version tuple: its whole 0x60-0x200 header region is
+// zero apart from a constant pair at 0x80. The version is the number in the product
+// banner itself, as in `Finale(TM) 2.6 Copyright 1987 by Coda.`, so that text is the
+// only place it can be recovered from.
+bool describeCodaBannerIdentity(
+    const std::uint8_t* data, std::size_t size, ImportReport& report)
+{
+    constexpr std::string_view prefix = "Finale(TM) ";
+    if (size <= prefix.size()
+        || std::memcmp(data, prefix.data(), prefix.size()) != 0) {
+        return false;
+    }
+
+    report.banner = fixedString(data, (std::min)(size, headerSize));
+    const auto product = report.banner.substr(prefix.size());
+    const auto productEnd = product.find(" Copyright");
+    report.savingProduct = product.substr(0, productEnd);
+
+    SourceVersion version;
+    std::size_t consumed = 0;
+    std::uint8_t* const components[] = {&version.major, &version.minor, &version.maint};
+    for (auto* component : components) {
+        std::size_t digits = 0;
+        unsigned value = 0;
+        while (consumed + digits < report.savingProduct.size()
+            && std::isdigit(static_cast<unsigned char>(report.savingProduct[consumed + digits]))) {
+            value = value * 10 + static_cast<unsigned>(report.savingProduct[consumed + digits] - '0');
+            ++digits;
+        }
+        if (digits == 0 || value > (std::numeric_limits<std::uint8_t>::max)()) {
+            break;
+        }
+        *component = static_cast<std::uint8_t>(value);
+        consumed += digits;
+        if (consumed >= report.savingProduct.size() || report.savingProduct[consumed] != '.') {
+            break;
+        }
+        ++consumed;
+    }
+    if (version.major != 0 && version.major <= maximumMajorVersion) {
+        report.sourceVersion = version;
+    }
+    return true;
+}
+
 } // namespace
 
 bool hasBanner(const std::uint8_t* data, std::size_t size)
@@ -181,6 +253,9 @@ bool hasBanner(const std::uint8_t* data, std::size_t size)
 
 void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportReport& report)
 {
+    if (describeCodaBannerIdentity(data, size, report)) {
+        return;
+    }
     if (!hasBanner(data, size) || size < headerSize) {
         return;
     }
@@ -193,23 +268,16 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
 
     // Prefer the version of the application that last saved the file, since that is what
     // determined the layout on disk.
-    const auto modified = decodeVersion(data + 0x092);
-    const auto created = decodeVersion(data + 0x06c);
+    const auto modified = decodeVersion(data + 0x092, report.byteOrder);
+    const auto created = decodeVersion(data + 0x06c, report.byteOrder);
     const auto& selected = modified.major != 0 ? modified : created;
     if (selected.major <= maximumMajorVersion) {
         report.sourceVersion = selected;
     } else {
-        // Every fixture available is big-endian, so whether a little-endian file stores
-        // this tuple reversed is untested. A major version out of range with a plausible
-        // one in the low byte is what that would look like.
-        std::string warning = "Recovered Finale major version "
+        report.warnings.push_back("Recovered Finale major version "
             + std::to_string(selected.major) + " is outside the valid range 0-"
-            + std::to_string(maximumMajorVersion) + "; version-gated mappings are skipped.";
-        if (selected.build <= maximumMajorVersion && selected.build != 0) {
-            warning += " The low byte holds " + std::to_string(selected.build)
-                + ", so the header tuple may be byte-reversed for this file.";
-        }
-        report.warnings.push_back(std::move(warning));
+            + std::to_string(maximumMajorVersion)
+            + "; version-gated mappings are skipped.");
     }
 }
 

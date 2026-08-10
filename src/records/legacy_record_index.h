@@ -3,13 +3,13 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <optional>
 #include <string>
+#include <span>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 #include "container/mus_container.h"
@@ -17,6 +17,89 @@
 
 namespace finale_mus_reader {
 namespace records {
+
+/// @brief A two-character record tag packed into one comparable value.
+using LegacyTag = std::uint16_t;
+
+/// @brief Packs a two-character tag, so lookups compare an integer rather than a string.
+/// @details The packed form is always in logical order, first character in the high byte,
+/// whatever byte order the file used to store it.
+[[nodiscard]] constexpr LegacyTag packTag(std::string_view tag)
+{
+    return static_cast<LegacyTag>(
+        (static_cast<unsigned char>(tag[0]) << 8U) | static_cast<unsigned char>(tag[1]));
+}
+
+/// @brief Unpacks a tag back into its two characters, for diagnostics and reporting.
+[[nodiscard]] constexpr std::array<char, 2> tagChars(LegacyTag tag)
+{
+    return {static_cast<char>(tag >> 8U), static_cast<char>(tag & 0xffU)};
+}
+
+/// @brief Unpacks a tag as a readable string, for diagnostics and reporting.
+[[nodiscard]] inline std::string tagText(LegacyTag tag)
+{
+    const auto chars = tagChars(tag);
+    return std::string(chars.data(), chars.size());
+}
+
+/// @brief One normalized record row, whatever epoch it came from.
+/// @details Through Finale 2006 every pool row is 16 bytes in one of two shapes. An other is
+/// a comparator, a tag, and six payload words. A detail carries a second comparator, which
+/// displaces its tag by two bytes and leaves five payload words. Normalizing both into this
+/// struct lets mapping tables address either without knowing the epoch or the pool.
+struct LegacyRow
+{
+    LegacyTag tag{};
+    std::uint16_t cmper1{};
+    /// @brief Always zero for an others row.
+    std::uint16_t cmper2{};
+    std::uint32_t inci{};
+    /// @brief Payload words in source order, six for an other and five for a detail.
+    /// @details Numeric fields are byte-order corrected, so these are logical values.
+    std::array<std::int16_t, 6> words{};
+    /// @brief The same payload as raw bytes in file order.
+    /// @details Character payloads are not byte-order sensitive: a little-endian file
+    /// stores a font name as plain text, so reading it through @ref words would transpose
+    /// every character pair. Text fields must read these bytes instead.
+    std::array<std::uint8_t, 12> bytes{};
+    std::uint8_t wordCount{};
+    std::uint8_t byteCount{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+};
+
+/// @brief Payload words carried by each row shape.
+inline constexpr std::uint8_t otherWordCount = 6;
+inline constexpr std::uint8_t detailWordCount = 5;
+
+/// @brief One searchable pool of normalized rows.
+/// @details Rows are held in a single sorted vector and found by binary search, so a lookup
+/// allocates nothing and a record family occupies a contiguous range. Accessors mirror
+/// musxdom's object pools: @ref get returns one incidence, @ref getArray returns the family.
+class LegacyRowPool
+{
+public:
+    /// @brief Sorts the rows and assigns incidences within each family.
+    static LegacyRowPool build(std::vector<LegacyRow> rows);
+
+    /// @brief Returns every row of a family, in incidence order.
+    [[nodiscard]] std::span<const LegacyRow> getArray(
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0) const;
+
+    /// @brief Returns one incidence of a family, or nullptr when it is absent.
+    [[nodiscard]] const LegacyRow* get(
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci) const;
+
+    /// @brief Returns every distinct first comparator carried by a tag, in ascending order.
+    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(LegacyTag tag) const;
+
+    [[nodiscard]] bool empty() const { return m_rows.empty(); }
+    [[nodiscard]] std::size_t size() const { return m_rows.size(); }
+
+private:
+    std::vector<LegacyRow> m_rows;
+};
 
 /// @brief One payload word together with the provenance of the row that held it.
 struct RecordWord
@@ -26,44 +109,30 @@ struct RecordWord
     std::size_t decodedOffset{};
 };
 
-/// @brief Presents the legacy other pool as a word stream per record family.
-/// @details A record family is every incidence sharing a tag and cmper. Fields address
-/// the family by absolute word index, `incidence * wordsPerIncidence + slot`, because a
-/// four-byte value can straddle an incidence boundary: the distilled framework mapping
-/// places `MusicSpacingPrefs.scalingFactor` low word at incidence 1 slot 5 and its high
-/// word at incidence 2 slot 0. Treating incidence and slot as independent coordinates
-/// cannot express that.
-///
-/// Mapping tables are applied against this interface rather than the decoded rows, so a
-/// later record source for the 2007+ era can drive the same tables.
+/// @brief The normalized, searchable record set for one source file.
+/// @details Pools are reached the way musxdom's document reaches its own: @ref getOthers and
+/// @ref getDetails. Mapping tables consume this rather than the container, so a new epoch is
+/// added by teaching @ref build to produce rows, not by changing any table.
 class LegacyRecordIndex
 {
 public:
-    /// @brief Payload words carried by one 16-byte legacy row.
-    static constexpr std::size_t wordsPerIncidence = 6;
-
-    /// @brief Indexes every legacy other row in a parsed container.
     [[nodiscard]] static LegacyRecordIndex build(const container::ParsedContainer& parsed);
 
-    /// @brief Reads one word of a record family.
-    /// @param tag The two-character record tag.
-    /// @param cmper The record comparator.
-    /// @param wordIndex Absolute word index across incidences.
-    /// @return The word, or `std::nullopt` when the family or that incidence is absent.
+    [[nodiscard]] const LegacyRowPool& getOthers() const { return m_others; }
+    [[nodiscard]] const LegacyRowPool& getDetails() const { return m_details; }
+
+    /// @brief Reads one word of an others family as a continuous stream across incidences.
+    /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
+    /// stream is what lets a four-byte value straddle an incidence boundary, which the
+    /// distilled framework mapping requires.
     [[nodiscard]] std::optional<RecordWord> word(
-        std::string_view tag, std::uint16_t cmper, std::size_t wordIndex) const;
+        LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const;
 
-    /// @brief Returns every cmper present for a tag, in ascending order.
-    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(std::string_view tag) const;
-
-    /// @brief Returns whether any record was indexed.
-    [[nodiscard]] bool empty() const { return m_families.empty(); }
+    [[nodiscard]] bool empty() const { return m_others.empty() && m_details.empty(); }
 
 private:
-    using FamilyKey = std::pair<std::string, std::uint16_t>;
-
-    std::map<FamilyKey, std::vector<LegacyOther>> m_families;
-    ByteOrder m_byteOrder = ByteOrder::Unknown;
+    LegacyRowPool m_others;
+    LegacyRowPool m_details;
 };
 
 } // namespace records

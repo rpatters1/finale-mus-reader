@@ -33,6 +33,8 @@ const MappingTable& layerAttributesTable()
         VersionRange{},
         TargetKind::OthersByCmper,
         &enumerateOthersTargets<Target>,
+        nullptr,
+        nullptr,
         layerFields,
         std::size(layerFields)};
     return table;

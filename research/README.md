@@ -19,6 +19,14 @@ extensionless filename; the 2.6 document had non-blocking font
 issues. These conversions disprove the suspected 2.6.x parser cutoff for the tested files while demonstrating that
 classic Mac type/creator discovery and modern filename-extension recognition are separate from format support.
 
+## Terminology note: "pre-banner"
+
+Earlier survey notes call the Finale 1.x-2.6 family "pre-banner". That is inaccurate and the term is
+retained only where it records what was observed at the time. Those files do carry a banner, a
+plain-text `Finale(TM) 2.6 Copyright 1987 by Coda.` product string at offset 0; what they lack is the
+`ENIGMA BINARY FILE` signature. The reader calls the era `CodaBanner`, and the corrected structural
+description is in [FORMAT_NOTES.md](FORMAT_NOTES.md#coda-banner-files).
+
 ## Public-source provenance policy
 
 The investigation began as a strict clean-room study. On 2026-08-08, the project broadened that boundary to permit

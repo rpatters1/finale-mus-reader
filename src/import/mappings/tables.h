@@ -18,6 +18,8 @@ namespace mapping {
 
 [[nodiscard]] const MappingTable& musicSpacingOptionsTable();
 [[nodiscard]] const MappingTable& layerAttributesTable();
+[[nodiscard]] const MappingTable& fontDefinitionsTable();
+[[nodiscard]] const MappingTable& earlyFontDefinitionsTable();
 
 } // namespace mapping
 } // namespace finale_mus_reader

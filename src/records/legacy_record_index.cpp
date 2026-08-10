@@ -4,63 +4,194 @@
 #include "records/legacy_record_index.h"
 
 #include <algorithm>
+#include <tuple>
 #include <utility>
 
 namespace finale_mus_reader {
 namespace records {
+namespace {
+
+constexpr std::size_t rowSize = 16;
+
+auto familyKey(const LegacyRow& row)
+{
+    return std::tie(row.tag, row.cmper1, row.cmper2);
+}
+
+std::int16_t readWord(const std::uint8_t* data, ByteOrder byteOrder)
+{
+    if (byteOrder == ByteOrder::BigEndian) {
+        return static_cast<std::int16_t>(
+            (static_cast<std::uint16_t>(data[0]) << 8U) | data[1]);
+    }
+    return static_cast<std::int16_t>(data[0] | (static_cast<std::uint16_t>(data[1]) << 8U));
+}
+
+std::uint16_t readCmper(const std::uint8_t* data, ByteOrder byteOrder)
+{
+    return static_cast<std::uint16_t>(readWord(data, byteOrder));
+}
+
+// Through Finale 2006 the pools appear in a fixed order and only the framing differs, so a
+// block type selects a pool the same way in every epoch. Coda-banner pools are reported
+// under the uncompressed numbering by the container.
+struct PoolTypes
+{
+    std::uint16_t others{};
+    std::uint16_t details{};
+};
+
+std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
+{
+    switch (epoch) {
+    case FormatEpoch::CodaBanner:
+    case FormatEpoch::UncompressedLegacy:
+        return PoolTypes{0x0001, 0x0002};
+    case FormatEpoch::DclLegacy:
+        return PoolTypes{0x000f, 0x0010};
+    case FormatEpoch::ZlibLegacy:
+    case FormatEpoch::Unknown:
+        break;
+    }
+    return std::nullopt;
+}
+
+// An other is cmper, tag, six words. A detail carries a second cmper, which pushes the tag
+// two bytes along and leaves five words.
+std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
+    std::uint16_t blockType, bool isDetail)
+{
+    std::vector<LegacyRow> result;
+    for (const auto& block : parsed.blocks) {
+        if (block.info.type != blockType) {
+            continue;
+        }
+        // Entry pools are not this shape and are frequently not a multiple of the row size,
+        // so a partial trailing row is ignored rather than treated as an error.
+        for (std::size_t offset = 0; offset + rowSize <= block.data.size(); offset += rowSize) {
+            const auto* row = block.data.data() + offset;
+            LegacyRow decoded;
+            decoded.cmper1 = readCmper(row, parsed.byteOrder);
+            const std::size_t tagOffset = isDetail ? 4 : 2;
+            if (isDetail) {
+                decoded.cmper2 = readCmper(row + 2, parsed.byteOrder);
+            }
+            // The tag is stored as a 16-bit value, so a little-endian file holds "FN" as
+            // the bytes "NF". Reading the bytes literally mismatches every tag in such a
+            // file and does so silently, because the rows still look structurally valid.
+            // The two characters are taken in the file's order and repacked logically, so
+            // everything above this point sees a tag that reads as text.
+            const bool bigEndian = parsed.byteOrder == ByteOrder::BigEndian;
+            const std::array<char, 2> tagBytes{
+                static_cast<char>(row[tagOffset + (bigEndian ? 0 : 1)]),
+                static_cast<char>(row[tagOffset + (bigEndian ? 1 : 0)])};
+            decoded.tag = packTag(std::string_view(tagBytes.data(), tagBytes.size()));
+            decoded.wordCount = isDetail ? detailWordCount : otherWordCount;
+            decoded.byteCount = static_cast<std::uint8_t>(decoded.wordCount * 2);
+            const auto* payload = row + tagOffset + 2;
+            for (std::uint8_t i = 0; i < decoded.wordCount; ++i) {
+                decoded.words[i] = readWord(payload + i * 2, parsed.byteOrder);
+            }
+            std::copy_n(payload, decoded.byteCount, decoded.bytes.begin());
+            decoded.blockOffset = block.info.sourceOffset;
+            decoded.decodedOffset = offset;
+            result.push_back(decoded);
+        }
+    }
+    return result;
+}
+
+} // namespace
+
+LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows)
+{
+    // Sorting by family keeps each family contiguous, so an incidence is an offset from the
+    // start of its range and a lookup is a binary search rather than a hashed allocation.
+    //
+    // Incidence is defined by encounter order, so decode order is carried into the sort key
+    // rather than left to the algorithm's stability. Relying on std::stable_sort would work
+    // but would silently break if the comparator were ever reused with std::sort.
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        rows[i].inci = static_cast<std::uint32_t>(i);
+    }
+    std::sort(rows.begin(), rows.end(),
+        [](const LegacyRow& left, const LegacyRow& right) {
+            return std::tuple_cat(familyKey(left), std::tie(left.inci))
+                < std::tuple_cat(familyKey(right), std::tie(right.inci));
+        });
+    std::uint32_t inci = 0;
+    for (std::size_t i = 0; i < rows.size(); ++i) {
+        if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) {
+            ++inci;
+        } else {
+            inci = 0;
+        }
+        rows[i].inci = inci;
+    }
+
+    LegacyRowPool result;
+    result.m_rows = std::move(rows);
+    return result;
+}
+
+std::span<const LegacyRow> LegacyRowPool::getArray(
+    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2) const
+{
+    const auto key = std::tie(tag, cmper1, cmper2);
+    const auto range = std::equal_range(m_rows.begin(), m_rows.end(), key,
+        [](const auto& left, const auto& right) {
+            if constexpr (std::is_same_v<std::decay_t<decltype(left)>, LegacyRow>) {
+                return familyKey(left) < right;
+            } else {
+                return left < familyKey(right);
+            }
+        });
+    return std::span<const LegacyRow>(&*range.first, static_cast<std::size_t>(
+        std::distance(range.first, range.second)));
+}
+
+const LegacyRow* LegacyRowPool::get(
+    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci) const
+{
+    const auto family = getArray(tag, cmper1, cmper2);
+    return inci < family.size() ? &family[inci] : nullptr;
+}
+
+std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag) const
+{
+    std::vector<std::uint16_t> result;
+    for (const auto& row : m_rows) {
+        if (row.tag == tag && (result.empty() || result.back() != row.cmper1)) {
+            result.push_back(row.cmper1);
+        }
+    }
+    return result;
+}
 
 LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& parsed)
 {
     LegacyRecordIndex result;
-    result.m_byteOrder = parsed.byteOrder;
-    for (auto& record : decodeLegacyOthers(parsed)) {
-        auto& family = result.m_families[FamilyKey{record.tag, record.cmper}];
-        family.push_back(std::move(record));
-    }
-    for (auto& [key, family] : result.m_families) {
-        (void)key;
-        std::sort(family.begin(), family.end(),
-            [](const LegacyOther& left, const LegacyOther& right) {
-                return left.incident < right.incident;
-            });
+    if (const auto types = poolTypesFor(parsed.formatEpoch)) {
+        result.m_others = LegacyRowPool::build(decodeRows(parsed, types->others, false));
+        result.m_details = LegacyRowPool::build(decodeRows(parsed, types->details, true));
     }
     return result;
 }
 
 std::optional<RecordWord> LegacyRecordIndex::word(
-    std::string_view tag, std::uint16_t cmper, std::size_t wordIndex) const
+    LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const
 {
-    const auto found = m_families.find(FamilyKey{std::string(tag), cmper});
-    if (found == m_families.end()) {
+    const auto family = m_others.getArray(tag, cmper);
+    if (family.empty()) {
         return std::nullopt;
     }
-    const auto incidence = wordIndex / wordsPerIncidence;
-    const auto slot = wordIndex % wordsPerIncidence;
-    if (incidence >= found->second.size()) {
+    const auto incidence = wordIndex / family.front().wordCount;
+    const auto slot = wordIndex % family.front().wordCount;
+    if (incidence >= family.size()) {
         return std::nullopt;
     }
-    const auto& record = found->second[incidence];
-    // The decoder assigns incidences in encounter order, so position and incident agree.
-    if (record.incident != incidence) {
-        return std::nullopt;
-    }
-    RecordWord result;
-    result.value = readPayloadWord(record, slot, m_byteOrder);
-    result.blockOffset = record.blockOffset;
-    result.decodedOffset = record.decodedOffset;
-    return result;
-}
-
-std::vector<std::uint16_t> LegacyRecordIndex::cmpersForTag(std::string_view tag) const
-{
-    std::vector<std::uint16_t> result;
-    for (const auto& [key, family] : m_families) {
-        if (!family.empty() && key.first == tag) {
-            result.push_back(key.second);
-        }
-    }
-    // The family map is already ordered by tag then cmper.
-    return result;
+    const auto& row = family[incidence];
+    return RecordWord{row.words[slot], row.blockOffset, row.decodedOffset};
 }
 
 } // namespace records

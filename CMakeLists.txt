@@ -111,6 +111,7 @@ add_library(finale_mus_reader STATIC
     src/defaults/embedded_default.cpp
     src/import/document_factory.cpp
     src/import/legacy_mapping.cpp
+    src/import/mappings/font_definitions.cpp
     src/import/mappings/layer_attributes.cpp
     src/import/mappings/music_spacing_options.cpp
     src/import/reader.cpp

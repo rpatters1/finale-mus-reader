@@ -18,80 +18,50 @@ fixed), **gap** (imported documents are correct but incomplete), **decided**
 
 ## P0 — imported documents are incorrect or throw
 
-### P0.1 Seeded font references resolve to nothing
+### P0.1 Font definitions now come from the file
 
-**Status:** blocker. **Confidence:** confirmed 2026-08-09.
+**Status:** done 2026-08-09. **Confidence:** confirmed.
 
-The pinned Finale 27 `<options>` pool references font definitions by cmper. The
-allowlist admits only `layerAtts`, so no `others::FontDefinition` reaches the
-imported document and every one of those references dangles.
+Previously the reader created no `others::FontDefinition` at all, so every font reference
+in the seeded options resolved to nothing and `FontInfo::getName` threw.
 
-Observed on `tests/evidence/F2002/F2002-baseline.mus` by calling
-`FontOptions::getFontInfo` and then `FontInfo::getName`:
+Font definitions are now decoded from the `FN` records of the source file for every
+pre-zlib epoch: 12,759 definitions across all 669 Coda-banner, uncompressed, and DCL corpus
+files, every one with a name. Character set bank and value, pitch, family, and name are all
+populated from the file. The layout is recorded in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#font-definitions).
 
-```
-fontId=0 -> THROWS: font definition not found for font id 0
-fontId=1 -> THROWS: font definition not found for font id 1
-```
+The zlib era still produces none, because its records are not decoded. See P1.3.
 
-`FontInfo::getName`, `calcIsSymbolFont`, `setFontIdByName`, and
-`calcIsSameTypeface` all throw `std::invalid_argument` when the definition is
-absent. Nothing in document finalization touches them, so import succeeds and
-the failure surfaces later, inside consumer code.
+**Open: character set and font platform for files before Finale 3.2.** Those files carry
+no header incidence, so the bank and character set value are absent from the record
+entirely and the reader leaves them at their constructed defaults. Every font in the 54
+Coda-banner and 28 Finale 3.0-3.7 documents is therefore reported as a Mac-bank font with
+character set 0, which is a default rather than a reading. Recovering them will have to come
+from somewhere other than the `FN` record.
 
-Baseline reference counts: `fontID` 1 appears 19 times, plus 3, 5, and 13 once
-each; every `<font>` node that omits `<fontID>` means id 0, the document default
-music font. The baseline defines cmpers 0–14.
+### P0.2 Seeded option font ids are not reconciled
 
-This is the visible symptom of [P0.2](#p02-font-definitions-must-come-from-the-mus-file),
-which is the actual work item and which rules out the obvious quick fix.
+**Status:** blocker, and newly urgent. **Confidence:** confirmed.
 
-**Seeding the pinned font definitions is rejected.** It looks like the cheapest
-interim — allowlist `fontName`, report the definitions as synthesized — but a
-document has a single `fontId` space. Once the real font table is imported, the
-seeded option ids would stop dangling and start *resolving*, into whichever
-source record happens to share that cmper. A loud `std::invalid_argument`
-becomes silent misattribution, and it happens exactly when the correct fix
-lands. The interim would be a landmine armed by its own replacement.
+This is the hazard that argued against seeding pinned font definitions, now arriving from
+the other direction. The pinned Finale 27 options carry Finale 27 font ids, and real font
+definitions from the source document now exist under the source document's ids. An option
+the reader has not yet mapped therefore resolves its font id against a table it was never
+written for, and returns whichever font happens to occupy that id.
 
-The only acceptable interim is one that fabricates nothing: report at import
-that font references do not resolve, so a consumer learns it before calling
-`getName`. Until then, the throw is the honest behavior.
+The failure mode has changed from loud to silent. Before font definitions existed, such a
+reference threw `std::invalid_argument`. It now returns a plausible, wrong font.
 
-### P0.2 Font definitions must come from the MUS file
+Reconciling means one of:
 
-**Status:** blocker. Top priority once record decoding begins; not queued before
-then. **Confidence:** strong.
+- recovering the legacy font preferences so the option values are themselves from the file,
+  which removes the mismatch at its source; or
+- pointing every unrecovered font reference at a designated source font and reporting it as
+  synthesized, so nothing resolves by coincidence.
 
-Font definitions must be decoded from the source. The pinned baseline's table
-cannot substitute for it: the tables are unrelated, and the ids are not
-transferable. Ids are assigned per capture machine — the two committed baselines
-disagree about which id holds which typeface purely because they were captured
-on different machines — so a baseline id carries no meaning that survives being
-copied into another document.
-
-Production requires both halves:
-
-- decode the legacy font table and create `others::FontDefinition` from it; and
-- reconcile every `fontId` in the imported document with that table.
-
-The second half is not automatic once the first lands. Options the reader never
-recovered still carry baseline ids, and those must be resolved deliberately —
-by recovering the corresponding legacy font preferences, or by pointing them at
-a designated source-derived font and reporting them as synthesized. Letting them
-resolve by cmper coincidence is the one outcome to avoid.
-
-**Invariant to enforce once implemented:** every `fontId` in an imported
-document resolves to a `FontDefinition` decoded from the MUS file. This is
-checkable as a post-import pass and should be asserted by tests.
-
-**Evidence already in hand.** The controlled ETF exports carry the font table in
-the clear, as `^FN(cmper) "name"` records — `tests/evidence/F2002/F2002-baseline.etf`
-holds 19 of them, beginning `^FN(0) "Maestro"`, `^FN(1) "Times"`,
-`^FN(2) "Helvetica"`. Each has a matching `.mus` file for 2002–2005, so the DCL
-era has ground truth to decode against. For the zlib era,
-[RECORD_CATALOG.md](RECORD_CATALOG.md) already lists `0x0090` as `fontName` at
-`weak` confidence across 2007–2012. This work starts from evidence, not a survey.
+Until then, treat any font reference reached through a seeded option as unverified. Font
+definitions themselves are trustworthy; the option fields that point at them are not.
 
 ### P0.3 Platform-matched baseline selection
 
@@ -126,6 +96,31 @@ Eight values are recovered: four `layerAtts.restOffset` and four
 `research/data/legacy_direct_option_blocks.csv` five direct blocks. Everything
 not in that slice silently remains a Finale 27 default.
 
+Measured coverage, from running the reader over all 1,218 direct corpus files:
+
+| Epoch | Files | Music spacing 4/4 | Layer offsets 4/4 | Files with fonts | Fonts |
+|---|---:|---:|---:|---:|---:|
+| Coda banner | 54 | 0 | 0 | 54 | 5,119 |
+| Uncompressed | 190 | 90 | 180 | 190 | 2,231 |
+| DCL | 426 | 426 | 426 | 426 | 5,418 |
+| zlib | 527 | 0 | 0 | 0 | 0 |
+| Unrecognized framing | 20 | 0 | 0 | 0 | 0 |
+
+Every file but one produced a document; the single failure is an AppleDouble
+metadata artifact, which is the correct outcome. Every pre-zlib file recovers its
+font table. Every framed DCL file recovers all eight of the promoted option
+values.
+
+The uncompressed shortfalls are era facts, not defects. Selector `94` does not
+appear before Finale 2000, so Finale 3.2 through 97 recover layer offsets and no
+spacing; the ten files without layer offsets are Finale 97 documents that carry no
+`LA` records. Coda-banner files have neither selector, which is why that row is
+zero. Per-era detail is in
+[LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md#corpus-verification-of-promoted-mappings).
+
+This measures recovery, not accuracy. Only the fixtures with ETF counterparts
+confirm that recovered values are correct.
+
 `ImportReport::fields` already distinguishes recovered from synthesized values,
 which is what keeps this a gap rather than a correctness problem. Promotion of
 further mappings should stay evidence-led and version-aware.
@@ -140,15 +135,43 @@ recovered header. This is the honest current scope and is asserted by
 `expectNoScoreContent`, but "MUS reader" will be read by users as meaning score
 content.
 
-### P1.3 Pre-banner and zlib-era logical records are unresolved
+### P1.3 The zlib era decodes no records
 
-**Status:** gap. **Confidence:** confirmed.
+**Status:** gap. **Confidence:** confirmed 2026-08-09.
 
-Both epochs classify and frame correctly but overlay nothing; the reader emits
-warnings saying so. Pre-banner pool directories remain unresolved
-(`FORMAT_NOTES.md`), and 2007–2012 variable logical records are not decoded.
+The Coda-banner half of this item is done. Its pools are decoded into typed
+blocks, its others and details pools are indexed like every other epoch, and all
+54 corpus files recover their font tables.
 
-### P1.4 Legacy text encoding is not converted
+The 2007-2012 zlib era still overlays nothing: 527 files classify and inflate but
+produce no records, so they receive no fonts and no option values. Its record
+framing is undecoded, which is research rather than implementation, and it is now
+the largest single block of unserved files.
+
+Twenty of those files additionally log a zlib decompression failure during
+inflation, which is a separate defect from the undecoded records.
+
+### P1.4 Twenty zlib-era files are not framed
+
+**Status:** gap. **Confidence:** confirmed 2026-08-09.
+
+This item previously read "thirty-seven banner-era files are not framed" and
+attributed them to known variant framings. That diagnosis was wrong twice over,
+and both causes are now fixed:
+
+- **Sixteen Finale 2001-2006 files** were not variant framings at all. Their tags
+  were being read as raw bytes rather than as byte-order-sensitive values, so
+  every tag in a little-endian file mismatched. Every framed DCL file in the
+  corpus now recovers all eight promoted values.
+- **One Finale 97 file** overran the customary `0x200` body boundary with long
+  file-info text. The body offset is a header field, not a constant. See
+  [FORMAT_NOTES.md](FORMAT_NOTES.md#banner-era-files); the controlled pair under
+  `tests/evidence/F97/` is the evidence and the regression test.
+
+Twenty files remain unrecognized, all of them zlib-era. They are covered by P1.3
+rather than by anything specific to framing.
+
+### P1.5 Legacy text encoding is not converted
 
 **Status:** gap. **Confidence:** strong.
 
@@ -208,27 +231,28 @@ records later. Clear the references instead, so the document does not claim
 shapes it lacks, or leave them until shapes are decoded from the source. Lower
 priority than fonts only because nothing throws.
 
-### P2.3 Early version ordering is ambiguous, and pre-banner files have no version
+### P2.3 Early version ordering
 
-**Status:** open. **Confidence:** confirmed for the mechanism, `open` for the boundaries.
+**Status:** resolved 2026-08-09, with two versions unverified. **Confidence:** confirmed.
 
-Mapping rows are gated on the version embedded in the file, which is decoded from the
-banner header tuple as major.minor.maint.build. Two limits are known:
+The version packing, the saving-product to internal-version mapping, and the byte-order
+behavior are now decoded and recorded in
+[VERSION_MATRIX.md](VERSION_MATRIX.md#decoded-version-packing). The consequences for
+gating:
 
-- **Major alone does not order Finale's history.** Finale 98 is believed to be major 4
-  and Finale 97 major 3, which collides with the Finale 3.x line. The gate therefore
-  orders on major *then minor*, but the actual early boundaries are unverified. Confirm
-  what Finale 97 and 98 record before writing any gate below major 5. The corpus holds
-  Finale 97 files; Finale 98 may be absent entirely.
-- **Pre-banner files carry no recoverable version.** They have no banner, so
-  `ImportReport::sourceVersion` is absent and only ungated rows can apply to them.
-  Whether a version lives elsewhere in those files is unknown and needs its own
-  investigation.
-
-A third limit is untested rather than unknown: every controlled fixture is big-endian,
-so whether a little-endian file stores the header tuple byte-reversed has never been
-exercised. The reader warns when the major version falls outside 0-27 and notes when the
-low byte holds a plausible major instead, which is the signature that case would produce.
+- **Major alone does not order Finale's history**, as suspected. Finale 3.2, 3.5, 3.7
+  and Finale 97 all carry major 3; Finale 97 is 3.8. Gates below major 5 must therefore
+  state a minor, which `VersionRange` supports.
+- **Finale 98 and Finale 2011 are absent from the corpus.** They are presumed to be
+  majors 4 and 16. Do not write a gate that depends on either until a sample confirms it.
+- **Coda-banner files carry a version, in their product banner.** They have no header
+  tuple: the whole 0x60-0x200 region is zero apart from a constant pair at 0x80. The
+  reader recovers major and minor from the `Finale(TM) 2.6` text instead, so
+  `ImportReport::sourceVersion::raw` is zero for them. Every such file in the corpus is
+  Finale 2.6, so no gate below major 3 has been exercised against real evidence.
+- **Byte order is settled.** The tuple is stored in the file's own byte order, confirmed
+  by the 2007 and 2008 wrapper splits matching the container classification exactly. Both
+  paths are covered by tests.
 
 ### P2.4 musxdom dependency pin
 

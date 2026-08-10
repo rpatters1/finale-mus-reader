@@ -1,0 +1,19 @@
+Finale 97 (internal version 3.8), uncompressed fixed-row era, big-endian.
+
+Origin: test cases authored for the Settings Scrapbook plug-in and released for
+publication by their author.
+
+F97-fileinfo-short.mus
+    sha256 35b764881cf54f67e2e4dfcd3d1f7071a330fd03e0f7a5afb6314a6b4857eb29
+    A document whose file-info text fits inside the usual header, so its record
+    body begins at the customary offset 0x200.
+
+F97-fileinfo-long.mus
+    sha256 01c845fbcdfc27a4f61033f66dbd16bf3a72a2bde6ff4cc4dda46733389ebf03
+    The same document with deliberately long file-info text. The text overruns
+    0x200 and the record body begins at 0x1167 instead. The header records that
+    offset at 0x60 as a byte-order-sensitive 16-bit value.
+
+The pair is a controlled difference: they vary only in the length of the
+file-info strings, which makes them the evidence that the record body offset is
+a header field rather than the constant 0x200.

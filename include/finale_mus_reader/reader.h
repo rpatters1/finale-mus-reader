@@ -25,7 +25,13 @@ using XmlParser = std::unique_ptr<musx::xml::IXmlDocument> (*)(const char* data,
 enum class FormatEpoch
 {
     Unknown,
-    PreBanner,
+    /// @brief The era before the `ENIGMA BINARY FILE` signature existed.
+    /// @details These files are not headerless. They open with a plain-text product
+    /// banner of the form `Finale(TM) 2.6 Copyright 1987 by Coda.`, which is where their
+    /// version lives, and they still reserve a 0x200 header. Later eras use `Finale(R)`
+    /// and name Coda too, so the distinguishing marks are the `(TM)` spelling and the
+    /// absent signature.
+    CodaBanner,
     UncompressedLegacy,
     DclLegacy,
     ZlibLegacy
@@ -51,21 +57,28 @@ enum class ValueOrigin
     Finale27Default
 };
 
-/// @brief A Finale version recorded in the file header.
-/// @details The header stores each version as a 32-bit value packed one byte per
-/// component: major, minor, maint, build. Finale 2002 records `0x07010401` as its
-/// application version, which Finale 27 renders as 7.1.4.1 when it converts a legacy
-/// file. Major versions run 0-27 across Finale's history.
+/// @brief A Finale version recorded in the file.
+/// @details Signature-era files store each version as a 32-bit value in the file's own
+/// byte order, packed as major in bits 31-24, minor in bits 23-20, maintenance in bits
+/// 19-16, a development-status code in bits 15-8, and build in bits 7-0. Finale 97
+/// records an application version of `0x03820401`, which is 3.8.2 build 1, matching what
+/// Finale 27 reports as the creator version when it converts such a file.
 ///
-/// The runtime version Finale reports to plug-ins packs the same components
-/// differently, placing the minor version in bits 23-20. Do not compare a value from
-/// this struct against a runtime version constant.
+/// This is the same packing the running application reports to plug-ins, so the two are
+/// directly comparable.
+///
+/// Major versions run 0-27 across Finale's history and do not order it by themselves:
+/// Finale 3.2 through 3.7 and Finale 97 all carry major 3, separated only by minor.
 struct SourceVersion
 {
+    /// @brief The 32-bit value in logical order, or zero when the version came from a
+    /// @ref FormatEpoch::CodaBanner product string rather than a header tuple.
     std::uint32_t raw{};
     std::uint8_t major{};
     std::uint8_t minor{};
     std::uint8_t maint{};
+    /// @brief Development-status code. Its values are not yet mapped to musxdom's names.
+    std::uint8_t devStatus{};
     std::uint8_t build{};
 };
 

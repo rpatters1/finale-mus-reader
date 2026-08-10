@@ -130,7 +130,8 @@ MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size
     VersionRange versions = {}, EpochMask epochs = EpochMask::FixedRow)
 {
     return MappingTable{prefix, epochs, versions, TargetKind::OptionsSingleton,
-        &finale_mus_reader::mapping::enumerateOptionsTarget<Spacing>, fields, count};
+        &finale_mus_reader::mapping::enumerateOptionsTarget<Spacing>, nullptr, nullptr,
+        fields, count};
 }
 
 // A four-byte value whose words straddle an incidence boundary: the low word is the last
@@ -355,12 +356,88 @@ void testUncoveredEpochStillReports()
         "An uncovered epoch did not report its supported field as a default");
 }
 
+// Details carry a second comparator, which displaces the tag two bytes and leaves five
+// payload words instead of six. The index normalizes both shapes into one row type.
+void testDetailRowShape()
+{
+    finale_mus_reader::container::ParsedContainer parsed;
+    parsed.formatEpoch = FormatEpoch::UncompressedLegacy;
+    parsed.byteOrder = ByteOrder::BigEndian;
+
+    finale_mus_reader::container::DecodedBlock block;
+    block.info.type = 0x0002;
+    const std::vector<std::array<std::int16_t, 8>> detailRows{
+        // cmper1, cmper2, packed tag halves, then five payload words
+        {7, 9, 'C', 'L', 11, 22, 33, 44},
+        {7, 9, 'C', 'L', 55, 66, 77, 88},
+        {7, 8, 'C', 'L', 99, 0, 0, 0},
+    };
+    for (const auto& row : detailRows) {
+        const auto push16 = [&](std::uint16_t v) {
+            block.data.push_back(static_cast<std::uint8_t>(v >> 8U));
+            block.data.push_back(static_cast<std::uint8_t>(v));
+        };
+        push16(static_cast<std::uint16_t>(row[0]));
+        push16(static_cast<std::uint16_t>(row[1]));
+        block.data.push_back(static_cast<std::uint8_t>(row[2]));
+        block.data.push_back(static_cast<std::uint8_t>(row[3]));
+        for (int i = 4; i < 8; ++i) push16(static_cast<std::uint16_t>(row[i]));
+        push16(0);
+    }
+    parsed.blocks.push_back(std::move(block));
+
+    const auto index = LegacyRecordIndex::build(parsed);
+    const auto tag = finale_mus_reader::records::packTag("CL");
+    const auto family = index.getDetails().getArray(tag, 7, 9);
+    expect(family.size() == 2, "Detail family did not group by both comparators");
+    expect(family[0].inci == 0 && family[1].inci == 1,
+        "Detail incidences were not assigned in encounter order");
+    expect(family[0].wordCount == finale_mus_reader::records::detailWordCount,
+        "Detail rows should carry five payload words");
+    expect(family[0].words[0] == 11 && family[1].words[0] == 55,
+        "Detail payload was read from the wrong offset");
+
+    const auto other = index.getDetails().getArray(tag, 7, 8);
+    expect(other.size() == 1 && other[0].words[0] == 99,
+        "A different second comparator was not treated as a separate family");
+    expect(index.getDetails().get(tag, 7, 9, 1) != nullptr
+        && index.getDetails().get(tag, 7, 9, 2) == nullptr,
+        "Detail incidence lookup did not bound correctly");
+    expect(index.getDetails().getArray(tag, 1, 1).empty(),
+        "An absent detail family returned rows");
+    expect(index.getOthers().empty(), "A details block produced others rows");
+}
+
+// The others pool keeps working through the same normalized index, and the word stream is
+// still addressed across incidences.
+void testOtherRowsRemainSearchable()
+{
+    const auto parsed = makeContainer({
+        {GLOBALS_CMPER, "94", {1, 2, 3, 4, 5, 6}},
+        {GLOBALS_CMPER, "94", {7, 8, 9, 10, 11, 12}},
+        {3, "LA", {-14, 0, 0, 0, 0, 0}},
+    });
+    const auto index = LegacyRecordIndex::build(parsed);
+    const auto spacing = finale_mus_reader::records::packTag("94");
+    expect(index.getOthers().getArray(spacing, GLOBALS_CMPER).size() == 2,
+        "Others family did not group by comparator");
+    expect(index.getOthers().cmpersForTag(finale_mus_reader::records::packTag("LA"))
+        == std::vector<std::uint16_t>{3}, "cmpersForTag did not report the layer comparator");
+    const auto straddle = index.word(spacing, GLOBALS_CMPER, 6);
+    expect(straddle && straddle->value == 7,
+        "Word addressing did not continue into the next incidence");
+    expect(!index.word(spacing, GLOBALS_CMPER, 12),
+        "Word addressing ran past the last incidence");
+}
+
 } // namespace
 
 namespace finale_mus_reader_tests {
 
 void runMappingTests()
 {
+    testDetailRowShape();
+    testOtherRowsRemainSearchable();
     testFourByteStraddlesIncidence();
     testLongWordOrder();
     testBitExtraction();

@@ -18,6 +18,8 @@ namespace {
 const std::vector<const MappingTable*>& registeredTables()
 {
     static const std::vector<const MappingTable*> result = {
+        &fontDefinitionsTable(),
+        &earlyFontDefinitionsTable(),
         &musicSpacingOptionsTable(),
         &layerAttributesTable()};
     return result;
@@ -34,9 +36,8 @@ struct ResolvedValue
 std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
-    const std::string_view tag(source.tag, sizeof(source.tag));
-    const std::size_t wordIndex =
-        source.incidence * records::LegacyRecordIndex::wordsPerIncidence + source.wordSlot;
+    const auto tag = records::packTag(std::string_view(source.tag, sizeof(source.tag)));
+    const std::size_t wordIndex = source.incidence * records::otherWordCount + source.wordSlot;
     const auto first = index.word(tag, cmper, wordIndex);
     if (!first) {
         return std::nullopt;
@@ -71,6 +72,33 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
             (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
     }
     return ResolvedValue{value, first->blockOffset, first->decodedOffset};
+}
+
+// Character payloads are not byte-order sensitive, so text is assembled from the raw bytes
+// rather than from the decoded words. A little-endian file stores a font name as plain text,
+// and reading it through the words would transpose every character pair.
+std::optional<std::string> readText(const records::LegacyRecordIndex& index,
+    std::uint16_t cmper, const SourceLocation& source)
+{
+    const auto tag = records::packTag(std::string_view(source.tag, sizeof(source.tag)));
+    const auto family = index.getOthers().getArray(tag, cmper);
+    std::string text;
+    bool found = false;
+    for (const auto& row : family) {
+        if (row.inci < source.incidence) {
+            continue;
+        }
+        found = true;
+        text.append(reinterpret_cast<const char*>(row.bytes.data()), row.byteCount);
+    }
+    if (!found) {
+        return std::nullopt;
+    }
+    // Rows are fixed width, so the last one is padded. The name ends at the first NUL.
+    if (const auto end = text.find('\0'); end != std::string::npos) {
+        text.resize(end);
+    }
+    return text;
 }
 
 /// @brief One destination field: what to report, and where to read it if this file can.
@@ -145,8 +173,8 @@ bool epochMatches(EpochMask mask, FormatEpoch epoch)
 {
     auto bit = EpochMask::None;
     switch (epoch) {
-    case FormatEpoch::PreBanner:
-        bit = EpochMask::PreBanner;
+    case FormatEpoch::CodaBanner:
+        bit = EpochMask::CodaBanner;
         break;
     case FormatEpoch::UncompressedLegacy:
         bit = EpochMask::Uncompressed;
@@ -175,16 +203,42 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
 {
     for (const auto& effective : buildEffectiveTables(tables, profile)) {
         const auto& table = *effective.table;
-        for (const auto& target : table.enumerateTargets(document)) {
+        std::vector<MappingTarget> targets;
+        if (table.targetKind == TargetKind::OthersFromRecords) {
+            // The legacy file is the only source of these objects, so they are created from
+            // the comparators the records themselves carry rather than found in the pool.
+            const auto tag = records::packTag(table.recordTag);
+            for (const auto cmper : index.getOthers().cmpersForTag(tag)) {
+                targets.push_back({cmper, table.createTarget(document, cmper)});
+            }
+        } else {
+            targets = table.enumerateTargets(document);
+        }
+
+        for (const auto& target : targets) {
             for (const auto& field : effective.fields) {
                 FieldInfo info;
                 info.target = reportTarget(table, target, *field.reporting);
                 info.origin = ValueOrigin::Finale27Default;
-                info.rawValue = field.reporting->read(target.instance);
+                // A text field has no numeric default to report, and an object created from
+                // records has no seeded value at all, so both leave the raw value at zero.
+                if (field.reporting->read) {
+                    info.rawValue = field.reporting->read(target.instance);
+                }
 
                 if (field.readable) {
-                    const auto selector = table.targetKind == TargetKind::OthersByCmper
-                        ? target.cmper : field.readable->source.selector;
+                    const auto selector =
+                        table.targetKind == TargetKind::OptionsSingleton
+                            ? field.readable->source.selector : target.cmper;
+                    if (field.readable->kind == FieldKind::Text) {
+                        if (const auto text = readText(index, selector, field.readable->source)) {
+                            field.readable->applyText(target.instance, *text);
+                            info.origin = ValueOrigin::LegacyMus;
+                            info.rawValue = static_cast<std::int64_t>(text->size());
+                        }
+                        report.fields.push_back(std::move(info));
+                        continue;
+                    }
                     if (const auto resolved = readValue(index, selector, field.readable->source)) {
                         field.readable->apply(target.instance, resolved->value);
                         info.origin = ValueOrigin::LegacyMus;

@@ -60,9 +60,9 @@ labels every unverified result accordingly; see
 
 | MUS epoch | Current useful output |
 | --- | --- |
-| Finale 1.x–2.x pre-banner | Strong structural classification; complete default options; explicit warning that pool directories remain unresolved. |
-| Finale 3.x–2000 uncompressed | Validated typed blocks, byte order, banner header, legacy other-record index, layer rest offsets, and selected music-spacing options. |
-| Finale 2001–2006 DCL | Validated typed blocks, PKWARE DCL inflation, CRC-32, banner header, layer rest offsets, and selected music-spacing options. |
+| Finale 1.x–2.6 Coda banner | Product and version from the `Finale(TM)` banner, chained record pools, and the document's font table. |
+| Finale 3.x–2000 uncompressed | Validated typed blocks, byte order, banner header, others and details record index, font table, layer rest offsets, and selected music-spacing options. |
+| Finale 2001–2006 DCL | Validated typed blocks, PKWARE DCL inflation, CRC-32, banner header, others and details record index, font table, layer rest offsets, and selected music-spacing options. |
 | Finale 2007–2012 zlib | Validated typed blocks, zlib inflation, CRC-32, byte order, and banner header; logical option overlays remain pending. |
 
 Unknown banner-era framing still produces an empty options-complete document

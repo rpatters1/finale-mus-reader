@@ -47,9 +47,9 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     result.document = createDocument(
         parsed, data, size, sourcePath, parseXml, result.report);
 
-    if (parsed.formatEpoch == FormatEpoch::PreBanner) {
+    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
         result.report.warnings.emplace_back(
-            "Pre-banner pool directories are unresolved; options remain at Finale 27 defaults.");
+            "Coda-banner pool directories are unresolved; options remain at Finale 27 defaults.");
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
         result.report.warnings.emplace_back(
             "Later variable logical records are not overlaid yet; options remain at Finale 27 defaults.");
