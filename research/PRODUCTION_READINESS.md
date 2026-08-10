@@ -256,7 +256,38 @@ gating:
   by the 2007 and 2008 wrapper splits matching the container classification exactly. Both
   paths are covered by tests.
 
-### P2.4 musxdom dependency pin
+### P2.4 Header fields beyond the versions are unpopulated
+
+**Status:** gap. **Confidence:** confirmed 2026-08-09.
+
+`recoverHeader` fills word order, text encoding, the creation and last-save dates,
+the application string, the platform, and all three version tuples. Three fields of
+musxdom's `header::FileInfo` are never written:
+
+- **`devStatus`** is decoded but discarded. The version packing carries a
+  development-status code in bits 15-8, and `SourceVersion::devStatus` holds it:
+  Finale 2002 stores 3, Finale 2012 stores 2 and 4. musxdom's field is a string
+  such as `dev` or `release`, and the mapping from code to name has not been
+  established, so nothing is written rather than a guess being recorded.
+- **`appRegion`** is never attempted. Finale 27 EnigmaXML carries `<appRegion>US</appRegion>`.
+- **`modifiedBy`** is never attempted. Finale 27 EnigmaXML carries the element, and
+  musxdom groups it with the date, which suggests the legacy file-info block is
+  where to look.
+
+The 2007-2012 era is the place to start. Its records are class-identified and map
+closely onto the EnigmaXML element model, so whatever carries this information is
+likely a record with its own class id rather than a packed header field, and
+reading it should be a table rather than an investigation. Confirming the values
+there would also supply the `devStatus` mapping for every earlier era, because a
+Finale 27 conversion of the same document states the name that a numeric code
+corresponds to.
+
+Coda-banner files are a separate case and are already as complete as their format
+allows: they record no date, application, or platform anywhere, and their only
+version is the one in the product banner, which the reader now writes to the
+last-saver block.
+
+### P2.5 musxdom dependency pin
 
 **Status:** done 2026-08-09. **Confidence:** confirmed.
 

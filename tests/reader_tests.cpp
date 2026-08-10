@@ -204,11 +204,14 @@ std::vector<std::uint8_t> makeZlibMus()
     return result;
 }
 
-const FieldInfo& field(const ImportResult& result, const std::string& target)
+// Taken by value rather than by const reference: see the note on the equivalent helper in
+// mapping_tests.cpp about -Wdangling-reference.
+const FieldInfo& field(const ImportResult& result, std::string_view target)
 {
     const auto found = std::find_if(result.report.fields.begin(), result.report.fields.end(),
-        [&](const FieldInfo& value) { return value.target == target; });
-    expect(found != result.report.fields.end(), "Missing field report for " + target);
+        [&](const FieldInfo& value) { return std::string_view(value.target) == target; });
+    expect(found != result.report.fields.end(),
+        std::string("Missing field report for ").append(target));
     return *found;
 }
 
@@ -627,6 +630,14 @@ void testCodaBannerEpoch()
         "A Coda-banner version was reported as though it came from a header tuple");
     expect(result.report.byteOrder == ByteOrder::BigEndian,
         "Coda-banner byte order was not classified");
+    // This era records its version only in the product banner, and that names the
+    // application that wrote the file, so it belongs to the last saver. Nothing identifies
+    // the creator, so that block stays empty rather than repeating a version it never held.
+    const auto& header = *result.document->getHeader();
+    expect(header.modified.finaleVersion.major == 2 && header.modified.finaleVersion.minor == 6,
+        "The Coda-banner version did not reach the document header");
+    expect(header.created.finaleVersion.major == 0,
+        "A creator version was invented for a file that records none");
     expect(result.report.sourcePlatform == SourcePlatform::Unknown
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");

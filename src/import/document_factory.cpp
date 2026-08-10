@@ -118,10 +118,8 @@ SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
     return decodeVersionValue(littleEndian);
 }
 
-void populateVersion(
-    const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
+void applyVersion(const SourceVersion& decoded, musx::dom::header::FinaleVersion& version)
 {
-    const auto decoded = decodeVersion(raw, byteOrder);
     version.major = decoded.major;
     version.minor = decoded.minor;
     // Finale omits these from EnigmaXML when they are zero, so match that convention.
@@ -133,6 +131,12 @@ void populateVersion(
     if (decoded.build != 0) {
         version.build = decoded.build;
     }
+}
+
+void populateVersion(
+    const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
+{
+    applyVersion(decodeVersion(raw, byteOrder), version);
 }
 
 musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data,
@@ -174,6 +178,13 @@ musx::dom::header::HeaderPtr recoverHeader(
     if (hasBanner(data, size) && size >= 0x0a6) {
         header->created = parseFileInfo(data, 0x066, 0x06c, report.byteOrder);
         header->modified = parseFileInfo(data, 0x08c, 0x092, report.byteOrder);
+    } else if (report.formatEpoch == FormatEpoch::CodaBanner && report.sourceVersion) {
+        // This era has no header tuples at all: its version lives only in the product
+        // banner, which names the application that wrote the file. That is the last saver,
+        // so it belongs in `modified`. Nothing identifies the creator, and no date,
+        // application, or platform is recorded anywhere, so the rest is left unset rather
+        // than invented.
+        applyVersion(*report.sourceVersion, header->modified.finaleVersion);
     }
     return header;
 }

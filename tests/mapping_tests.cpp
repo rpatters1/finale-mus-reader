@@ -11,6 +11,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "container/mus_container.h"
@@ -118,11 +119,18 @@ SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0)
     return profile;
 }
 
-const finale_mus_reader::FieldInfo& field(const ImportReport& report, const std::string& target)
+// The target is taken by value rather than by const reference so that a literal call site
+// does not create a temporary bound to a reference parameter. GCC cannot prove the returned
+// reference does not alias such a temporary and rejects the binding under
+// -Wdangling-reference.
+const finale_mus_reader::FieldInfo& field(const ImportReport& report, std::string_view target)
 {
     const auto found = std::find_if(report.fields.begin(), report.fields.end(),
-        [&](const finale_mus_reader::FieldInfo& info) { return info.target == target; });
-    expect(found != report.fields.end(), "Missing mapping report for " + target);
+        [&](const finale_mus_reader::FieldInfo& info) {
+            return std::string_view(info.target) == target;
+        });
+    expect(found != report.fields.end(),
+        std::string("Missing mapping report for ").append(target));
     return *found;
 }
 
@@ -239,7 +247,7 @@ void testAbsentRecordKeepsSeededDefault()
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
     expect(spacing->minWidth == 111, "An absent record overwrote the seeded default");
-    const auto& info = field(report, "options.spacing.minWidth");
+    const auto info = field(report, "options.spacing.minWidth");
     expect(info.origin == ValueOrigin::Finale27Default,
         "An absent record was not reported as a synthesized default");
     expect(info.rawValue == 111, "The reported default did not carry the seeded value");
