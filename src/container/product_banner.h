@@ -33,8 +33,11 @@ enum class Spelling
     /// existed.
     Trademark,
     /// @brief `Finale<0xAA> 1.0.0 ENIGA Structures Copyright 1987 by Coda.`, Finale 1.0.0
-    /// only. 0xAA is the MacRoman trademark sign, and the version is terminated by the
-    /// misspelled `ENIGA Structures` rather than by a copyright notice.
+    /// only. 0xAA is the MacRoman trademark sign, and the version is terminated by
+    /// `ENIGA Structures` rather than by a copyright notice.
+    ///
+    /// `ENIGA` is Coda's typo, not this project's. It is what the files contain, so it is
+    /// what the parser matches, and it must be preserved wherever it is written down.
     MacTrademark,
 };
 
