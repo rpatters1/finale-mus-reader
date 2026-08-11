@@ -10,7 +10,7 @@ FetchContent_Declare(Catch2
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp)
+add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp text_encoding_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader

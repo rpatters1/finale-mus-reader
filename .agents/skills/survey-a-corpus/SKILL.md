@@ -52,11 +52,26 @@ that silently reports zero exports.
    extracts them, which is the slowest part of a survey, and it needs `unar` and
    `lsar` on PATH (`brew install unar`). Warn about the runtime before starting,
    and mention the cache: extracted members land in an ignored directory under
-   `private/generated/`, so later runs are fast but disk is used — the reference
-   corpus caches roughly 720 MB.
-6. **DCL probe?** Needs a `blast`-compatible executable; ask for its path or
+   `private/generated/<survey_id>/`, so later runs are fast but disk is used —
+   the reference corpus caches roughly 720 MB.
+6. **Are the sources named `*.mus`?** Ask, and do not assume. Classic Mac Finale
+   kept the file type in the resource fork, so a corpus containing Mac
+   installations or Mac-authored documents holds documents with no extension at
+   all, and an extension-only scan reports a confident zero for whole eras.
+   `--sniff-content` inventories any loose file whose header is Finale content.
+   Prefer it whenever the corpus predates OS X or came off a Mac; the cost is
+   reading 256 bytes per file.
+7. **Anything to exclude?** `--exclude=GLOB` is repeatable and skips a path or
+   anything beneath a matching directory. Two kinds of answer matter: material
+   that is ENIGMA-framed but is not a document (`*.lib` library files, `*.fan`
+   font annotations), and subtrees a survey must not read at all. Ask rather
+   than guess, then verify the guess: excluding a whole directory because its
+   name suggests non-documents is how a survey loses real files, since Finale
+   moved `Maestro Font Default` and `Jazz Font Default` into `Libraries/` at
+   version 2007. Check what an exclusion actually drops before adopting it.
+8. **DCL probe?** Needs a `blast`-compatible executable; ask for its path or
    skip that step.
-7. **Publishing intent** — are they surveying privately, or contributing
+9. **Publishing intent** — are they surveying privately, or contributing
    deliverables upstream? If private only, do Steps 1–5 and stop.
 
 Record the answers verbatim in the survey registry (Step 2) so a later reader
@@ -115,7 +130,7 @@ different ways and destroy the comparison the field exists for:
 ```bash
 python3 - <<'PY'
 import csv, hashlib
-with open("private/generated/corpus_inventory.csv", newline="", encoding="utf-8") as fh:
+with open(f"private/generated/{SURVEY}/corpus_inventory.csv", newline="", encoding="utf-8") as fh:
     digests = sorted({row["source_sha256"] for row in csv.DictReader(fh)
                       if row.get("origin", "filesystem") == "filesystem"})
 print("corpus-" + hashlib.sha256("\n".join(digests).encode()).hexdigest()[:16])
@@ -136,10 +151,26 @@ not produced by this pipeline. Do not add per-survey output there.
 
 ## Step 3 — Private output directory
 
-All path-bearing output goes to `private/generated/`, which the repository
-`.gitignore` excludes. Create it if absent. If the user wants their own local
-history of it, `private/` can be its own local-only git repository with a
-`pre-push` hook that refuses every push; never give `private/` a remote.
+All path-bearing output goes to `private/generated/<survey_id>/`, which the
+repository `.gitignore` excludes. Create it if absent. Private output is
+namespaced per survey exactly as public deliverables are, so rebuilding one
+corpus never overwrites another's results:
+
+| Path | Holds |
+|---|---|
+| `private/corpora/<survey_id>.conf` | that corpus's root and conventions |
+| `private/generated/<survey_id>/` | its path-bearing CSVs and archive cache |
+| `private/evidence/<survey_id>/` | fixtures taken from it |
+
+The archive cache is per-survey deliberately: `build_cache` rewrites
+`cache_index.csv` with only the archives it saw on that run, so a shared cache
+would lose the other corpus's index entries and re-extract everything next time.
+
+If the user wants their own local history of this, `private/` can be its own
+local-only git repository with a `pre-push` hook that refuses every push; never
+give `private/` a remote. When it is set up that way, `private/regenerate.sh
+<survey_id>` drives everything below from the corpus's `.conf`, and that is the
+normal way to run a survey; the commands in Step 4 are what it executes.
 
 ## Step 4 — Run the pipeline
 
@@ -147,67 +178,70 @@ From the repository root, with `SURVEY=<survey_id>`. Order matters: later steps
 consume earlier outputs.
 
 ```bash
+GEN="private/generated/$SURVEY"
 OUT="research/corpora/$SURVEY"
-mkdir -p "$OUT/data" private/generated
+mkdir -p "$OUT/data" "$GEN"
 
 # Add --include-archives only if the user agreed. Members then appear as
 # ordinary inventory rows with origin=archive, and every step below covers them.
+# Add --sniff-content if sources are not all named *.mus, and --exclude=GLOB
+# (repeatable) for anything the survey must skip.
 python3 scripts/inventory.py '<corpus-root>' \
-  --output-dir private/generated \
+  --output-dir "$GEN" \
   --export-dir-name='<export-dir-name>' \
   --export-suffix='<export-suffix>' \
   --include-archives
 
 # Only when the inventory included archives. This renders deliverables from that
 # inventory; it does not open archives itself.
-python3 scripts/archive_probe.py private/generated/corpus_inventory.csv \
+python3 scripts/archive_probe.py "$GEN/corpus_inventory.csv" \
   --output "$OUT/data/archive_members.csv" \
   --summary "$OUT/ARCHIVE_SURVEY.md" \
-  --private-output private/generated/archive_locations.csv
+  --private-output "$GEN/archive_locations.csv"
 
-python3 scripts/publish_manifest.py private/generated/corpus_inventory.csv \
+python3 scripts/publish_manifest.py "$GEN/corpus_inventory.csv" \
   --public-output "$OUT/data/corpus_manifest.csv" \
-  --private-output private/generated/corpus_locations.csv
+  --private-output "$GEN/corpus_locations.csv"
 
-python3 scripts/structure_probe.py private/generated/corpus_inventory.csv \
-  --output-dir private/generated
+python3 scripts/structure_probe.py "$GEN/corpus_inventory.csv" \
+  --output-dir "$GEN"
 
 # Optional; needs a blast-compatible executable.
-python3 scripts/dcl_probe.py private/generated/corpus_locations.csv \
+python3 scripts/dcl_probe.py "$GEN/corpus_locations.csv" \
   "$OUT/data/corpus_manifest.csv" \
   --blast '<path-to-blast>' \
-  --output private/generated/dcl_probe.json
+  --output "$GEN/dcl_probe.json"
 
-python3 scripts/uncompressed_probe.py private/generated/corpus_locations.csv \
+python3 scripts/uncompressed_probe.py "$GEN/corpus_locations.csv" \
   "$OUT/data/corpus_manifest.csv" \
-  --output private/generated/uncompressed_probe.json
+  --output "$GEN/uncompressed_probe.json"
 
-# The three steps below need exports; skip them for a corpus without any.
-python3 scripts/musx_semantics.py private/generated/corpus_inventory.csv \
-  --output private/generated/musx_semantics.csv
+# The three steps below need exports; skip them for a corpus without any and
+# call render_corpus_inventory.py with two positional arguments instead of three.
+python3 scripts/musx_semantics.py "$GEN/corpus_inventory.csv" \
+  --output "$GEN/musx_semantics.csv"
 
-python3 scripts/correlate_records.py private/generated/corpus_inventory.csv \
-  private/generated/musx_semantics.csv \
+python3 scripts/correlate_records.py "$GEN/corpus_inventory.csv" \
+  "$GEN/musx_semantics.csv" \
   --output "$OUT/data/record_correlations.csv"
 
-python3 scripts/render_record_catalog.py private/generated/record_catalog.csv \
+python3 scripts/render_record_catalog.py "$GEN/record_catalog.csv" \
   "$OUT/data/record_correlations.csv" \
-  --inventory private/generated/corpus_inventory.csv \
+  --inventory "$GEN/corpus_inventory.csv" \
   --output "$OUT/RECORD_CATALOG.md"
 
-python3 scripts/render_corpus_inventory.py private/generated/corpus_inventory.csv \
-  private/generated/structure_probe.csv \
-  private/generated/musx_semantics.csv \
+python3 scripts/render_corpus_inventory.py "$GEN/corpus_inventory.csv" \
+  "$GEN/structure_probe.csv" \
+  "$GEN/musx_semantics.csv" \
   --output "$OUT/CORPUS_INVENTORY.md"
 ```
 
-`structure_probe.py` writes `version_structure_summary.csv` into
-`private/generated/` rather than to a public path; copy it to `$OUT/data/` by
-hand if publishing it.
+`structure_probe.py` writes `version_structure_summary.csv` into `$GEN` rather
+than to a public path; copy it to `$OUT/data/` by hand if publishing it.
 
-`inventory.py` additionally writes a superseded `CORPUS_INVENTORY.md` to the
-*parent* of its `--output-dir` (so, `private/CORPUS_INVENTORY.md`). Ignore it;
-the copy from `render_corpus_inventory.py` is the real one.
+`inventory.py` additionally writes a superseded, path-bearing
+`CORPUS_INVENTORY.md` into its `--output-dir`. Ignore it; the copy from
+`render_corpus_inventory.py` is the publishable one.
 
 ## Step 5 — Leak check before publishing
 
@@ -223,7 +257,7 @@ which the pattern above will not catch if the corpus lives somewhere unusual.
 
 Paths are the easy half. **Filenames must also be checked**, and no path pattern
 finds them. Write a short script that collects every basename and stem from
-`private/generated/corpus_inventory.csv` (columns `source_relative`,
+`private/generated/<survey_id>/corpus_inventory.csv` (columns `source_relative`,
 `export_relative`, `member_path`), drops names shorter than 8 characters and
 obvious dictionary words such as `score` or `text`, and then reports any that
 appear in a published file under `research/corpora/<survey_id>/`. Short and

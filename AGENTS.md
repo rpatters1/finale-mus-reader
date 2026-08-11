@@ -52,11 +52,46 @@ that task rather than reconstructing the procedure:
   Location-agnostic by design: every path is a CLI argument, so corpus-specific
   conventions belong in the invocation and never in the code.
 - `private/`: ignored local evidence and path mappings. Never publish it.
-  Script output belongs in `private/generated/`.
+  Results are namespaced per surveyed corpus: conventions in
+  `private/corpora/<survey_id>.conf`, script output in
+  `private/generated/<survey_id>/`, fixtures in `private/evidence/<survey_id>/`.
+  `private/regenerate.sh <survey_id>` rebuilds one corpus, `--all` rebuilds every
+  configured one.
 - `third_party/`: permitted location for pinned, license-compatible codec code.
 
 Some implementation directories may be absent until the initial CMake
 scaffolding creates them.
+
+## Nothing is implemented more than once
+
+In library and reader code, every fact and every behaviour has exactly one
+implementation. A second copy is a defect even when both copies are currently
+correct, because the two will diverge and the divergence will be silent.
+
+This is close to absolute. Treat an exception as needing extraordinary
+justification, stated in a comment at the site, rather than as a judgement call.
+Duplication is not paid for by being convenient, by being small, or by the copies
+being far apart — distance makes it worse.
+
+In practice:
+
+- If a constant, a spelling, a table, or a rule is needed in two places, give it
+  one home and include it. Do not restate it, not even in a `case` label.
+- If musxdom already implements something, call it. Do not reimplement it here,
+  and do not restate the values it is built on.
+- When a fact must be recorded twice for humans, record it once as code and once
+  as prose that points at the code. A comment is documentation, not a second
+  implementation.
+- Before adding a literal, grep for it. Three separately hardcoded spellings of
+  the product banner are what let Finale 1.0.0 go unread: the survey scripts
+  learned the third spelling and the reader did not, because the reader had two
+  copies and only one was updated.
+
+This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
+apply to `scripts/`, `tools/`, or test code, which may repeat themselves as
+freely as makes sense — a probe is meant to be written quickly while a question
+is live, and a test that spells out its own expectations is clearer than one that
+shares a helper with the code under test.
 
 ## Format and decoder rules
 
@@ -88,6 +123,26 @@ words, and multi-incidence rows may form one logical object.
   labeled open in the research as open.
 - When evidence conflicts with an assumption, preserve the evidence and update
   the hypothesis rather than forcing the sample through an expected layout.
+
+## Legacy text encoding
+
+Legacy MUS stores text in whatever encoding the machine that saved it used; EnigmaXML and
+musxdom are always UTF-8. Converting between the two is this project's job and not
+musxdom's, which is why `src/import/text_encoding.*` exists here.
+
+The encoding is named per font rather than per document: `charsetBank` selects the
+platform's charset numbering and `charsetVal` selects within it, so a Mac font in a document
+saved on Windows still decodes correctly. Before Finale 3.2 the font record carries no
+charset at all, and the bank is synthesized from the document's own platform instead.
+
+**Aim for the best result obtainable on the machine that is running.** Conversion need not
+be bit-identical across platforms, and insisting on that would mean giving up real accuracy:
+Windows can name encodings iconv cannot, so it gets the more faithful code page rather than
+being held to a common subset. Where a platform must fall back, say so next to the fallback
+and record what evidence shows the fallback is adequate.
+
+Choices that no observed file settles are starting positions, not findings. Label them as
+such and revise them when a file demands it, rather than defending them.
 
 ## Options fallback strategy
 
@@ -194,6 +249,9 @@ The build uses CMake. Keep these properties intact when extending it:
 - Compile every C and C++ object with `/bigobj` under MSVC. Keep this as a
   directory-wide build invariant so template-heavy musxdom factory
   instantiations cannot exceed the default COFF section limit in any target.
+- Compile every object with `/utf-8` under MSVC, also directory-wide. Sources
+  carry UTF-8 string literals and no byte-order mark; without the flag MSVC reads
+  them in the machine's active code page and silently produces different bytes.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging

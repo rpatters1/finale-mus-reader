@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
+#include "container/product_banner.h"
 #include <algorithm>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
@@ -699,3 +700,60 @@ TEST_CASE("Uncompressed epoch and overlays", "[reader]")
 TEST_CASE("Coda banner epoch", "[reader]") { testCodaBannerEpoch(); }
 TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
+
+// Every banner spelling is recognized through the one parser, so a file that carries the
+// Finale 1.0.0 spelling reports a product and a version like any other era. Before the
+// parser was unified this file read as an error, because the container and the identity
+// code each carried their own copy of the spellings and neither knew the third.
+TEST_CASE("Finale 1.0.0 banner spelling", "[banner]")
+{
+    // `Finale` + the MacRoman trademark sign + a version, terminated by `ENIGA Structures`
+    // (sic) where every later era puts a copyright notice.
+    std::vector<std::uint8_t> data(0x400, 0);
+    const std::string banner = "Finale\xaa 1.0.0 ENIGA Structures Copyright 1987 by Coda.";
+    std::copy(banner.begin(), banner.end(), data.begin());
+    // A body prologue: the record count, then the body offset itself, which is what
+    // confirms the era.
+    data[0x203] = 0x01;
+    data[0x205] = 0x00;
+    data[0x206] = 0x02;
+
+    const auto parsed = finale_mus_reader::banner::parse(data.data(), data.size());
+    REQUIRE(parsed.spelling == finale_mus_reader::banner::Spelling::MacTrademark);
+    CHECK(parsed.offset == 0);
+    CHECK(parsed.product == "1.0.0");
+    CHECK(parsed.hasNumericProduct());
+
+    const auto version = finale_mus_reader::banner::versionFromProduct(parsed.product);
+    REQUIRE(version.has_value());
+    CHECK(version->major == 1);
+    CHECK(version->minor == 0);
+    CHECK(version->maint == 0);
+}
+
+TEST_CASE("The other two banner spellings still parse", "[banner]")
+{
+    const auto coda = [] {
+        std::vector<std::uint8_t> data(0x100, 0);
+        const std::string text = "Finale(TM) 2.6 Copyright 1987 by Coda.";
+        std::copy(text.begin(), text.end(), data.begin());
+        return finale_mus_reader::banner::parse(data.data(), data.size());
+    }();
+    CHECK(coda.spelling == finale_mus_reader::banner::Spelling::Trademark);
+    CHECK(coda.product == "2.6");
+    CHECK(coda.isPreSignature());
+
+    // The registered spelling sits at 0x20, after the ENIGMA signature.
+    const auto signature = [] {
+        std::vector<std::uint8_t> data(0x100, 0);
+        const std::string sig = "ENIGMA BINARY FILE";
+        std::copy(sig.begin(), sig.end(), data.begin());
+        const std::string text = "Finale(R) 2003 Copyright (c) 1987-2002 Coda Music Technology";
+        std::copy(text.begin(), text.end(), data.begin() + 0x20);
+        return finale_mus_reader::banner::parse(data.data(), data.size());
+    }();
+    CHECK(signature.spelling == finale_mus_reader::banner::Spelling::Registered);
+    CHECK(signature.offset == 0x20);
+    CHECK(signature.product == "2003");
+    CHECK_FALSE(signature.isPreSignature());
+}

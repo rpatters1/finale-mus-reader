@@ -50,7 +50,12 @@ def archive_id(data: bytes) -> str:
 
 
 SIGNATURE = b"ENIGMA BINARY FILE"
-BANNER_RE = re.compile(rb"Finale\((?:R|TM)\)")
+ETF_SIGNATURE = b"ENIGMA TRANSPORTABLE FILE"
+# All three banner spellings: `Finale(R)`, the Coda-era `Finale(TM)`, and Finale
+# 1.0.0's MacRoman trademark sign (0xAA) with no parentheses.  Keep this in step
+# with BANNER_RE in inventory.py; a spelling missing here means those files are
+# never cached, so the parser there never gets the chance to read them.
+BANNER_RE = re.compile(rb"Finale(?:\((?:R|TM)\)|\xaa)")
 
 
 def likely_member(name: str) -> bool:
@@ -74,7 +79,16 @@ def looks_like_mus(data: bytes) -> bool:
     carry a ``Finale(R)``/``Finale(TM)`` string near the start instead.  Checking
     content is what keeps READMEs and other extensionless members out of the
     cache.
+
+    ETF is excluded explicitly.  An ETF is Finale's *text* interchange format and
+    it quotes the same product banner on its fourth line, so a banner search
+    alone accepts it — including the extensionless ETFs that classic Mac Finale
+    wrote, which no extension rule would catch.  It is a real Finale file and
+    valuable evidence, but it is not a MUS binary, and admitting it to a MUS
+    inventory only produces rows that every reader must reject.
     """
+    if data.startswith(ETF_SIGNATURE):
+        return False
     return data.startswith(SIGNATURE) or BANNER_RE.search(data[:256]) is not None
 
 
@@ -97,13 +111,23 @@ def specimen_filename(row: dict) -> str:
     return row["source_relative"].rsplit("/", 1)[-1]
 
 
-def find_archives(root: Path) -> list[Path]:
+def find_archives(root: Path, excluded=None) -> list[Path]:
+    """Locate archives under root, honouring the caller's exclusions.
+
+    ``excluded`` takes a POSIX path relative to root.  The caller owns the
+    pattern semantics; this only has to apply the same decision to archives that
+    it applies to loose files, so an excluded subtree stays excluded whether or
+    not its contents happen to be zipped.
+    """
     found: list[Path] = []
     for directory, _, names in os.walk(root):
         for name in names:
             path = Path(directory) / name
-            if path.suffix.lower() in ARCHIVE_SUFFIXES:
-                found.append(path)
+            if path.suffix.lower() not in ARCHIVE_SUFFIXES:
+                continue
+            if excluded is not None and excluded(path.relative_to(root).as_posix()):
+                continue
+            found.append(path)
     return sorted(found)
 
 
@@ -148,7 +172,8 @@ def cached_path(cache_dir: Path, mid: str) -> Path:
     return cache_dir / f"{mid}.mus"
 
 
-def build_cache(root: Path, cache_dir: Path, refresh: bool = False) -> tuple[list[dict[str, str]], dict[str, int]]:
+def build_cache(root: Path, cache_dir: Path, refresh: bool = False,
+                excluded=None) -> tuple[list[dict[str, str]], dict[str, int]]:
     """Extract candidate members into cache_dir, reusing what is already there.
 
     Returns one row per (archive, member) occurrence and a stats mapping.  Rows
@@ -171,7 +196,7 @@ def build_cache(root: Path, cache_dir: Path, refresh: bool = False) -> tuple[lis
     index_rows: list[dict[str, str]] = []
     rows: list[dict[str, str]] = []
     stats = {"archives": 0, "reused": 0, "extracted": 0, "unreadable": 0, "unrecognized": 0, "members": 0}
-    for archive in find_archives(root):
+    for archive in find_archives(root, excluded):
         try:
             aid = archive_id(archive.read_bytes())
         except OSError:

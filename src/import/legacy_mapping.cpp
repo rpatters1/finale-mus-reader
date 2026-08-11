@@ -321,6 +321,9 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 }
                 report.fields.push_back(std::move(info));
             }
+            if (table.finalizeTarget) {
+                table.finalizeTarget(target.instance, profile);
+            }
         }
     }
 }

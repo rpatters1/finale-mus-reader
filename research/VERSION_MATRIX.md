@@ -1,38 +1,58 @@
 # Version Matrix
 
-The saving product comes from the binary banner, not filenames or timestamps. Both spellings count: `Finale(R)` at
-0x20 for signature-bearing files and `Finale(TM)` at offset 0 for the Coda-banner era, which is why 1.8.7, 2.0.1,
-and 2.6 now appear as products in their own right rather than as one `unknown` bucket. Counts include archive
-members, which is where nearly all the pre-3.x material lives. “ETF likely” means the file should be
-tested with the earliest compatible application available; it is not a guarantee. Fifteen local ETF exports are now
-available across private and tracked evidence, including two saves of the same Finale 2000 template by Finale 2000
-and Finale 2005, the exact Finale 2000 `tremolos` pair, plus controlled Finale 2002–2005 pairs. Three targeted Finale
-27 conversions now cover the ETF-backed 1.8.7, 2.0.1, and 2.6 sources.
+The saving product comes from the binary banner, not filenames or timestamps. All three spellings count: `Finale(R)`
+at 0x20 for signature-bearing files, `Finale(TM)` at offset 0 for the Coda-banner era, and `Finale` followed by a
+MacRoman trademark sign (0xAA) for Finale 1.0.0, whose banner ends `ENIGA Structures` (sic) rather than a copyright
+notice. Reading all three is why 1.0.0, 1.8.7, 2.0.1, and 2.6 appear as products in their own right rather than as
+one `unknown` bucket. Counts include archive members, which is where nearly all the pre-3.x material lives.
+“ETF likely” means the file should be tested with the earliest compatible application available; it is not a
+guarantee. Fifteen local ETF exports are now available across private and tracked evidence, including two saves of
+the same Finale 2000 template by Finale 2000 and Finale 2005, the exact Finale 2000 `tremolos` pair, plus controlled
+Finale 2002–2005 pairs. Three targeted Finale 27 conversions now cover the ETF-backed 1.8.7, 2.0.1, and 2.6 sources.
 
-| Saving product | Files | Structural family | Header/body characteristic | MUSX counterparts | ETF likely | Notes |
-|---|---:|---|---|---:|---|---|
-| Finale 1.8.7 | 19 | early fixed-row/indexed | Coda banner at offset 0; no Enigma signature; 0x60-0x200 zero apart from `01 03` at 0x80 | 0 | three ETF exports analyzed across the era | archive-only in this corpus; indexes/boundaries unresolved |
-| Finale 2.0.1 | 33 | early fixed-row/indexed | as above | 0 | as above | archive-only in this corpus |
-| Finale 2.6 | 177 | early fixed-row/indexed | as above | 58 exact | as above | 63 loose, the rest archive-derived; Finale 27 opens selected files after adding `.mus`; detail tags and all 11,089 entry rows correlate exactly; no Finale 1.0 yet |
-| unknown | 3 | unclassified | no recognizable banner in either spelling; includes an AppleDouble artifact | 0 | uncertain | what is left once both banner spellings are read |
-| Finale 3.0 | 3 | uncompressed fixed-row | four little-endian typed pools; all three are Windows-origin | 3 | yes | 3/3 framed; earliest explicit product in direct corpus |
-| Finale 3.2 | 3 | uncompressed fixed-row | four big-endian typed pools | 3 | yes | 3/3 framed |
-| Finale 3.5 | 2 | uncompressed fixed-row | four big-endian typed pools | 2 | yes | 2/2 framed |
-| Finale 3.7 | 20 | uncompressed fixed-row | four big-endian typed pools | 20 | yes | 20/20 framed; incidental zlib signature is not a wrapper |
-| Finale 97 | 70 | uncompressed fixed-row | four big-endian typed pools in 69/70 | 68 | yes | one file needs integrity/classification work |
-| Finale 2000 | 92 | uncompressed fixed-row | four typed pools; 91 big-endian, one Windows-origin little-endian | 91 | analyzed | exact `tremolos` ETF pair; same fixed rows as 2001–06; template resave evidence remains |
-| Finale 2001 | 4 | DCL-compressed legacy | big-endian typed/length/CRC blocks; 3/4 framed files, all 9 members DCL/CRC-valid | 4 | yes | major codec boundary; resolved direct files retain 16-byte other/detail rows |
-| Finale 2002 | 48 | DCL-compressed legacy | same framing; 47/48 files, all 181 members DCL/CRC-valid | 47 | yes | controlled pairs prove 16-byte other/detail and 38-byte entry rows; `IS` uses three rows |
-| Finale 2003 | 168 | DCL-compressed legacy | same framing; 168/168 files, all 659 members DCL/CRC-valid | 163 | yes | fixed physical rows persist; controlled `IS` expands to six rows |
-| Finale 2004 | 7 | DCL-compressed legacy | same framing; 7/7 files, all 25 members DCL/CRC-valid | 7 | yes | controlled MUS/ETF pairs available |
-| Finale 2004b | 13 | DCL-compressed legacy | 6/13 framed files, all 23 recognized members DCL/CRC-valid | 6 | yes | seven unframed variants need classification |
-| Finale 2005 | 120 | DCL-compressed legacy | 116/120 framed files, all 459 members DCL/CRC-valid | 118 | analyzed | fixed rows persist; controlled `MS` and `SS` expand from two physical rows to three |
-| Finale 2006 | 66 | DCL-compressed legacy | 63/66 framed files, all 247 members DCL/CRC-valid; empty `0x0013` after nonempty `0x0012` | 63 | unlikely | fixed rows persist; three unframed files need classification |
-| Finale 2007 | 108 | typed zlib transition | four CRC blocks; 81 big-endian, 27 little-endian | 104 | no | first solved wrapper era; mixed serialization |
-| Finale 2008 | 182 | typed zlib transition | 180 little-endian, 2 big-endian | 180 | no | sharing/linked parts common |
-| Finale 2009 | 5 | typed zlib stable | four blocks, little-endian | 5 | no | small sample |
-| Finale 2010 | 4 | typed zlib stable | four blocks, little-endian | 4 | no | small sample |
-| Finale 2012 / File Converter | 248 | typed zlib stable | four principal blocks, little-endian in all sampled wrappers | 248 | no | banner count combines 238 Finale 2012 and 10 File Converter files |
+Counts are given per survey, since no one corpus sees the whole format. `rpatters1-main` is documents and is the
+corpus every structural claim below rests on; `rpatters1-installs` is Finale application installations, which supply
+version coverage rather than authored music and have no MUSX counterparts at all. Both are registered in
+[`data/surveys.csv`](data/surveys.csv). A product absent from one and present in the other is coverage, not
+disagreement.
+
+**A banner is a marketing label, not a version.** Two products in this table are alternate names for a release that
+shipped under a different name, established below in *Renamed releases*: `Finale 3.8` is `Finale 97`, and `Finale 99`
+is `Finale 2000`. They are listed separately because the banner really does differ, not because the format does.
+
+| Saving product | main | installs | exact MUSX (main) | Structural family | Header/body characteristic | ETF likely | Notes |
+|---|---:|---:|---:|---|---|---|---|
+| Finale 1.0.0 | 0 | 22 | 0 | early fixed-row/indexed | `Finale` + 0xAA banner at offset 0; no Enigma signature; median body entropy 2.80, no compressed member | uncertain | first Finale 1.0 material in any survey; 14 samples, 6 templates, 2 tool demos; indexes/boundaries unresolved |
+| Finale 1.8.7 | 19 | 0 | 0 | early fixed-row/indexed | Coda banner at offset 0; no Enigma signature; 0x60-0x200 zero apart from `01 03` at 0x80 | three ETF exports analyzed across the era | archive-only in this corpus; indexes/boundaries unresolved |
+| Finale 2.0.1 | 33 | 0 | 0 | early fixed-row/indexed | as above | as above | archive-only in this corpus |
+| Finale 2.6 | 177 | 1 | 53 | early fixed-row/indexed | as above | as above | 63 loose in main, the rest archive-derived; Finale 27 opens selected files after adding `.mus`; detail tags and all 11,089 entry rows correlate exactly |
+| unknown | 2 | 2 | 0 | unclassified | no recognizable banner in any of the three spellings | uncertain | what is left once all three banner spellings are read; the AppleDouble artifact previously counted here is no longer inventoried |
+| Finale 3.0 | 18 | 64 | 3 | uncompressed fixed-row | four typed pools | yes | earliest explicit product in the direct corpus |
+| Finale 3.2 | 18 | 4 | 3 | uncompressed fixed-row | four big-endian typed pools | yes | |
+| Finale 3.5 | 26 | 8 | 2 | uncompressed fixed-row | four big-endian typed pools | yes | |
+| Finale 3.7 | 56 | 71 | 20 | uncompressed fixed-row | four big-endian typed pools | yes | incidental zlib signature is not a wrapper |
+| Finale 3.8 | 0 | 11 | 0 | uncompressed fixed-row | median body entropy 3.54, no compressed member | yes | **not a distinct release**: same Enigma version as Finale 97, see *Renamed releases* |
+| Finale 97 | 238 | 41 | 68 | uncompressed fixed-row | four big-endian typed pools | yes | |
+| Finale 98 | 0 | 56 | 0 | uncompressed fixed-row | median body entropy 3.68, no compressed member | yes | first Finale 98 material in any survey; application major 4, Enigma version mixed 3.8/4.0, see below |
+| Finale 99 | 0 | 4 | 0 | uncompressed fixed-row | median body entropy 2.21, no compressed member | yes | **not a distinct release**: same Enigma 5.0 line as Finale 2000, see *Renamed releases* |
+| Finale 2000 | 449 | 68 | 91 | uncompressed fixed-row | four typed pools; predominantly big-endian, Windows-origin files little-endian | analyzed | exact `tremolos` ETF pair; same fixed rows as 2001–06; template resave evidence remains |
+| Finale 2001 | 24 | 967 | 4 | DCL-compressed legacy | big-endian typed/length/CRC blocks; 3/4 framed files, all 9 members DCL/CRC-valid | yes | major codec boundary; resolved direct files retain 16-byte other/detail rows |
+| Finale 2002 | 201 | 5399 | 47 | DCL-compressed legacy | same framing; 47/48 files, all 181 members DCL/CRC-valid | yes | controlled pairs prove 16-byte other/detail and 38-byte entry rows; `IS` uses three rows |
+| Finale 2003 | 513 | 334 | 163 | DCL-compressed legacy | same framing; 168/168 files, all 659 members DCL/CRC-valid | yes | fixed physical rows persist; controlled `IS` expands to six rows |
+| Finale 2004 | 43 | 245 | 7 | DCL-compressed legacy | same framing; 7/7 files, all 25 members DCL/CRC-valid | yes | controlled MUS/ETF pairs available |
+| Finale 2004b | 58 | 1 | 6 | DCL-compressed legacy | 6/13 framed files, all 23 recognized members DCL/CRC-valid | yes | seven unframed variants need classification |
+| Finale 2005 | 338 | 336 | 118 | DCL-compressed legacy | 116/120 framed files, all 459 members DCL/CRC-valid | analyzed | fixed rows persist; controlled `MS` and `SS` expand from two physical rows to three |
+| Finale 2006 | 129 | 823 | 63 | DCL-compressed legacy | 63/66 framed files, all 247 members DCL/CRC-valid; empty `0x0013` after nonempty `0x0012` | unlikely | fixed rows persist; three unframed files need classification |
+| Finale 2007 | 353 | 468 | 104 | typed zlib transition | four CRC blocks; both byte orders occur | no | first solved wrapper era; mixed serialization |
+| Finale 2008 | 298 | 479 | 180 | typed zlib transition | predominantly little-endian | no | sharing/linked parts common |
+| Finale 2009 | 22 | 189 | 5 | typed zlib stable | four blocks, little-endian | no | |
+| Finale 2010 | 4 | 467 | 4 | typed zlib stable | four blocks, little-endian | no | |
+| Finale 2012 / File Converter | 708 | 0 | 248 | typed zlib stable | four principal blocks, little-endian in all sampled wrappers | no | banner count combines Finale 2012 and File Converter files |
+
+The DCL and framing figures in the two right-hand columns predate the current run and describe the sample they were
+measured on; the `Files` counts have been refreshed and the framing counts have not. Re-running `dcl_probe.py`
+against both surveys is outstanding work — it needs a `blast`-compatible executable, which the runs behind this
+table did not have.
 
 ## Internal and creation versions
 
@@ -72,9 +92,42 @@ Byte order tracks the container. Finale 2007 splits 81 big-endian against 27 lit
 | 2000 | 5.0 | 2009 | 14.x |
 | 2001 | 6.0 | 2010 | 15.0 |
 | 2002 | 7.0 | 2012 | 17.0 |
-| 2003 | 8.0 | | |
+| 2003 | 8.0 | 98 | 4.0 (application) |
 
-Finale 98 is absent from the corpus and is presumed to be major 4; Finale 2011 is likewise absent and would be major 16. Neither is verified.
+Finale 98 is no longer absent. **Strong.** 56 Finale-98 files in `rpatters1-installs` decode an application version of
+4.0.x in 41 of the 44 macOS-origin files that yield a tuple at the expected offset, which settles the major-4
+presumption for the *application*. The Enigma version is not uniformly 4: 41 files carry Enigma 4.0.0 build 10 and 8
+carry Enigma 3.8.0 build 7, the same Enigma version Finale 97 writes. So Finale 98 could write the 3.8 format, and a
+Finale-98 banner does not by itself imply a major-4 file layout. Four Windows-origin files decode nonsense at the
+same offset and remain unclassified.
+
+Finale 2011 is still absent from every survey and would be major 16. Not verified.
+
+### Renamed releases
+
+**Strong.** Two banners in the table above name a release that shipped under a different name. Coda replaced
+version-numbered product names with year-numbered ones, and files written before or around the rename keep the older
+banner while carrying the shipping release's internal version.
+
+| Banner | Files | Enigma version | Application version | Shipped as |
+|---|---:|---|---|---|
+| `Finale(R) 3.8` | 11 | 3.8.0 build 7 | 3.8.0 build 13 | Finale 97 |
+| `Finale(R) 97` | 279 | 3.8.0 build 7 | 3.8.0 build 3, 3.8.2 build 1, 3.8.2 build 6 | — |
+| `Finale(R) 99` | 4 | 5.0.0 build 15 | 5.0.0 build 1 | Finale 2000 |
+| `Finale(R) 2000` | 517 | 5.0.0 build 5, 5.0.1 build 9, 5.0.2 build 5 | 5.0.0–5.0.4 | — |
+
+The Enigma version is the discriminator. Every Finale 97 file that yields a tuple carries Enigma 3.8.0 build 7, and
+so does every Finale 3.8 file — the same value, not merely the same major. Finale 99 and Finale 2000 likewise share
+the 5.0 line. Copyright years agree: the 3.8 and 97 banners both read 1987-1997, and 99 reads 1987-1999 against
+2000's 1987-1999/2000.
+
+The consequence for a decoder is that these four banners select two layouts, not four, and that a product string is
+not a safe key for a layout decision on its own. It also means a `Finale 99` count is a count of files written under
+a pre-release name, not evidence of a release that ever shipped.
+
+Evidence: 11 `Finale 3.8`, 4 `Finale 99`, 41 `Finale 97` and 68 `Finale 2000` files in `rpatters1-installs`, plus
+238 `Finale 97` and 449 `Finale 2000` files in `rpatters1-main`. No fixture in `tests/evidence/` demonstrates either
+rename yet, which is what holds this at `strong` rather than `confirmed`.
 
 ### Back-saved files
 
@@ -116,12 +169,17 @@ The creator and last-saver blocks agree in every fixture.
 
 ## Compatibility families
 
-Evidence currently supports at least four parsers/codecs, not one parser per Finale release:
+Evidence currently supports at least five parsers/codecs, not one parser per Finale release:
 
-1. archive-derived explicit Finale 1.8.7–2.6 fixed-row/indexed family;
+1. explicit Finale 1.0.0–2.6 fixed-row/indexed family;
 2. pre-banner/Finale 2;
-3. Finale 3.x–2000 uncompressed typed pools with platform byte order;
+3. Finale 3.x–2000 uncompressed typed pools with platform byte order, which by the *Renamed releases* section above
+   covers the `3.8`, `97`, `98`, `99` and `2000` banners between them;
 4. Finale 2001–2006 typed PKWARE DCL with CRC-32;
 5. Finale 2007–2012 typed zlib, with two record serialization variants around 2007–2008.
 
-The explicit 1.8.7–2.6 family shares Finale 3.0's logical record model; the direct apparent-Finale-2/unknown family still needs classification. Exact minimal pairs are the shortest path to its index and boundary rules.
+The explicit 1.0.0–2.6 family shares Finale 3.0's logical record model; the direct apparent-Finale-2/unknown family still needs classification. Exact minimal pairs are the shortest path to its index and boundary rules.
+
+Family 1 previously read "archive-derived 1.8.7–2.6", which was true of the corpora available at the time. It is not
+any more: `rpatters1-installs` holds 22 loose Finale 1.0.0 files, so the earliest family now has evidence that is
+neither archive-derived nor confined to 1.8.7 and later.

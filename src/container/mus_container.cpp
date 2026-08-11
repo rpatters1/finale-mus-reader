@@ -3,6 +3,8 @@
 
 #include "container/mus_container.h"
 
+#include "container/product_banner.h"
+
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -331,15 +333,16 @@ bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 }
 
 // Files older than the signature open with a plain-text product banner instead, such as
-// `Finale(TM) 2.6 Copyright 1987 by Coda.`. Every signature-bearing file in the surveyed
-// corpus spells it `Finale(R)`, so the `(TM)` spelling identifies the era on its own.
+// `Finale(TM) 2.6 Copyright 1987 by Coda.` or Finale 1.0.0's `Finale<0xAA> 1.0.0 ENIGA
+// Structures ...`. Every signature-bearing file in the surveyed corpora spells it
+// `Finale(R)`, so a pre-signature spelling at offset 0 identifies the era on its own.
+//
+// The spellings themselves live in banner::parse, which is the only place any of them is
+// recognized.
 bool hasCodaBanner(const std::uint8_t* data, std::size_t size)
 {
-    constexpr char prefix[] = "Finale(TM) ";
-    constexpr std::size_t prefixLength = sizeof(prefix) - 1;
-    return size > prefixLength
-        && std::memcmp(data, prefix, prefixLength) == 0
-        && data[prefixLength] >= '0' && data[prefixLength] <= '9';
+    const auto parsed = banner::parse(data, size);
+    return parsed.isPreSignature() && parsed.offset == 0 && parsed.hasNumericProduct();
 }
 
 } // namespace

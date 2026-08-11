@@ -59,7 +59,7 @@ region's end is **`open`** and should not be assumed to stop at `0x200`.
 
 Two consequences for the reader. Legacy documents carry authorship metadata that
 a future importer should map rather than discard. And no part of the header is
-published in survey evidence bundles: 433 of 1,290 files in `rpatters1-main`
+published in survey evidence bundles: 433 of 1,289 files in `rpatters1-main`
 contain free text here, including author names, work titles, and in some files
 third-party email addresses. Publishing a metadata-free subset of the header
 becomes possible once these fields and their neighbours are named well enough to
@@ -93,6 +93,8 @@ would also give the Coda-banner era a real test in place of its current assertio
 Previously described here as "pre-banner", which is inaccurate: these files do have a banner.
 
 **Confirmed.** These files lack the `ENIGMA BINARY FILE` signature but open at offset 0 with a plain-text product banner reading `Finale(TM) <version> Copyright 1987 by Coda. All rights reserved.`. The banner is the only place their version appears: bytes 0x60-0x200 are entirely zero apart from a constant `01 03` at 0x80, which is a candidate format version rather than an application version.
+
+Finale 1.0.0 belongs to this family but spells the banner a third way: `Finale` followed by a MacRoman trademark sign (0xAA), the version, and `ENIGA Structures` (sic) in place of the copyright notice, as in `Finale™ 1.0.0 ENIGA Structures Copyright 1987 by Coda.`. It shows the same absence of an Enigma tuple — 22 of 22 files in `rpatters1-installs` yield no `FIN` application string at the offset where later eras carry one — which is consistent with the zeroed 0x60-0x200 region described above rather than with a differently placed tuple.
 
 **Contradicted: the era is not Finale 2.6 alone.** This section previously read "every one of the 54 is Finale 2.6", measured when the survey saw only loose files. Including archive members raised the sample to 229 files, and 52 of them state a version older than 2.6 in their own banner:
 
@@ -300,7 +302,15 @@ and no evidence has been gathered for it yet.
 
 ## Archive-derived early-version evidence
 
-The expanded archive survey changes the earliest-version picture. StuffIt extraction with `unar` 1.10.7 produced explicit Coda-banner samples labeled Finale 1.8.7, 2.0.1, and 2.6, plus additional 3.0–3.7 files. The earliest explicit product currently observed is 1.8.7; no explicit Finale 1.0 sample has yet been found. These files should not be conflated with the 55 direct Coda-banner/unknown files. Public IDs and hashes are in `data/archive_members.csv`; original archive/member locations are private.
+The expanded archive survey changes the earliest-version picture. StuffIt extraction with `unar` 1.10.7 produced explicit Coda-banner samples labeled Finale 1.8.7, 2.0.1, and 2.6, plus additional 3.0–3.7 files. These files should not be conflated with the 55 direct Coda-banner/unknown files. Public IDs and hashes are in `data/archive_members.csv`; original archive/member locations are private.
+
+**Superseded.** This section previously stated that 1.8.7 was the earliest explicit product observed and that no
+explicit Finale 1.0 sample had been found. The `rpatters1-installs` survey holds 22 loose Finale 1.0.0 files — 14
+samples, 6 templates and 2 tool demonstrations — so the earliest explicit product is now 1.0.0, and it is not
+archive-derived. They were invisible to earlier surveys for two compounding reasons, both since fixed in
+`scripts/`: they carry no extension, and their banner uses a third spelling, `Finale` followed by a MacRoman
+trademark sign (0xAA) and terminated by `ENIGA Structures` (sic) rather than a copyright notice, which neither the
+`Finale(R)` nor the `Finale(TM)` pattern matched.
 
 Finale 27 successfully opened the selected 1.8.7, 2.0.1, and 2.6 files after `.mus` was appended to their
 filenames and produced private `.fin27.musx` references. Thus there is no parser compatibility cutoff among these
