@@ -52,7 +52,7 @@ using finale_mus_reader::VersionRange;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
 
-void expect(bool condition, const std::string& message)
+void expectMapping(bool condition, const std::string& message)
 {
     if (!condition) {
         throw std::runtime_error(message);
@@ -170,20 +170,20 @@ void testMissingRecoveredFontDefinitionFallback()
         targetDocument, referenceDocument, targetOptions, report);
 
     const auto fretboard = targetOptions->getFontInfo(FontType::Fretboard);
-    expect(fretboard->fontId == 6 && fretboard->fontSize == 36
+    expectMapping(fretboard->fontId == 6 && fretboard->fontSize == 36
             && fretboard->getEnigmaStyles() == 1,
         "A same-type reference face was not cloned after the highest target comparator");
-    expect(targetDocument->getOthers()->get<FontDefinition>(
+    expectMapping(targetDocument->getOthers()->get<FontDefinition>(
             musx::dom::SCORE_PARTID, 6)->name == "Seville",
         "The cloned same-type reference face did not retain its reference spelling");
     const auto tablature = targetOptions->getFontInfo(FontType::Tablature);
-    expect(tablature->fontId == 5 && tablature->fontSize == 12
+    expectMapping(tablature->fontId == 5 && tablature->fontSize == 12
             && tablature->getEnigmaStyles() == 2,
         "A normalized nonzero target face was not reused by the fallback");
-    expect(targetDocument->getOthers()->getArray<FontDefinition>(
+    expectMapping(targetDocument->getOthers()->getArray<FontDefinition>(
             musx::dom::SCORE_PARTID).size() == 3,
         "The fallback introduced a duplicate nonzero font name");
-    expect(report.warnings.size() == 2,
+    expectMapping(report.warnings.size() == 2,
         "Missing recovered font definitions were not reported");
 }
 
@@ -197,7 +197,7 @@ const finale_mus_reader::FieldInfo& field(const ImportReport& report, std::strin
         [&](const finale_mus_reader::FieldInfo& info) {
             return std::string_view(info.target) == target;
         });
-    expect(found != report.fields.end(),
+    expectMapping(found != report.fields.end(),
         std::string("Missing mapping report for ").append(target));
     return *found;
 }
@@ -239,9 +239,9 @@ void testFourByteStraddlesIncidence()
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
-    expect(spacing->referenceDuration == 0x12345678,
+    expectMapping(spacing->referenceDuration == 0x12345678,
         "Four-byte value straddling an incidence boundary was not assembled");
-    expect(field(report, "options.spacing.referenceDuration").origin == ValueOrigin::LegacyMus,
+    expectMapping(field(report, "options.spacing.referenceDuration").origin == ValueOrigin::LegacyMus,
         "Straddling four-byte value was not reported as recovered");
 }
 
@@ -269,8 +269,8 @@ void testLongWordOrder()
         return spacing->referenceDuration;
     };
 
-    expect(readWith(highFirst) == 0x01020304, "High-first four-byte order is wrong");
-    expect(readWith(lowFirst) == 0x03040102, "Low-first four-byte order is wrong");
+    expectMapping(readWith(highFirst) == 0x01020304, "High-first four-byte order is wrong");
+    expectMapping(readWith(lowFirst) == 0x03040102, "Low-first four-byte order is wrong");
 }
 
 // Booleans live as bits of a flag word, so bit addressing has to work before any such
@@ -293,9 +293,9 @@ void testBitExtraction()
         return spacing->avoidColNotes;
     };
 
-    expect(readFlag(0x0008), "Bit 3 set was not extracted as true");
-    expect(!readFlag(0x0004), "An unrelated bit was reported as the mapped bit");
-    expect(readFlag(static_cast<std::int16_t>(0xfff8)), "Bit 3 was lost among other bits");
+    expectMapping(readFlag(0x0008), "Bit 3 set was not extracted as true");
+    expectMapping(!readFlag(0x0004), "An unrelated bit was reported as the mapped bit");
+    expectMapping(readFlag(static_cast<std::int16_t>(0xfff8)), "Bit 3 was lost among other bits");
 }
 
 // A file with no matching record keeps the seeded value and still reports the field.
@@ -314,11 +314,11 @@ void testAbsentRecordKeepsSeededDefault()
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
-    expect(spacing->minWidth == 111, "An absent record overwrote the seeded default");
+    expectMapping(spacing->minWidth == 111, "An absent record overwrote the seeded default");
     const auto info = field(report, "options.spacing.minWidth");
-    expect(info.origin == ValueOrigin::Finale27Default,
+    expectMapping(info.origin == ValueOrigin::Finale27Default,
         "An absent record was not reported as a synthesized default");
-    expect(info.rawValue == 111, "The reported default did not carry the seeded value");
+    expectMapping(info.rawValue == 111, "The reported default did not carry the seeded value");
 }
 
 // A row gated to a later version must not be applied to an earlier file, and a file whose
@@ -342,14 +342,14 @@ void testVersionGating()
         return spacing->minWidth;
     };
 
-    expect(readWithProfile(profileFor(7)) == 111,
+    expectMapping(readWithProfile(profileFor(7)) == 111,
         "A row gated to a later version was applied to an earlier file");
-    expect(readWithProfile(profileFor(12)) == 777,
+    expectMapping(readWithProfile(profileFor(12)) == 777,
         "A row gated to this version was not applied");
 
     SourceProfile unknownVersion;
     unknownVersion.epoch = FormatEpoch::UncompressedLegacy;
-    expect(readWithProfile(unknownVersion) == 111,
+    expectMapping(readWithProfile(unknownVersion) == 111,
         "A gated row was applied to a file with no recovered version");
 }
 
@@ -374,8 +374,8 @@ void testMinorVersionOrdering()
         return spacing->minWidth;
     };
 
-    expect(readWith(3, 2) == 111, "Version 3.2 matched a gate starting at 3.5");
-    expect(readWith(3, 7) == 888, "Version 3.7 did not match a gate starting at 3.5");
+    expectMapping(readWith(3, 2) == 111, "Version 3.2 matched a gate starting at 3.5");
+    expectMapping(readWith(3, 7) == 888, "Version 3.7 did not match a gate starting at 3.5");
 }
 
 // A later table supersedes an earlier one for the same field, so a field that moves costs
@@ -406,12 +406,12 @@ void testTableLayering()
     };
 
     const auto early = readWith(7);
-    expect(early.first == 11, "The base location was not used below the override version");
-    expect(early.second == 22, "The base table lost an unrelated field");
+    expectMapping(early.first == 11, "The base location was not used below the override version");
+    expectMapping(early.second == 22, "The base table lost an unrelated field");
 
     const auto late = readWith(12);
-    expect(late.first == 33, "The override location did not supersede the base location");
-    expect(late.second == 22, "The override table dropped a field it does not restate");
+    expectMapping(late.first == 33, "The override location did not supersede the base location");
+    expectMapping(late.second == 22, "The override table dropped a field it does not restate");
 }
 
 // An epoch the tables do not cover still reports its supported fields as defaults.
@@ -432,8 +432,8 @@ void testUncoveredEpochStillReports()
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profile, document, report);
 
-    expect(spacing->minWidth == 111, "A table was applied outside its epoch");
-    expect(field(report, "options.spacing.minWidth").origin == ValueOrigin::Finale27Default,
+    expectMapping(spacing->minWidth == 111, "A table was applied outside its epoch");
+    expectMapping(field(report, "options.spacing.minWidth").origin == ValueOrigin::Finale27Default,
         "An uncovered epoch did not report its supported field as a default");
 }
 
@@ -470,23 +470,23 @@ void testDetailRowShape()
     const auto index = LegacyRecordIndex::build(parsed);
     const auto tag = finale_mus_reader::records::packTag("CL");
     const auto family = index.getDetails().getArray(tag, 7, 9);
-    expect(family.size() == 2, "Detail family did not group by both comparators");
-    expect(family[0].inci == 0 && family[1].inci == 1,
+    expectMapping(family.size() == 2, "Detail family did not group by both comparators");
+    expectMapping(family[0].inci == 0 && family[1].inci == 1,
         "Detail incidences were not assigned in encounter order");
-    expect(family[0].wordCount == finale_mus_reader::records::detailWordCount,
+    expectMapping(family[0].wordCount == finale_mus_reader::records::detailWordCount,
         "Detail rows should carry five payload words");
-    expect(family[0].words[0] == 11 && family[1].words[0] == 55,
+    expectMapping(family[0].words[0] == 11 && family[1].words[0] == 55,
         "Detail payload was read from the wrong offset");
 
     const auto other = index.getDetails().getArray(tag, 7, 8);
-    expect(other.size() == 1 && other[0].words[0] == 99,
+    expectMapping(other.size() == 1 && other[0].words[0] == 99,
         "A different second comparator was not treated as a separate family");
-    expect(index.getDetails().get(tag, 7, 9, 1) != nullptr
+    expectMapping(index.getDetails().get(tag, 7, 9, 1) != nullptr
         && index.getDetails().get(tag, 7, 9, 2) == nullptr,
         "Detail incidence lookup did not bound correctly");
-    expect(index.getDetails().getArray(tag, 1, 1).empty(),
+    expectMapping(index.getDetails().getArray(tag, 1, 1).empty(),
         "An absent detail family returned rows");
-    expect(index.getOthers().empty(), "A details block produced others rows");
+    expectMapping(index.getOthers().empty(), "A details block produced others rows");
 }
 
 // The others pool keeps working through the same normalized index, and the word stream is
@@ -500,14 +500,14 @@ void testOtherRowsRemainSearchable()
     });
     const auto index = LegacyRecordIndex::build(parsed);
     const auto spacing = finale_mus_reader::records::packTag("94");
-    expect(index.getOthers().getArray(spacing, GLOBALS_CMPER).size() == 2,
+    expectMapping(index.getOthers().getArray(spacing, GLOBALS_CMPER).size() == 2,
         "Others family did not group by comparator");
-    expect(index.getOthers().cmpersForTag(finale_mus_reader::records::packTag("LA"))
+    expectMapping(index.getOthers().cmpersForTag(finale_mus_reader::records::packTag("LA"))
         == std::vector<std::uint16_t>{3}, "cmpersForTag did not report the layer comparator");
     const auto straddle = index.word(spacing, GLOBALS_CMPER, 6);
-    expect(straddle && straddle->value == 7,
+    expectMapping(straddle && straddle->value == 7,
         "Word addressing did not continue into the next incidence");
-    expect(!index.word(spacing, GLOBALS_CMPER, 12),
+    expectMapping(!index.word(spacing, GLOBALS_CMPER, 12),
         "Word addressing ran past the last incidence");
 }
 

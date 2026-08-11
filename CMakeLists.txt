@@ -110,6 +110,13 @@ endif()
 message(STATUS
     "Legacy Finale MUS Reader musxdom: ${FINALE_MUS_READER_MUSXDOM_ORIGIN} at ${FINALE_MUS_READER_MUSXDOM_SOURCE}")
 
+if(CMAKE_UNITY_BUILD AND TARGET musx)
+    # musxdom is a separately owned dependency; this client's unity smoke build covers
+    # project-owned translation units without imposing a unity policy on that target.
+    set_target_properties(musx PROPERTIES UNITY_BUILD OFF)
+    message(STATUS "Legacy Finale MUS Reader: unity build limited to project-owned targets")
+endif()
+
 add_library(finale_mus_reader_blast OBJECT
     third_party/blast/blast.c)
 

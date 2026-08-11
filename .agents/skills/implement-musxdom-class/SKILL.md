@@ -29,6 +29,11 @@ without destabilizing the others.
 - Keep corpora read-only and paths private. Use controlled tracked evidence or ignored
   `private/` output according to repository policy.
 - Record recovered and synthesized values separately in `ImportReport`.
+- Keep project-owned source files unity-build clean. A future build may combine many
+  class-specific translation units, and anonymous namespaces do not isolate names from
+  one another after CMake amalgamates those files. Use distinctive file-local aliases,
+  helpers, and constants; verify with a temporary `CMAKE_UNITY_BUILD=ON` build when the
+  implementation or its neighboring source files change.
 - Do not commit, push, or publish unless the user separately requests it.
 
 ## Work interactively
