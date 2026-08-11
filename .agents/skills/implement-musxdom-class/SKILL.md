@@ -29,6 +29,11 @@ without destabilizing the others.
 - Keep corpora read-only and paths private. Use controlled tracked evidence or ignored
   `private/` output according to repository policy.
 - Record recovered and synthesized values separately in `ImportReport`.
+- Keep project-owned source files unity-build clean. A future build may combine many
+  class-specific translation units, and anonymous namespaces do not isolate names from
+  one another after CMake amalgamates those files. Use distinctive file-local aliases,
+  helpers, and constants; verify with a temporary `CMAKE_UNITY_BUILD=ON` build when the
+  implementation or its neighboring source files change.
 - Do not commit, push, or publish unless the user separately requests it.
 
 ## Work interactively
@@ -158,8 +163,12 @@ other fields remain open.
 
 Prefer the existing table-driven mapping framework when a field has a stable source
 location and a direct assignment or bit extraction. Add a class-specific mapping file
-under `src/import/mappings/`, expose only its table or capture entry in `tables.h`, and
-register it once in the central mapping registry.
+under the class's musxdom pool directory (`src/import/others/`, `src/import/options/`,
+`src/import/details/`, or `src/import/entries/`). Expose only its table or capture entry
+from that pool's `<pool>.h`, and register it once in the central mapping registry. Keep
+the shared table machinery in `src/import/legacy_mapping.*`; there is no intermediate
+`mappings/` directory. Concrete table declarations and implementations should use the
+corresponding pool namespace (`others`, `options`, `details`, or `entries`).
 
 Choose target construction deliberately:
 

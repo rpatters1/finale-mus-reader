@@ -17,7 +17,7 @@
 #include "records/legacy_record_index.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+
 
 /// @brief Width of a mapped value in the source record.
 enum class ValueWidth : std::uint8_t
@@ -347,81 +347,81 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);
 
-} // namespace mapping
+
 } // namespace finale_mus_reader
 
 /// @brief Declares a numeric field mapping with every column stated explicitly.
 #define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
                   orderValue, bitsValue, versionsValue, member) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Number, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
         (versionsValue), \
         [](void* instance, std::int64_t value) { \
-            ::finale_mus_reader::mapping::assignFrom( \
+            ::finale_mus_reader::assignFrom( \
                 static_cast<Class*>(instance)->member, value); }, \
         [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::mapping::readAs( \
+            return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
 
 /// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
 #define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Number, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
             (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::mapping::ValueWidth::Word, \
-            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::mapping::BitRange{ \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::BitRange{ \
                 static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
-        ::finale_mus_reader::mapping::VersionRange{}, \
+        ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
-            ::finale_mus_reader::mapping::assignFrom( \
+            ::finale_mus_reader::assignFrom( \
                 static_cast<Class*>(instance)->member, value); }, \
         [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::mapping::readAs( \
+            return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Number, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
             (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::mapping::ValueWidth::Word, \
-            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::mapping::BitRange{ \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::BitRange{ \
                 static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
-        ::finale_mus_reader::mapping::VersionRange{}, \
+        ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::mapping::readAs( \
+            return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
 
 /// @brief Text running from a byte offset to the end of a class-identified record's payload.
 #define MUS_CLASS_TEXT(Class, classId, byteOffset, member) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Text, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Text, \
+        ::finale_mus_reader::SourceLocation{ \
             (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::mapping::ValueWidth::Word, \
-            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-            ::finale_mus_reader::mapping::BitRange{} }, \
-        ::finale_mus_reader::mapping::VersionRange{}, \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            ::finale_mus_reader::BitRange{} }, \
+        ::finale_mus_reader::VersionRange{}, \
         nullptr, \
         nullptr, \
         [](void* instance, std::string_view value) { \
@@ -433,37 +433,37 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// enum whose values differ from the legacy encoding. `value` names the extracted bits.
 #define MUS_BITS_AS(Class, tagText, selectorValue, incidenceValue, slotValue, firstBit, \
                     bitCount, member, ...) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Number, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
-            ::finale_mus_reader::mapping::ValueWidth::Word, \
-            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::mapping::BitRange{ \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::BitRange{ \
                 static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
-        ::finale_mus_reader::mapping::VersionRange{}, \
+        ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::mapping::readAs( \
+            return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
 
 /// @brief Text assembled from every incidence at or after `firstIncidence`.
 #define MUS_TEXT(Class, tagText, selectorValue, firstIncidence, member) \
-    ::finale_mus_reader::mapping::FieldMapping { \
+    ::finale_mus_reader::FieldMapping { \
         #member, \
-        ::finale_mus_reader::mapping::FieldKind::Text, \
-        ::finale_mus_reader::mapping::SourceLocation{ \
+        ::finale_mus_reader::FieldKind::Text, \
+        ::finale_mus_reader::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint16_t>(firstIncidence), 0, \
-            ::finale_mus_reader::mapping::ValueWidth::Word, \
-            ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-            ::finale_mus_reader::mapping::BitRange{} }, \
-        ::finale_mus_reader::mapping::VersionRange{}, \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            ::finale_mus_reader::BitRange{} }, \
+        ::finale_mus_reader::VersionRange{}, \
         nullptr, \
         nullptr, \
         [](void* instance, std::string_view value) { \
@@ -473,46 +473,46 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @brief A two-byte field.
 #define MUS_WORD(Class, tagText, selector, incidence, slot, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Word, \
-        ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-        ::finale_mus_reader::mapping::BitRange{}, \
-        ::finale_mus_reader::mapping::VersionRange{}, member)
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, \
+        ::finale_mus_reader::VersionRange{}, member)
 
 /// @brief A two-byte field restricted to a range of Finale major versions.
 #define MUS_WORD_V(Class, tagText, selector, incidence, slot, versionRange, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Word, \
-        ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-        ::finale_mus_reader::mapping::BitRange{}, (versionRange), member)
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, (versionRange), member)
 
 /// @brief A one-byte field, narrowed from its payload word.
 #define MUS_BYTE(Class, tagText, selector, incidence, slot, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Byte, \
-        ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-        ::finale_mus_reader::mapping::BitRange{}, \
-        ::finale_mus_reader::mapping::VersionRange{}, member)
+        ::finale_mus_reader::ValueWidth::Byte, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, \
+        ::finale_mus_reader::VersionRange{}, member)
 
 /// @brief A four-byte field spanning two consecutive payload words.
 #define MUS_LONG(Class, tagText, selector, incidence, slot, order, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Long, (order), \
-        ::finale_mus_reader::mapping::BitRange{}, \
-        ::finale_mus_reader::mapping::VersionRange{}, member)
+        ::finale_mus_reader::ValueWidth::Long, (order), \
+        ::finale_mus_reader::BitRange{}, \
+        ::finale_mus_reader::VersionRange{}, member)
 
 /// @brief A single bit of a payload word.
 #define MUS_BIT(Class, tagText, selector, incidence, slot, bitIndex, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Word, \
-        ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-        (::finale_mus_reader::mapping::BitRange{static_cast<std::uint8_t>(bitIndex), 1}), \
-        ::finale_mus_reader::mapping::VersionRange{}, member)
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{static_cast<std::uint8_t>(bitIndex), 1}), \
+        ::finale_mus_reader::VersionRange{}, member)
 
 /// @brief A contiguous bit range of a payload word.
 #define MUS_BITS(Class, tagText, selector, incidence, slot, firstBit, bitCount, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
-        ::finale_mus_reader::mapping::ValueWidth::Word, \
-        ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
-        (::finale_mus_reader::mapping::BitRange{ \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{ \
             static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
-        ::finale_mus_reader::mapping::VersionRange{}, member)
+        ::finale_mus_reader::VersionRange{}, member)

@@ -1,17 +1,17 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/others/others.h"
 
 #include <iterator>
 
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace others {
 namespace {
 
-using Target = musx::dom::others::LayerAttributes;
+using LayerAttributesTarget = musx::dom::others::LayerAttributes;
 
 // Layer attributes are ordinary other records rather than synthetic preferences: the
 // record comparator is the layer number, so the table binds each record to the seeded
@@ -20,7 +20,7 @@ using Target = musx::dom::others::LayerAttributes;
 // Verified against the controlled fixtures, where each layer's rest offset moves
 // independently.
 const FieldMapping layerFields[] = {
-    MUS_WORD(Target, "LA", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0, restOffset),
+    MUS_WORD(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0, restOffset),
 };
 
 } // namespace
@@ -31,11 +31,11 @@ const MappingTable& layerAttributesTable()
         .reportPrefix = "others.layerAtts",
         .epochs = EpochMask::FixedRow,
         .targetKind = TargetKind::OthersByCmper,
-        .enumerateTargets = &enumerateOthersTargets<Target>,
+        .enumerateTargets = &enumerateOthersTargets<LayerAttributesTarget>,
         .fields = layerFields,
         .fieldCount = std::size(layerFields)};
     return table;
 }
 
-} // namespace mapping
+} // namespace others
 } // namespace finale_mus_reader

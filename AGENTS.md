@@ -261,6 +261,14 @@ The build uses CMake. Keep these properties intact when extending it:
 - Compile every object with `/utf-8` under MSVC, also directory-wide. Sources
   carry UTF-8 string literals and no byte-order mark; without the flag MSVC reads
   them in the machine's active code page and silently produces different bytes.
+- Keep every project-owned translation unit unity-build clean even though unity
+  builds are not the default. CMake may combine unrelated source files into one
+  translation unit, so an anonymous namespace does not make file-local names
+  unique after amalgamation; use distinctive names for aliases, helpers, and
+  constants when needed. Do not let unity-only fixes change runtime behavior.
+- Periodically smoke-test this invariant in a fresh temporary build directory
+  with `-DCMAKE_UNITY_BUILD=ON` and the normal test suite. The smoke test applies
+  to project-owned targets; external dependencies retain their own build policy.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging
@@ -280,6 +288,17 @@ cmake -S . -B build \
   -DFINALE_MUS_READER_MUSXDOM_SOURCE_DIR=../musxdom
 cmake --build build
 ctest --test-dir build --output-on-failure
+```
+
+For a unity-build smoke test, use a separate temporary build directory and retain
+the same local musxdom source override, for example:
+
+```bash
+cmake -S . -B /tmp/finale-mus-reader-unity -G Ninja \
+  -DCMAKE_UNITY_BUILD=ON \
+  -DFINALE_MUS_READER_MUSXDOM_SOURCE_DIR=../musxdom
+cmake --build /tmp/finale-mus-reader-unity
+ctest --test-dir /tmp/finale-mus-reader-unity --output-on-failure
 ```
 
 Do not modify large evidence or default fixtures unless the task requires it.

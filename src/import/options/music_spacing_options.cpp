@@ -1,17 +1,17 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/options/options.h"
 
 #include <iterator>
 
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace options {
 namespace {
 
-using Target = musx::dom::options::MusicSpacingOptions;
+using MusicSpacingTarget = musx::dom::options::MusicSpacingOptions;
 
 // Verified against the controlled Finale 2002-2005 MUS/ETF pairs: changing one spacing
 // value at a time moves exactly these words.
@@ -21,10 +21,10 @@ using Target = musx::dom::options::MusicSpacingOptions;
 // Those are distilled in research/data/legacy_option_mappings.csv but are not yet
 // verified against a fixture, so they are not promoted here.
 const FieldMapping spacingFields[] = {
-    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, minWidth),
-    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, maxWidth),
-    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, minDistance),
-    MUS_WORD(Target, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, minDistTiedNotes),
+    MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, minWidth),
+    MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, maxWidth),
+    MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, minDistance),
+    MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, minDistTiedNotes),
 };
 
 } // namespace
@@ -35,11 +35,11 @@ const MappingTable& musicSpacingOptionsTable()
         .reportPrefix = "options.musicSpacing",
         .epochs = EpochMask::FixedRow,
         .targetKind = TargetKind::OptionsSingleton,
-        .enumerateTargets = &enumerateOptionsTarget<Target>,
+        .enumerateTargets = &enumerateOptionsTarget<MusicSpacingTarget>,
         .fields = spacingFields,
         .fieldCount = std::size(spacingFields)};
     return table;
 }
 
-} // namespace mapping
+} // namespace options
 } // namespace finale_mus_reader

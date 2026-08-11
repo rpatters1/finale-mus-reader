@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/options/options.h"
 
 #include <algorithm>
 #include <array>
@@ -18,13 +18,13 @@
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace options {
 namespace {
 
 using FontDefinition = musx::dom::others::FontDefinition;
 using FontInfo = musx::dom::FontInfo;
-using Target = musx::dom::options::FontOptions;
-using FontType = Target::FontType;
+using FontOptionsTarget = musx::dom::options::FontOptions;
+using FontType = FontOptionsTarget::FontType;
 
 constexpr std::uint16_t fontOptionsSelector = 24;
 constexpr std::size_t tupleFieldCount = 3;
@@ -267,7 +267,7 @@ bool isStructuralTupleFill(std::size_t tupleCount, std::size_t physicalOrdinal,
 }
 
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
-    const std::shared_ptr<Target>& target, FontType type,
+    const std::shared_ptr<FontOptionsTarget>& target, FontType type,
     const ResolvedValue& fontId, const ResolvedValue& size,
     const ResolvedValue& effects, ImportReport& report)
 {
@@ -359,9 +359,9 @@ TargetFontState collectTargetFonts(const musx::dom::DocumentPtr& document)
 
 void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<Target>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
 {
-    const auto reference = referenceDocument->getOptions()->get<Target>();
+    const auto reference = referenceDocument->getOptions()->get<FontOptionsTarget>();
     if (!reference) {
         throw std::logic_error("FontOptions reference document is incomplete");
     }
@@ -396,9 +396,9 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
 
 void completeFromReference(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<Target>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
 {
-    const auto reference = referenceDocument->getOptions()->get<Target>();
+    const auto reference = referenceDocument->getOptions()->get<FontOptionsTarget>();
     if (!reference) {
         throw std::logic_error("FontOptions reference document is incomplete");
     }
@@ -429,7 +429,7 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
 
 void repairMissingRecoveredFontDefinitions(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<Target>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
 {
     repairMissingRecoveredFontDefinitionsImpl(
         document, referenceDocument, target, report);
@@ -439,8 +439,8 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
 {
-    auto target = std::make_shared<Target>(document);
-    document->getOptions()->add(Target::XmlNodeName, target);
+    auto target = std::make_shared<FontOptionsTarget>(document);
+    document->getOptions()->add(FontOptionsTarget::XmlNodeName, target);
 
     if (profile.epoch == FormatEpoch::CodaBanner
         && versions::between({1, 0}, {2, 0xff}).includes(profile.version)) {
@@ -492,5 +492,5 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     completeFromReference(document, referenceDocument, target, report);
 }
 
-} // namespace mapping
+} // namespace options
 } // namespace finale_mus_reader

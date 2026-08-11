@@ -10,6 +10,14 @@ FetchContent_Declare(Catch2
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(Catch2)
 
+# Catch2 is intentionally consumed as a normal library, but its implementation is split
+# across many translation units. Unity compilation keeps those upstream files together
+# without merging this project's independent test files, where separate diagnostics and
+# translation-unit boundaries are useful.
+set_target_properties(Catch2 PROPERTIES
+    UNITY_BUILD ON
+    UNITY_BUILD_BATCH_SIZE 15)
+
 add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp text_encoding_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE

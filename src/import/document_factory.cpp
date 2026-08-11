@@ -3,16 +3,11 @@
 
 #include "import/document_factory.h"
 
-#include <algorithm>
-#include <cstring>
 #include <memory>
-#include <stdexcept>
-#include <string>
-#include <string_view>
 #include <utility>
 
-#include "container/product_banner.h"
 #include "defaults/default_document.h"
+#include "import/header/header.h"
 #include "import/legacy_mapping.h"
 #include "records/legacy_record_index.h"
 #include "musx/factory/DocumentFactory.h"
@@ -21,152 +16,6 @@
 
 namespace finale_mus_reader {
 namespace {
-
-constexpr std::size_t headerSize = 0x200;
-constexpr std::string_view bannerSignature = "ENIGMA BINARY FILE";
-
-std::string fixedString(const std::uint8_t* data, std::size_t size)
-{
-    const auto* end = std::find(data, data + size, std::uint8_t{0});
-    return std::string(reinterpret_cast<const char*>(data),
-        static_cast<std::size_t>(end - data));
-}
-
-SourcePlatform parsePlatform(const std::string& platform)
-{
-    if (platform == "MAC") {
-        return SourcePlatform::MacOS;
-    }
-    if (platform == "WIN") {
-        return SourcePlatform::Windows;
-    }
-    return SourcePlatform::Unknown;
-}
-
-musx::dom::header::Platform toDomPlatform(SourcePlatform platform)
-{
-    switch (platform) {
-    case SourcePlatform::MacOS:
-        return musx::dom::header::Platform::Mac;
-    case SourcePlatform::Windows:
-        return musx::dom::header::Platform::Windows;
-    case SourcePlatform::Unknown:
-        return musx::dom::header::Platform::Other;
-    }
-    return musx::dom::header::Platform::Other;
-}
-
-// A header version is a 32-bit value in the file's own byte order, packed as major in
-// bits 31-24, minor in 23-20, maintenance in 19-16, a development-status code in 15-8,
-// and build in 7-0. Finale 97 records application version 0x03820401, which is 3.8.2
-// build 1, exactly what Finale 27 reports as the creator version for such a file.
-SourceVersion decodeVersionValue(std::uint32_t value)
-{
-    SourceVersion version;
-    version.raw = value;
-    version.major = static_cast<std::uint8_t>(value >> 24U);
-    version.minor = static_cast<std::uint8_t>((value >> 20U) & 0x0fU);
-    version.maint = static_cast<std::uint8_t>((value >> 16U) & 0x0fU);
-    version.devStatus = static_cast<std::uint8_t>((value >> 8U) & 0xffU);
-    version.build = static_cast<std::uint8_t>(value & 0xffU);
-    return version;
-}
-
-SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
-{
-    const auto bigEndian = (static_cast<std::uint32_t>(raw[0]) << 24U)
-        | (static_cast<std::uint32_t>(raw[1]) << 16U)
-        | (static_cast<std::uint32_t>(raw[2]) << 8U)
-        | raw[3];
-    const auto littleEndian = (static_cast<std::uint32_t>(raw[3]) << 24U)
-        | (static_cast<std::uint32_t>(raw[2]) << 16U)
-        | (static_cast<std::uint32_t>(raw[1]) << 8U)
-        | raw[0];
-
-    if (byteOrder == ByteOrder::LittleEndian) {
-        return decodeVersionValue(littleEndian);
-    }
-    if (byteOrder == ByteOrder::BigEndian) {
-        return decodeVersionValue(bigEndian);
-    }
-    // With no classified byte order, prefer the reading whose major version is possible.
-    const auto candidate = decodeVersionValue(bigEndian);
-    if (candidate.major <= maximumFinaleMajorVersion) {
-        return candidate;
-    }
-    return decodeVersionValue(littleEndian);
-}
-
-void applyVersion(const SourceVersion& decoded, musx::dom::header::FinaleVersion& version)
-{
-    version.major = decoded.major;
-    version.minor = decoded.minor;
-    // Finale omits these from EnigmaXML when they are zero, so match that convention.
-    // The development-status code has no mapping to musxdom's names yet, so it is
-    // reported through ImportReport rather than guessed at here.
-    if (decoded.maint != 0) {
-        version.maint = decoded.maint;
-    }
-    if (decoded.build != 0) {
-        version.build = decoded.build;
-    }
-}
-
-void populateVersion(
-    const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
-{
-    applyVersion(decodeVersion(raw, byteOrder), version);
-}
-
-musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data,
-    std::size_t dateOffset, std::size_t tupleOffset, ByteOrder byteOrder)
-{
-    musx::dom::header::FileInfo info;
-    const int month = data[dateOffset + 1];
-    const int day = data[dateOffset + 2];
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        info.year = 1900 + data[dateOffset];
-        info.month = month;
-        info.day = day;
-    }
-
-    populateVersion(data + tupleOffset, byteOrder, info.finaleVersion);
-    info.application = fixedString(data + tupleOffset + 4, 4);
-    const auto platform = parsePlatform(fixedString(data + tupleOffset + 8, 4));
-    info.platform = toDomPlatform(platform);
-    populateVersion(data + tupleOffset + 12, byteOrder, info.appVersion);
-    populateVersion(data + tupleOffset + 16, byteOrder, info.fileVersion);
-    return info;
-}
-
-musx::dom::header::HeaderPtr recoverHeader(
-    const std::uint8_t* data, std::size_t size, const ImportReport& report)
-{
-    auto header = std::make_shared<musx::dom::header::Header>();
-    if (report.byteOrder == ByteOrder::BigEndian) {
-        header->wordOrder = musx::dom::header::WordOrder::BigEndian;
-    } else {
-        header->wordOrder = musx::dom::header::WordOrder::LittleEndian;
-    }
-    if (report.sourcePlatform == SourcePlatform::MacOS) {
-        header->textEncoding = musx::dom::header::TextEncoding::Mac;
-    } else if (report.sourcePlatform == SourcePlatform::Windows) {
-        header->textEncoding = musx::dom::header::TextEncoding::Windows;
-    }
-
-    if (hasBanner(data, size) && size >= 0x0a6) {
-        header->created = parseFileInfo(data, 0x066, 0x06c, report.byteOrder);
-        header->modified = parseFileInfo(data, 0x08c, 0x092, report.byteOrder);
-    } else if (report.formatEpoch == FormatEpoch::CodaBanner && report.sourceVersion) {
-        // This era has no header tuples at all: its version lives only in the product
-        // banner, which names the application that wrote the file. That is the last saver,
-        // so it belongs in `modified`. Nothing identifies the creator, and no date,
-        // application, or platform is recorded anywhere, so the rest is left unset rather
-        // than invented.
-        applyVersion(*report.sourceVersion, header->modified.finaleVersion);
-    }
-    return header;
-}
 
 // Seeds the Finale 27 options pool, excluding FontOptions, plus the four option-like layer
 // attributes. FontOptions is reconstructed only from tuples physically present in the MUS
@@ -188,62 +37,16 @@ void seedPinnedDefaults(
         pinned.others, document, pinned.optionLikeOthersFilter);
 }
 
-// A pre-signature file carries no version tuple: its whole 0x60-0x200 header region is
-// zero apart from a constant word at 0x80. The version is the number in the product banner
-// itself, as in `Finale(TM) 2.6 Copyright 1987 by Coda.`, so that text is the only place it
-// can be recovered from. This covers Finale 1.0.0's spelling too, because banner::parse
-// does.
-bool describeCodaBannerIdentity(
-    const std::uint8_t* data, std::size_t size, ImportReport& report)
-{
-    const auto parsed = banner::parse(data, size);
-    if (!parsed.isPreSignature() || parsed.offset != 0) {
-        return false;
-    }
-    report.banner = parsed.text;
-    report.savingProduct = parsed.product;
-    report.sourceVersion = banner::versionFromProduct(parsed.product);
-    return true;
-}
-
 } // namespace
 
 bool hasBanner(const std::uint8_t* data, std::size_t size)
 {
-    return size > bannerSignature.size()
-        && std::memcmp(data, bannerSignature.data(), bannerSignature.size()) == 0
-        && data[bannerSignature.size()] == 0;
+    return header::hasBanner(data, size);
 }
 
 void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportReport& report)
 {
-    if (describeCodaBannerIdentity(data, size, report)) {
-        return;
-    }
-    if (!hasBanner(data, size) || size < headerSize) {
-        return;
-    }
-    const auto parsed = banner::parse(data, size);
-    report.banner = parsed.text;
-    report.savingProduct = parsed.product;
-    const auto modifiedPlatform = parsePlatform(fixedString(data + 0x09a, 4));
-    const auto createdPlatform = parsePlatform(fixedString(data + 0x074, 4));
-    report.sourcePlatform = modifiedPlatform != SourcePlatform::Unknown
-        ? modifiedPlatform : createdPlatform;
-
-    // Prefer the version of the application that last saved the file, since that is what
-    // determined the layout on disk.
-    const auto modified = decodeVersion(data + 0x092, report.byteOrder);
-    const auto created = decodeVersion(data + 0x06c, report.byteOrder);
-    const auto& selected = modified.major != 0 ? modified : created;
-    if (selected.major <= maximumFinaleMajorVersion) {
-        report.sourceVersion = selected;
-    } else {
-        report.warnings.push_back("Recovered Finale major version "
-            + std::to_string(selected.major) + " is outside the valid range 0-"
-            + std::to_string(maximumFinaleMajorVersion)
-            + "; version-gated mappings are skipped.");
-    }
+    header::describeSourceIdentity(data, size, report);
 }
 
 musx::dom::DocumentPtr createDocument(
@@ -265,14 +68,14 @@ musx::dom::DocumentPtr createDocument(
     const auto pinned = defaults::parseDefault(
         parseXml, parseDocument, report.sourcePlatform);
     seedPinnedDefaults(document, pinned, report);
-    document->getHeader() = recoverHeader(data, size, report);
+    document->getHeader() = header::recover(data, size, report);
 
-    mapping::SourceProfile profile;
+    SourceProfile profile;
     profile.epoch = report.formatEpoch;
     profile.version = report.sourceVersion;
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;
-    mapping::applyLegacyMappings(
+    applyLegacyMappings(
         records::LegacyRecordIndex::build(parsed), profile,
         document, pinned.referenceDocument, report);
 

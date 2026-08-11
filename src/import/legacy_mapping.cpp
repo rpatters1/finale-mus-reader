@@ -9,21 +9,24 @@
 #include <string_view>
 #include <vector>
 
-#include "import/mappings/tables.h"
+#include "import/details/details.h"
+#include "import/entries/entries.h"
+#include "import/options/options.h"
+#include "import/others/others.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+
 namespace {
 
 /// @brief Every table, in the order they are layered.
 const std::vector<const MappingTable*>& registeredTables()
 {
     static const std::vector<const MappingTable*> result = {
-        &fontDefinitionsTable(),
-        &earlyFontDefinitionsTable(),
-        &classFontDefinitionsTable(),
-        &musicSpacingOptionsTable(),
-        &layerAttributesTable()};
+        &others::fontDefinitionsTable(),
+        &others::earlyFontDefinitionsTable(),
+        &others::classFontDefinitionsTable(),
+        &options::musicSpacingOptionsTable(),
+        &others::layerAttributesTable()};
     return result;
 }
 
@@ -268,7 +271,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             "Legacy mappings require a separate, fully formed reference document");
     }
     applyMappingTables(registeredTables(), index, profile, document, report);
-    captureFontOptions(index, profile, document, referenceDocument, report);
+    options::captureFontOptions(index, profile, document, referenceDocument, report);
 }
 
 void applyMappingTables(const std::vector<const MappingTable*>& tables,
@@ -337,5 +340,5 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
     }
 }
 
-} // namespace mapping
+
 } // namespace finale_mus_reader

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/others/others.h"
 
 #include <iterator>
 
@@ -9,10 +9,10 @@
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace others {
 namespace {
 
-using Target = musx::dom::others::FontDefinition;
+using FontDefinitionTarget = musx::dom::others::FontDefinition;
 
 // Legacy MUS stores a font name in whatever encoding the machine that saved it used, and
 // names the encoding nowhere except in this same record: `charsetBank` selects the
@@ -27,7 +27,7 @@ using Target = musx::dom::others::FontDefinition;
 // replaced or dropped: preserved mojibake can be re-decoded later, discarded bytes cannot.
 void convertNameToUtf8(void* instance, const SourceProfile&)
 {
-    auto* font = static_cast<Target*>(instance);
+    auto* font = static_cast<FontDefinitionTarget*>(instance);
     font->name = text::toUtf8(
         font->name, text::codePageForCharset(font->charsetBank, font->charsetVal));
 }
@@ -47,10 +47,10 @@ void convertNameToUtf8(void* instance, const SourceProfile&)
 // only origin those documents can have.
 void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile)
 {
-    auto* font = static_cast<Target*>(instance);
+    auto* font = static_cast<FontDefinitionTarget*>(instance);
     font->charsetBank = profile.platform == SourcePlatform::Windows
-        ? Target::CharacterSetBank::Windows
-        : Target::CharacterSetBank::MacOS;
+        ? FontDefinitionTarget::CharacterSetBank::Windows
+        : FontDefinitionTarget::CharacterSetBank::MacOS;
     convertNameToUtf8(instance, profile);
 }
 
@@ -82,19 +82,19 @@ const FieldMapping fontFields[] = {
     // Bit 13 distinguishes the two banks: the nibble holds 1 for Mac and 2 for Windows, so
     // only a Windows font sets it. An explicit conversion keeps the enum honest rather than
     // relying on the legacy encoding happening to match musxdom's enumerators.
-    MUS_BITS_AS(Target, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
+    MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
         charsetBankBit, 1, charsetBank,
-        value != 0 ? Target::CharacterSetBank::Windows : Target::CharacterSetBank::MacOS),
-    MUS_BITS(Target, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
+        value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
+    MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
         /*firstBit*/ 0, charsetValueBits, charsetVal),
-    MUS_BITS(Target, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
+    MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
         /*firstBit*/ 0, nibbleBits, pitch),
-    MUS_BITS(Target, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
+    MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
         /*firstBit*/ nibbleBits, nibbleBits, family),
     // The name runs from the second incidence to the end of the family, so a long name
     // simply occupies more rows. It is read as bytes because character payloads are not
     // byte-order sensitive, and it ends at the first NUL.
-    MUS_TEXT(Target, "FN", CMPER_FROM_TARGET, /*firstIncidence*/ 1, name),
+    MUS_TEXT(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*firstIncidence*/ 1, name),
 };
 
 // Before Finale 3.2 there is no header incidence at all: the family opens with the name.
@@ -120,7 +120,7 @@ constexpr std::uint8_t headerFirstVersion = 3;
 constexpr std::uint8_t headerFirstMinor = 2;
 
 const FieldMapping earlyFontFields[] = {
-    MUS_TEXT(Target, "FN", CMPER_FROM_TARGET, /*firstIncidence*/ 0, name),
+    MUS_TEXT(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*firstIncidence*/ 0, name),
 };
 
 // From Finale 2007 the record is class-identified and length-governed rather than a fixed
@@ -136,14 +136,14 @@ constexpr std::uint8_t pitchFamilyOffset = 2;
 constexpr std::uint8_t nameOffset = 12;
 
 const FieldMapping classFontFields[] = {
-    MUS_CLASS_BITS_AS(Target, fontDefinitionClass, charsetOffset, charsetBankBit, 1, charsetBank,
-        value != 0 ? Target::CharacterSetBank::Windows : Target::CharacterSetBank::MacOS),
-    MUS_CLASS_BITS(Target, fontDefinitionClass, charsetOffset, 0, charsetValueBits, charsetVal),
-    MUS_CLASS_BITS(Target, fontDefinitionClass, pitchFamilyOffset, 0, nibbleBits, pitch),
-    MUS_CLASS_BITS(Target, fontDefinitionClass, pitchFamilyOffset, nibbleBits, nibbleBits, family),
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, charsetBankBit, 1, charsetBank,
+        value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
+    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, 0, charsetValueBits, charsetVal),
+    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, nibbleBits, pitch),
+    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, nibbleBits, nibbleBits, family),
     // The payload is length-governed, so the name simply runs to its end. A longer name grows
     // the record rather than spilling into another incidence.
-    MUS_CLASS_TEXT(Target, fontDefinitionClass, nameOffset, name),
+    MUS_CLASS_TEXT(FontDefinitionTarget, fontDefinitionClass, nameOffset, name),
 };
 
 } // namespace
@@ -156,7 +156,7 @@ const MappingTable& classFontDefinitionsTable()
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = fontDefinitionClass,
-        .createTarget = &createOthersTarget<Target>,
+        .createTarget = &createOthersTarget<FontDefinitionTarget>,
         .fields = classFontFields,
         .fieldCount = std::size(classFontFields),
         .finalizeTarget = &convertNameToUtf8};
@@ -171,7 +171,7 @@ const MappingTable& fontDefinitionsTable()
         .versions = versions::from(headerFirstVersion, headerFirstMinor),
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
-        .createTarget = &createOthersTarget<Target>,
+        .createTarget = &createOthersTarget<FontDefinitionTarget>,
         .fields = fontFields,
         .fieldCount = std::size(fontFields),
         .finalizeTarget = &convertNameToUtf8};
@@ -186,12 +186,12 @@ const MappingTable& earlyFontDefinitionsTable()
         .versions = versions::upTo(headerFirstVersion, headerFirstMinor - 1),
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
-        .createTarget = &createOthersTarget<Target>,
+        .createTarget = &createOthersTarget<FontDefinitionTarget>,
         .fields = earlyFontFields,
         .fieldCount = std::size(earlyFontFields),
         .finalizeTarget = &convertEarlyNameToUtf8};
     return table;
 }
 
-} // namespace mapping
+} // namespace others
 } // namespace finale_mus_reader
