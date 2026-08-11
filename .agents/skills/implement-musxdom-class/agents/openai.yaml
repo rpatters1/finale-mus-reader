@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement musxdom Class"
+  short_description: "Recover one musxdom class from legacy MUS"
+  default_prompt: "Use $implement-musxdom-class to draft and refine recovery of a musxdom DOM class from legacy Finale files."

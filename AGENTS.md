@@ -36,6 +36,10 @@ that task rather than reconstructing the procedure:
   using ETF or Finale 27 companions. Read this for targeted decoder-coverage and
   upgrade-behavior studies; it keeps per-fixture observations private and
   publishes only aggregate results.
+- `.agents/skills/implement-musxdom-class/`: research, draft, test, and refine
+  recovery of one musxdom DOM class from legacy MUS records. Read this when the
+  user asks to implement a class; it moves from small epoch samples to a narrow
+  implementation and then hands broad validation to `survey-class-coverage`.
 
 ## Repository map
 
