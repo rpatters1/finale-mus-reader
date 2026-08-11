@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/others/others.h"
 
 #include <iterator>
 
@@ -9,7 +9,7 @@
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace others {
 namespace {
 
 using Target = musx::dom::others::FontDefinition;
@@ -193,5 +193,5 @@ const MappingTable& earlyFontDefinitionsTable()
     return table;
 }
 
-} // namespace mapping
+} // namespace others
 } // namespace finale_mus_reader

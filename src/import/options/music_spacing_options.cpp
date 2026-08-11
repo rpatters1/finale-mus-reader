@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/options/options.h"
 
 #include <iterator>
 
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace options {
 namespace {
 
 using Target = musx::dom::options::MusicSpacingOptions;
@@ -41,5 +41,5 @@ const MappingTable& musicSpacingOptionsTable()
     return table;
 }
 
-} // namespace mapping
+} // namespace options
 } // namespace finale_mus_reader

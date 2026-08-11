@@ -17,7 +17,7 @@
 
 #include "container/mus_container.h"
 #include "import/legacy_mapping.h"
-#include "import/mappings/tables.h"
+#include "import/options/options.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -41,14 +41,14 @@ using finale_mus_reader::FormatEpoch;
 using finale_mus_reader::ImportReport;
 using finale_mus_reader::SourceVersion;
 using finale_mus_reader::ValueOrigin;
-using finale_mus_reader::mapping::EpochMask;
-using finale_mus_reader::mapping::FieldMapping;
-using finale_mus_reader::mapping::GLOBALS_CMPER;
-using finale_mus_reader::mapping::LongWordOrder;
-using finale_mus_reader::mapping::MappingTable;
-using finale_mus_reader::mapping::SourceProfile;
-using finale_mus_reader::mapping::TargetKind;
-using finale_mus_reader::mapping::VersionRange;
+using finale_mus_reader::EpochMask;
+using finale_mus_reader::FieldMapping;
+using finale_mus_reader::GLOBALS_CMPER;
+using finale_mus_reader::LongWordOrder;
+using finale_mus_reader::MappingTable;
+using finale_mus_reader::SourceProfile;
+using finale_mus_reader::TargetKind;
+using finale_mus_reader::VersionRange;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
 
@@ -166,7 +166,7 @@ void testMissingRecoveredFontDefinitionFallback()
     addReference(FontType::Tablature, 4, " arIAL ");
 
     ImportReport report;
-    finale_mus_reader::mapping::repairMissingRecoveredFontDefinitions(
+    finale_mus_reader::options::repairMissingRecoveredFontDefinitions(
         targetDocument, referenceDocument, targetOptions, report);
 
     const auto fretboard = targetOptions->getFontInfo(FontType::Fretboard);
@@ -210,7 +210,7 @@ MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size
         .epochs = epochs,
         .versions = versions,
         .targetKind = TargetKind::OptionsSingleton,
-        .enumerateTargets = &finale_mus_reader::mapping::enumerateOptionsTarget<Spacing>,
+        .enumerateTargets = &finale_mus_reader::enumerateOptionsTarget<Spacing>,
         .fields = fields,
         .fieldCount = count};
 }
@@ -236,7 +236,7 @@ void testFourByteStraddlesIncidence()
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
     ImportReport report;
-    finale_mus_reader::mapping::applyMappingTables(
+    finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
     expect(spacing->referenceDuration == 0x12345678,
@@ -264,7 +264,7 @@ void testLongWordOrder()
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
         ImportReport report;
-        finale_mus_reader::mapping::applyMappingTables(
+        finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
         return spacing->referenceDuration;
     };
@@ -288,7 +288,7 @@ void testBitExtraction()
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
         ImportReport report;
-        finale_mus_reader::mapping::applyMappingTables(
+        finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
         return spacing->avoidColNotes;
     };
@@ -311,7 +311,7 @@ void testAbsentRecordKeepsSeededDefault()
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
     ImportReport report;
-    finale_mus_reader::mapping::applyMappingTables(
+    finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
     expect(spacing->minWidth == 111, "An absent record overwrote the seeded default");
@@ -327,7 +327,7 @@ void testVersionGating()
 {
     const FieldMapping fields[] = {
         MUS_WORD_V(Spacing, "94", GLOBALS_CMPER, 0, 1,
-            finale_mus_reader::mapping::versions::from(12), minWidth),
+            finale_mus_reader::versions::from(12), minWidth),
     };
     const auto table = makeTable("options.spacing", fields, std::size(fields));
     const std::vector<const MappingTable*> tables{&table};
@@ -337,7 +337,7 @@ void testVersionGating()
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
         ImportReport report;
-        finale_mus_reader::mapping::applyMappingTables(
+        finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profile, document, report);
         return spacing->minWidth;
     };
@@ -359,7 +359,7 @@ void testMinorVersionOrdering()
 {
     const FieldMapping fields[] = {
         MUS_WORD_V(Spacing, "94", GLOBALS_CMPER, 0, 1,
-            finale_mus_reader::mapping::versions::from(3, 5), minWidth),
+            finale_mus_reader::versions::from(3, 5), minWidth),
     };
     const auto table = makeTable("options.spacing", fields, std::size(fields));
     const std::vector<const MappingTable*> tables{&table};
@@ -369,7 +369,7 @@ void testMinorVersionOrdering()
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
         ImportReport report;
-        finale_mus_reader::mapping::applyMappingTables(
+        finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(major, minor), document, report);
         return spacing->minWidth;
     };
@@ -391,7 +391,7 @@ void testTableLayering()
     };
     const auto base = makeTable("options.spacing", baseFields, std::size(baseFields));
     const auto override = makeTable("options.spacing", overrideFields,
-        std::size(overrideFields), finale_mus_reader::mapping::versions::from(12));
+        std::size(overrideFields), finale_mus_reader::versions::from(12));
     const std::vector<const MappingTable*> tables{&base, &override};
 
     const auto parsed = makeContainer({{GLOBALS_CMPER, "94", {0, 11, 22, 33, 0, 0}}});
@@ -400,7 +400,7 @@ void testTableLayering()
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
         ImportReport report;
-        finale_mus_reader::mapping::applyMappingTables(
+        finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(major), document, report);
         return std::pair<int, int>{spacing->minWidth, spacing->maxWidth};
     };
@@ -429,7 +429,7 @@ void testUncoveredEpochStillReports()
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
     ImportReport report;
-    finale_mus_reader::mapping::applyMappingTables(
+    finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profile, document, report);
 
     expect(spacing->minWidth == 111, "A table was applied outside its epoch");

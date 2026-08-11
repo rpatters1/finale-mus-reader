@@ -158,8 +158,12 @@ other fields remain open.
 
 Prefer the existing table-driven mapping framework when a field has a stable source
 location and a direct assignment or bit extraction. Add a class-specific mapping file
-under `src/import/mappings/`, expose only its table or capture entry in `tables.h`, and
-register it once in the central mapping registry.
+under the class's musxdom pool directory (`src/import/others/`, `src/import/options/`,
+`src/import/details/`, or `src/import/entries/`). Expose only its table or capture entry
+from that pool's `<pool>.h`, and register it once in the central mapping registry. Keep
+the shared table machinery in `src/import/legacy_mapping.*`; there is no intermediate
+`mappings/` directory. Concrete table declarations and implementations should use the
+corresponding pool namespace (`others`, `options`, `details`, or `entries`).
 
 Choose target construction deliberately:
 

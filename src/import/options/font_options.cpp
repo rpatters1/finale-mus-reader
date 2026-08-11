@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/mappings/tables.h"
+#include "import/options/options.h"
 
 #include <algorithm>
 #include <array>
@@ -18,7 +18,7 @@
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
-namespace mapping {
+namespace options {
 namespace {
 
 using FontDefinition = musx::dom::others::FontDefinition;
@@ -492,5 +492,5 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     completeFromReference(document, referenceDocument, target, report);
 }
 
-} // namespace mapping
+} // namespace options
 } // namespace finale_mus_reader

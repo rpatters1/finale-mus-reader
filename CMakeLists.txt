@@ -128,11 +128,12 @@ add_library(finale_mus_reader STATIC
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/document_factory.cpp
+    src/import/header/header.cpp
     src/import/legacy_mapping.cpp
-    src/import/mappings/font_definitions.cpp
-    src/import/mappings/font_options.cpp
-    src/import/mappings/layer_attributes.cpp
-    src/import/mappings/music_spacing_options.cpp
+    src/import/others/font_definitions.cpp
+    src/import/others/layer_attributes.cpp
+    src/import/options/font_options.cpp
+    src/import/options/music_spacing_options.cpp
     src/import/reader.cpp
     src/import/text_encoding.cpp
     src/records/legacy_others.cpp
