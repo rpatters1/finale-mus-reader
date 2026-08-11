@@ -31,6 +31,11 @@ that task rather than reconstructing the procedure:
   It covers the conventions you must ask the user for, how survey results are
   namespaced per corpus, and the checks that keep local paths out of published
   files.
+- `.agents/skills/survey-class-coverage/`: compare one class or related set of
+  classes across a selected cohort of already-inventoried fixtures, optionally
+  using ETF or Finale 27 companions. Read this for targeted decoder-coverage and
+  upgrade-behavior studies; it keeps per-fixture observations private and
+  publishes only aggregate results.
 
 ## Repository map
 

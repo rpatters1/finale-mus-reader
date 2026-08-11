@@ -4,6 +4,7 @@
 #include "import/legacy_mapping.h"
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,14 +26,6 @@ const std::vector<const MappingTable*>& registeredTables()
         &layerAttributesTable()};
     return result;
 }
-
-/// @brief A value read out of the record stream, with the provenance of its first word.
-struct ResolvedValue
-{
-    std::int64_t value{};
-    std::size_t blockOffset{};
-    std::size_t decodedOffset{};
-};
 
 // Reads a numeric value from a class-identified record, addressed by byte offset inside a
 // single record's payload rather than by word slot across an incidence stream.
@@ -90,7 +83,8 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
     const auto tag = source.identity;
-    const std::size_t wordIndex = source.incidence * records::otherWordCount + source.wordSlot;
+    const std::size_t wordIndex = static_cast<std::size_t>(source.incidence)
+        * records::otherWordCount + source.wordSlot;
     const auto first = index.word(tag, cmper, wordIndex);
     if (!first) {
         return std::nullopt;
@@ -223,7 +217,8 @@ std::string reportTarget(const MappingTable& table, const MappingTarget& target,
     const FieldMapping& field)
 {
     std::string result = table.reportPrefix;
-    if (table.targetKind == TargetKind::OthersByCmper) {
+    if (table.targetKind == TargetKind::OthersByCmper
+            || table.targetKind == TargetKind::OthersFromRecords) {
         result += '[' + std::to_string(target.cmper) + ']';
     }
     result += '.';
@@ -255,10 +250,25 @@ bool epochMatches(EpochMask mask, FormatEpoch epoch)
     return (static_cast<std::uint8_t>(mask) & static_cast<std::uint8_t>(bit)) != 0;
 }
 
-void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+std::optional<ResolvedValue> readSourceValue(
+    const records::LegacyRecordIndex& index, RecordEncoding encoding,
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder)
 {
+    return encoding == RecordEncoding::ClassRecord
+        ? readClassValue(index, cmper, source, byteOrder)
+        : readValue(index, cmper, source);
+}
+
+void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
+    const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+{
+    if (!referenceDocument || referenceDocument == document) {
+        throw std::logic_error(
+            "Legacy mappings require a separate, fully formed reference document");
+    }
     applyMappingTables(registeredTables(), index, profile, document, report);
+    captureFontOptions(index, profile, document, referenceDocument, report);
 }
 
 void applyMappingTables(const std::vector<const MappingTable*>& tables,
@@ -308,9 +318,8 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                         report.fields.push_back(std::move(info));
                         continue;
                     }
-                    const auto resolved = classRecord
-                        ? readClassValue(index, selector, field.readable->source, profile.byteOrder)
-                        : readValue(index, selector, field.readable->source);
+                    const auto resolved = readSourceValue(index, table.encoding, selector,
+                        field.readable->source, profile.byteOrder);
                     if (resolved) {
                         field.readable->apply(target.instance, resolved->value);
                         info.origin = ValueOrigin::LegacyMus;

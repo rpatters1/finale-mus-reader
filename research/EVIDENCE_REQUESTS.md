@@ -145,6 +145,25 @@ Store publishable pairs under `tests/evidence/options/<version>/`. This is the s
 private-framework-derived mappings and exercises two-byte, four-byte, numeric, boolean, and five separate musxdom
 destinations.
 
+### C7 — Analyzed — default-font sequence and early-location verification
+
+Exact Finale 27 companions now accompany every tracked MUS fixture. Their hashes and the Finale 27.4 conversion
+provenance are recorded in `tests/evidence/finale27-provenance.txt`. The controlled Finale 2002–2012 pairs confirm
+that companions carry a complete modern vector but do not preserve one timeless physical order: Finale 2002 maps
+physical 28 to tablature while physical 13 is a holding slot, and Finale 2003–2006 physical 43 is zero structural
+fill in the second half of the final fixed row.
+
+Fourteen newly authored Finale 1.0.0 Mac fixtures provide a baseline and thirteen one-variable UI saves. The source files were
+created by Robert G. Patterson under Mac OS 9 hosted by SheepShaver, and their Finale 27 companions were made by the
+same automated conversion. They locate every font exposed in Finale 1.0.0's Font Preferences UI; the complete field
+table is in `FORMAT_NOTES.md` and their provenance and hashes are in `tests/evidence/F100/provenance.txt`. Features
+not exposed in that UI remain open; companion-only additions or coupled changes are upgrade synthesis and are not
+source-location evidence.
+
+The comparisons resolve IDs independently through normalized font names and compare `(name, size, effects)`, never
+numeric cmpers. The detailed method and remaining early-version work are in
+[LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md#fontoptions-sequence-verification-strategy).
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

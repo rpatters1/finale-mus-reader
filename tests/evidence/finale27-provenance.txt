@@ -1,0 +1,70 @@
+Finale 27 semantic-reference upgrades
+
+All MUSX files below were generated on 2026-08-11 by an automated Lua plug-in
+running in Finale 27.4. The plug-in opened each tracked legacy MUS fixture and
+saved its converted document beneath that fixture's `-finale27/` directory.
+The run upgraded all 30 inputs successfully. These files are semantic
+references for Finale's upgrade behavior; they may normalize, synthesize,
+substitute, reorder, or remove legacy values and are not presumed to preserve
+the source representation.
+
+F100/-finale27/F100-baseline.musx
+    sha256 d1806679cd2e997b1b5c515ff9961b9b0f41378f52c805715e50a0afef8d1e9d
+F100/-finale27/F100-accis.musx
+    sha256 932500f35d636debcfcc7122121621da0ef14335da774ba467cf218a89f040f3
+F100/-finale27/F100-chord.musx
+    sha256 ea7ed2d223b9681d1458ef9ad0ec4f34739235291dab713ec040bc87f5db2d55
+F100/-finale27/F100-chorus.musx
+    sha256 7ef6d0a2f317cd09d71cd5d6d8d41e80463f2466df3c3d72f85e86929c369e39
+F100/-finale27/F100-clef.musx
+    sha256 c57ee4ce0becfe98810e741ea75b79a43fc5c6dbfd680df0c2ebc2de5ab37598
+F100/-finale27/F100-ending.musx
+    sha256 0e9f9d4dbf11a8cecf178030f4828f294c2338d535a52a081ad3839f8ef5dbf8
+F100/-finale27/F100-key-font.musx
+    sha256 6047591563ae31f70a088c65812403730be838b48f52aab9722b0fdaa04c0c26
+F100/-finale27/F100-lyric-verse.musx
+    sha256 3845cccfb74d7661d6a0a75433e3de811d308012a8ba7125e57fccec0dc4d2a4
+F100/-finale27/F100-music-font.musx
+    sha256 af6aa36fba1c3f83fe4a57e5ff0cdfe956fa0607ee9c124c8ce55ccab3ded80e
+F100/-finale27/F100-name.musx
+    sha256 5d4f5ee82dfdb496eebd54fa8d13242a91294b189c6538116c2dd280c54b9f07
+F100/-finale27/F100-section.musx
+    sha256 746ef7927b3bc548235b7d63a7d99b34b17156e0ace90b1ef6c480df44a668aa
+F100/-finale27/F100-text-font.musx
+    sha256 9ddd79c62e92de241fbf321147f0ace9842a9dc0236247115a96657fb81ef237
+F100/-finale27/F100-time.musx
+    sha256 5dea8e7f1fbe92f1ba4beeba8b9d0c47d7ec76ff91342f766d8c70ac389b2fb1
+F100/-finale27/F100-tuplet.musx
+    sha256 e5abcfb0de2feff2461294886370f12ad243699c1542335799af0a07294fbb35
+F2000/-finale27/F2000-multilayer.musx
+    sha256 3a6109d914da24ab34dcdc968455266ac72e7d1df545484a39c67d968a0103ef
+F2002/-finale27/F2002-baseline.musx
+    sha256 0ddc98aedcc9012907f2eb6ed1aeb6902a5f20403bca41328fb8a05eab9587d2
+F2002/-finale27/F2002-changed-C-to-D.musx
+    sha256 fb05aaae04d97719ade218ca5ad61a7535e876da658055ca87eef6f2d19e8d55
+F2003/-finale27/F2003-baseline.musx
+    sha256 53ada61f06c1ad907411386113324ec5d7077840f7bc0a2e0b52a17b0d4f95db
+F2003/-finale27/F2003-changed-C-to-D.musx
+    sha256 cbe5b0896758b9679a56d20d56986b21dff8cd1f57900e4056a20a725918886e
+F2004/-finale27/F2004-baseline.musx
+    sha256 acab5454db5e6e36bb829716ae0d86dab7d3a70a7daf1e48b89fef9426106c2f
+F2004/-finale27/F2004-changed-C-to-D.musx
+    sha256 a950ce9a3beebf26aeacb9e9092a5dc32cfb89f43f504cf08d3a2f97b141e8f0
+F2005/-finale27/F2005-baseline.musx
+    sha256 c65f6565d0f6c24d477c64cdc6c36f9f20d85f777f0762b7317bab3270c48a4b
+F2005/-finale27/F2005-changed-C-to-D.musx
+    sha256 43c7cdd6a69f73e501b2b08b60ab268ecfdabbc4377e5ccbfd925fd2f70de982
+F2006/-finale27/F2006-single-title.musx
+    sha256 62caddef23b04954156cf8f8ea2a33313e0643887bebdb20641bde6a72fe2320
+F2007/-finale27/F2007-lyric-hyphens.musx
+    sha256 8bdae85db86c19ab554065740ac273e62bfc4155e2def786948233e0610a81ba
+F2012/-finale27/F2012-upstem-flags.musx
+    sha256 30ca5fb34509f5774009fa0f99b2bccd7c43c1aad21ce4132193a9a118a7a158
+F263/-finale27/F263-baseline.musx
+    sha256 bfba54f5c29dcd7004ed1a228b4d329e5efa103692b7971abf7006c09b88ae8f
+F263/-finale27/F263-music-font.musx
+    sha256 bc13293f984654f75867612718c96c2e98d08ff7e2ed8d744a3530e7fc631edb
+F97/-finale27/F97-fileinfo-long.musx
+    sha256 46fbf33141e7e03ef2e59de7daef6d19f4d932f15ef04865dc8ccc97cb1acee8
+F97/-finale27/F97-fileinfo-short.musx
+    sha256 9cc5125e235a475fe33f95f93a76df698d8667617f555931feceb289492e3d1b

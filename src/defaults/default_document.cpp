@@ -14,6 +14,7 @@
 
 #include "embedded_default.h"
 #include "musx/dom/Others.h"
+#include "musx/dom/Options.h"
 
 namespace finale_mus_reader {
 namespace defaults {
@@ -117,7 +118,8 @@ std::size_t countAccepted(
 
 } // namespace
 
-ParsedDefaultDocument parseDefault(XmlParser parseXml, SourcePlatform platform)
+ParsedDefaultDocument parseDefault(
+    XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform)
 {
     constexpr std::size_t expectedLayerAttributes = 4;
 
@@ -126,6 +128,20 @@ ParsedDefaultDocument parseDefault(XmlParser parseXml, SourcePlatform platform)
         ? SourcePlatform::Windows : SourcePlatform::MacOS;
     const auto& xml = defaultXml(result.platform);
     result.xmlDocument = parseXml(xml.data(), xml.size());
+    result.referenceDocument = parseDocument(xml.data(), xml.size());
+    if (!result.referenceDocument) {
+        throw std::runtime_error("Embedded default did not produce a reference document");
+    }
+    if (!result.referenceDocument->getOptions()
+        || !result.referenceDocument->getOptions()
+                ->get<musx::dom::options::FontOptions>()) {
+        throw std::runtime_error("Embedded default reference is missing FontOptions");
+    }
+    if (!result.referenceDocument->getOthers()
+        || result.referenceDocument->getOthers()
+                ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).empty()) {
+        throw std::runtime_error("Embedded default reference is missing font definitions");
+    }
     const auto root = result.xmlDocument ? result.xmlDocument->getRootElement() : nullptr;
     if (!root || root->getTagName() != "finale") {
         throw std::runtime_error("Embedded default is missing its <finale> element");
@@ -133,12 +149,17 @@ ParsedDefaultDocument parseDefault(XmlParser parseXml, SourcePlatform platform)
 
     result.options = requireChild(root, "options");
     result.others = requireChild(root, "others");
+    // Most baseline options are structurally safe defaults. FontOptions is not: its ids
+    // belong to the baseline font-definition table, which is deliberately not imported.
+    result.optionsFilter = [](const musx::xml::XmlElementPtr& node) {
+        return node->getTagName() != musx::dom::options::FontOptions::XmlNodeName;
+    };
     // This allowlist is what keeps the fallback measures, staves, entries, text, parts,
     // and layouts of the baseline out of an imported document.
-    result.optionLikeOthers = [](const musx::xml::XmlElementPtr& node) {
+    result.optionLikeOthersFilter = [](const musx::xml::XmlElementPtr& node) {
         return node->getTagName() == musx::dom::others::LayerAttributes::XmlNodeName;
     };
-    if (countAccepted(result.others, result.optionLikeOthers) != expectedLayerAttributes) {
+    if (countAccepted(result.others, result.optionLikeOthersFilter) != expectedLayerAttributes) {
         throw std::runtime_error("Embedded default must contain exactly four layer attributes");
     }
     return result;

@@ -168,23 +168,24 @@ musx::dom::header::HeaderPtr recoverHeader(
     return header;
 }
 
-// Seeds the structurally complete Finale 27 options pool and the four option-like
-// layer attributes. No other pinned content may reach the imported document.
+// Seeds the Finale 27 options pool, excluding FontOptions, plus the four option-like layer
+// attributes. FontOptions is reconstructed only from tuples physically present in the MUS
+// file; leaving it absent is safer than retaining baseline ids from another font table.
 //
-// The seeded options reference font and shape records by cmper, and those records
+// The remaining seeded options reference font and shape records by cmper, and those records
 // are deliberately not seeded: a document has one id space per record type, so a
 // pinned definition would later collide with the source record sharing its cmper.
 // Those references therefore do not resolve, and font lookups throw until the
 // definitions are decoded from the MUS file. See research/PRODUCTION_READINESS.md.
 void seedPinnedDefaults(
-    const musx::dom::DocumentPtr& document, XmlParser parseXml, ImportReport& report)
+    const musx::dom::DocumentPtr& document,
+    const defaults::ParsedDefaultDocument& pinned, ImportReport& report)
 {
-    // The parsed baseline owns both elements, so it must outlive the pool creation below.
-    const auto pinned = defaults::parseDefault(parseXml, report.sourcePlatform);
     report.defaultsPlatform = pinned.platform;
-    document->getOptions() = musx::factory::OptionsFactory::create(pinned.options, document);
+    document->getOptions() = musx::factory::OptionsFactory::create(
+        pinned.options, document, pinned.optionsFilter);
     document->getOthers() = musx::factory::OthersFactory::create(
-        pinned.others, document, pinned.optionLikeOthers);
+        pinned.others, document, pinned.optionLikeOthersFilter);
 }
 
 // A pre-signature file carries no version tuple: its whole 0x60-0x200 header region is
@@ -250,7 +251,7 @@ musx::dom::DocumentPtr createDocument(
     const std::uint8_t* data,
     std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
-    XmlParser parseXml,
+    XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report)
 {
     musx::factory::DocumentFactory::ConstructionOptions constructionOptions;
@@ -258,7 +259,12 @@ musx::dom::DocumentPtr createDocument(
     auto session = musx::factory::DocumentFactory::begin(std::move(constructionOptions));
     const auto& document = session.getDocument();
 
-    seedPinnedDefaults(document, parseXml, report);
+    // Keep both baseline representations alive through the complete import. The XML tree
+    // owns the elements used to seed filtered pools; the fully formed document is the
+    // read-only source for later completion passes.
+    const auto pinned = defaults::parseDefault(
+        parseXml, parseDocument, report.sourcePlatform);
+    seedPinnedDefaults(document, pinned, report);
     document->getHeader() = recoverHeader(data, size, report);
 
     mapping::SourceProfile profile;
@@ -267,7 +273,8 @@ musx::dom::DocumentPtr createDocument(
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;
     mapping::applyLegacyMappings(
-        records::LegacyRecordIndex::build(parsed), profile, document, report);
+        records::LegacyRecordIndex::build(parsed), profile,
+        document, pinned.referenceDocument, report);
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every
     // legacy overlay has been applied.

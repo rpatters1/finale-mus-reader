@@ -19,7 +19,8 @@ namespace finale_mus_reader {
 namespace {
 
 ImportResult readImpl(const std::uint8_t* data, std::size_t size,
-    const std::optional<std::filesystem::path>& sourcePath, XmlParser parseXml)
+    const std::optional<std::filesystem::path>& sourcePath,
+    XmlParser parseXml, DocumentParser parseDocument)
 {
     if (!data || size == 0) {
         throw std::invalid_argument("MUS input is empty");
@@ -45,14 +46,15 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     result.document = createDocument(
-        parsed, data, size, sourcePath, parseXml, result.report);
+        parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
 
     if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
         result.report.warnings.emplace_back(
-            "Coda-banner pool directories are unresolved; options remain at Finale 27 defaults.");
+            "Coda-banner pool directories are unresolved; supported fallback options "
+            "remain at Finale 27 defaults.");
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
         result.report.warnings.emplace_back(
-            "Later variable logical records are not overlaid yet; options remain at Finale 27 defaults.");
+            "Only supported later variable logical records are overlaid; other options remain at Finale 27 defaults.");
     } else if (parsed.formatEpoch == FormatEpoch::Unknown) {
         result.report.warnings.emplace_back(
             "The banner header was recovered, but the body framing was not recognized.");
@@ -66,7 +68,8 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
 } // namespace
 
 ImportResult Reader::readWithParser(
-    const std::filesystem::path& path, XmlParser parseXml)
+    const std::filesystem::path& path,
+    XmlParser parseXml, DocumentParser parseDocument)
 {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
@@ -88,13 +91,14 @@ ImportResult Reader::readWithParser(
     if (!input) {
         throw std::runtime_error("Unable to read complete MUS input: " + path.string());
     }
-    return readImpl(data.data(), data.size(), path, parseXml);
+    return readImpl(data.data(), data.size(), path, parseXml, parseDocument);
 }
 
 ImportResult Reader::readWithParser(
-    const std::uint8_t* data, std::size_t size, XmlParser parseXml)
+    const std::uint8_t* data, std::size_t size,
+    XmlParser parseXml, DocumentParser parseDocument)
 {
-    return readImpl(data, size, std::nullopt, parseXml);
+    return readImpl(data, size, std::nullopt, parseXml, parseDocument);
 }
 
 } // namespace finale_mus_reader

@@ -23,6 +23,13 @@ blocks that do not use the field map are cataloged in
 [`data/legacy_direct_option_blocks.csv`](data/legacy_direct_option_blocks.csv). These are factual
 schemas, not translations of the C++ source.
 
+The separate [`data/legacy_option_font_id_locations.csv`](data/legacy_option_font_id_locations.csv)
+audits every musxdom options-pool field that contains a font-definition cmper. It was checked against
+the same historical `JWPDKFramework` snapshot at commit `d8a4c7782a7213bfd7350e3f03976b12afb1d2ab`;
+the inspected `finaleframework.cpp` has SHA-256
+`f38fa25ad08e41130c36b228794bbea306b5f96e0db58cef4315e5e55dbaf683`. The table contains no private
+path and records only distilled interoperability facts.
+
 ## Central finding
 
 Before Finale 26.2 exposed regular preference structures, the framework reconstructed synthetic preference objects
@@ -125,6 +132,161 @@ Five legacy option structures bypass the synthetic field map but still have expl
 All five selectors occur in the available ETF evidence. Their internal field layouts remain source-derived. Stem
 connection elements use one layout before Finale 2012 and a different layout from Finale 2012 onward, an explicit
 format-era boundary that a reader must honor.
+
+## Options-pool font IDs
+
+Two of the five musxdom options fields containing font-definition cmpers have legacy locations identified by the
+framework study. In the verified Finale 2002–2005 range, `FontOptions` uses the direct default-font preference family
+at `24(65534)`. Each incidence packs two three-word font tuples: `(font ID, size, effects)` in slots 0–2 and another
+in slots 3–5. For zero-based physical tuple index `n`, the incidence is `n / 2`; the font-ID slot is 0 when `n` is
+even and 3 when it is odd. The physical index is translated through a versioned semantic map rather than cast to
+the modern `FontType` enum. This layout is not valid for Finale 1.0.0, whose single selector-24 row contains values that
+cannot reference its five font definitions.
+Controlled Finale 1.0.0 fixtures instead confirm Music at words 0–2 of `02(65534)`, TextBlock at words 0–2 of
+`26(65534)`, and LyricVerse at words 3–5 of `26(65534)`. No other early category is inferred from the Finale 27
+companions because the upgrade synthesizes and couples additional values.
+In zlib files the same logical stream is coalesced into singleton class `0x0026(65534)`: the tuple for `n` begins at
+byte `6n`, with font ID, size, and effects at offsets `6n`, `6n + 2`, and `6n + 4`. Both controlled endian variants
+have 45 live tuples followed by one zero tuple. The effects word is a bitmask and must be expanded with musxdom's
+`FontInfo::setEnigmaStyles` into its six style booleans.
+`StemOptions` uses the direct stem-connection block at `40(65534)`; before Finale 2012 each connection occupies one
+incidence and its font ID is word slot 0. Available ETFs independently support the existence and organization of both
+selectors, but no controlled one-option-at-a-time font change has yet promoted either semantic mapping to
+`confirmed`.
+Neither is a row in the framework's fragmented `PREFERENCE_LOCATION_MAPRECORD` arrays: both use direct preference
+loaders. Thus the strict count found in those arrays is zero, while the broader framework source identifies two
+direct legacy locations.
+
+No preference-table location was found for the clef-specific override, alternate lyric-hyphen font, or text inserted-
+symbol font. Absence from the framework tables is not evidence that a legacy document cannot store them: the
+framework models clef overrides through clef definitions outside its preference maps, and it may simply not expose
+the other two legacy fields. The complete five-row audit, including these open results and the Finale 2012 stem-layout
+caveat, is in [`data/legacy_option_font_id_locations.csv`](data/legacy_option_font_id_locations.csv).
+
+### FontOptions implementation plan
+
+The implementation follows this staged data flow: filter the unsafe baseline object, recover every era-verified
+source tuple, translate physical positions through a versioned semantic map, then complete all absent modern types
+from a separate baseline document with font-definition remapping.
+
+1. Exclude the direct `<fontOptions>` child when loading the pinned `<options>` element. musxdom's existing
+   `OptionsFactory::create` filter supports this directly. A modern fallback font ID is unsafe when the legacy file
+   has a smaller, unrelated font-definition table; an absent map key is preferable to a silently wrong typeface.
+   Retain a separate, fully populated baseline `DocumentPtr` for the completion pass, but never insert an object
+   owned by that document into the imported document.
+2. Give the numeric-option class transform one code home: zlib class ID is the old selector plus `0x000e`. Derive
+   the FontOptions class from selector 24 rather than hard-coding two unrelated identities.
+3. Add one bounds-checked font-tuple reader with a six-byte stride. Feed it the concatenated `24(65534)` fixed-row
+   words before Finale 2007 and the `0x0026(65534)` class payload in the zlib epoch; numeric reads follow the file's
+   established byte order.
+4. Construct one fresh, document-owned `FontOptions`. For each complete source tuple, construct a fresh `FontInfo`,
+   assign `fontId`, assign signed `fontSize`, and pass the unsigned effects word to `setEnigmaStyles`. Insert it only
+   through the era-specific semantic map: in Finale 2002, skip physical 13 and map physical 28 to `Tablature`;
+   from Finale 2003 onward, map 13 to `Tablature` and 28 to `Percussion`. Do not encode a tuple-count limit: walk
+   what the file carries, ignoring an all-zero second tuple at the end of the final two-tuple unit as structural
+   fill. This applies to fixed rows and to the tuple-pair grouping preserved in the zlib payload. Add
+   the `FontOptions` object to the pool exactly once. Do not duplicate the six effect bit constants in this
+   project.
+5. Walk every complete tuple to the physical end of the family or payload; do not encode an expected tuple count.
+   Report holding and structural-fill tuples even when the era map does not insert them. Keep the modern enum as
+   the model bound, including reporting the terminal zlib zero tuple without inventing an out-of-range enum value.
+6. Report the three recovered source values independently for each present `FontType`, including raw effects plus
+   its legacy origin and offsets. Never partially construct or report a truncated tuple. Validate each recovered
+   font ID against the source document's `FontDefinition` pool. During source capture, preserve and report a dangling
+   numeric reference exactly as stored; never replace it silently with a default.
+7. Complete all remaining `FontType` keys from the platform-matched baseline. Clone the baseline `FontInfo` into a
+   fresh target-owned instance, preserving its size and effects, and remap its font ID by this exact procedure:
+   - baseline cmper 0 transfers as cmper 0 without a lookup or validation;
+   - for a nonzero cmper, obtain its `FontDefinition` in the baseline and compare its normalized name with the target
+     definitions, using the matching target cmper if found. Normalization removes whitespace and folds case, so
+     PostScript and family spellings such as `FinaleMaestro` and `Finale Maestro` compare equal;
+   - if no name matches, clone every `FontDefinition` field into a fresh target-owned record at one past the greatest
+     target font cmper, then use that new cmper; and
+   - cache the remapping by normalized name so every later option using that baseline face reuses the same target
+     definition. If more than one existing definition has the normalized name, choose the lowest cmper
+     deterministically. Detect 16-bit cmper exhaustion rather than wrapping.
+   musxdom already implements this normalization privately for font recognition. Promote that one implementation to
+   a reusable public comparison/key helper and call it here; do not create a second normalization rule in the reader.
+8. Report completed entries as synthesized Finale 27 defaults. The resulting target font ID shows whether an
+   existing record was reused or a new comparator was allocated. The baseline document is a read-only template and need
+   live only through completion; the finished import owns every resulting `FontOptions`, `FontInfo`, and
+   `FontDefinition` instance.
+9. Test synthetic truncation and both fixed-row packing halves, then assert exact real values from Finale 2002 and
+   2005, big-endian Finale 2007, and little-endian Finale 2012. Include effects values `3`, `2`, and `1` so the tests
+   prove conversion to multiple booleans and verify that no source-recovered or synthesized `FontInfo` instance is
+   shared between documents. Add Finale 1.0.0 tests proving that there are five source font definitions, that its
+   selector-24 row is not decoded with the later layout, that all 45 option keys are populated, that cmper 0 remains
+   0, that case/whitespace variants reuse the normalized-name match, and that unmatched baseline definitions are
+   copied once at consecutive cmpers beyond the source maximum.
+10. Keep the mapping at **strong** confidence until exact legacy/Finale 27 pairs verify that the physical ordinal
+    sequence upgrades to the same named `FontType` sequence. Use controlled one-font-at-a-time fixtures only for
+    positions that remain ambiguous because several categories have identical defaults. Those fixtures should
+    change a text typeface, point size, and each exposed style in separate saves and compare Finale's EnigmaXML
+    conversion.
+
+### FontOptions sequence-verification strategy
+
+The physical sequence has not always used the current `FontType` semantics. Private framework history places the
+tablature transition at Finale 2003: from at least Finale 98 through Finale 2002, physical 13 is a holding slot and
+physical 28 is default tablature; beginning in Finale 2003, 13 is tablature and 28 is percussion. Physical 43 is
+reserved through Finale 2006 and becomes `TimeParts` in Finale 2007. The sequence before Finale 98 and the physical
+location before the verified Finale 2002 layout remain **open**.
+Finale 27 upgrades of exact legacy files remain the primary semantic reference for observing the associated upgrade
+transformations and font substitutions.
+
+The source mappings are in
+[`data/font_options_mapping.csv`](data/font_options_mapping.csv). It deliberately has one row per physical layout,
+plus targeted rows for the three confirmed Finale 1.0.0 categories. Variable arrays are walked to their physical
+end without discarding holding or structural-fill tuples. Semantic completion is a separate pass and always
+produces 45 keys. The selector-24 layout does not apply to Finale 1.0.0.
+
+For each exact legacy/Finale 27 pair, construct two canonical views:
+
+1. Resolve every candidate legacy tuple's font cmper through that source's `FontDefinition` pool and represent the
+   tuple as `(normalized font name, signed size, effects mask)`. Keep its physical family, incidence, word/byte
+   offset, and ordinal alongside it.
+2. Parse the upgraded EnigmaXML through musxdom. For each named `FontType`, resolve its upgraded font cmper through
+   the upgraded document's font definitions and construct the same canonical tuple. Treat omitted XML members as
+   the values musxdom assigns, rather than comparing XML spelling or presence.
+
+Do not compare font cmpers directly: Finale 27 may renumber definitions. Use the same case-folded,
+whitespace-insensitive font-name key required by the importer. Compare the effects mask both as raw legacy bits and
+as the booleans produced by `FontInfo::setEnigmaStyles`. Record conversion warnings and reject a font-name comparison
+when Finale substituted a face rather than merely renumbering it.
+
+For source ordinal `i`, first obtain its candidate semantic type from the era descriptor, then form the set of
+upgraded `FontType` values whose canonical tuples equal that source tuple. Holding and reserved physical slots have
+no modern semantic candidate and remain source-only observations.
+Intersect those candidate sets over multiple, varied documents from the same saving product, then solve the
+remaining one-to-one mapping while preserving physical order. This avoids claiming that an ordinal is `music`,
+`clef`, or another category merely because several unchanged defaults happen to share the same font, size, and
+effects. It also makes a disagreement visible instead of forcing the current enum order onto the evidence.
+
+Run the comparison in three passes:
+
+1. Add Finale 27 upgrades for the existing controlled Finale 2002–2005, 2007, and 2012 fixtures. These verify the
+   already located arrays and the zlib transition against small, publishable sources.
+2. Apply the analyzer to the existing exact source/export corpus pairs at every represented saving-product
+   boundary. Use this breadth to find reordered positions, inserted categories, shorter arrays, and conversion
+   outliers. An upgraded tail that has no source tuple is synthesized data and says nothing about the historical
+   array.
+3. Use controlled source-version edits for the remaining coverage gaps. The Finale 1.0.0 control and three edits
+   have now confirmed Music, TextBlock, and LyricVerse; repeat that method for other exposed categories and then for
+   1.8.7, 2.0.1, 3.8, 98, and 99 as needed. Scan plausible global records rather than presuming selector 24.
+
+If repeated defaults leave an ordinal unresolved, make one controlled file in the originating Finale version and
+give exactly one exposed default-font category a distinctive face, size, and effect combination. Save the legacy
+file and upgrade that exact save in Finale 27. One changed source position paired with one changed named XML category
+settles the ordinal; reset to the unchanged baseline before testing another category. Also save an unchanged control
+twice so incidental save-time changes can be excluded. For Finale 1.0.0 this is the fallback, not the first step:
+the paired stock fixtures may already contain enough variation to identify the representation without operating the
+old application.
+
+Record a separate era descriptor containing the physical location, available ordinal count, and ordinal-to-
+`FontType` map. Promote a position to **confirmed** only when a publishable exact pair or controlled pair makes it
+unambiguous; consistent private pairs are **strong**. Matching lengths, a stable prefix, or framework history alone
+is structural evidence and cannot establish semantic order. The importer must not use one timeless ordinal map
+until every era it claims to support is covered by such a descriptor.
 
 ## Consequences for the reader
 

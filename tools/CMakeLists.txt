@@ -23,3 +23,4 @@ endfunction()
 
 finale_mus_reader_add_tool(font_definition_census NEEDS_PUGIXML)
 finale_mus_reader_add_tool(font_header_words PRIVATE_HEADERS)
+finale_mus_reader_add_tool(font_options_coverage NEEDS_PUGIXML)

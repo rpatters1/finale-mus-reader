@@ -1,0 +1,37 @@
+Finale 1.0.0 for Macintosh, Coda-banner era, big-endian.
+
+Origin: controlled test documents created by Robert G. Patterson in Finale
+1.0.0 running under Mac OS 9 hosted by SheepShaver. The documents and their
+musical content are released by their author under this repository's MIT
+license.
+
+All three changed files were derived from the same newly created baseline. Each
+changes one default-font control. Pairwise comparison among the changed files
+localizes the intended changes to the named physical tuples; the baseline has a
+smaller save allocation and is therefore a semantic rather than byte-for-byte
+control for those files.
+
+F100-baseline.mus
+    sha256 9b6605da705949155d2690bc51680576b87872272406077fb59160fb599f00b9
+    4,143 bytes. Unmodified new-document defaults.
+
+F100-music-font.mus
+    sha256 931417967ea03e945f532e4157fb6ed210aa3989e6848d9b3c17ad10b67edadc
+    4,655 bytes. Changes the music default to Symbol at 60 points. The raw
+    source tuple is `02(65534)` words 0-2: `(12, 60, 0)`.
+
+F100-text-font.mus
+    sha256 b393e9b2d8ef844f64967ae208ac50e452dc1672e87b8b569ff8c3cbea3e015c
+    4,655 bytes. Changes the text-block default to New York at 17 points,
+    bold and italic. The raw source tuple is `26(65534)` words 0-2:
+    `(2, 17, 3)`.
+
+F100-lyric-verse.mus
+    sha256 012c07efcaadf2d17f31a9b4ce6ffe632c2edd34bc894d698a46f37c47994618
+    4,655 bytes. Changes the lyric-verse default to Geneva at 13 points with
+    raw effects mask `0x001c`. The raw source tuple is `26(65534)` words 3-5:
+    `(3, 13, 28)`.
+
+Finale 27 companions are in `-finale27/`. They were generated without manual
+document edits in the same automated Finale 27.4 run described by
+`../finale27-provenance.txt`.

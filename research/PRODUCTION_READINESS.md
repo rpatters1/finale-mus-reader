@@ -40,15 +40,28 @@ Coda-banner and 28 Finale 3.0-3.7 documents is therefore reported as a Mac-bank 
 character set 0, which is a default rather than a reading. Recovering them will have to come
 from somewhere other than the `FN` record.
 
-### P0.2 Seeded option font ids are not reconciled
+### P0.2 Remaining seeded option font ids are not reconciled
 
-**Status:** blocker, and newly urgent. **Confidence:** confirmed.
+**Status:** blocker, narrowed 2026-08-11. **Confidence:** confirmed.
 
 This is the hazard that argued against seeding pinned font definitions, now arriving from
 the other direction. The pinned Finale 27 options carry Finale 27 font ids, and real font
 definitions from the source document now exist under the source document's ids. An option
 the reader has not yet mapped therefore resolves its font id against a table it was never
 written for, and returns whichever font happens to occupy that id.
+
+The direct `FontOptions` case is now reconciled. The pinned object is filtered out; confirmed
+source tuples are inserted through an era-specific physical-to-semantic map, and every missing
+modern type is cloned from the separate baseline document. Baseline id 0 passes unchanged.
+Every nonzero baseline id is matched to the lowest target comparator by normalized font name,
+or its complete `FontDefinition` is cloned at the next nonzero comparator with the selected
+platform reference's exact name spelling. The reference comparator itself is never retained.
+Finale 1.0.0 Music,
+TextBlock, and LyricVerse are recovered from confirmed locations; other early categories safely
+remain synthesized.
+
+The blocker remains for the other seeded option classes containing font ids. Those objects are
+still copied from the baseline with numeric references that have not been reconciled.
 
 The failure mode has changed from loud to silent. Before font definitions existed, such a
 reference threw `std::invalid_argument`. It now returns a plausible, wrong font.
@@ -85,6 +98,11 @@ platform behavior of Finale.
 ---
 
 ## P1 — imported documents are correct but substantially incomplete
+
+A legacy MUS import is not expected to become as complete as a native MUSX document. The reader
+recovers only source representations established by evidence and fills structurally required
+gaps from reported defaults; this section records the remaining distance so coverage can improve
+incrementally without presenting inferred upgrade behavior as source data.
 
 ### P1.1 Option coverage is a thin slice
 
@@ -132,23 +150,25 @@ further mappings should stay evidence-led and version-aware.
 **Status:** gap. **Confidence:** confirmed.
 
 No measures, staves, entries, text, page or system layout, parts, or
-instruments. The reader currently produces an options-complete document with a
-recovered header. This is the honest current scope and is asserted by
+instruments. The reader currently produces a fallback-heavy document whose `FontOptions`
+is structurally complete but may synthesize many categories when their source representation
+is not identified. It also contains a recovered header. This is the
+honest current scope and is asserted by
 `expectNoScoreContent`, but "MUS reader" will be read by users as meaning score
 content.
 
-### P1.3 The zlib era decodes no records
+### P1.3 The zlib era decodes only supported record classes
 
-**Status:** gap. **Confidence:** confirmed 2026-08-09.
+**Status:** gap, narrowed 2026-08-11. **Confidence:** confirmed.
 
 The Coda-banner half of this item is done. Its pools are decoded into typed
 blocks, its others and details pools are indexed like every other epoch, and all
 54 corpus files then known recover their font tables.
 
-The 2007-2012 zlib era still overlays nothing: 527 files classify and inflate but
-produce no records, so they receive no fonts and no option values. Its record
-framing is undecoded, which is research rather than implementation, and it is now
-the largest single block of unserved files.
+The 2007-2012 class-record framing is now decoded. The reader recovers zlib-era
+font definitions and captures the complete class `0x0026` default-font tuple stream
+in either byte order. Most other record classes remain unidentified or unmapped, so
+the era is still the largest single block of unserved score content.
 
 Twenty of those files additionally log a zlib decompression failure during
 inflation, which is a separate defect from the undecoded records.
