@@ -17,6 +17,7 @@
 
 #include "container/mus_container.h"
 #include "import/legacy_mapping.h"
+#include "import/mappings/tables.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -118,6 +119,72 @@ SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0)
     version.minor = minor;
     profile.version = version;
     return profile;
+}
+
+void testMissingRecoveredFontDefinitionFallback()
+{
+    using FontDefinition = musx::dom::others::FontDefinition;
+    using FontOptions = musx::dom::options::FontOptions;
+    using FontType = FontOptions::FontType;
+
+    auto targetSession = musx::factory::DocumentFactory::begin();
+    const auto targetDocument = targetSession.getDocument();
+    auto targetOptions = std::make_shared<FontOptions>(targetDocument);
+    targetDocument->getOptions()->add(FontOptions::XmlNodeName, targetOptions);
+    const auto addTargetFont = [&](musx::dom::Cmper cmper, const char* name) {
+        auto font = std::make_shared<FontDefinition>(targetDocument, musx::dom::SCORE_PARTID,
+            musx::dom::EnigmaBase::ShareMode::All, cmper);
+        font->name = name;
+        targetDocument->getOthers()->add(FontDefinition::XmlNodeName, font);
+    };
+    addTargetFont(0, "Seville");
+    addTargetFont(5, "Arial");
+    const auto addMissingOption = [&](FontType type, int size, std::uint16_t effects) {
+        auto font = std::make_shared<musx::dom::FontInfo>(targetDocument);
+        font->fontId = 99;
+        font->fontSize = size;
+        font->setEnigmaStyles(effects);
+        targetOptions->fontOptions.emplace(type, font);
+    };
+    addMissingOption(FontType::Fretboard, 36, 1);
+    addMissingOption(FontType::Tablature, 12, 2);
+
+    auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto referenceDocument = referenceSession.getDocument();
+    auto referenceOptions = std::make_shared<FontOptions>(referenceDocument);
+    referenceDocument->getOptions()->add(FontOptions::XmlNodeName, referenceOptions);
+    const auto addReference = [&](FontType type, musx::dom::Cmper cmper, const char* name) {
+        auto definition = std::make_shared<FontDefinition>(referenceDocument,
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+        definition->name = name;
+        referenceDocument->getOthers()->add(FontDefinition::XmlNodeName, definition);
+        auto font = std::make_shared<musx::dom::FontInfo>(referenceDocument);
+        font->fontId = cmper;
+        referenceOptions->fontOptions.emplace(type, font);
+    };
+    addReference(FontType::Fretboard, 3, "Seville");
+    addReference(FontType::Tablature, 4, " arIAL ");
+
+    ImportReport report;
+    finale_mus_reader::mapping::repairMissingRecoveredFontDefinitions(
+        targetDocument, referenceDocument, targetOptions, report);
+
+    const auto fretboard = targetOptions->getFontInfo(FontType::Fretboard);
+    expect(fretboard->fontId == 6 && fretboard->fontSize == 36
+            && fretboard->getEnigmaStyles() == 1,
+        "A same-type reference face was not cloned after the highest target comparator");
+    expect(targetDocument->getOthers()->get<FontDefinition>(
+            musx::dom::SCORE_PARTID, 6)->name == "Seville",
+        "The cloned same-type reference face did not retain its reference spelling");
+    const auto tablature = targetOptions->getFontInfo(FontType::Tablature);
+    expect(tablature->fontId == 5 && tablature->fontSize == 12
+            && tablature->getEnigmaStyles() == 2,
+        "A normalized nonzero target face was not reused by the fallback");
+    expect(targetDocument->getOthers()->getArray<FontDefinition>(
+            musx::dom::SCORE_PARTID).size() == 3,
+        "The fallback introduced a duplicate nonzero font name");
+    expect(report.warnings.size() == 2,
+        "Missing recovered font definitions were not reported");
 }
 
 // The target is taken by value rather than by const reference so that a literal call site
@@ -459,6 +526,10 @@ TEST_CASE("Bit extraction", "[mapping]") { testBitExtraction(); }
 TEST_CASE("Absent record keeps seeded default", "[mapping]")
 {
     testAbsentRecordKeepsSeededDefault();
+}
+TEST_CASE("Missing recovered font definition fallback", "[mapping]")
+{
+    testMissingRecoveredFontDefinitionFallback();
 }
 TEST_CASE("Version gating", "[mapping]") { testVersionGating(); }
 TEST_CASE("Minor version ordering", "[mapping]") { testMinorVersionOrdering(); }

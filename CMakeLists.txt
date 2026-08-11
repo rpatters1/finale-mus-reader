@@ -78,7 +78,10 @@ if(NOT TARGET ZLIB::ZLIB)
 endif()
 message(STATUS "Legacy Finale MUS Reader zlib target: ${FINALE_MUS_READER_ZLIB_TARGET}")
 
-if(NOT TARGET musx)
+if(TARGET musx)
+    get_target_property(FINALE_MUS_READER_MUSXDOM_SOURCE musx SOURCE_DIR)
+    set(FINALE_MUS_READER_MUSXDOM_ORIGIN "existing musx target")
+else()
     set(musx_BUILD_TESTING OFF CACHE BOOL "Do not build musxdom tests" FORCE)
 
     if(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR)
@@ -91,14 +94,21 @@ if(NOT TARGET musx)
         endif()
         add_subdirectory("${FINALE_MUS_READER_MUSXDOM_SOURCE_DIR}"
             "${CMAKE_CURRENT_BINARY_DIR}/_deps/musxdom-build")
+        set(FINALE_MUS_READER_MUSXDOM_SOURCE
+            "${FINALE_MUS_READER_MUSXDOM_SOURCE_DIR}")
+        set(FINALE_MUS_READER_MUSXDOM_ORIGIN "local source tree")
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 3df76025fd764478c1b7c99d4e97b10b4d8b5653
+            GIT_TAG b9a78f495476e1678f74a4bd811149981ee34852
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
+        set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
+        set(FINALE_MUS_READER_MUSXDOM_ORIGIN "fetched pinned revision")
     endif()
 endif()
+message(STATUS
+    "Legacy Finale MUS Reader musxdom: ${FINALE_MUS_READER_MUSXDOM_ORIGIN} at ${FINALE_MUS_READER_MUSXDOM_SOURCE}")
 
 add_library(finale_mus_reader_blast OBJECT
     third_party/blast/blast.c)
@@ -120,6 +130,7 @@ add_library(finale_mus_reader STATIC
     src/import/document_factory.cpp
     src/import/legacy_mapping.cpp
     src/import/mappings/font_definitions.cpp
+    src/import/mappings/font_options.cpp
     src/import/mappings/layer_attributes.cpp
     src/import/mappings/music_spacing_options.cpp
     src/import/reader.cpp

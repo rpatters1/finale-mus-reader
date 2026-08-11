@@ -200,7 +200,8 @@ def main() -> None:
         default=[],
         metavar="GLOB",
         help="Skip paths matching this glob, or anything beneath a directory matching it. "
-             "Relative to the corpus root; repeatable. E.g. --exclude='*/Libraries*'",
+             "Applied to corpus-relative loose paths and archive member paths; repeatable. "
+             "E.g. --exclude='*/Libraries*'",
     )
     parser.add_argument(
         "--include-archives",
@@ -255,6 +256,8 @@ def main() -> None:
         print(f"archives: {archive_stats['archives']} scanned, {archive_stats['extracted']} extracted, "
               f"{archive_stats['reused']} reused from cache, {archive_stats['unreadable']} unreadable")
         for member in sorted(members, key=lambda m: (norm(m["archive_filename"]), norm(m["member_path"]))):
+            if excluded(member["member_path"]):
+                continue
             path = cache_dir / f"{member['member_id']}.mus"
             if not path.is_file():
                 continue

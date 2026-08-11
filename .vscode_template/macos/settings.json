@@ -1,0 +1,6 @@
+{
+    "cmake.configureOnOpen": true,
+    "cmake.configureSettings": {
+        "FINALE_MUS_READER_MUSXDOM_SOURCE_DIR": "${workspaceFolder}/../musxdom"
+    }
+}

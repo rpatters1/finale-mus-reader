@@ -223,7 +223,7 @@ void expectOption(const ImportResult& result)
         "Pinned default omitted an expected options instance");
 }
 
-void expectCompleteOptions(const ImportResult& result)
+void expectSeededOptionsExceptFontOptions(const ImportResult& result)
 {
     using namespace musx::dom::options;
     expectOption<AccidentalOptions>(result);
@@ -234,7 +234,6 @@ void expectCompleteOptions(const ImportResult& result)
     expectOption<ChordOptions>(result);
     expectOption<ClefOptions>(result);
     expectOption<FlagOptions>(result);
-    expectOption<FontOptions>(result);
     expectOption<GraceNoteOptions>(result);
     expectOption<KeySignatureOptions>(result);
     expectOption<LineCurveOptions>(result);
@@ -270,16 +269,8 @@ void expectNoScoreContent(const ImportResult& result)
     expect(result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID).empty(),
         "Output contains fallback part definitions");
     // The pinned <others> element has 127 direct children; only the four layerAtts are
-    // allowlisted. These are the most numerous of the rest.
-    // Font definitions are recovered from the file, so the test is not that they are absent
-    // but that none of them came from the pinned baseline. These names appear in the Finale
-    // 27 default and in no legacy fixture.
-    for (const auto& font : result.document->getOthers()
-            ->getArray<others::FontDefinition>(SCORE_PARTID)) {
-        expect(font->name != "Broadway Copyist" && font->name != "Engraver Text T"
-                && font->name != "Broadway Copyist Text",
-            "A pinned default font leaked into the imported document");
-    }
+    // allowlisted. Font definitions cloned individually to resolve synthesized FontOptions
+    // are intentional and do not constitute leaked baseline score content.
     expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).empty(),
         "Output contains fallback marking categories");
     expect(result.document->getOthers()->getArray<others::ShapeDef>(SCORE_PARTID).empty(),
@@ -330,7 +321,7 @@ void testControlledDclFile()
         "F2002 music spacing distance overlay failed");
     expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
         "F2002 music spacing overlay was not reported as recovered");
-    expectCompleteOptions(result);
+    expectSeededOptionsExceptFontOptions(result);
     expectNoScoreContent(result);
 }
 
@@ -361,8 +352,9 @@ void testIndependentImportedDocuments()
         "Imported documents share a layer attributes instance");
 }
 
-// Font definitions come from the file, never from the pinned baseline. The controlled
-// fixture's ETF prints the same table, so the names and character sets are ground truth:
+// Font definitions come from the file except when a missing FontOptions type needs a
+// baseline face that is not already present by normalized name. The controlled fixture's
+// ETF prints the nine source definitions, so those names and character sets are ground truth:
 // ^FN(0) 8191 0 0 0 0 0 with ^FN(0) "Maestro", where 8191 is 0x1fff, a Mac symbol font.
 void testFontDefinitions()
 {
@@ -372,7 +364,7 @@ void testFontDefinitions()
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    expect(fonts.size() == 9, "F2002 font table size is incorrect");
+    expect(fonts.size() == 10, "F2002 font table plus required fallback font is incorrect");
 
     const auto fontAt = [&](musx::dom::Cmper cmper) {
         const auto font = result.document->getOthers()->get<FontDefinition>(
@@ -397,11 +389,200 @@ void testFontDefinitions()
     expect(fontAt(5)->name == "Maestro Percussion",
         "A font name spanning incidences was not assembled");
 
-    // The pinned baseline must not contribute fonts of its own: every one of the Finale 27
-    // defaults would otherwise appear here alongside the recovered table.
-    for (const auto& font : fonts) {
-        expect(font->name != "Broadway Copyist" && font->name != "Engraver Text T",
-            "A pinned default font leaked into the imported document");
+    expect(fontAt(9)->name == "Times New Roman",
+        "The unmatched fallback face did not retain the reference spelling");
+}
+
+// FontOptions is a variable-length, versioned source collection. Recovered semantic tuples
+// override a complete 45-type baseline whose nonzero font ids are remapped by name.
+void testFontOptionsCapture()
+{
+    using FontOptions = musx::dom::options::FontOptions;
+    using FontType = FontOptions::FontType;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+
+    const auto f2002 = read("evidence/F2002/F2002-baseline.mus");
+    const auto fixed = f2002.document->getOptions()->get<FontOptions>();
+    expect(fixed && fixed->fontOptions.size() == 45,
+        "Finale 2002 font options were not completed to the modern type set");
+    const auto tuplet = fixed->getFontInfo(FontType::Tuplet);
+    expect(tuplet->fontId == 1 && tuplet->fontSize == 10,
+        "A fixed-row font-options tuple was not captured");
+    expect(tuplet->bold && tuplet->italic && !tuplet->underline,
+        "Font option effects were not expanded into musxdom booleans");
+    expect(field(f2002, "others.fontName[0].name").origin == ValueOrigin::LegacyMus,
+        "A record-created font definition did not retain its comparator in diagnostics");
+    expect(field(f2002, "options.fontOptions[7].effects").rawValue == 3,
+        "The raw fixed-row effects mask was not reported");
+    expect(field(f2002, "options.fontOptionsPhysical[13].fontId").origin
+            == ValueOrigin::LegacyMus,
+        "The Finale 2002 drawing-time tablature slot was not retained as physical evidence");
+    expect(field(f2002, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus,
+        "Finale 2002 physical slot 28 was not mapped to semantic tablature");
+    expect(field(f2002, "options.fontOptions[28].fontId").origin
+            == ValueOrigin::Finale27Default,
+        "Finale 2002 percussion was not supplied by the baseline");
+    expect(field(f2002, "options.fontOptions[40].fontId").origin
+            == ValueOrigin::Finale27Default,
+        "A modern bend font absent from Finale 2002 was not synthesized");
+    expect(fixed->getFontInfo(FontType::TimeParts)->fontId == 0,
+        "A synthesized baseline font id 0 did not pass through unchanged");
+
+    const auto f2005 = read("evidence/F2005/F2005-baseline.mus");
+    const auto laterFixed = f2005.document->getOptions()->get<FontOptions>();
+    expect(laterFixed && laterFixed->fontOptions.size() == 45,
+        "Finale 2005 font options were not completed to the modern type set");
+    expect(field(f2005, "options.fontOptionsPhysical[43].fontId").rawValue == 0
+            && field(f2005, "options.fontOptionsPhysical[43].fontSize").rawValue == 0
+            && field(f2005, "options.fontOptionsPhysical[43].effects").rawValue == 0,
+        "The Finale 2005 structural-fill tuple was not retained as physical evidence");
+    expect(field(f2005, "options.fontOptions[43].fontId").origin
+            == ValueOrigin::Finale27Default
+            && field(f2005, "options.fontOptions[44].fontId").origin
+                == ValueOrigin::Finale27Default,
+        "Finale 2005 time-parts fonts were not supplied by the baseline");
+
+    const auto f2007 = read("evidence/F2007/F2007-lyric-hyphens.mus");
+    const auto zlib = f2007.document->getOptions()->get<FontOptions>();
+    expect(zlib && zlib->fontOptions.size() == 45,
+        "The zlib font-options payload did not populate its live tuple range");
+    const auto zlibTuplet = zlib->getFontInfo(FontType::Tuplet);
+    expect(zlibTuplet->fontId == tuplet->fontId
+            && zlibTuplet->fontSize == tuplet->fontSize
+            && zlibTuplet->getEnigmaStyles() == tuplet->getEnigmaStyles(),
+        "The zlib tuple layout disagrees with the fixed-row layout");
+    expect(field(f2007, "options.fontOptionsPhysical[45].fontId").rawValue == 0
+            && field(f2007, "options.fontOptionsPhysical[45].fontSize").rawValue == 0
+            && field(f2007, "options.fontOptionsPhysical[45].effects").rawValue == 0,
+        "The terminal physical zlib tuple was not captured in the report");
+
+    const auto f2012 = read("evidence/F2012/F2012-upstem-flags.mus");
+    const auto littleEndianZlib = f2012.document->getOptions()->get<FontOptions>();
+    expect(littleEndianZlib && littleEndianZlib->fontOptions.size() == 45,
+        "The little-endian zlib font-options payload was not captured");
+    const auto music = littleEndianZlib->getFontInfo(FontType::Music);
+    expect(music->fontId == 0 && music->fontSize == 24
+            && field(f2012, "options.fontOptions[0].fontSize").rawValue == 24,
+        "A little-endian zlib font-options word was byte-swapped incorrectly");
+
+    const auto f100Baseline = read("evidence/F100/F100-baseline.mus");
+    const auto earlyBaseline = f100Baseline.document->getOptions()->get<FontOptions>();
+    expect(earlyBaseline && earlyBaseline->fontOptions.size() == 45,
+        "Finale 1.0.0 font options were not completed");
+    expect(earlyBaseline->getFontInfo(FontType::Music)->fontId == 0
+            && earlyBaseline->getFontInfo(FontType::Music)->fontSize == 71,
+        "Finale 1.0.0 music font tuple was not recovered");
+    expect(earlyBaseline->getFontInfo(FontType::TextBlock)->fontId == 1
+            && earlyBaseline->getFontInfo(FontType::TextBlock)->fontSize == 12,
+        "Finale 1.0.0 text-block font tuple was not recovered");
+    expect(earlyBaseline->getFontInfo(FontType::LyricVerse)->fontId == 1
+            && earlyBaseline->getFontInfo(FontType::LyricVerse)->fontSize == 12,
+        "Finale 1.0.0 lyric-verse font tuple was not recovered");
+
+    const auto f100Music = read("evidence/F100/F100-music-font.mus");
+    const auto earlyMusic = f100Music.document->getOptions()->get<FontOptions>()
+        ->getFontInfo(FontType::Music);
+    expect(earlyMusic->fontId == 12 && earlyMusic->fontSize == 60
+            && earlyMusic->getEnigmaStyles() == 0,
+        "The controlled Finale 1.0.0 music-font edit was not recovered");
+
+    const auto f263Baseline = read("evidence/F263/F263-baseline.mus");
+    const auto f263Music = read("evidence/F263/F263-music-font.mus");
+    const auto f263BaselineOptions = f263Baseline.document->getOptions()->get<FontOptions>();
+    const auto f263MusicOptions = f263Music.document->getOptions()->get<FontOptions>();
+    expect(f263BaselineOptions && f263MusicOptions
+            && f263BaselineOptions->fontOptions.size() == 45
+            && f263MusicOptions->fontOptions.size() == 45,
+        "Finale 2.6.3 font options were not completed");
+    const auto f263ChangedMusic = f263MusicOptions->getFontInfo(FontType::Music);
+    expect(f263ChangedMusic->fontId == 28 && f263ChangedMusic->fontSize == 24
+            && f263ChangedMusic->italic,
+        "The controlled Finale 2.6.3 music-font edit was not recovered");
+
+    // Finale 27 derives a JazzPerc percussion preference when it upgrades the changed
+    // fixture, but the MUS file contains no independently sourced percussion preference.
+    // It therefore remains the selected platform reference value in both imports.
+    for (const auto* result : {&f263Baseline, &f263Music}) {
+        const auto percussion = result->document->getOptions()->get<FontOptions>()
+            ->getFontInfo(FontType::Percussion);
+        expect(percussion->fontId == 77 && percussion->fontSize == 24
+                && percussion->getEnigmaStyles() == 0
+                && percussion->getName() == "Maestro Percussion",
+            "Pre-2003 percussion did not retain the reference FontOptions value");
+        expect(field(*result, "options.fontOptions[28].fontId").origin
+                == ValueOrigin::Finale27Default,
+            "Pre-2003 percussion was reported as though it came from the MUS file");
+    }
+
+    const auto f100Text = read("evidence/F100/F100-text-font.mus");
+    const auto earlyText = f100Text.document->getOptions()->get<FontOptions>()
+        ->getFontInfo(FontType::TextBlock);
+    expect(earlyText->fontId == 2 && earlyText->fontSize == 17
+            && earlyText->bold && earlyText->italic,
+        "The controlled Finale 1.0.0 text-font edit was not recovered");
+
+    const auto f100Lyric = read("evidence/F100/F100-lyric-verse.mus");
+    const auto earlyLyric = f100Lyric.document->getOptions()->get<FontOptions>()
+        ->getFontInfo(FontType::LyricVerse);
+    expect(earlyLyric->fontId == 3 && earlyLyric->fontSize == 13
+            && earlyLyric->underline
+            && field(f100Lyric, "options.fontOptions[9].effects").rawValue == 28,
+        "The controlled Finale 1.0.0 lyric-font edit or effects mask was not recovered");
+
+    const auto expectEarlyFont = [&](const char* path, FontType type,
+                                     musx::dom::Cmper fontId, int size,
+                                     std::uint16_t rawEffects) {
+        auto result = read(path);
+        const auto font = result.document->getOptions()->get<FontOptions>()->getFontInfo(type);
+        expect(font->fontId == fontId && font->fontSize == size,
+            std::string("Controlled early font was not recovered from ") + path);
+        expect(field(result, "options.fontOptions["
+                + std::to_string(static_cast<std::size_t>(type)) + "].effects").rawValue
+                == rawEffects,
+            std::string("Controlled early effects mask was not reported from ") + path);
+        return result;
+    };
+
+    const auto f100Accis = expectEarlyFont(
+        "evidence/F100/F100-accis.mus", FontType::ChordAcci, 2, 8, 0);
+    const auto f100Chord = expectEarlyFont(
+        "evidence/F100/F100-chord.mus", FontType::Chord, 3, 9, 8);
+    const auto f100Chorus = expectEarlyFont(
+        "evidence/F100/F100-chorus.mus", FontType::LyricChorus, 4, 11, 4);
+    const auto f100Clef = expectEarlyFont(
+        "evidence/F100/F100-clef.mus", FontType::Clef, 4, 33, 4);
+    const auto f100Ending = expectEarlyFont(
+        "evidence/F100/F100-ending.mus", FontType::Ending, 9, 19, 0);
+    const auto f100Key = expectEarlyFont(
+        "evidence/F100/F100-key-font.mus", FontType::Key, 4, 13, 2);
+    const auto f100Name = expectEarlyFont(
+        "evidence/F100/F100-name.mus", FontType::StaffNames, 7, 12, 1);
+    const auto f100Section = expectEarlyFont(
+        "evidence/F100/F100-section.mus", FontType::LyricSection, 3, 19, 16);
+    const auto f100Time = expectEarlyFont(
+        "evidence/F100/F100-time.mus", FontType::Time, 4, 17, 16);
+    const auto f100Tuplet = expectEarlyFont(
+        "evidence/F100/F100-tuplet.mus", FontType::Tuplet, 20, 17, 0);
+    expect(f100Tuplet.document->getOptions()->get<FontOptions>()
+                ->getFontInfo(FontType::ChordAcci)->fontId == 20,
+        "The ChordAcci side effect in the controlled tuplet save was not recovered");
+
+    for (const auto* result : {&f2002, &f2005, &f2007, &f2012,
+             &f100Baseline, &f100Music, &f263Baseline, &f263Music,
+             &f100Text, &f100Lyric,
+             &f100Accis, &f100Chord, &f100Chorus, &f100Clef, &f100Ending,
+             &f100Key, &f100Name, &f100Section, &f100Time, &f100Tuplet}) {
+        const auto options = result->document->getOptions()->get<FontOptions>();
+        for (const auto& [type, font] : options->fontOptions) {
+            (void)type;
+            expect(static_cast<bool>(result->document->getOthers()
+                    ->get<musx::dom::others::FontDefinition>(
+                        musx::dom::SCORE_PARTID, font->fontId)),
+                "A completed font option has a dangling font id");
+        }
     }
 }
 
@@ -597,7 +778,22 @@ void testUncompressedEpochAndOverlays()
         "Uncompressed music spacing overlay failed");
     expect(field(result, "others.layerAtts[3].restOffset").origin == ValueOrigin::LegacyMus,
         "Layer overlay was not reported as recovered");
-    expectCompleteOptions(result);
+    const auto fallbackText = result.document->getOptions()
+        ->get<musx::dom::options::FontOptions>()
+        ->getFontInfo(musx::dom::options::FontOptions::FontType::TextBlock);
+    const auto fallbackDefinition = result.document->getOthers()
+        ->get<musx::dom::others::FontDefinition>(
+            musx::dom::SCORE_PARTID, fallbackText->fontId);
+    // Times New Roman is cmper 2 in the Windows reference. This target starts with no
+    // font definitions, so the cloned definition must use its next sequential cmper, 1.
+    expect(fallbackText->fontId == 1
+            && fallbackDefinition && fallbackDefinition->getCmper() == 1
+            && fallbackDefinition->name == "Times New Roman"
+            && fallbackDefinition->charsetBank
+                == musx::dom::others::FontDefinition::CharacterSetBank::Windows
+            && fallbackDefinition->pitch == 2,
+        "A cloned Windows fallback font retained its reference cmper or lost its definition");
+    expectSeededOptionsExceptFontOptions(result);
     expectNoScoreContent(result);
 }
 
@@ -646,7 +842,11 @@ void testCodaBannerEpoch()
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported Coda-banner option was not retained as a default");
-    expectCompleteOptions(result);
+    const auto fonts = result.document->getOptions()
+        ->get<musx::dom::options::FontOptions>();
+    expect(fonts && fonts->fontOptions.size() == 45,
+        "Unsupported Coda-banner FontOptions were not safely completed from the baseline");
+    expectSeededOptionsExceptFontOptions(result);
     expectNoScoreContent(result);
 }
 
@@ -681,6 +881,7 @@ void testMalformedInput()
 
 TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
 TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
+TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
 TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
 TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }
 TEST_CASE("Big-endian class records", "[reader]") { testBigEndianClassRecords(); }

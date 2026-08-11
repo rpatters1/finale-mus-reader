@@ -32,7 +32,7 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     const std::uint8_t* data,
     std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
-    XmlParser parseXml,
+    XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report);
 
 } // namespace finale_mus_reader

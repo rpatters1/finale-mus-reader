@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "musx/dom/Document.h"
+#include "musx/factory/DocumentFactory.h"
 #include "musx/xml/XmlInterface.h"
 
 namespace finale_mus_reader {
@@ -21,6 +22,11 @@ namespace finale_mus_reader {
 /// @details The reader owns document construction and only needs the caller's backend
 /// to turn pinned default EnigmaXML into elements the musxdom pool factories accept.
 using XmlParser = std::unique_ptr<musx::xml::IXmlDocument> (*)(const char* data, std::size_t size);
+
+/// @brief Parses a complete EnigmaXML document with the caller's selected XML backend.
+/// @details The pinned baseline uses this to retain a fully formed reference document
+/// alongside the filtered pools copied into the import target.
+using DocumentParser = musx::dom::DocumentPtr (*)(const char* data, std::size_t size);
 
 enum class FormatEpoch
 {
@@ -136,19 +142,22 @@ public:
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::filesystem::path& path)
     {
-        return readWithParser(path, &parseXml<XmlDocumentType>);
+        return readWithParser(
+            path, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data)
     {
-        return readWithParser(data.data(), data.size(), &parseXml<XmlDocumentType>);
+        return readWithParser(data.data(), data.size(),
+            &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size)
     {
-        return readWithParser(data, size, &parseXml<XmlDocumentType>);
+        return readWithParser(data, size,
+            &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
 private:
@@ -163,9 +172,17 @@ private:
         return xmlDocument;
     }
 
-    static ImportResult readWithParser(const std::filesystem::path& path, XmlParser parseXml);
+    template <typename XmlDocumentType>
+    static musx::dom::DocumentPtr parseDocument(const char* data, std::size_t size)
+    {
+        return musx::factory::DocumentFactory::create<XmlDocumentType>(data, size);
+    }
+
+    static ImportResult readWithParser(const std::filesystem::path& path,
+        XmlParser parseXml, DocumentParser parseDocument);
     static ImportResult readWithParser(
-        const std::uint8_t* data, std::size_t size, XmlParser parseXml);
+        const std::uint8_t* data, std::size_t size,
+        XmlParser parseXml, DocumentParser parseDocument);
 };
 
 } // namespace finale_mus_reader

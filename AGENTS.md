@@ -31,6 +31,15 @@ that task rather than reconstructing the procedure:
   It covers the conventions you must ask the user for, how survey results are
   namespaced per corpus, and the checks that keep local paths out of published
   files.
+- `.agents/skills/survey-class-coverage/`: compare one class or related set of
+  classes across a selected cohort of already-inventoried fixtures, optionally
+  using ETF or Finale 27 companions. Read this for targeted decoder-coverage and
+  upgrade-behavior studies; it keeps per-fixture observations private and
+  publishes only aggregate results.
+- `.agents/skills/implement-musxdom-class/`: research, draft, test, and refine
+  recovery of one musxdom DOM class from legacy MUS records. Read this when the
+  user asks to implement a class; it moves from small epoch samples to a narrow
+  implementation and then hands broad validation to `survey-class-coverage`.
 
 ## Repository map
 

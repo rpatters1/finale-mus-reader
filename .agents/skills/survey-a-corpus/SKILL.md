@@ -27,6 +27,11 @@ Two things make this more than "run the scripts":
   name, or path. A filename can name a work, a client, or a person. Anything
   bearing a name goes to `private/generated/`, which is gitignored. Step 5 is a
   mandatory check, not a formality.
+- **Print total import failures locally.** Whenever any survey stage attempts a
+  complete document import and a fixture fails, print that fixture's name and
+  private source path to the console, together with the error. Print every
+  failed occurrence, including archive members. This local diagnostic is the
+  intentional exception to path suppression; never copy it into tracked output.
 - **Do not move the generators.** `scripts/` is deliberately public and
   location-agnostic: every path is a CLI argument. Keep it that way. Anything
   corpus-specific belongs in the invocation, not in the code.
@@ -61,8 +66,9 @@ that silently reports zero exports.
    `--sniff-content` inventories any loose file whose header is Finale content.
    Prefer it whenever the corpus predates OS X or came off a Mac; the cost is
    reading 256 bytes per file.
-7. **Anything to exclude?** `--exclude=GLOB` is repeatable and skips a path or
-   anything beneath a matching directory. Two kinds of answer matter: material
+7. **Anything to exclude?** `--exclude=GLOB` is repeatable and skips a loose
+   path, an individual archive-member path, or anything beneath a matching
+   directory. Two kinds of answer matter: material
    that is ENIGMA-framed but is not a document (`*.lib` library files, `*.fan`
    font annotations), and subtrees a survey must not read at all. Ask rather
    than guess, then verify the guess: excluding a whole directory because its

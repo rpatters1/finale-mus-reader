@@ -63,10 +63,10 @@ struct SourceLocation
     /// @brief The record comparator. Ignored for @ref TargetKind::OthersByCmper tables,
     /// where the comparator of the target object is used instead.
     std::uint16_t selector{};
-    std::uint16_t incidence{};
+    std::uint32_t incidence{};
     /// @brief Word slot for @ref RecordEncoding::FixedRow, byte offset for
     /// @ref RecordEncoding::ClassRecord.
-    std::uint8_t wordSlot{};
+    std::uint32_t wordSlot{};
     ValueWidth width = ValueWidth::Word;
     LongWordOrder longOrder = LongWordOrder::HighFirst;
     BitRange bits{};
@@ -78,6 +78,14 @@ inline constexpr musx::dom::Cmper GLOBALS_CMPER = musx::dom::MUSX_GLOBALS_CMPER;
 
 /// @brief Placeholder selector for rows whose comparator comes from the target object.
 inline constexpr musx::dom::Cmper CMPER_FROM_TARGET = 0;
+
+/// @brief Converts a fixed-row numeric global selector to its zlib-era class id.
+/// @details The zlib serialization retained the logical option identities and added
+/// `0x000e` while coalescing each incidence family into one class-record payload.
+[[nodiscard]] constexpr records::LegacyTag numericGlobalClass(std::uint16_t selector)
+{
+    return static_cast<records::LegacyTag>(selector + 0x000eU);
+}
 
 /// @brief One end of a version gate, ordered by major then minor.
 /// @details Minor participates because the major version alone does not order Finale's
@@ -175,6 +183,21 @@ struct SourceProfile
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform platform = SourcePlatform::Unknown;
 };
+
+/// @brief A decoded mapping value together with the physical row that supplied it.
+struct ResolvedValue
+{
+    std::int64_t value{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+};
+
+/// @brief Reads one numeric value through the common fixed-row/class-record machinery.
+/// @details Dynamic collection mappings use this rather than duplicating bounds checks,
+/// byte-order handling, long-word assembly, or provenance rules.
+[[nodiscard]] std::optional<ResolvedValue> readSourceValue(
+    const records::LegacyRecordIndex& index, RecordEncoding encoding,
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder);
 
 /// @brief Assigns a decoded value to a member, converting through the member's own type.
 template <typename T>
@@ -321,7 +344,8 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
 
 /// @brief Applies every registered mapping table to a seeded document.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report);
+    const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);
 
 } // namespace mapping
 } // namespace finale_mus_reader
@@ -334,7 +358,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
-            static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
+            static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
         (versionsValue), \
         [](void* instance, std::int64_t value) { \
@@ -352,7 +376,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
             (::finale_mus_reader::mapping::BitRange{ \
@@ -373,7 +397,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
             (::finale_mus_reader::mapping::BitRange{ \
@@ -393,7 +417,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, \
         ::finale_mus_reader::mapping::FieldKind::Text, \
         ::finale_mus_reader::mapping::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint8_t>(byteOffset), \
+            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
             ::finale_mus_reader::mapping::BitRange{} }, \
@@ -414,7 +438,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::mapping::FieldKind::Number, \
         ::finale_mus_reader::mapping::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
-            static_cast<std::uint16_t>(incidenceValue), static_cast<std::uint8_t>(slotValue), \
+            static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             ::finale_mus_reader::mapping::ValueWidth::Word, \
             ::finale_mus_reader::mapping::LongWordOrder::HighFirst, \
             (::finale_mus_reader::mapping::BitRange{ \
