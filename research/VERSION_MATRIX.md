@@ -102,7 +102,9 @@ carry Enigma 3.8.0 build 7, the same Enigma version Finale 97 writes. So Finale 
 Finale-98 banner does not by itself imply a major-4 file layout. Four Windows-origin files decode nonsense at the
 same offset and remain unclassified.
 
-Finale 2011 is still absent from every survey and would be major 16. Not verified.
+Finale 2011 is major 16, **verified**: 723 distinct Finale 2011 documents mined from the Finale 2011 install DVD
+(Mac and Windows payloads) all report `16.0.0.30`. They also settled the FontOptions 13/28 boundary, which no other
+version could: see FORMAT_NOTES.md, "The 13/28 boundary is Finale 2012, not Finale 2003".
 
 ### Renamed releases
 

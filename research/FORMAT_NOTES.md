@@ -938,15 +938,44 @@ physical incidence:
 | odd | `n / 2` | slot 3 | slot 4 | slot 5 |
 
 The framework's zero-based default-font preference numbers are versioned rather than one timeless musxdom enum
-order. From at least Finale 98 through Finale 2002, index 13 is a legacy drawing-time tablature holding slot and
-index 28 is the actual default tablature font; earlier versions remain open. Beginning with Finale 2003, tablature
+order. From at least Finale 98 **through Finale 2011**, index 13 is a legacy drawing-time tablature holding slot and
+index 28 is the actual default tablature font; earlier versions remain open. **Beginning with Finale 2012**, tablature
 uses index 13 and index 28 is percussion. Indices
 40–42 are also present beginning in Finale 2003. The controlled Finale 2002 ETFs contain 20 incidences, enough for
 indices 0–39. The Finale 2003–2005 ETFs contain 22, enough for indices 0–43; index 43 is the zero-filled second tuple
 required to complete the final fixed 16-byte row. Each baseline/changed pair has
 an identical selector-24 array, as expected because the controlled edit changed a note rather than a document font.
 
-The version boundary is private-framework-derived and independently fits the exact-pair corpus. Across 42 distinct
+#### The 13/28 boundary is Finale 2012, not Finale 2003
+
+**Confirmed** by measurement, and it **contradicts the private-framework history** these notes previously followed,
+which places the transition at Finale 2003. Where the two disagree, the measurement governs and is what the importer
+implements; see the comment on `semanticType` in `src/import/options/font_options.cpp`.
+
+The earlier claim that the boundary "independently fits the exact-pair corpus" was true but not discriminating. It
+was tested against Finale 2002 sources, and Finale 2002 precedes *both* candidate boundaries, so those documents are
+consistent with either. Nothing in the corpus distinguished them until Finale 2011 specimens existed, because
+Finale 2011 is the only version whose behavior differs between the two hypotheses.
+
+Across 1,211 documents whose Finale 27 companion assigns tablature and percussion different values — the only
+documents that can discriminate — the arrangement is:
+
+| Source version | Documents | Arrangement |
+|---|---|---|
+| Finale 2003–2010 (majors 8–15) | 405 | index 28 is tablature; 13 is a holding slot |
+| **Finale 2011 (major 16)** | **597** | index 28 is tablature; 13 is a holding slot |
+| Finale 2012 (major 17) | 209 | index 13 is tablature; index 28 is percussion |
+
+No document contradicts this on either side of the boundary, on either platform. Coding the boundary at Finale 2003
+cost every Finale 2003–2011 document its tablature font and gave it a percussion font it never stored: 2,516 of the
+2,629 FontOptions disagreements then present in the corpus were this single rule.
+
+The Finale 2011 specimens that settled it came from the Finale 2011 install DVD; no Finale 2011 document existed in
+any survey before that. Comparison must normalize font names with musxdom's `normalizeFontName`: `EngraverTextT` and
+`Engraver Text T` are one face, and comparing raw spellings produced 324 false disagreements that made Finale 2011
+look internally inconsistent.
+
+Across 42 distinct
 Finale 2002 sources, index 28 carries the value upgraded into modern tablature, while index 13 is not an independent
 modern default. Across all 329 distinct Finale 2003–2006 exact-pair sources, physical index 43 is `(0, 0, 0)`. This
 is structural row fill, not a terminator or a version-encoded collection limit. Physical capture therefore walks

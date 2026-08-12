@@ -450,20 +450,27 @@ EPSF, six a `%!PS-Adobe` EPS, one a PNG. The container keeps the bytes and
 `ImportReport` names them, so nothing is silently dropped, but nothing consumes
 them. See [FORMAT_NOTES.md](FORMAT_NOTES.md#which-blocks-are-compressed).
 
-Two things are unresolved and neither needs solving soon:
+**Corrected 2026-08-12.** This entry previously listed two blockers and both were
+wrong. musxdom does have a destination: `DocumentFactory::CreateOptions` carries
+`EmbeddedGraphicFiles`, a vector of `{filename, EmbeddedGraphicBlob}` supplied at
+document creation. That also disposes of the filesystem objection, since the blobs
+are in-memory and the filename is just a label. Nothing about WebAssembly prevents
+this, and no second document model is needed.
 
-- **musxdom has no destination for picture data.** Whatever is decided must not
-  become a second document model here, per the repository boundary.
-- **There is no filesystem to write to.** The reader is expected to work under
-  WebAssembly, so "extract the EPS next to the document" is not available as a
-  general answer. Whatever the destination is, it has to be in-memory and carried
-  by the document or handed to the caller.
+What actually remains is decoding, and it is a self-contained cycle of work rather
+than an open question:
 
-The inner framing is only partly read: the stored payload begins with a nested
-`type` and `size` header — `0x000f` and `0x0043` both observed — before the image
-signature, and a block may hold more than one graphic. Decoding that is the first
-step whenever this is picked up, and it needs no new evidence; the corpus already
-has the specimens.
+- **The inner framing differs by epoch** and has to be worked out per era, the way
+  every other structure here has been.
+- **The framing is only partly read.** The stored payload begins with a nested
+  `type` and `size` header — `0x000f` and `0x0043` both observed — before the image
+  signature, and a block may hold more than one graphic. That is the first step
+  whenever this is picked up, and it needs no new evidence; the corpus already has
+  the specimens.
+
+The expectation is that these will eventually be carried across. Until then the
+bytes are preserved, the report names them at info level, and the document is
+usable without them.
 
 A related observation, also deferred: **208 zlib files carry a non-empty `0x001d`
 block** that the reader never reaches, because the walk stops at the first terminal

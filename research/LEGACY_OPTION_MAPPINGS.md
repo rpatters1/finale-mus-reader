@@ -181,8 +181,11 @@ from a separate baseline document with font-definition remapping.
    established byte order.
 4. Construct one fresh, document-owned `FontOptions`. For each complete source tuple, construct a fresh `FontInfo`,
    assign `fontId`, assign signed `fontSize`, and pass the unsigned effects word to `setEnigmaStyles`. Insert it only
-   through the era-specific semantic map: in Finale 2002, skip physical 13 and map physical 28 to `Tablature`;
-   from Finale 2003 onward, map 13 to `Tablature` and 28 to `Percussion`. Do not encode a tuple-count limit: walk
+   through the era-specific semantic map: through Finale 2011, skip physical 13 and map physical 28 to `Tablature`;
+   from Finale 2012 onward, map 13 to `Tablature` and 28 to `Percussion`. Decide which layout applies by epoch first:
+   the uncompressed and DCL epochs are entirely pre-2012 and need no version test, and only the zlib epoch spans the
+   boundary. Major 12 occurs in both the DCL epoch (Finale 2006) and the zlib epoch (Finale 2007), so no version
+   range alone separates them. Do not encode a tuple-count limit: walk
    what the file carries, ignoring an all-zero second tuple at the end of the final two-tuple unit as structural
    fill. This applies to fixed rows and to the tuple-pair grouping preserved in the zlib payload. Add
    the `FontOptions` object to the pool exactly once. Do not duplicate the six effect bit constants in this
@@ -227,8 +230,11 @@ from a separate baseline document with font-definition remapping.
 ### FontOptions sequence-verification strategy
 
 The physical sequence has not always used the current `FontType` semantics. Private framework history places the
-tablature transition at Finale 2003: from at least Finale 98 through Finale 2002, physical 13 is a holding slot and
-physical 28 is default tablature; beginning in Finale 2003, 13 is tablature and 28 is percussion. Physical 43 is
+tablature transition at Finale 2003; **measurement places it at Finale 2012, and the measurement governs.** From at
+least Finale 98 through **Finale 2011**, physical 13 is a holding slot and physical 28 is default tablature;
+**beginning in Finale 2012**, 13 is tablature and 28 is percussion. See FORMAT_NOTES.md, "The 13/28 boundary is
+Finale 2012, not Finale 2003", for the 1,211 discriminating documents behind this and for why the corpus appeared to
+agree with the framework history until Finale 2011 specimens existed. Physical 43 is
 reserved through Finale 2006 and becomes `TimeParts` in Finale 2007. The sequence before Finale 98 and the physical
 location before the verified Finale 2002 layout remain **open**.
 Finale 27 upgrades of exact legacy files remain the primary semantic reference for observing the associated upgrade
