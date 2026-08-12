@@ -904,7 +904,7 @@ void testClefOptionsCapture()
         const auto result = read(path);
         const auto options = clefs(result);
         for (std::size_t i = 0; i < expected.size(); ++i) {
-            expect(options->getClefDef(i)->baselineAdjust == expected[i],
+            expect(options->getClefDef(musx::dom::ClefIndex(i))->baselineAdjust == expected[i],
                 std::string("The clef baseline adjustment was wrong for ") + era);
         }
         // The edit must not disturb the fields that share the record.
