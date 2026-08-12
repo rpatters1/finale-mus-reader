@@ -96,6 +96,7 @@ std::string originName(finale_mus_reader::ValueOrigin origin)
 {
     switch (origin) {
     case finale_mus_reader::ValueOrigin::LegacyMus: return "legacy-mus";
+    case finale_mus_reader::ValueOrigin::LegacyBehavior: return "legacy-behavior";
     case finale_mus_reader::ValueOrigin::Finale27Default: return "finale27-default";
     }
     return "unknown";
@@ -149,14 +150,15 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         ->get<musx::dom::options::FontOptions>();
     std::size_t completeFieldCount = 0;
     std::size_t recoveredCount = 0;
+    std::size_t behaviorCount = 0;
     std::size_t defaultCount = 0;
     for (const auto& [ordinal, tuple] : tuples) {
         if (ordinal >= 45 || !tuple.fontId || !tuple.fontSize || !tuple.effects) continue;
         ++completeFieldCount;
-        if (tuple.fontId->origin == finale_mus_reader::ValueOrigin::LegacyMus) {
-            ++recoveredCount;
-        } else {
-            ++defaultCount;
+        switch (tuple.fontId->origin) {
+        case finale_mus_reader::ValueOrigin::LegacyMus: ++recoveredCount; break;
+        case finale_mus_reader::ValueOrigin::LegacyBehavior: ++behaviorCount; break;
+        case finale_mus_reader::ValueOrigin::Finale27Default: ++defaultCount; break;
         }
     }
     std::size_t danglingNonzeroCount = 0;
@@ -195,6 +197,7 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         << ",\"font_option_count\":" << (fontOptions ? fontOptions->fontOptions.size() : 0)
         << ",\"complete_font_option_field_count\":" << completeFieldCount
         << ",\"recovered_font_option_count\":" << recoveredCount
+        << ",\"legacy_behavior_font_option_count\":" << behaviorCount
         << ",\"default_font_option_count\":" << defaultCount
         << ",\"font_definition_count\":" << fonts.size()
         << ",\"source_font_definition_count\":" << sourceFontIds.size()

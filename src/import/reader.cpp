@@ -36,8 +36,24 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     result.report.byteOrder = parsed.byteOrder;
     result.report.sourceSize = size;
     describeSourceIdentity(data, size, result.report);
+    std::size_t storedBlocks = 0;
+    std::size_t storedBytes = 0;
     for (const auto& block : parsed.blocks) {
         result.report.blocks.push_back(block.info);
+        if (block.info.stored) {
+            ++storedBlocks;
+            storedBytes += block.data.size();
+        }
+    }
+    if (storedBlocks != 0) {
+        // Say what is there rather than silently dropping it. These blocks hold embedded
+        // graphics, and nothing imports them yet: musxdom has no destination for picture
+        // data and the reader must work without a filesystem under WebAssembly, so where the
+        // bytes should go is an open question. Reporting keeps the fact visible in the
+        // meantime. See research/PRODUCTION_READINESS.md.
+        result.report.warnings.push_back("The document embeds " + std::to_string(storedBlocks)
+            + " stored block(s) totalling " + std::to_string(storedBytes)
+            + " byte(s), which hold graphics this reader preserves but does not import.");
     }
     if (parsed.trailingByteCount != 0) {
         result.report.warnings.push_back(

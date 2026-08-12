@@ -59,7 +59,22 @@ enum class SourcePlatform
 
 enum class ValueOrigin
 {
+    /// @brief Read from the source file's own bytes.
     LegacyMus,
+    /// @brief Supplied from how the source version behaved, because it had no option to
+    /// store.
+    /// @details A field that later Finale versions expose as a setting is often fixed
+    /// behavior in an earlier one. Such a value is neither read from the file nor guessed:
+    /// the era's behavior determines it, and the version or epoch that introduced the
+    /// setting is the boundary. Reporting it as a synthesized default would understate it,
+    /// and reporting it as recovered would claim bytes that do not exist.
+    ///
+    /// Coda-banner clef courtesies are the motivating case. No version before 3.6.2 offers
+    /// the option and every such document shows a courtesy clef, so the value is known
+    /// exactly while nothing in the file records it.
+    LegacyBehavior,
+    /// @brief Left at the value the pinned Finale 27 baseline supplies, because this source
+    /// neither records the field nor determines it by behavior.
     Finale27Default
 };
 
@@ -96,6 +111,12 @@ struct BlockInfo
     std::size_t decodedSize{};
     bool checksumPresent{};
     bool checksumValid{};
+    /// @brief The block's payload is held verbatim rather than decompressed.
+    /// @details The two terminal block types are usually empty markers, but when a document
+    /// embeds a graphic they carry its bytes, uncompressed and with no checksum word. Such a
+    /// block is reported so a caller can see that the document contains data this reader
+    /// preserves but does not yet interpret.
+    bool stored{};
 };
 
 struct FieldInfo

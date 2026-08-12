@@ -24,8 +24,12 @@ const std::vector<const MappingTable*>& registeredTables()
     static const std::vector<const MappingTable*> result = {
         &others::fontDefinitionsTable(),
         &others::earlyFontDefinitionsTable(),
+        &others::codaFontDefinitionsTable(),
         &others::classFontDefinitionsTable(),
         &options::musicSpacingOptionsTable(),
+        &options::clefOptionsTable(),
+        &options::earlyClefOptionsTable(),
+        &options::classClefOptionsTable(),
         &others::layerAttributesTable()};
     return result;
 }
@@ -57,6 +61,16 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
         const auto mask = (std::uint64_t{1} << source.bits.bitCount) - 1U;
         value = static_cast<std::int64_t>(
             (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
+    } else {
+        // A whole field is signed, because the fixed-row path reads one through a signed
+        // word and the two encodings must not disagree about the same logical option. A bit
+        // range is exempt: extracted bits are a magnitude, not a number with a sign. Without
+        // this an Evpu of -12 arrives as 65524 and is assigned as such.
+        const auto bitCount = 8U * width;
+        const auto signBit = std::uint64_t{1} << (bitCount - 1U);
+        if ((static_cast<std::uint64_t>(value) & signBit) != 0) {
+            value |= static_cast<std::int64_t>(~std::uint64_t{0} << bitCount);
+        }
     }
     return ResolvedValue{value, row->blockOffset, row->decodedOffset};
 }
@@ -270,7 +284,12 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         throw std::logic_error(
             "Legacy mappings require a separate, fully formed reference document");
     }
+    // ClefOptions is rebuilt rather than seeded, so its object must exist before the tables
+    // run: the clef tables overlay that object's scalars and report the ones this source
+    // cannot supply as Finale 27 defaults.
+    options::captureClefOptions(index, profile, document, referenceDocument, report);
     applyMappingTables(registeredTables(), index, profile, document, report);
+    options::validateClefOptions(document, report);
     options::captureFontOptions(index, profile, document, referenceDocument, report);
 }
 
@@ -298,6 +317,15 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 FieldInfo info;
                 info.target = reportTarget(table, target, *field.reporting);
                 info.origin = ValueOrigin::Finale27Default;
+                // A capture pass runs before the tables and may already have established
+                // this field, most often as era behavior that no record stores. Claiming it
+                // as a synthesized default afterwards would both duplicate the entry and
+                // downgrade what is known about it, so the earlier claim stands.
+                if (!field.readable
+                    && std::any_of(report.fields.begin(), report.fields.end(),
+                        [&](const FieldInfo& existing) { return existing.target == info.target; })) {
+                    continue;
+                }
                 // A text field has no numeric default to report, and an object created from
                 // records has no seeded value at all, so both leave the raw value at zero.
                 if (field.reporting->read) {

@@ -60,8 +60,16 @@ struct EarlyTuple
 };
 
 // One row per variable-length physical representation. Tuple counts come from the file.
+//
+// The fixed-row row is gated on the epoch rather than on a version range. Selector 24 is the
+// default-font array in every epoch that uses fixed rows except the Coda-banner era, where it
+// holds one row of unrelated values, and `EpochMask::FixedRow` excludes exactly that era. A
+// version range would add nothing and would cost real files: it previously read `Dcl` only,
+// so every Finale 3.0 through 2000 document reported all 45 font options as Finale 27
+// defaults while its source held 40 of them. Verified against the exact Finale 27 companions
+// of the Finale 97 and Finale 2000 fixtures, which agree tuple for tuple.
 const std::array<FontOptionsLayout, 2> layouts{{
-    {EpochMask::Dcl, versions::between({7, 0}, {11, 0xff}),
+    {EpochMask::FixedRow, versions::any(),
         RecordEncoding::FixedRow, records::packTag("24")},
     {EpochMask::Zlib, versions::any(), RecordEncoding::ClassRecord,
         numericGlobalClass(fontOptionsSelector)},
@@ -80,8 +88,9 @@ constexpr EarlyTuple contiguousEarlyTuple(
 }
 
 // Confirmed by controlled Finale 1.0.0 source edits and their exact Finale 27 upgrades,
-// except StaffNames: Finale 1.0 calls the source preference "Name", but Finale 27 drops it.
-// Its continuation as StaffNames is strong under the additive-only early-version hypothesis.
+// except StaffNames: Finale 1.0 calls the source preference "Name", and this era has exactly
+// one of it where Finale 3.0 and later store four. Its continuation as StaffNames is strong
+// under the additive-only early-version hypothesis. See @ref codaNameCompanionTypes.
 const std::array<EarlyTuple, 13> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::Music, "02", 0),
     contiguousEarlyTuple(FontType::Key, "03", 3),
@@ -98,6 +107,30 @@ const std::array<EarlyTuple, 13> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::LyricSection, "27", 3),
     contiguousEarlyTuple(FontType::StaffNames, "04", 3),
 }};
+
+// The Coda-banner era exposes a single "Name" font preference. Finale 3.0 split it into the
+// four modern name types, which that era stores as separate tuples at physical ordinals 31,
+// 32, 33 and 39 -- so this fan-out belongs to the Coda epoch alone and must not be applied
+// to any later one.
+//
+// Recovering only StaffNames would leave the other three at Finale 27 defaults and so emit a
+// document whose staff names use one face and size while its group and abbreviated names use
+// another. The source never had that split, and neither does the Finale 27 baseline, which
+// sets all four identically. Propagating the one preference to all four is the reading that
+// preserves the source's own behavior.
+//
+// This is a deliberate divergence from the Finale 27 companions, which is recorded in
+// research/FORMAT_NOTES.md and is open to revision. Those companions disagree among
+// themselves about the four name types in a way that tracks the default file the upgrade was
+// performed under rather than the source document, so they do not settle the question. The
+// three propagated types report as ValueOrigin::LegacyBehavior, not LegacyMus: the bytes are
+// read from the source, but the assignment restores an era behavior rather than an option
+// the source stored.
+constexpr std::array<FontType, 3> codaNameCompanionTypes{
+    FontType::AbbrvStaffNames,
+    FontType::GroupNames,
+    FontType::AbbrvGroupNames,
+};
 
 const FontOptionsLayout* layoutFor(const SourceProfile& profile)
 {
@@ -221,11 +254,14 @@ std::optional<FontType> semanticType(
         return std::nullopt;
     }
 
-    if (!profile.version) {
-        return std::nullopt;
-    }
-    if (profile.version->major >= 3 // Finale 3.0
-        && profile.version->major <= 7) { // Finale 2002
+    // The uncompressed epoch is entirely Finale 3.0 through 2000, so it always takes the
+    // earlier semantic layout and needs no version at all. Deciding by epoch rather than by
+    // version range is what keeps this true of any file the container classifies, including
+    // one whose header version cannot be recovered.
+    const bool earlyLayout = profile.epoch == FormatEpoch::UncompressedLegacy
+        || (profile.version && profile.version->major >= 3 // Finale 3.0
+            && profile.version->major <= 7); // Finale 2002
+    if (earlyLayout) {
         if (physicalOrdinal == 13) {
             return std::nullopt;
         }
@@ -235,6 +271,9 @@ std::optional<FontType> semanticType(
         if (physicalOrdinal < fontTypeCount) {
             return static_cast<FontType>(physicalOrdinal);
         }
+        return std::nullopt;
+    }
+    if (!profile.version) {
         return std::nullopt;
     }
     if (profile.version->major >= 8 // Finale 2003
@@ -269,7 +308,8 @@ bool isStructuralTupleFill(std::size_t tupleCount, std::size_t physicalOrdinal,
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<FontOptionsTarget>& target, FontType type,
     const ResolvedValue& fontId, const ResolvedValue& size,
-    const ResolvedValue& effects, ImportReport& report)
+    const ResolvedValue& effects, ImportReport& report,
+    ValueOrigin origin = ValueOrigin::LegacyMus)
 {
     auto font = std::make_shared<FontInfo>(document);
     font->fontId = static_cast<musx::dom::Cmper>(
@@ -278,11 +318,11 @@ void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     font->setEnigmaStyles(static_cast<std::uint16_t>(effects.value));
     target->fontOptions.insert_or_assign(type, std::move(font));
 
-    reportField(report, type, "fontId", ValueOrigin::LegacyMus,
+    reportField(report, type, "fontId", origin,
         static_cast<std::uint16_t>(fontId.value), fontId.blockOffset, fontId.decodedOffset);
-    reportField(report, type, "fontSize", ValueOrigin::LegacyMus,
+    reportField(report, type, "fontSize", origin,
         static_cast<std::int16_t>(size.value), size.blockOffset, size.decodedOffset);
-    reportField(report, type, "effects", ValueOrigin::LegacyMus,
+    reportField(report, type, "effects", origin,
         static_cast<std::uint16_t>(effects.value), effects.blockOffset, effects.decodedOffset);
 }
 
@@ -442,8 +482,12 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     auto target = std::make_shared<FontOptionsTarget>(document);
     document->getOptions()->add(FontOptionsTarget::XmlNodeName, target);
 
-    if (profile.epoch == FormatEpoch::CodaBanner
-        && versions::between({1, 0}, {2, 0xff}).includes(profile.version)) {
+    // The epoch alone, with no version test. The range this used to carry, 1.0 through 2.ff,
+    // is simply a restatement of the Coda-banner era, so it could never exclude a Mac document
+    // -- but it excluded every Windows one, because that era states a platform where it states
+    // a version and `PC 1.0+` yields none. The tuple locations below hold for both: all 24
+    // Windows documents agree with their exact Finale 27 companions on every recovered type.
+    if (profile.epoch == FormatEpoch::CodaBanner) {
         for (const auto& tuple : earlyCodaTuples) {
             const auto fontId = readEarlyTupleField(
                 index, tuple, TupleField::FontId, profile.byteOrder);
@@ -454,6 +498,13 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
             if (fontId && size && effects) {
                 insertRecoveredTuple(document, target, tuple.type,
                     *fontId, *size, *effects, report);
+                if (tuple.type == FontType::StaffNames) {
+                    for (const auto companion : codaNameCompanionTypes) {
+                        insertRecoveredTuple(document, target, companion,
+                            *fontId, *size, *effects, report,
+                            ValueOrigin::LegacyBehavior);
+                    }
+                }
             }
         }
     } else if (const auto* layout = layoutFor(profile)) {

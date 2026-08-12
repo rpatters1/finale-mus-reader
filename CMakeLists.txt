@@ -62,6 +62,18 @@ else()
             EXCLUDE_FROM_DEFAULT_BUILD TRUE)
     endif()
 
+    # A unity build is this project's invariant, not the dependency's. zlib's own C sources
+    # do not amalgamate: inftrees.h is included by several of them and is not idempotent, so
+    # combining them redefines its types. Opting the fetched targets out keeps
+    # -DCMAKE_UNITY_BUILD=ON a single-flag smoke test of project-owned code rather than
+    # something that needs an installed zlib to get past a dependency's build policy.
+    foreach(finale_mus_reader_zlib_target zlib zlibstatic)
+        if(TARGET ${finale_mus_reader_zlib_target})
+            set_target_properties(${finale_mus_reader_zlib_target} PROPERTIES
+                UNITY_BUILD OFF)
+        endif()
+    endforeach()
+
     if(TARGET zlibstatic)
         set(FINALE_MUS_READER_ZLIB_TARGET zlibstatic)
     elseif(TARGET zlib)
@@ -139,6 +151,7 @@ add_library(finale_mus_reader STATIC
     src/import/legacy_mapping.cpp
     src/import/others/font_definitions.cpp
     src/import/others/layer_attributes.cpp
+    src/import/options/clef_options.cpp
     src/import/options/font_options.cpp
     src/import/options/music_spacing_options.cpp
     src/import/reader.cpp

@@ -14,6 +14,10 @@ namespace others {
 [[nodiscard]] const MappingTable& layerAttributesTable();
 [[nodiscard]] const MappingTable& fontDefinitionsTable();
 [[nodiscard]] const MappingTable& earlyFontDefinitionsTable();
+
+/// @brief Font definitions for the Coda-banner epoch, which is entirely below the header
+/// boundary and therefore needs no version test. Its Windows documents have no version to test.
+[[nodiscard]] const MappingTable& codaFontDefinitionsTable();
 [[nodiscard]] const MappingTable& classFontDefinitionsTable();
 
 } // namespace others

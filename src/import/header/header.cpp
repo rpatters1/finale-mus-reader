@@ -76,6 +76,11 @@ SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
     if (byteOrder == ByteOrder::BigEndian) {
         return decodeVersionValue(bigEndian);
     }
+    // Last resort only: the caller did not know the byte order. Preferring big-endian and
+    // accepting any major version inside Finale's range is a weak test, because a swapped
+    // value often lands inside it too. A Windows Finale 3.0 file stores `0f 03 01 03`, which
+    // reads big-endian as major 15 and passes, concealing the correct 3.0.1. Callers that can
+    // know the order must set it; this exists so a header can still be described without one.
     const auto candidate = decodeVersionValue(bigEndian);
     return candidate.major <= maximumFinaleMajorVersion
         ? candidate : decodeVersionValue(littleEndian);
@@ -128,6 +133,19 @@ bool describeCodaBannerIdentity(
     report.banner = parsed.text;
     report.savingProduct = parsed.product;
     report.sourceVersion = banner::versionFromProduct(parsed.product);
+    // This era has no platform field at 0x074, so the banner product is the only place it
+    // can say. A `PC` product states Windows; anything else states nothing and stays
+    // Unknown. The era is believed to have had only two platforms, which would make every
+    // other product a Mac one, but no observed file says so and a Windows release writing a
+    // numeric product would break the inference silently. Unknown already falls back to the
+    // macOS baseline, so claiming Mac would buy nothing and risk being wrong.
+    //
+    // Recovering the Windows case matters beyond diagnostics: the platform selects which
+    // pinned Finale 27 baseline seeds the options pool, so without this a Windows document
+    // would be completed from macOS defaults.
+    if (parsed.hasPcProduct()) {
+        report.sourcePlatform = SourcePlatform::Windows;
+    }
     return true;
 }
 

@@ -370,13 +370,16 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         nullptr \
     }
 
-/// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
-#define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload,
+/// in a record found under an explicit comparator.
+#define MUS_CLASS_SELECTED_BITS(Class, classId, selectorValue, byteOffset, firstBit, \
+                                bitCount, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
+            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             (::finale_mus_reader::BitRange{ \
@@ -390,6 +393,24 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
+
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
+/// @details The comparator is left at zero because the tables that use this are others
+/// tables, where the target object's own comparator selects the record and the field's
+/// comparator is ignored. An options singleton has no such comparator and must name the
+/// record's own, so it uses @ref MUS_CLASS_WORD or @ref MUS_CLASS_BIT instead.
+#define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, 0, byteOffset, firstBit, bitCount, member)
+
+/// @brief A whole two-byte field of a class-identified record found under a comparator.
+/// @details The zero bit count is what selects the whole value rather than a range of it,
+/// and a whole value is read signed.
+#define MUS_CLASS_WORD(Class, classId, selector, byteOffset, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, selector, byteOffset, 0, 0, member)
+
+/// @brief A single bit of a class-identified record's payload word, under a comparator.
+#define MUS_CLASS_BIT(Class, classId, selector, byteOffset, bitIndex, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, selector, byteOffset, bitIndex, 1, member)
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \

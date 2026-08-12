@@ -1,0 +1,676 @@
+// Copyright (c) 2026 Robert G. Patterson
+// SPDX-License-Identifier: MIT
+
+#include "import/options/options.h"
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "musx/musx.h"
+
+namespace finale_mus_reader {
+namespace options {
+namespace {
+
+using ClefOptionsTarget = musx::dom::options::ClefOptions;
+using ClefDef = ClefOptionsTarget::ClefDef;
+using FontInfo = musx::dom::FontInfo;
+
+// The clef table is a numeric global like any other option. It is not a record type of its
+// own: through Finale 2006 it is the two decimal characters of its selector, and from 2007
+// the class id that the shared numericGlobalClass rule derives from that same selector.
+constexpr std::uint16_t clefTableSelector = 95;
+
+// Before Finale 2001 there is no clef table. Each of the eight clefs of that era is a
+// separate single-incidence global, selectors 28 through 35, and selector 36 is the tuplet
+// font, so eight is a ceiling the record vocabulary itself imposes rather than a guess.
+constexpr std::uint16_t earlyFirstSelector = 28;
+constexpr std::size_t earlyClefCount = 8;
+
+// Word slots within one early record. Confirmed by controlled one-variable edits in both
+// Finale 1.0.0 and Finale 2.6.3: changing one clef's baseline adjustment moves word 4 and
+// nothing else in the entire record set, and the era's own ETF shows the same word. Word 1
+// carries a per-clef value this era populates by default and Finale 3.0 stops writing; what
+// it means is **open**, so it is neither assigned nor converted.
+constexpr std::uint32_t earlyMiddleCPosSlot = 0;
+constexpr std::uint32_t earlyClefCharSlot = 2;
+constexpr std::uint32_t earlyStaffPositionSlot = 3;
+constexpr std::uint32_t earlyBaselineDifferenceSlot = 4;
+
+// Before Finale 97 the baseline adjustment is a feature the document switches on, in bit 0
+// of word 5 of the *first* clef's selector. The switch is per document, not per clef: the
+// controlled Finale 3.7.2 pair toggles it 0 -> 1 and its companion then converts all eight
+// clefs, including ones that save never touched, while the same document with the switch off
+// loses baselines it plainly stores.
+//
+// Finale 97, internally 3.8, dropped the checkbox and applies the adjustment unconditionally.
+// Its files still carry other bits in word 5 -- 24, 30 and 36 all occur -- so testing the
+// word for non-zero would read those as a switch that is not there and happen to be right
+// only because every 3.8-and-later corpus file leaves its baselines at zero.
+//
+// The window is bounded at both ends rather than left open at "3.8 or later". The early path
+// only ever sees pre-2001 versions, so the upper bound changes nothing today; it is there so
+// that a file whose version is recovered as something wild cannot land in the always-on case
+// by accident. A wrong version should fall back to the bit test, which reads the document,
+// rather than to an unconditional yes.
+constexpr std::uint32_t earlyBaselineEnableSlot = 5;
+constexpr std::uint16_t earlyBaselineEnableBit = 0x0001;
+const VersionRange alwaysAdjustsBaseline = versions::between({3, 8}, {5, 0xff});
+
+// Word counts of the two clef-table tuple shapes. They differ only in the clef character,
+// which Finale 2012 widened from one word to a long when it gained Unicode text support.
+constexpr std::size_t narrowTupleWords = 9;
+constexpr std::size_t wideTupleWords = 10;
+constexpr std::size_t clefWordSize = 2;
+
+// The Enigma major version of Finale 2012, the first release whose clef character is a long.
+constexpr std::uint8_t firstUnicodeMajorVersion = 17;
+
+// A harmonic level is one staff position, so the conversion of a pre-2001 baseline
+// difference into Efix is musxdom's own two constants multiplied. Composing them rather
+// than writing half of EFIX_PER_SPACE keeps the definition of a staff position in the one
+// place musxdom already states it.
+constexpr double efixPerHarmonicLevel =
+    musx::dom::EFIX_PER_EVPU * musx::dom::EVPU_PER_STAFF_POSITION;
+
+// Every observed clef table from Finale 2003 onward holds this many definitions, and so
+// does the pinned Finale 27 baseline. It is what lets an ambiguous payload size be
+// resolved: 360 bytes divides evenly by both tuple width, but only one of the two
+// readings yields the collection Finale actually stores.
+constexpr std::size_t modernClefCount = 18;
+
+// Packed clef flags. Confirmed against exact Finale 27 companions: every tuple carrying
+// bit 1 has a non-zero font triple and its companion has <useOwnFont/>, and no tuple
+// without it ever does.
+constexpr std::uint16_t isShapeBit = 0x0001;
+constexpr std::uint16_t useOwnFontBit = 0x0002;
+constexpr std::uint16_t scaleToStaffHeightBit = 0x0004;
+
+/// @brief One clef definition as the source stores it, before any musxdom semantics.
+struct PhysicalClef
+{
+    std::int16_t middleCPos{};
+    std::uint32_t clefChar{};
+    std::int16_t staffPosition{};
+    /// @brief The difference between the clef's musical baseline, such as the G line of a
+    /// treble clef, and its typographic baseline. A music font whose clefs already sit on
+    /// the musical baseline leaves it zero.
+    /// @details The unit changes with the era, and both halves now rest on controlled edits.
+    ///
+    /// From Finale 2001 it is Efix, **confirmed**: a Finale 2005 fixture that sets one inch
+    /// on the treble clef stores 18432, which is exactly one inch, and its exact Finale 27
+    /// companion carries 18432 straight through as `<baseAdjust>`. The stored field is a
+    /// signed word, so its range is about +/-512 Evpu; the same fixture's second edit
+    /// saturated at -32768 rather than storing the -36864 the UI asked for.
+    ///
+    /// Through Finale 2000 it is harmonic levels, and the conversion through
+    /// @ref efixPerHarmonicLevel is **confirmed** in two independent eras. A Finale 3.7.2
+    /// fixture storing 1, -2 and -5 upgrades to 768, -1536 and -3840, and a Finale 97 fixture
+    /// storing 1 and -2 upgrades to 768 and -1536. Controlled Finale 1.0.0 and 2.6.3 edits
+    /// move this word alone, and each era's own ETF shows the same numbers.
+    ///
+    /// A stored value only applies when @ref baselineEnabled says so. The raw stored word is
+    /// always reported, enabled or not. See research/FORMAT_NOTES.md.
+    std::int16_t baselineDifference{};
+    /// @brief Whether @ref baselineDifference is already in the unit `baselineAdjust` uses.
+    bool baselineIsEfix{};
+    /// @brief Whether the document applies its baseline adjustments at all.
+    /// @details Always true from Finale 2001, which has no such switch. Before that it is
+    /// @ref earlyBaselineEnableSlot of the first clef's selector, and a stored value with the
+    /// switch off is inert: assigning it would introduce an offset the source never applied.
+    bool baselineEnabled{};
+    std::uint16_t shapeId{};
+    std::uint16_t fontId{};
+    std::int16_t fontSize{};
+    std::uint16_t fontEffects{};
+    std::uint16_t flags{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+};
+
+/// @brief Legacy clef characters are single bytes of a symbol font.
+/// @details A source may store one either zero-extended or sign-extended: the same
+/// character 139 appears as 0x008b in some files and 0xff8b in others. Narrowing to the
+/// low byte is what makes the two spellings agree, and it is safe for every era whose
+/// character is one word. It must not be applied once the character is a long.
+std::uint32_t narrowClefChar(std::int16_t stored)
+{
+    return static_cast<std::uint32_t>(static_cast<std::uint8_t>(stored));
+}
+
+std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index)
+{
+    return index < words.size() ? words[index] : static_cast<std::int16_t>(0);
+}
+
+/// @brief Reads one tuple out of a flat word stream, in either of the two tuple widths.
+PhysicalClef decodeTuple(
+    const std::vector<std::int16_t>& words, std::size_t first, std::size_t tupleWords)
+{
+    // The wide tuple is the narrow one with the clef character promoted to a long, so every
+    // slot after the character shifts by exactly one word. Expressing it as an offset keeps
+    // the two layouts from becoming two independently maintained field lists.
+    const std::size_t shift = tupleWords == wideTupleWords ? 1 : 0;
+    PhysicalClef result;
+    result.middleCPos = wordAt(words, first);
+    if (shift == 0) {
+        result.clefChar = narrowClefChar(wordAt(words, first + 1));
+    } else {
+        // The long's two words are in the same order the container already normalized each
+        // word into, so the low half comes first. No big-endian Finale 2012 specimen exists
+        // in any surveyed corpus, so this half of the rule is untested and likely to stay
+        // that way: such a file needs the 2012 release on a PowerPC Mac, which its stated
+        // requirements allow only by implication and the operating systems mostly forbid.
+        result.clefChar = static_cast<std::uint32_t>(
+                static_cast<std::uint16_t>(wordAt(words, first + 1)))
+            | (static_cast<std::uint32_t>(
+                   static_cast<std::uint16_t>(wordAt(words, first + 2))) << 16U);
+    }
+    result.staffPosition = wordAt(words, first + 2 + shift);
+    result.baselineDifference = wordAt(words, first + 3 + shift);
+    // Only the clef table has this word in Efix; the pre-2001 per-clef globals hold
+    // harmonic levels in their own slot and set this false. The table era has no enable
+    // switch either: the value applies whenever it is present.
+    result.baselineIsEfix = true;
+    result.baselineEnabled = true;
+    result.shapeId = static_cast<std::uint16_t>(wordAt(words, first + 4 + shift));
+    result.fontId = static_cast<std::uint16_t>(wordAt(words, first + 5 + shift));
+    result.fontSize = wordAt(words, first + 6 + shift);
+    result.fontEffects = static_cast<std::uint16_t>(wordAt(words, first + 7 + shift));
+    result.flags = static_cast<std::uint16_t>(wordAt(words, first + 8 + shift));
+    return result;
+}
+
+/// @brief Chooses the clef-table tuple width for a class-record payload.
+/// @details Preferring the payload size over the version is deliberate. A size that divides
+/// evenly by only one tuple width states its own layout, and some Finale 2007 files report
+/// a major version far outside their release, so a version gate alone would misread them.
+/// The version decides only the genuinely ambiguous case, a payload that divides by both.
+std::optional<std::size_t> classTupleWords(
+    std::size_t payloadSize, const std::optional<SourceVersion>& version)
+{
+    const auto narrowBytes = narrowTupleWords * clefWordSize;
+    const auto wideBytes = wideTupleWords * clefWordSize;
+    const bool fitsNarrow = payloadSize != 0 && payloadSize % narrowBytes == 0;
+    const bool fitsWide = payloadSize != 0 && payloadSize % wideBytes == 0;
+    if (fitsNarrow && !fitsWide) {
+        return narrowTupleWords;
+    }
+    if (fitsWide && !fitsNarrow) {
+        return wideTupleWords;
+    }
+    if (!fitsNarrow) {
+        return std::nullopt;
+    }
+    // Both widths divide the payload, which happens at 360 bytes. Finale 2012 introduced
+    // Unicode text and with it the long clef character, so the version separates the two.
+    return version && version->major >= firstUnicodeMajorVersion
+        ? wideTupleWords : narrowTupleWords;
+}
+
+void reportClefField(ImportReport& report, std::size_t index, const char* member,
+    ValueOrigin origin, std::int64_t rawValue,
+    std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
+{
+    FieldInfo info;
+    info.target = "options.clefOptions.clefDefs[" + std::to_string(index) + "]." + member;
+    info.origin = origin;
+    info.blockOffset = blockOffset;
+    info.decodedOffset = decodedOffset;
+    info.rawValue = rawValue;
+    report.fields.push_back(std::move(info));
+}
+
+/// @brief Turns one stored clef into a musxdom ClefDef and records where each value came from.
+void insertRecoveredClef(const std::shared_ptr<ClefOptionsTarget>& target,
+    const PhysicalClef& stored, ImportReport& report)
+{
+    const auto index = target->clefDefs.size();
+    auto def = std::make_shared<ClefDef>(target);
+    def->middleCPos = stored.middleCPos;
+    def->clefChar = static_cast<char32_t>(stored.clefChar);
+    def->staffPosition = stored.staffPosition;
+    def->shapeId = static_cast<musx::dom::Cmper>(stored.shapeId);
+    if (stored.baselineEnabled) {
+        def->baselineAdjust = stored.baselineIsEfix
+            ? static_cast<musx::dom::Efix>(stored.baselineDifference)
+            : static_cast<musx::dom::Efix>(stored.baselineDifference * efixPerHarmonicLevel);
+    }
+    def->isShape = (stored.flags & isShapeBit) != 0;
+    def->useOwnFont = (stored.flags & useOwnFontBit) != 0;
+    def->scaleToStaffHeight = (stored.flags & scaleToStaffHeightBit) != 0;
+    if (def->useOwnFont) {
+        // musxdom's own resolver rejects useOwnFont without a font, so the instance is
+        // always created when the bit is set, even if the stored triple were empty.
+        auto font = std::make_shared<FontInfo>(target->getDocument());
+        font->fontId = static_cast<musx::dom::Cmper>(stored.fontId);
+        font->fontSize = stored.fontSize;
+        font->setEnigmaStyles(stored.fontEffects);
+        def->font = std::move(font);
+    }
+    target->clefDefs.push_back(std::move(def));
+
+    const auto block = stored.blockOffset;
+    const auto decoded = stored.decodedOffset;
+    reportClefField(report, index, "middleCPos", ValueOrigin::LegacyMus,
+        stored.middleCPos, block, decoded);
+    reportClefField(report, index, "clefChar", ValueOrigin::LegacyMus,
+        static_cast<std::int64_t>(stored.clefChar), block, decoded);
+    reportClefField(report, index, "staffPosition", ValueOrigin::LegacyMus,
+        stored.staffPosition, block, decoded);
+    reportClefField(report, index, "shapeId", ValueOrigin::LegacyMus,
+        stored.shapeId, block, decoded);
+    reportClefField(report, index, "flags", ValueOrigin::LegacyMus,
+        stored.flags, block, decoded);
+    // The raw stored word, not the assigned Efix. A pre-2001 value is scaled on the way in,
+    // and the report is the only place the original harmonic-level number survives.
+    reportClefField(report, index, "baselineAdjust", ValueOrigin::LegacyMus,
+        stored.baselineDifference, block, decoded);
+    if ((stored.flags & useOwnFontBit) != 0) {
+        reportClefField(report, index, "font.fontId", ValueOrigin::LegacyMus,
+            stored.fontId, block, decoded);
+        reportClefField(report, index, "font.fontSize", ValueOrigin::LegacyMus,
+            stored.fontSize, block, decoded);
+        reportClefField(report, index, "font.effects", ValueOrigin::LegacyMus,
+            stored.fontEffects, block, decoded);
+    }
+}
+
+/// @brief Collects the clef table's word stream from the fixed-row era.
+std::vector<std::int16_t> selectorWords(const records::LegacyRecordIndex& index,
+    PhysicalClef& provenance, bool& present)
+{
+    std::vector<std::int16_t> words;
+    const auto rows = index.getOthers().getArray(
+        records::packTag("95"), GLOBALS_CMPER);
+    present = !rows.empty();
+    if (present) {
+        provenance.blockOffset = rows.front().blockOffset;
+        provenance.decodedOffset = rows.front().decodedOffset;
+    }
+    for (const auto& row : rows) {
+        for (std::uint8_t slot = 0; slot < row.wordCount; ++slot) {
+            words.push_back(row.words[slot]);
+        }
+    }
+    return words;
+}
+
+bool captureFromWordStream(const std::vector<std::int16_t>& words, std::size_t tupleWords,
+    const PhysicalClef& provenance, const std::shared_ptr<ClefOptionsTarget>& target,
+    ImportReport& report)
+{
+    if (tupleWords == 0 || words.size() % tupleWords != 0) {
+        report.warnings.push_back("Legacy clef table holds " + std::to_string(words.size())
+            + " word(s), which is not a whole number of " + std::to_string(tupleWords)
+            + "-word clef definitions; no clef definitions were recovered from the source.");
+        return false;
+    }
+    for (std::size_t first = 0; first + tupleWords <= words.size(); first += tupleWords) {
+        auto stored = decodeTuple(words, first, tupleWords);
+        stored.blockOffset = provenance.blockOffset;
+        stored.decodedOffset = provenance.decodedOffset;
+        insertRecoveredClef(target, stored, report);
+    }
+    return true;
+}
+
+/// @brief Recovers the eight separately stored clefs of the pre-2001 eras.
+bool captureEarlyClefs(const records::LegacyRecordIndex& index, const SourceProfile& profile,
+    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report)
+{
+    // Read the document-wide switch from the first clef's record before any clef is built.
+    const char firstText[2] = {static_cast<char>('0' + earlyFirstSelector / 10),
+        static_cast<char>('0' + earlyFirstSelector % 10)};
+    const auto* firstRow = index.getOthers().get(
+        records::packTag(std::string_view(firstText, std::size(firstText))), GLOBALS_CMPER, 0, 0);
+    // The Coda era is excluded outright. Its word 4 is a mid-measure-clef baseline rather
+    // than the general clef baseline musxdom means, its switch is never set in any corpus
+    // file, and Finale 27 discards the value. Transferring it would invent an offset from a
+    // field that does not mean the same thing.
+    const bool baselineEnabled = profile.epoch != FormatEpoch::CodaBanner
+        && (alwaysAdjustsBaseline.includes(profile.version)
+            || (firstRow
+                && (static_cast<std::uint16_t>(firstRow->words[earlyBaselineEnableSlot])
+                    & earlyBaselineEnableBit) != 0));
+
+    std::vector<PhysicalClef> stored;
+    for (std::size_t i = 0; i < earlyClefCount; ++i) {
+        const auto selector = static_cast<std::uint16_t>(earlyFirstSelector + i);
+        const char text[2] = {static_cast<char>('0' + selector / 10),
+            static_cast<char>('0' + selector % 10)};
+        const auto* row = index.getOthers().get(
+            records::packTag(std::string_view(text, std::size(text))), GLOBALS_CMPER, 0, 0);
+        if (!row) {
+            // The eight are written as a set. A partial set is a source this layout does
+            // not describe, so nothing is taken from it rather than half a table.
+            return false;
+        }
+        PhysicalClef clef;
+        clef.middleCPos = row->words[earlyMiddleCPosSlot];
+        clef.clefChar = narrowClefChar(row->words[earlyClefCharSlot]);
+        clef.staffPosition = row->words[earlyStaffPositionSlot];
+        clef.baselineDifference = row->words[earlyBaselineDifferenceSlot];
+        clef.baselineEnabled = baselineEnabled;
+        clef.blockOffset = row->blockOffset;
+        clef.decodedOffset = row->decodedOffset;
+        stored.push_back(clef);
+    }
+    for (const auto& clef : stored) {
+        insertRecoveredClef(target, clef, report);
+    }
+    return true;
+}
+
+/// @brief Copies the reference document's scalar clef options onto a fresh target.
+/// @details The clef definitions are rebuilt from the source, but the scalars around them
+/// are ordinary numbers with no cross-document identity, so seeding them from the baseline
+/// is safe and gives the scalar mapping table a default to overlay and to report.
+void copyScalarsFromReference(
+    const musx::dom::DocumentPtr& referenceDocument,
+    const std::shared_ptr<ClefOptionsTarget>& target)
+{
+    const auto reference = referenceDocument->getOptions()->get<ClefOptionsTarget>();
+    if (!reference) {
+        throw std::logic_error("ClefOptions reference document is incomplete");
+    }
+    target->defaultClef = reference->defaultClef;
+    target->clefChangePercent = reference->clefChangePercent;
+    target->clefChangeOffset = reference->clefChangeOffset;
+    target->clefFrontSepar = reference->clefFrontSepar;
+    target->clefBackSepar = reference->clefBackSepar;
+    target->showClefFirstSystemOnly = reference->showClefFirstSystemOnly;
+    target->clefKeySepar = reference->clefKeySepar;
+    target->clefTimeSepar = reference->clefTimeSepar;
+    target->cautionaryClefChanges = reference->cautionaryClefChanges;
+}
+
+/// @brief Extends a short recovered collection with the platform baseline's own definitions.
+/// @details Finale's own upgrade does exactly this: a Finale 2000 document keeps its eight
+/// stored clefs and receives the rest from the version it is opened in. Reproducing that
+/// keeps every clef index a document might reference addressable, because musxdom's
+/// bounds-checked accessor throws rather than returning an empty definition.
+void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
+    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report)
+{
+    const auto reference = referenceDocument->getOptions()->get<ClefOptionsTarget>();
+    if (!reference) {
+        throw std::logic_error("ClefOptions reference document is incomplete");
+    }
+    bool warnedAboutShapes = false;
+    for (std::size_t index = target->clefDefs.size();
+         index < reference->clefDefs.size(); ++index) {
+        const auto& source = reference->clefDefs[index];
+        auto def = std::make_shared<ClefDef>(target);
+        def->middleCPos = source->middleCPos;
+        def->clefChar = source->clefChar;
+        def->staffPosition = source->staffPosition;
+        def->baselineAdjust = source->baselineAdjust;
+        def->isShape = source->isShape;
+        def->scaleToStaffHeight = source->scaleToStaffHeight;
+        // A shape comparator belongs to the baseline's own shape table, which is
+        // deliberately not imported, so this reference does not resolve. musxdom tolerates
+        // that: an unresolvable shape reads as a blank clef rather than throwing. The
+        // remaining shape-definition gap is tracked in research/PRODUCTION_READINESS.md.
+        def->shapeId = source->shapeId;
+        if (def->isShape && def->shapeId != 0 && !warnedAboutShapes) {
+            report.warnings.push_back("Synthesized clef definitions carry Finale 27 shape "
+                "comparators whose shape definitions are not imported; those clefs read as "
+                "blank until shape definitions are recovered.");
+            warnedAboutShapes = true;
+        }
+        // Neither pinned baseline gives a clef its own font, so there is no baseline font
+        // comparator to remap here. Should one ever appear, it would need the same
+        // definition matching that FontOptions performs rather than a numeric copy.
+        if (source->useOwnFont && source->font) {
+            throw std::logic_error(
+                "Finale 27 ClefOptions baseline unexpectedly carries a clef-specific font");
+        }
+        reportClefField(report, index, "middleCPos", ValueOrigin::Finale27Default,
+            def->middleCPos);
+        reportClefField(report, index, "clefChar", ValueOrigin::Finale27Default,
+            static_cast<std::int64_t>(def->clefChar));
+        reportClefField(report, index, "staffPosition", ValueOrigin::Finale27Default,
+            def->staffPosition);
+        reportClefField(report, index, "shapeId", ValueOrigin::Finale27Default, def->shapeId);
+        target->clefDefs.push_back(std::move(def));
+    }
+}
+
+// The scalars around the collection. Each location was checked against every adjacent-exact
+// Finale 27 companion in the reference corpus, per epoch, because the eras do not agree
+// about what these selectors hold. The locations themselves are distilled in
+// research/data/legacy_option_mappings.csv; the per-epoch verification is in
+// research/FORMAT_NOTES.md.
+//
+// cautionaryClefChanges is bit 2 of the courtesy flags in selector 44 word 3, confirmed by a
+// controlled Finale 2005 pair: turning off the courtesy clef alone moves that word 7 -> 3,
+// and turning off the courtesy key signature alone moves it 7 -> 6, so bit 0 is the key and
+// bit 2 the clef. The corpus could not have settled this, because every companion has the
+// option set and only the values 5 and 7 occur, both of which have bit 2 set.
+//
+// The Coda era is excluded: it has no packed courtesy word. Selector 12 holds these as
+// separate boolean words, where the same controlled edit in Finale 2.6.3 moves word 1, the
+// key signature's. Which word is the clef's is **open**.
+
+// Finale 3.0 through 2006. All eight agree with 547 companions.
+const FieldMapping clefScalarFields[] = {
+    MUS_WORD(ClefOptionsTarget, "01", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, defaultClef),
+    MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, clefChangePercent),
+    MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, clefChangeOffset),
+    MUS_WORD(ClefOptionsTarget, "19", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, clefFrontSepar),
+    MUS_WORD(ClefOptionsTarget, "19", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, clefBackSepar),
+    MUS_WORD(ClefOptionsTarget, "38", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, clefKeySepar),
+    MUS_WORD(ClefOptionsTarget, "39", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, clefTimeSepar),
+    MUS_BIT(ClefOptionsTarget, "27", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1,
+        /*bit*/ 0, showClefFirstSystemOnly),
+    MUS_BIT(ClefOptionsTarget, "44", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3,
+        /*bit*/ 2, cautionaryClefChanges),
+};
+
+// Finale 1.8.7 through 2.6. Only five of the eight selectors mean the same thing here.
+// Selector 27 word 1 and selector 39 word 4 are font sizes in this era, not clef spacing --
+// they are the lyric-chorus and clef font tuples the FontOptions mapping reads -- and
+// selector 38 word 5 disagrees with the companion on every file that has a non-default
+// value. Reading any of the three would produce a confident wrong number, so the era simply
+// leaves those three at the Finale 27 default.
+const FieldMapping earlyClefScalarFields[] = {
+    MUS_WORD(ClefOptionsTarget, "01", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, defaultClef),
+    MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, clefChangePercent),
+    MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, clefChangeOffset),
+    MUS_WORD(ClefOptionsTarget, "19", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, clefFrontSepar),
+    MUS_WORD(ClefOptionsTarget, "19", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, clefBackSepar),
+};
+
+// Finale 2007 and later. The same eight logical options, reached through the shared
+// numericGlobalClass rule and addressed by byte offset rather than word slot. All eight
+// agree with 497 companions.
+constexpr std::uint32_t wordOffset(std::uint32_t slot) { return slot * clefWordSize; }
+
+const FieldMapping classClefScalarFields[] = {
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(1), GLOBALS_CMPER, wordOffset(0), defaultClef),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, wordOffset(2), clefChangePercent),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, wordOffset(3), clefChangeOffset),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, wordOffset(0), clefFrontSepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, wordOffset(1), clefBackSepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(38), GLOBALS_CMPER, wordOffset(5), clefKeySepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(39), GLOBALS_CMPER, wordOffset(4), clefTimeSepar),
+    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(27), GLOBALS_CMPER, wordOffset(1),
+        /*bit*/ 0, showClefFirstSystemOnly),
+    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(44), GLOBALS_CMPER, wordOffset(3),
+        /*bit*/ 2, cautionaryClefChanges),
+};
+
+} // namespace
+
+const MappingTable& clefOptionsTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "options.clefOptions",
+        .epochs = EpochMask::FixedRow,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<ClefOptionsTarget>,
+        .fields = clefScalarFields,
+        .fieldCount = std::size(clefScalarFields)};
+    return table;
+}
+
+const MappingTable& earlyClefOptionsTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "options.clefOptions",
+        .epochs = EpochMask::CodaBanner,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<ClefOptionsTarget>,
+        .fields = earlyClefScalarFields,
+        .fieldCount = std::size(earlyClefScalarFields)};
+    return table;
+}
+
+const MappingTable& classClefOptionsTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "options.clefOptions",
+        .epochs = EpochMask::Zlib,
+        .encoding = RecordEncoding::ClassRecord,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<ClefOptionsTarget>,
+        .fields = classClefScalarFields,
+        .fieldCount = std::size(classClefScalarFields)};
+    return table;
+}
+
+void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report)
+{
+    const auto target = document->getOptions()->get<ClefOptionsTarget>();
+    if (!target) {
+        return;
+    }
+    // The default clef is an index into the collection, and musxdom's accessor throws on an
+    // out-of-range one. Warn and leave the recovered value rather than clamping it: clamping
+    // would turn a decoding error, or a damaged file, into a plausible document and hide the
+    // very thing worth knowing. Every corpus file is in range, so this fires only on
+    // something genuinely unexpected.
+    if (target->defaultClef >= target->clefDefs.size()) {
+        report.warnings.push_back("The recovered default clef index "
+            + std::to_string(target->defaultClef) + " is outside the "
+            + std::to_string(target->clefDefs.size())
+            + " clef definitions this document has; it is reported as read, not corrected.");
+    }
+}
+
+void captureClefOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
+    const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+{
+    auto target = std::make_shared<ClefOptionsTarget>(document);
+    document->getOptions()->add(ClefOptionsTarget::XmlNodeName, target);
+    copyScalarsFromReference(referenceDocument, target);
+
+    // The Coda era has no courtesy-clef option; the first version found to offer one is 3.6.2.
+    // Its documents always show a courtesy clef, so that is asserted here rather than read:
+    // selector 44 is zero throughout the era, and its bit 2 would say the opposite.
+    //
+    // Three neighbouring options -- the clef-to-key and clef-to-time spacings and
+    // "display clef only on first system" -- do not exist in that era either, but they need
+    // no assertion. Both pinned baselines omit all three, so the seeded values are already
+    // zero and false, which is what Finale 27 itself produces when it upgrades one of these
+    // documents: all 57 Coda companions in the corpus agree. Where the baseline already gives
+    // the value the upgrade would give, the baseline is the answer, and reporting it as a
+    // Finale 27 default is accurate rather than an understatement.
+    //
+    // Asserting them instead would buy nothing. The baseline is a pinned artifact, generated
+    // from committed resources whose hashes AGENTS.md records, so depending on it is not the
+    // fragile choice it might look like.
+    //
+    // Nothing may read them: selectors 27 and 39 hold font tuples in this era, so reading the
+    // later locations there would report a font size as a spacing value.
+    if (profile.epoch == FormatEpoch::CodaBanner) {
+        target->cautionaryClefChanges = true;
+        FieldInfo courtesy;
+        courtesy.target = "options.clefOptions.cautionaryClefChanges";
+        courtesy.origin = ValueOrigin::LegacyBehavior;
+        courtesy.rawValue = 1;
+        report.fields.push_back(std::move(courtesy));
+    }
+
+    if (profile.epoch == FormatEpoch::ZlibLegacy) {
+        const auto* row = index.getClassRecords().get(
+            numericGlobalClass(clefTableSelector), GLOBALS_CMPER, 0, 0);
+        if (row) {
+            const auto bytes = index.getClassRecords().payloadOf(*row);
+            if (const auto tupleWords = classTupleWords(bytes.size(), profile.version)) {
+                std::vector<std::int16_t> words;
+                words.reserve(bytes.size() / clefWordSize);
+                for (std::size_t offset = 0; offset + clefWordSize <= bytes.size();
+                     offset += clefWordSize) {
+                    words.push_back(profile.byteOrder == ByteOrder::BigEndian
+                        ? static_cast<std::int16_t>(
+                              (static_cast<std::uint16_t>(bytes[offset]) << 8U) | bytes[offset + 1])
+                        : static_cast<std::int16_t>(
+                              bytes[offset] | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U)));
+                }
+                PhysicalClef provenance;
+                provenance.blockOffset = row->blockOffset;
+                provenance.decodedOffset = row->decodedOffset;
+                if (*tupleWords == wideTupleWords
+                    && profile.byteOrder == ByteOrder::BigEndian) {
+                    // The long clef character's word order has no big-endian witness and
+                    // almost certainly never will: see research/FORMAT_NOTES.md. Rather than
+                    // rely on that absence, say so when the case actually arrives.
+                    //
+                    // Warning rather than something quieter, despite firing for essentially no
+                    // real file. Every other diagnostic this reader emits says a value is
+                    // missing; this one says a value may be wrong. If the word order is the
+                    // other way, the clef characters are not slightly off but nonsense, and a
+                    // clef table of nonsense is worth interrupting for. The level costs
+                    // nothing when no such file exists and costs a silently broken document
+                    // when one does.
+                    report.warnings.push_back("This document uses the Finale 2012 clef layout "
+                        "in big-endian order, which no surveyed file does; the clef "
+                        "character's word order is unverified for it.");
+                }
+                captureFromWordStream(words, *tupleWords, provenance, target, report);
+            } else {
+                report.warnings.push_back("Legacy clef table payload of "
+                    + std::to_string(bytes.size())
+                    + " byte(s) matches neither clef-definition tuple width.");
+            }
+        }
+    } else {
+        PhysicalClef provenance;
+        bool present = false;
+        const auto words = selectorWords(index, provenance, present);
+        if (present) {
+            captureFromWordStream(words, narrowTupleWords, provenance, target, report);
+        } else if (profile.epoch == FormatEpoch::CodaBanner
+            || profile.epoch == FormatEpoch::UncompressedLegacy) {
+            // Only these two eras keep clefs in selectors 28 through 35. Falling back on the
+            // mere absence of selector 95 would be wrong for a DCL file that happens to lack
+            // it: those selectors still exist there and hold unrelated option words, so the
+            // reader would fabricate eight clef definitions and report them as recovered.
+            captureEarlyClefs(index, profile, target, report);
+        } else {
+            report.warnings.push_back("The clef table is absent from a source era that "
+                "stores one; every clef definition came from the Finale 27 baseline.");
+        }
+    }
+
+    if (target->clefDefs.size() > modernClefCount) {
+        report.warnings.push_back("Legacy clef table holds "
+            + std::to_string(target->clefDefs.size())
+            + " clef definitions, more than the " + std::to_string(modernClefCount)
+            + " Finale 27 stores.");
+    }
+    completeFromReference(referenceDocument, target, report);
+}
+
+} // namespace options
+} // namespace finale_mus_reader
