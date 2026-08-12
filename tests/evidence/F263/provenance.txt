@@ -1,0 +1,34 @@
+Finale 2.6.3, classic Mac OS.
+    The precise application build and host environment are not yet recorded here;
+    fill them in from the machine that produced these files.
+
+F263-baseline.mus
+    12,848 bytes. The unedited document the other F263 fixtures derive from.
+
+F263-music-font.mus
+    12,848 bytes. Changes the default music font. See ../../../research/FORMAT_NOTES.md.
+
+F263-clef-baseline.mus
+    sha256 685fbeb932be3b503775a4f5749a6dad456f3fde525fbeeacf297b33245d81d4
+    12,848 bytes. Changes the Clef Designer baseline adjustment on two clefs and
+    nothing else. It differs from F263-baseline.mus in exactly three bytes:
+    selector `28(65534)` word 4 moves -2 -> 1 and `29(65534)` word 4 moves -4 -> -2.
+    The values are harmonic levels. Finale 27 discards them, emitting no
+    `<baseAdjust>` in the companion.
+
+F263-clef-baseline.etf
+    sha256 0a54adf5445503e1727b6c566f0de43addebcf896121aa408ece7a2140392252
+    A Finale 2.6.3 ETF export of the same document, carrying the era's own
+    `ENIGMA Structures Copyright 1987 by Coda.` banner. Its `^28(65534)` and
+    `^29(65534)` rows confirm the edited words, and `^24(65534) 13 69 52 48 65 60`
+    confirms from a second era that selector 24 is not the default-font array
+    before Finale 2002.
+
+Finale 27 companions are in `-finale27/`.
+
+F263-courtesy-key-off.mus / .etf
+    Only the courtesy key signature turned off. The change is selector 12 word 1,
+    1 -> 0, not the packed courtesy word selector 44 uses from Finale 3.0 onward:
+    the Coda era stores the three courtesies as separate boolean words. Which word
+    holds the clef's is still open, so the reader leaves cautionaryClefChanges at the
+    Finale 27 default for this era.

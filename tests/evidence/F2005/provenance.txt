@@ -1,2 +1,18 @@
 Version 2005b.r1
 Mac OS X 10.4.11 running in QEMU PowerPC emulator
+
+F2005-clef-baseline: from F2005-baseline, Clef Designer baseline adjustment set on two clefs.
+  Clef 0 (treble): 1 inch requested. The document's measurement unit was inches, so this is
+  288 Evpu and the file stores 18432 Efix.
+  Clef 1 (bass): -2 inches requested. That is -36864 Efix, which does not fit the signed
+  16-bit stored field, so Finale saturated it to -32768 and the dialog reads it back as
+  -1.7778 inches.
+
+F2005-courtesy-clef-off: from F2005-baseline, "Display Courtesy Clef at End of Staff
+  System" turned off and the key and time signature courtesies left on. Selector 44
+  word 3 moves 7 -> 3, so the clef's courtesy is bit 2.
+
+F2005-courtesy-key-off: from F2005-baseline, only the courtesy key signature turned
+  off. Selector 44 word 3 moves 7 -> 6, so the key signature's courtesy is bit 0.
+  This is the save that distinguishes the clef bit from a bit that merely happened to
+  be clear; time is bit 1 by elimination.
