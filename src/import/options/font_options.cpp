@@ -344,75 +344,29 @@ void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
         static_cast<std::uint16_t>(effects.value), effects.blockOffset, effects.decodedOffset);
 }
 
-musx::dom::Cmper cloneOrMatchFont(const musx::dom::DocumentPtr& document,
+/// @brief Resolves a reference font into this document, reporting when it cannot be done.
+/// @details musxdom owns the rule: match by normalized name, never by comparator, and treat 0 as
+/// the default-music-font sentinel. This only adapts the result to the importer's reporting, which
+/// is why the legacy side keeps no font-matching logic of its own.
+musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, musx::dom::Cmper referenceId,
-    std::unordered_map<std::string, musx::dom::Cmper>& targetFonts,
-    std::uint32_t& nextCmper, ImportReport& report)
+    ImportReport& report)
 {
-    if (referenceId == 0) {
-        return 0;
-    }
     const auto referenceFont = referenceDocument->getOthers()->get<FontDefinition>(
         musx::dom::SCORE_PARTID, referenceId);
     if (!referenceFont) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Finale 27 FontOptions referenced missing font definition "
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+            "Finale 27 FontOptions referenced missing font definition "
             + std::to_string(referenceId) + "; substituted font id 0."});
         return 0;
     }
-
-    const auto key = musx::dom::normalizeFontName(referenceFont->name);
-    if (const auto found = targetFonts.find(key); found != targetFonts.end()) {
-        return found->second;
+    if (const auto resolved = musx::dom::importFontDefinitionInto(document, referenceFont)) {
+        return *resolved;
     }
-    if (nextCmper > (std::numeric_limits<musx::dom::Cmper>::max)()) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"No free font comparator remained for Finale 27 font \""
-            + referenceFont->name + "\"; substituted font id 0."});
-        return 0;
-    }
-
-    // The comparator belongs to the target document's id space. Never carry the
-    // reference comparator across documents: allocate directly after the target's
-    // highest existing font comparator.
-    const auto cmper = static_cast<musx::dom::Cmper>(nextCmper++);
-    auto clone = std::make_shared<FontDefinition>(document, musx::dom::SCORE_PARTID,
-        musx::dom::EnigmaBase::ShareMode::All, cmper);
-    clone->charsetBank = referenceFont->charsetBank;
-    clone->charsetVal = referenceFont->charsetVal;
-    clone->pitch = referenceFont->pitch;
-    clone->family = referenceFont->family;
-    // Normalization is only a matching rule. A definition newly introduced from the
-    // platform baseline retains that baseline's exact spelling in the output document.
-    clone->name = referenceFont->name;
-    document->getOthers()->add(FontDefinition::XmlNodeName, clone);
-    targetFonts.emplace(key, cmper);
-    return cmper;
-}
-
-struct TargetFontState
-{
-    std::unordered_map<std::string, musx::dom::Cmper> byName;
-    std::uint32_t nextCmper = 1;
-};
-
-TargetFontState collectTargetFonts(const musx::dom::DocumentPtr& document)
-{
-    TargetFontState result;
-    // Comparator zero has default-music semantics and is never a safe destination for a
-    // concrete nonzero font copied from the reference document.
-    for (const auto& font : document->getOthers()
-            ->getArray<FontDefinition>(musx::dom::SCORE_PARTID)) {
-        if (font->getCmper() != 0) {
-            const auto key = musx::dom::normalizeFontName(font->name);
-            const auto found = result.byName.find(key);
-            if (found == result.byName.end() || font->getCmper() < found->second) {
-                result.byName.insert_or_assign(key, font->getCmper());
-            }
-        }
-        if (font->getCmper() >= result.nextCmper) {
-            result.nextCmper = static_cast<std::uint32_t>(font->getCmper()) + 1;
-        }
-    }
-    return result;
+    report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+        "No free font comparator remained for Finale 27 font \"" + referenceFont->name
+        + "\"; substituted font id 0."});
+    return 0;
 }
 
 /// @brief Restates an already-reported FontOptions field as coming from the reference.
@@ -447,7 +401,6 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
         throw std::logic_error("FontOptions reference document is incomplete");
     }
 
-    auto targetFonts = collectTargetFonts(document);
     for (const auto& [type, font] : target->fontOptions) {
         const auto missingId = font->fontId;
         if (missingId == 0 || document->getOthers()->get<FontDefinition>(
@@ -473,8 +426,8 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
         // than the negative and is a guard for its own renderer rather than a judgment
         // about the value. Taking the reference size yields the only usable result.
         const auto referenceFont = reference->getFontInfo(type);
-        const auto resolvedId = cloneOrMatchFont(document, referenceDocument,
-            referenceFont->fontId, targetFonts.byName, targetFonts.nextCmper, report);
+        const auto resolvedId = resolveReferenceFont(
+            document, referenceDocument, referenceFont->fontId, report);
         auto replacement = std::make_shared<FontInfo>(document);
         replacement->fontId = resolvedId;
         replacement->fontSize = referenceFont->fontSize;
@@ -510,8 +463,6 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         throw std::logic_error("FontOptions reference document is incomplete");
     }
 
-    auto targetFonts = collectTargetFonts(document);
-
     for (std::size_t ordinal = 0; ordinal < fontTypeCount; ++ordinal) {
         const auto type = static_cast<FontType>(ordinal);
         if (target->fontOptions.contains(type)) {
@@ -519,8 +470,8 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         }
         const auto source = reference->getFontInfo(type);
         auto font = std::make_shared<FontInfo>(document);
-        font->fontId = cloneOrMatchFont(document, referenceDocument, source->fontId,
-            targetFonts.byName, targetFonts.nextCmper, report);
+        font->fontId = resolveReferenceFont(
+            document, referenceDocument, source->fontId, report);
         font->fontSize = source->fontSize;
         font->setEnigmaStyles(source->getEnigmaStyles());
         target->fontOptions.emplace(type, font);

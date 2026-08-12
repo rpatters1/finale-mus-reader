@@ -528,8 +528,9 @@ void testClefTupleDecoding()
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
         ImportReport report;
+        finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(LegacyRecordIndex::build(parsed),
-            profile, document, makeClefReferenceDocument(), report);
+            profile, document, makeClefReferenceDocument(), report, pending);
         return document->getOptions()->get<ClefOptions>();
     };
 
@@ -589,9 +590,10 @@ void testClefTupleDecoding()
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
         ImportReport report;
+        finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeContainer(dclRows)), profile, document,
-            makeClefReferenceDocument(), report);
+            makeClefReferenceDocument(), report, pending);
         const auto recovered = std::count_if(report.fields.begin(), report.fields.end(),
             [](const finale_mus_reader::FieldInfo& f) {
                 return f.origin == ValueOrigin::LegacyMus
@@ -717,9 +719,10 @@ void testClefTupleDecoding()
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::BigEndian;
         ImportReport report;
+        finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::BigEndian)),
-            profile, document, makeClefReferenceDocument(), report);
+            profile, document, makeClefReferenceDocument(), report, pending);
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
                           [](const finale_mus_reader::Diagnostic& entry) {
                               return entry.message.find("unverified") != std::string::npos;
@@ -738,9 +741,10 @@ void testClefTupleDecoding()
         auto profile = profileFor(13);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::LittleEndian;
+        finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::LittleEndian)),
-            profile, document, makeClefReferenceDocument(), report);
+            profile, document, makeClefReferenceDocument(), report, pending);
         expectMapping(document->getOptions()->get<ClefOptions>()->clefDefs.size() == 20,
             "The pre-Unicode reading of an ambiguous payload did not use the narrow tuple");
     }

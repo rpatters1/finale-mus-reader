@@ -33,7 +33,8 @@ void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& r
 /// mapping tables so that @ref clefOptionsTable has an object to overlay.
 void captureClefOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    PendingReferences& pending);
 
 /// @brief Recovers source FontOptions and completes the modern 45-type collection.
 /// @details Physical tuples are interpreted through versioned semantic mappings. Types absent

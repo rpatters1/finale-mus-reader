@@ -96,6 +96,14 @@ In practice:
   learned the third spelling and the reader did not, because the reader had two
   copies and only one was updated.
 
+Doxygen comments document the contract, not its history. State what a caller must know:
+behavior, parameters, return values, and what is thrown. Do not explain why a function or
+property was added, what it replaced, or which investigation prompted it. A reader arriving at
+the published API has none of that context. This constrains Doxygen only; ordinary
+implementation comments in this repository are expected to carry that reasoning, because the
+evidence behind a mapping is the thing hardest to reconstruct later. The same rule applies to
+Doxygen written in musxdom.
+
 This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
 apply to `scripts/`, `tools/`, or test code, which may repeat themselves as
 freely as makes sense — a probe is meant to be written quickly while a question

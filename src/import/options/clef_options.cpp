@@ -398,13 +398,13 @@ void copyScalarsFromReference(
 /// keeps every clef index a document might reference addressable, because musxdom's
 /// bounds-checked accessor throws rather than returning an empty definition.
 void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report)
+    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report,
+    PendingReferences& pending)
 {
     const auto reference = referenceDocument->getOptions()->get<ClefOptionsTarget>();
     if (!reference) {
         throw std::logic_error("ClefOptions reference document is incomplete");
     }
-    bool warnedAboutShapes = false;
     for (std::size_t index = target->clefDefs.size();
          index < reference->clefDefs.size(); ++index) {
         const auto& source = reference->clefDefs[index];
@@ -415,16 +415,15 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
         def->baselineAdjust = source->baselineAdjust;
         def->isShape = source->isShape;
         def->scaleToStaffHeight = source->scaleToStaffHeight;
-        // A shape comparator belongs to the baseline's own shape table, which is
-        // deliberately not imported, so this reference does not resolve. musxdom tolerates
-        // that: an unresolvable shape reads as a blank clef rather than throwing. The
-        // remaining shape-definition gap is tracked in research/PRODUCTION_READINESS.md.
-        def->shapeId = source->shapeId;
-        if (def->isShape && def->shapeId != 0 && !warnedAboutShapes) {
-            report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Synthesized clef definitions carry Finale 27 shape "
-                "comparators whose shape definitions are not imported; those clefs read as "
-                "blank until shape definitions are recovered."});
-            warnedAboutShapes = true;
+        // A comparator is only meaningful in the document that issued it, so the baseline's
+        // number is never written here. The shape is copied after every pool is complete, and
+        // the field stays zero until then: a blank clef is honest, a foreign comparator is not.
+        def->shapeId = 0;
+        if (source->isShape && source->shapeId != 0) {
+            const auto target = "options.clefOptions.clefDefs[" + std::to_string(index)
+                + "].shapeId";
+            pending.push_back({source->shapeId,
+                [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }, target});
         }
         // Neither pinned baseline gives a clef its own font, so there is no baseline font
         // comparator to remap here. Should one ever appear, it would need the same
@@ -568,7 +567,8 @@ void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& r
 
 void captureClefOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    PendingReferences& pending)
 {
     auto target = std::make_shared<ClefOptionsTarget>(document);
     document->getOptions()->add(ClefOptionsTarget::XmlNodeName, target);
@@ -669,7 +669,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
             + " clef definitions, more than the " + std::to_string(modernClefCount)
             + " Finale 27 stores."});
     }
-    completeFromReference(referenceDocument, target, report);
+    completeFromReference(referenceDocument, target, report, pending);
 }
 
 } // namespace options

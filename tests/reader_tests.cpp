@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -367,8 +368,25 @@ void expectNoScoreContent(const ImportResult& result)
     // are intentional and do not constitute leaked baseline score content.
     expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).empty(),
         "Output contains fallback marking categories");
-    expect(result.document->getOthers()->getArray<others::ShapeDef>(SCORE_PARTID).empty(),
-        "Output contains fallback shape definitions");
+    // Shapes are no longer absent. The two tablature clef definitions completed from the
+    // baseline are drawn as shapes, and those shapes are copied in so the clefs render. Nothing
+    // else may ride along, so every shape present must be one a clef definition names.
+    {
+        std::set<musx::dom::Cmper> referencedShapes;
+        if (const auto clefs = result.document->getOptions()
+                ->get<musx::dom::options::ClefOptions>()) {
+            for (const auto& def : clefs->clefDefs) {
+                if (def->isShape && def->shapeId != 0) {
+                    referencedShapes.insert(def->shapeId);
+                }
+            }
+        }
+        for (const auto& shape : result.document->getOthers()
+                ->getArray<others::ShapeDef>(SCORE_PARTID)) {
+            expect(referencedShapes.count(shape->getCmper()) != 0,
+                "Output contains a baseline shape no clef definition references");
+        }
+    }
     expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(),
         "Output contains fallback text blocks");
     expect(result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(),
@@ -458,7 +476,10 @@ void testFontDefinitions()
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    expect(fonts.size() == 10, "F2002 font table plus required fallback font is incorrect");
+    // Nine source definitions, plus two introduced from the baseline: one for a FontOptions type
+    // this source does not store, and one for the typeface the copied tablature clef shapes draw
+    // their character in. A shape that names a font the target lacks brings that font with it.
+    expect(fonts.size() == 11, "F2002 font table plus required fallback fonts is incorrect");
 
     const auto fontAt = [&](musx::dom::Cmper cmper) {
         const auto font = result.document->getOthers()->get<FontDefinition>(
@@ -1234,10 +1255,16 @@ void testUncompressedEpochAndOverlays()
     const auto fallbackDefinition = result.document->getOthers()
         ->get<musx::dom::others::FontDefinition>(
             musx::dom::SCORE_PARTID, fallbackText->fontId);
-    // Times New Roman is cmper 2 in the Windows reference. This target starts with no
-    // font definitions, so the cloned definition must use its next sequential cmper, 1.
-    expect(fallbackText->fontId == 1
-            && fallbackDefinition && fallbackDefinition->getCmper() == 1
+    // This target recovers no font definitions of its own, so every one below was introduced
+    // from the Windows reference. Cmpers 0 and 1 both hold the music font: 0 is the
+    // default-music-font sentinel, materialized so that anything storing 0 resolves, and 1 makes
+    // the same typeface addressable concretely, since matching never selects 0.
+    const auto zeroDefinition = result.document->getOthers()
+        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    expect(static_cast<bool>(zeroDefinition),
+        "A document referencing font id 0 was left with no definition at 0");
+    expect(fallbackText->fontId != 0
+            && fallbackDefinition && fallbackDefinition->getCmper() == fallbackText->fontId
             && fallbackDefinition->name == "Times New Roman"
             && fallbackDefinition->charsetBank
                 == musx::dom::others::FontDefinition::CharacterSetBank::Windows
