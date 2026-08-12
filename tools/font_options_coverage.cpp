@@ -145,7 +145,7 @@ std::set<musx::dom::Cmper> collectSourceFontIds(
         }
         const auto close = field.target.find(']', prefix.size());
         if (close == std::string::npos) continue;
-        result.insert(static_cast<musx::dom::Cmper>(
+        result.insert(musx::dom::Cmper(
             std::stoul(field.target.substr(prefix.size(), close - prefix.size()))));
     }
     return result;

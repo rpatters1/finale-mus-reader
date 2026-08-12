@@ -237,11 +237,11 @@ void insertRecoveredClef(const std::shared_ptr<ClefOptionsTarget>& target,
     def->middleCPos = stored.middleCPos;
     def->clefChar = static_cast<char32_t>(stored.clefChar);
     def->staffPosition = stored.staffPosition;
-    def->shapeId = static_cast<musx::dom::Cmper>(stored.shapeId);
+    def->shapeId = musx::dom::Cmper(stored.shapeId);
     if (stored.baselineEnabled) {
         def->baselineAdjust = stored.baselineIsEfix
-            ? static_cast<musx::dom::Efix>(stored.baselineDifference)
-            : static_cast<musx::dom::Efix>(stored.baselineDifference * efixPerHarmonicLevel);
+            ? musx::dom::Efix(stored.baselineDifference)
+            : musx::dom::Efix(stored.baselineDifference * efixPerHarmonicLevel);
     }
     def->isShape = (stored.flags & isShapeBit) != 0;
     def->useOwnFont = (stored.flags & useOwnFontBit) != 0;
@@ -250,7 +250,7 @@ void insertRecoveredClef(const std::shared_ptr<ClefOptionsTarget>& target,
         // musxdom's own resolver rejects useOwnFont without a font, so the instance is
         // always created when the bit is set, even if the stored triple were empty.
         auto font = std::make_shared<FontInfo>(target->getDocument());
-        font->fontId = static_cast<musx::dom::Cmper>(stored.fontId);
+        font->fontId = musx::dom::Cmper(stored.fontId);
         font->fontSize = stored.fontSize;
         font->setEnigmaStyles(stored.fontEffects);
         def->font = std::move(font);

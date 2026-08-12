@@ -330,8 +330,7 @@ void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     ValueOrigin origin = ValueOrigin::LegacyMus)
 {
     auto font = std::make_shared<FontInfo>(document);
-    font->fontId = static_cast<musx::dom::Cmper>(
-        static_cast<std::uint16_t>(fontId.value));
+    font->fontId = musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value));
     font->fontSize = static_cast<std::int16_t>(size.value);
     font->setEnigmaStyles(static_cast<std::uint16_t>(effects.value));
     target->fontOptions.insert_or_assign(type, std::move(font));
