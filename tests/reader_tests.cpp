@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <stdexcept>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -169,6 +170,68 @@ std::vector<std::uint8_t> makeUncompressedMus()
     return result;
 }
 
+// An uncompressed-era file carrying a selector 24 default-font array. Its banner version is
+// major 12, deliberately outside the Finale 3.0 through 2002 range, because that is the shape
+// of the three real Finale 3.0 documents whose header recovers a major version of 15: the
+// epoch has to carry the semantic layout when the version cannot.
+std::vector<std::uint8_t> makeUncompressedMusWithFontOptions()
+{
+    constexpr auto byteOrder = ByteOrder::LittleEndian;
+    auto result = makeBanner("2000", "WIN", byteOrder);
+    std::vector<std::uint8_t> others;
+    // One font definition so the recovered ids resolve.
+    appendOther(others, 0, "FN", words(0x1fff, 0, 0, 0, 0, 0), byteOrder);
+    appendOther(others, 0, "FN", words(0x4d61, 0x6573, 0x7472, 0x6f00, 0, 0), byteOrder);
+    // Two incidences of selector 24: four three-word tuples, music/key/clef/time.
+    appendOther(others, 0xfffe, "24", words(0, 28, 0, 0, 26, 0), byteOrder);
+    appendOther(others, 0xfffe, "24", words(0, 24, 0, 0, 22, 1), byteOrder);
+    appendUncompressedBlock(result, 1, others, byteOrder);
+    appendUncompressedBlock(result, 2, {}, byteOrder);
+    appendUncompressedBlock(result, 3, {}, byteOrder);
+    appendUncompressedBlock(result, 4, {}, byteOrder);
+    return result;
+}
+
+// A Coda-banner document in either byte order. The era has no block framing to trial, so the
+// container takes its order from the banner product: a `PC` product is a Windows document and
+// little-endian, anything else is big-endian. Both are built here from one description so the
+// two paths cannot drift apart, and so that neither needs a committed fixture -- the only real
+// Windows documents of this era are Coda's own installer templates.
+std::vector<std::uint8_t> makeCodaBannerMus(ByteOrder byteOrder, std::string_view product)
+{
+    std::vector<std::uint8_t> result(0x200, 0);
+    const std::string banner = "Finale(TM) " + std::string(product)
+        + " Copyright 1987 by Coda. All rights reserved.";
+    writeFixed(result, 0, banner, banner.size());
+
+    // The era's eight clefs are one single-incidence global each, selectors 28 through 35,
+    // holding middle-C position, an unexplained word, the clef character and the staff
+    // position. These are the values every surveyed document of the era carries.
+    std::vector<std::uint8_t> pool;
+    const std::array<std::array<std::int16_t, 4>, 8> clefs{{{-10, 6, 38, -6}, {-4, 0, 66, -4},
+        {-2, -2, 66, -2}, {2, -6, 63, -2}, {-10, 6, 214, -4}, {-3, -1, 86, -6},
+        {9, -13, 116, -2}, {0, -4, 63, -4}}};
+    for (std::size_t i = 0; i < clefs.size(); ++i) {
+        const char tag[2] = {static_cast<char>('0' + (28 + i) / 10),
+            static_cast<char>('0' + (28 + i) % 10)};
+        appendOther(pool, 0xfffe, std::string_view(tag, 2),
+            words(clefs[i][0], clefs[i][1], clefs[i][2], clefs[i][3], 0, 0), byteOrder);
+    }
+    // Scalars the era does record: the default clef, the end-of-measure percent and offset,
+    // and the spacing before and after a clef.
+    appendOther(pool, 0xfffe, "01", words(0, 0, 0, 0, 0, 0), byteOrder);
+    appendOther(pool, 0xfffe, "13", words(4, 24, 75, -12, 0, 0), byteOrder);
+    appendOther(pool, 0xfffe, "19", words(24, 0, 0, 0, 0, 0), byteOrder);
+    pool.resize(0x200, 0);
+
+    // One pool: a page count and a page size, then that many 512-byte pages. The page size is
+    // what confirms the era, and it reads 0x200 only in the file's own order.
+    write32(result, 1, byteOrder);
+    write32(result, 0x200, byteOrder);
+    result.insert(result.end(), pool.begin(), pool.end());
+    return result;
+}
+
 std::vector<std::uint8_t> compressZlib(const std::vector<std::uint8_t>& input)
 {
     uLongf compressedSize = compressBound(static_cast<uLong>(input.size()));
@@ -205,6 +268,24 @@ std::vector<std::uint8_t> makeZlibMus()
     return result;
 }
 
+// The same file, but its terminal block carries an embedded graphic instead of being an
+// empty marker. A stored block has no checksum word and its payload starts right after the
+// six-byte header, so writing one is not appendZlibBlock with compression turned off.
+std::vector<std::uint8_t> makeZlibMusWithGraphic(
+    std::uint16_t terminalType, std::string_view graphic)
+{
+    constexpr auto byteOrder = ByteOrder::LittleEndian;
+    auto result = makeBanner("2012", "MAC", byteOrder);
+    appendZlibBlock(result, 0x001a, {1, 2, 3}, byteOrder);
+    appendZlibBlock(result, 0x001b, {4, 5}, byteOrder);
+    appendZlibBlock(result, 0x0016, {6}, byteOrder);
+    appendZlibBlock(result, 0x0017, {7, 8, 9}, byteOrder);
+    write16(result, terminalType, byteOrder);
+    write32(result, static_cast<std::uint32_t>(graphic.size() + 6), byteOrder);
+    result.insert(result.end(), graphic.begin(), graphic.end());
+    return result;
+}
+
 // Taken by value rather than by const reference: see the note on the equivalent helper in
 // mapping_tests.cpp about -Wdangling-reference.
 const FieldInfo& field(const ImportResult& result, std::string_view target)
@@ -216,6 +297,16 @@ const FieldInfo& field(const ImportResult& result, std::string_view target)
     return *found;
 }
 
+// Whether the report carries any diagnostic at the given level. Tests assert the level a
+// message was raised at, not merely that some message exists: the whole point of the level
+// is that a routine fallback and an unreadable document must not look alike to a host.
+bool hasDiagnostic(const finale_mus_reader::ImportReport& report,
+    musx::util::Logger::LogLevel level)
+{
+    return std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+        [&](const finale_mus_reader::Diagnostic& entry) { return entry.level == level; });
+}
+
 template <typename T>
 void expectOption(const ImportResult& result)
 {
@@ -223,7 +314,11 @@ void expectOption(const ImportResult& result)
         "Pinned default omitted an expected options instance");
 }
 
-void expectSeededOptionsExceptFontOptions(const ImportResult& result)
+// The imported options pool must be structurally complete whatever era the source is.
+// Most of these instances are seeded from the pinned baseline; FontOptions and ClefOptions
+// are filtered out of that seeding and rebuilt, so their presence here is a check that the
+// rebuild ran rather than that the baseline was copied.
+void expectCompleteOptionsPool(const ImportResult& result)
 {
     using namespace musx::dom::options;
     expectOption<AccidentalOptions>(result);
@@ -273,8 +368,25 @@ void expectNoScoreContent(const ImportResult& result)
     // are intentional and do not constitute leaked baseline score content.
     expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).empty(),
         "Output contains fallback marking categories");
-    expect(result.document->getOthers()->getArray<others::ShapeDef>(SCORE_PARTID).empty(),
-        "Output contains fallback shape definitions");
+    // Shapes are no longer absent. The two tablature clef definitions completed from the
+    // baseline are drawn as shapes, and those shapes are copied in so the clefs render. Nothing
+    // else may ride along, so every shape present must be one a clef definition names.
+    {
+        std::set<musx::dom::Cmper> referencedShapes;
+        if (const auto clefs = result.document->getOptions()
+                ->get<musx::dom::options::ClefOptions>()) {
+            for (const auto& def : clefs->clefDefs) {
+                if (def->isShape && def->shapeId != 0) {
+                    referencedShapes.insert(def->shapeId);
+                }
+            }
+        }
+        for (const auto& shape : result.document->getOthers()
+                ->getArray<others::ShapeDef>(SCORE_PARTID)) {
+            expect(referencedShapes.count(shape->getCmper()) != 0,
+                "Output contains a baseline shape no clef definition references");
+        }
+    }
     expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(),
         "Output contains fallback text blocks");
     expect(result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(),
@@ -321,7 +433,7 @@ void testControlledDclFile()
         "F2002 music spacing distance overlay failed");
     expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
         "F2002 music spacing overlay was not reported as recovered");
-    expectSeededOptionsExceptFontOptions(result);
+    expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
 }
 
@@ -364,7 +476,10 @@ void testFontDefinitions()
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    expect(fonts.size() == 10, "F2002 font table plus required fallback font is incorrect");
+    // Nine source definitions, plus two introduced from the baseline: one for a FontOptions type
+    // this source does not store, and one for the typeface the copied tablature clef shapes draw
+    // their character in. A shape that names a font the target lacks brings that font with it.
+    expect(fonts.size() == 11, "F2002 font table plus required fallback fonts is incorrect");
 
     const auto fontAt = [&](musx::dom::Cmper cmper) {
         const auto font = result.document->getOthers()->get<FontDefinition>(
@@ -459,10 +574,26 @@ void testFontOptionsCapture()
             && field(f2007, "options.fontOptionsPhysical[45].effects").rawValue == 0,
         "The terminal physical zlib tuple was not captured in the report");
 
+    // The 13/28 renumbering happens at Finale 2012, not Finale 2003 as the documentation
+    // said. Finale 2007 is inside the zlib epoch but before the boundary, so it must still
+    // take the earlier layout: tablature comes from physical 28, and percussion is not
+    // stored at all. Pinning this side matters more than the modern side, because the
+    // previous code got precisely this wrong for every 2003-2011 document.
+    expect(field(f2007, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus,
+        "Finale 2007 tablature was not recovered from physical slot 28");
+    expect(field(f2007, "options.fontOptions[28].fontId").origin
+            == ValueOrigin::Finale27Default,
+        "Finale 2007 percussion was not left to the baseline; it is not stored before 2012");
+
     const auto f2012 = read("evidence/F2012/F2012-upstem-flags.mus");
     const auto littleEndianZlib = f2012.document->getOptions()->get<FontOptions>();
     expect(littleEndianZlib && littleEndianZlib->fontOptions.size() == 45,
         "The little-endian zlib font-options payload was not captured");
+    // The far side of the same boundary: Finale 2012 stores both, at the modern ordinals.
+    expect(field(f2012, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus
+            && field(f2012, "options.fontOptions[28].fontId").origin
+                == ValueOrigin::LegacyMus,
+        "Finale 2012 did not recover both tablature and percussion from stored tuples");
     const auto music = littleEndianZlib->getFontInfo(FontType::Music);
     expect(music->fontId == 0 && music->fontSize == 24
             && field(f2012, "options.fontOptions[0].fontSize").rawValue == 24,
@@ -560,6 +691,38 @@ void testFontOptionsCapture()
         "evidence/F100/F100-key-font.mus", FontType::Key, 4, 13, 2);
     const auto f100Name = expectEarlyFont(
         "evidence/F100/F100-name.mus", FontType::StaffNames, 7, 12, 1);
+    // The Coda-banner era has one "Name" preference where Finale 3.0 and later store four
+    // separate name tuples, so the single recovered value has to reach all four types.
+    // Recovering StaffNames alone would split a document that was never split.
+    for (const auto companion : {FontType::AbbrvStaffNames, FontType::GroupNames,
+             FontType::AbbrvGroupNames}) {
+        const auto font = f100Name.document->getOptions()
+            ->get<FontOptions>()->getFontInfo(companion);
+        expect(font->fontId == 7 && font->fontSize == 12,
+            "The Finale 1.0.0 Name preference did not reach every modern name font type");
+        expect(field(f100Name, "options.fontOptions["
+                    + std::to_string(static_cast<std::size_t>(companion)) + "].fontId").origin
+                == ValueOrigin::LegacyBehavior,
+            "A propagated name font was not reported as restored era behavior");
+    }
+    expect(field(f100Name, "options.fontOptions["
+                + std::to_string(static_cast<std::size_t>(FontType::StaffNames))
+                + "].fontId").origin == ValueOrigin::LegacyMus,
+        "The Name preference itself must still report as recovered from the source");
+
+    // Finale 3.0 stores the four name types separately, so the fan-out must stop at the
+    // Coda-banner epoch rather than overwriting three real recovered values.
+    {
+        const auto f97 = read("evidence/F372/F372-baseline.mus");
+        for (const auto companion : {FontType::AbbrvStaffNames, FontType::GroupNames,
+                 FontType::AbbrvGroupNames}) {
+            expect(field(f97, "options.fontOptions["
+                        + std::to_string(static_cast<std::size_t>(companion)) + "].fontId")
+                    .origin == ValueOrigin::LegacyMus,
+                "The Coda name fan-out leaked into an epoch that stores the types separately");
+        }
+    }
+
     const auto f100Section = expectEarlyFont(
         "evidence/F100/F100-section.mus", FontType::LyricSection, 3, 19, 16);
     const auto f100Time = expectEarlyFont(
@@ -584,6 +747,314 @@ void testFontOptionsCapture()
                 "A completed font option has a dangling font id");
         }
     }
+}
+
+// Clef definitions are a numeric global like any other option, but their collection has
+// changed size twice and their tuple once. Each fixture below is one of those layouts.
+void testClefOptionsCapture()
+{
+    using ClefOptions = musx::dom::options::ClefOptions;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+    const auto clefs = [](const ImportResult& result) {
+        const auto options = result.document->getOptions()->get<ClefOptions>();
+        expect(static_cast<bool>(options), "The imported document has no clef options");
+        expect(options->clefDefs.size() == 18,
+            "Clef definitions were not completed to the modern collection size");
+        return options;
+    };
+    // Every era stores these three for its first clef, so agreement across all of them is
+    // what shows the four physical layouts describe one logical table.
+    const auto expectTreble = [](const auto& options, const char* era) {
+        const auto treble = options->getClefDef(0);
+        expect(treble->middleCPos == -10 && treble->clefChar == 38
+                && treble->staffPosition == -6,
+            std::string("The treble clef definition was not recovered from ") + era);
+    };
+
+    // Finale 2002: selector 95, 24 incidences, sixteen nine-word tuples. The last two
+    // definitions did not exist yet and come from the baseline.
+    const auto f2002 = read("evidence/F2002/F2002-baseline.mus");
+    const auto f2002Clefs = clefs(f2002);
+    expectTreble(f2002Clefs, "Finale 2002");
+    expect(field(f2002, "options.clefOptions.clefDefs[0].middleCPos").origin
+            == ValueOrigin::LegacyMus,
+        "The Finale 2002 clef table was not reported as recovered");
+    expect(f2002Clefs->getClefDef(15)->middleCPos == -10
+            && f2002Clefs->getClefDef(15)->clefChar == 0
+            && f2002Clefs->getClefDef(15)->staffPosition == -6,
+        "The last stored Finale 2002 clef definition was not recovered");
+    expect(field(f2002, "options.clefOptions.clefDefs[16].shapeId").origin
+            == ValueOrigin::Finale27Default
+            && field(f2002, "options.clefOptions.clefDefs[17].shapeId").origin
+                == ValueOrigin::Finale27Default,
+        "The two clef definitions Finale 2002 lacks were not reported as synthesized");
+    expect(f2002Clefs->getClefDef(16)->isShape && f2002Clefs->getClefDef(16)->scaleToStaffHeight,
+        "A synthesized shape clef lost its shape flags");
+    // The scalars around the collection, verified against the controlled ETF and its
+    // exact Finale 27 companion.
+    expect(f2002Clefs->clefChangePercent == 75 && f2002Clefs->clefChangeOffset == -8
+            && f2002Clefs->clefFrontSepar == 24 && f2002Clefs->clefBackSepar == 0
+            && f2002Clefs->clefKeySepar == 0 && f2002Clefs->clefTimeSepar == 0
+            && f2002Clefs->defaultClef == 0 && !f2002Clefs->showClefFirstSystemOnly,
+        "The Finale 2002 clef scalars were not recovered");
+    expect(field(f2002, "options.clefOptions.clefFrontSepar").origin == ValueOrigin::LegacyMus
+            && field(f2002, "options.clefOptions.clefChangePercent").origin
+                == ValueOrigin::LegacyMus,
+        "Recovered clef scalars were reported as synthesized defaults");
+    expect(f2002Clefs->cautionaryClefChanges
+            && field(f2002, "options.clefOptions.cautionaryClefChanges").origin
+                == ValueOrigin::LegacyMus,
+        "cautionaryClefChanges was not recovered from the courtesy-flags word");
+
+    // Finale 2005: the same tuple, but 27 incidences, so the collection is complete in
+    // the source and nothing is synthesized.
+    const auto f2005 = read("evidence/F2005/F2005-baseline.mus");
+    const auto f2005Clefs = clefs(f2005);
+    expectTreble(f2005Clefs, "Finale 2005");
+    expect(field(f2005, "options.clefOptions.clefDefs[17].shapeId").origin
+            == ValueOrigin::LegacyMus,
+        "The Finale 2005 source stores eighteen clefs and should synthesize none");
+    expect(f2005Clefs->getClefDef(16)->isShape && f2005Clefs->getClefDef(16)->shapeId == 2
+            && f2005Clefs->getClefDef(16)->scaleToStaffHeight
+            && !f2005Clefs->getClefDef(16)->useOwnFont,
+        "The Finale 2005 shape-clef flags were not expanded from the packed word");
+
+    // Finale 2007: the same nine-word tuple carried by a big-endian class record.
+    const auto f2007 = read("evidence/F2007/F2007-lyric-hyphens.mus");
+    const auto f2007Clefs = clefs(f2007);
+    expectTreble(f2007Clefs, "Finale 2007");
+    expect(f2007Clefs->getClefDef(13)->middleCPos == -17
+            && f2007Clefs->getClefDef(13)->clefChar == 160,
+        "A later big-endian class-record clef definition was not recovered");
+    expect(f2007Clefs->getClefDef(17)->isShape && f2007Clefs->getClefDef(17)->shapeId == 3,
+        "The big-endian class-record shape clef was not recovered");
+
+    // Finale 2012: little-endian, and the clef character is a long because that release
+    // introduced Unicode text. Reading it as the narrow tuple would shift every slot after
+    // the character and yield twenty definitions instead of eighteen.
+    const auto f2012 = read("evidence/F2012/F2012-upstem-flags.mus");
+    const auto f2012Clefs = clefs(f2012);
+    expectTreble(f2012Clefs, "Finale 2012");
+    expect(f2012Clefs->getClefDef(12)->clefChar == 139
+            && f2012Clefs->getClefDef(12)->staffPosition == -6,
+        "The Finale 2012 long clef character was not assembled from its two words");
+    expect(f2012Clefs->getClefDef(16)->isShape && f2012Clefs->getClefDef(16)->shapeId == 2
+            && f2012Clefs->getClefDef(17)->shapeId == 3,
+        "The wide-tuple shape clefs were not read at their shifted slots");
+
+    // Finale 2000: eight separate globals, selectors 28 through 35. This fixture stores
+    // clef character 32 for its fourth clef where every other era stores 214, and the
+    // exact Finale 27 companion carries that 32 through, so it is a real stored value
+    // rather than an absent one.
+    const auto f2000 = read("evidence/F2000/F2000-multilayer.mus");
+    const auto f2000Clefs = clefs(f2000);
+    expectTreble(f2000Clefs, "Finale 2000");
+    expect(f2000Clefs->getClefDef(4)->clefChar == 32
+            && f2000Clefs->getClefDef(4)->middleCPos == -10
+            && f2000Clefs->getClefDef(4)->staffPosition == -4,
+        "The distinctive Finale 2000 alto clef character was not recovered");
+    expect(field(f2000, "options.clefOptions.clefDefs[7].middleCPos").origin
+            == ValueOrigin::LegacyMus
+            && field(f2000, "options.clefOptions.clefDefs[8].middleCPos").origin
+                == ValueOrigin::Finale27Default,
+        "The pre-2001 boundary between eight stored and ten synthesized clefs moved");
+
+    // Finale 1.0.0: the same eight selectors. Its seventh clef stores -5 where every later
+    // era stores 9, and the exact Finale 27 companion preserves the -5, which is what
+    // shows the value is read from the file rather than defaulted.
+    const auto f100 = read("evidence/F100/F100-baseline.mus");
+    const auto f100Clefs = clefs(f100);
+    expectTreble(f100Clefs, "Finale 1.0.0");
+    expect(f100Clefs->getClefDef(6)->middleCPos == -5
+            && f100Clefs->getClefDef(6)->clefChar == 116,
+        "The Finale 1.0.0 percussion clef definition was not recovered");
+    expect(f100Clefs->getClefDef(4)->clefChar == 214,
+        "The Finale 1.0.0 alto clef character was not recovered");
+
+    // The clef baseline adjustment, from three controlled one-variable saves. It is the one
+    // clef field the corpus could not exercise: every unedited document leaves it zero.
+    //
+    // Finale 2005 stores Efix directly. The fixture asked for one inch on the treble clef,
+    // which is 18432 Efix, and its exact Finale 27 companion carries that number unchanged.
+    // The second edit asked for minus two inches, which does not fit a signed word, so the
+    // stored value saturated; recovering -32768 rather than -36864 is the file being read
+    // correctly, not a decoding error.
+    const auto f2005Baseline = read("evidence/F2005/F2005-clef-baseline.mus");
+    const auto f2005BaselineClefs = clefs(f2005Baseline);
+    expect(f2005BaselineClefs->getClefDef(0)->baselineAdjust == 18432,
+        "The Finale 2005 clef baseline adjustment was not recovered as Efix");
+    expect(f2005BaselineClefs->getClefDef(1)->baselineAdjust == -32768,
+        "The saturated Finale 2005 baseline adjustment was not recovered verbatim");
+    expect(f2005BaselineClefs->getClefDef(2)->baselineAdjust == 0,
+        "An unedited clef did not keep a zero baseline adjustment");
+    expect(field(f2005Baseline, "options.clefOptions.clefDefs[0].baselineAdjust").rawValue
+            == 18432,
+        "The stored baseline word was not reported for the Efix era");
+
+    // The pre-2001 eras store the same setting as a small signed count of harmonic levels,
+    // in word 4 of the clef's own selector, and scale it into Efix. Word 5 of the first
+    // clef's selector is a document-wide switch: with it clear the stored counts are inert,
+    // and Finale 27 discards them. Every assertion below matches the exact companion.
+    constexpr int efixPerHarmonicLevel = 768;
+    const auto expectEarlyBaseline = [&](const char* path, const std::vector<int>& expected,
+                                         const char* era) {
+        const auto result = read(path);
+        const auto options = clefs(result);
+        for (std::size_t i = 0; i < expected.size(); ++i) {
+            expect(options->getClefDef(musx::dom::ClefIndex(i))->baselineAdjust == expected[i],
+                std::string("The clef baseline adjustment was wrong for ") + era);
+        }
+        // The edit must not disturb the fields that share the record.
+        expect(options->getClefDef(0)->middleCPos == -10
+                && options->getClefDef(0)->clefChar == 38
+                && options->getClefDef(0)->staffPosition == -6,
+            std::string("A baseline edit changed neighbouring clef fields in ") + era);
+        return result;
+    };
+
+    // Finale 3.7.2 with the switch on. All eight clefs convert, including ones this save
+    // never touched, which is what shows the switch is per document rather than per clef.
+    const auto f372Baseline = expectEarlyBaseline("evidence/F372/F372-clef-baseline.mus",
+        {1 * efixPerHarmonicLevel, -2 * efixPerHarmonicLevel, -5 * efixPerHarmonicLevel},
+        "Finale 3.7.2 with the switch on");
+    expect(field(f372Baseline, "options.clefOptions.clefDefs[0].baselineAdjust").rawValue == 1,
+        "The raw harmonic-level count was not reported for Finale 3.7.2");
+    // The same document with the switch off. Its clefs still carry -2, -4 and -5, so a
+    // reader that ignored the switch would produce three offsets Finale never applied.
+    expectEarlyBaseline("evidence/F372/F372-baseline.mus", {0, 0, 0},
+        "Finale 3.7.2 with the switch off");
+    expect(field(read("evidence/F372/F372-baseline.mus"),
+               "options.clefOptions.clefDefs[0].baselineAdjust").rawValue == -2,
+        "A disabled baseline count was not still reported as stored evidence");
+
+    // Finale 97 is internally 3.8 and dropped the checkbox, so it adjusts unconditionally.
+    // Its word 5 is 30 here, which has bit 0 clear: a reader that tested the word for
+    // non-zero, or that tested the bit without the version, would get this file wrong.
+    const auto f97Baseline = expectEarlyBaseline("evidence/F97/Fin97-clef-baseline.mus",
+        {1 * efixPerHarmonicLevel, -2 * efixPerHarmonicLevel, 0}, "Finale 97");
+
+    // The Coda era is excluded outright, not merely left switched off: its word 4 is a
+    // mid-measure-clef baseline rather than the general one, and Finale 27 discards it.
+    const auto f100Baseline = expectEarlyBaseline("evidence/F100/F100-clef-baseline.mus",
+        {0, 0, 0}, "Finale 1.0.0");
+    const auto f263Baseline = expectEarlyBaseline("evidence/F263/F263-clef-baseline.mus",
+        {0, 0, 0}, "Finale 2.6.3");
+    expect(field(f100Baseline, "options.clefOptions.clefDefs[0].baselineAdjust").rawValue == -4,
+        "The Finale 1.0.0 stored baseline count was not reported");
+
+    // The courtesy flags pack clef, key and time in one word. Only a controlled pair can say
+    // which bit is which: every companion in the corpus has all three set, and only the
+    // values 5 and 7 occur, both of which leave the clef bit set.
+    const auto clefCourtesyOff = read("evidence/F2005/F2005-courtesy-clef-off.mus");
+    expect(!clefs(clefCourtesyOff)->cautionaryClefChanges,
+        "Turning off the courtesy clef alone was not recovered");
+    // Turning off the key signature's courtesy instead must leave the clef's alone. Without
+    // this the test would pass for any bit that happens to be clear.
+    const auto keyCourtesyOff = read("evidence/F2005/F2005-courtesy-key-off.mus");
+    expect(clefs(keyCourtesyOff)->cautionaryClefChanges,
+        "A courtesy key-signature edit was misread as the clef bit");
+
+    // The Coda era has no courtesy-clef option and always shows one, so the reader asserts
+    // that rather than reading selector 44, which is zero throughout the era and would say
+    // the opposite. Both a plain Coda document and one whose key courtesy was turned off
+    // must come out true.
+    for (const char* path : {"evidence/F263/F263-baseline.mus",
+             "evidence/F263/F263-courtesy-key-off.mus", "evidence/F100/F100-baseline.mus"}) {
+        const auto coda = read(path);
+        expect(clefs(coda)->cautionaryClefChanges,
+            std::string("A Coda document did not always show a courtesy clef: ") + path);
+        // Neither read from the file nor a baseline default: the era had no option, so the
+        // behavior determines it. Reported once, and as behavior.
+        const auto entries = std::count_if(coda.report.fields.begin(), coda.report.fields.end(),
+            [](const FieldInfo& value) {
+                return value.target == "options.clefOptions.cautionaryClefChanges";
+            });
+        expect(entries == 1,
+            std::string("cautionaryClefChanges was reported more than once from ") + path);
+        expect(field(coda, "options.clefOptions.cautionaryClefChanges").origin
+                == ValueOrigin::LegacyBehavior,
+            std::string("A Coda courtesy clef was not reported as legacy behavior: ") + path);
+    }
+    // Every other era reads it, so nothing else may claim behavior.
+    for (const auto* result : {&f2002, &f2007, &f2000}) {
+        expect(field(*result, "options.clefOptions.cautionaryClefChanges").origin
+                == ValueOrigin::LegacyMus,
+            "A recorded courtesy clef was reported as legacy behavior");
+    }
+    // Finale 3.0 through 3.5 predate the option too, but already carry the bit set, so the
+    // epoch is the boundary and reading the bit gives the right answer there.
+    expect(clefs(read("evidence/F372/F372-baseline.mus"))->cautionaryClefChanges,
+        "A pre-3.6.2 uncompressed document lost its courtesy clef");
+
+    for (const auto* result : {&f2002, &f2005, &f2007, &f2012, &f2000, &f100,
+             &f2005Baseline, &f100Baseline, &f263Baseline, &f372Baseline, &f97Baseline}) {
+        const auto options = result->document->getOptions()->get<ClefOptions>();
+        for (std::size_t index = 0; index < options->clefDefs.size(); ++index) {
+            const auto& def = options->clefDefs[index];
+            // musxdom's own resolver rejects this combination, so it must never be built.
+            expect(!def->useOwnFont || static_cast<bool>(def->font),
+                "A clef claims its own font without carrying one");
+            if (def->useOwnFont) {
+                expect(static_cast<bool>(result->document->getOthers()
+                        ->get<musx::dom::others::FontDefinition>(
+                            musx::dom::SCORE_PARTID, def->font->fontId)),
+                    "A recovered clef font has a dangling font id");
+            }
+        }
+    }
+}
+
+// Selector 24 is the default-font array from well before the DCL era, but the reader used to
+// gate that layout to DCL alone, so every Finale 3.0 through 2000 document reported all 45
+// font options as Finale 27 defaults while its source held 40 of them.
+void testUncompressedFontOptions()
+{
+    using FontOptions = musx::dom::options::FontOptions;
+    using FontType = FontOptions::FontType;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+    // Finale 3.7.2, Finale 97 and Finale 2000 span the epoch. All three store the same
+    // sizes, and each agrees with its exact Finale 27 companion.
+    const std::array<std::pair<const char*, std::array<int, 4>>, 3> eraFixtures{{
+        // path, then the music, key, clef and time sizes its companion shows.
+        {"evidence/F372/F372-baseline.mus", {24, 24, 24, 24}},
+        {"evidence/F97/F97-fileinfo-short.mus", {28, 28, 24, 26}},
+        {"evidence/F2000/F2000-multilayer.mus", {28, 28, 24, 26}}}};
+    for (const auto& [path, sizes] : eraFixtures) {
+        const auto result = read(path);
+        expect(result.report.formatEpoch == FormatEpoch::UncompressedLegacy,
+            "An uncompressed fixture was not classified as uncompressed");
+        const auto options = result.document->getOptions()->get<FontOptions>();
+        expect(options && options->fontOptions.size() == 45,
+            "Uncompressed font options were not completed to the modern type set");
+        expect(options->getFontInfo(FontType::Music)->fontSize == sizes[0]
+                && options->getFontInfo(FontType::Key)->fontSize == sizes[1]
+                && options->getFontInfo(FontType::Clef)->fontSize == sizes[2]
+                && options->getFontInfo(FontType::Time)->fontSize == sizes[3],
+            std::string("Uncompressed font options were not recovered from ") + path);
+        expect(field(result, "options.fontOptions[0].fontSize").origin == ValueOrigin::LegacyMus,
+            std::string("Uncompressed font options were reported as defaults from ") + path);
+        // The era's physical slot 28 is tablature and slot 13 is not an independent value.
+        expect(field(result, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus,
+            "The uncompressed tablature slot was not mapped");
+    }
+
+    // The epoch alone must carry the semantic layout, because three real Finale 3.0
+    // documents recover a major version far outside the era's own range.
+    const auto synthetic = Reader::read<TestXmlDocument>(makeUncompressedMusWithFontOptions());
+    const auto options = synthetic.document->getOptions()->get<FontOptions>();
+    expect(options->getFontInfo(FontType::Music)->fontSize == 28
+            && options->getFontInfo(FontType::Key)->fontSize == 26
+            && options->getFontInfo(FontType::Clef)->fontSize == 24
+            && options->getFontInfo(FontType::Time)->fontSize == 22,
+        "An uncompressed file with an out-of-range major version recovered no font options");
+    expect(options->getFontInfo(FontType::Time)->bold,
+        "A recovered effects mask was not expanded for the uncompressed era");
 }
 
 // The uncompressed era had no tracked fixture until these: every result for it was
@@ -784,16 +1255,22 @@ void testUncompressedEpochAndOverlays()
     const auto fallbackDefinition = result.document->getOthers()
         ->get<musx::dom::others::FontDefinition>(
             musx::dom::SCORE_PARTID, fallbackText->fontId);
-    // Times New Roman is cmper 2 in the Windows reference. This target starts with no
-    // font definitions, so the cloned definition must use its next sequential cmper, 1.
-    expect(fallbackText->fontId == 1
-            && fallbackDefinition && fallbackDefinition->getCmper() == 1
+    // This target recovers no font definitions of its own, so every one below was introduced
+    // from the Windows reference. Cmpers 0 and 1 both hold the music font: 0 is the
+    // default-music-font sentinel, materialized so that anything storing 0 resolves, and 1 makes
+    // the same typeface addressable concretely, since matching never selects 0.
+    const auto zeroDefinition = result.document->getOthers()
+        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    expect(static_cast<bool>(zeroDefinition),
+        "A document referencing font id 0 was left with no definition at 0");
+    expect(fallbackText->fontId != 0
+            && fallbackDefinition && fallbackDefinition->getCmper() == fallbackText->fontId
             && fallbackDefinition->name == "Times New Roman"
             && fallbackDefinition->charsetBank
                 == musx::dom::others::FontDefinition::CharacterSetBank::Windows
             && fallbackDefinition->pitch == 2,
         "A cloned Windows fallback font retained its reference cmper or lost its definition");
-    expectSeededOptionsExceptFontOptions(result);
+    expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
 }
 
@@ -838,7 +1315,8 @@ void testCodaBannerEpoch()
     expect(result.report.sourcePlatform == SourcePlatform::Unknown
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
-    expect(!result.report.warnings.empty(), "Coda-banner limitation was not reported");
+    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Warning),
+        "Coda-banner limitation was not reported as a warning");
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported Coda-banner option was not retained as a default");
@@ -846,7 +1324,7 @@ void testCodaBannerEpoch()
         ->get<musx::dom::options::FontOptions>();
     expect(fonts && fonts->fontOptions.size() == 45,
         "Unsupported Coda-banner FontOptions were not safely completed from the baseline");
-    expectSeededOptionsExceptFontOptions(result);
+    expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
 }
 
@@ -861,20 +1339,141 @@ void testZlibEpoch()
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported zlib-era option was not retained as a default");
-    expect(!result.report.warnings.empty(), "Zlib-era overlay limitation was not reported");
+    // Info, not a warning: this message fires for every zlib document ever read and
+    // describes how far recovery reaches, so raising it to a user would report normal
+    // operation as a fault on every file. Other diagnostics from this synthetic fixture
+    // may legitimately be warnings, so the level is asserted on this message alone.
+    expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
+               [](const finale_mus_reader::Diagnostic& entry) {
+                   return entry.message.find("variable logical records") != std::string::npos
+                       && entry.level == musx::util::Logger::LogLevel::Info;
+               }),
+        "The zlib overlay limitation was not reported at info level");
     expectNoScoreContent(result);
+}
+
+// A document that embeds a graphic puts its bytes in one of the two terminal blocks, stored
+// rather than deflated. Inflating it used to fail and abandon every block already decoded,
+// so a score with a picture in it lost its entire options pool. Both terminal types are
+// exercised because a file may use either.
+void testEmbeddedGraphics()
+{
+    // A PNG signature and an EPS header: the two shapes the corpus actually contains.
+    for (const auto& [terminalType, graphic] :
+         {std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x0013),
+              "\x89PNG\r\n\x1a\n padding"},
+          std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x001d),
+              "%!PS-Adobe-3.0 EPSF-3.0"}}) {
+        const auto result = Reader::read<TestXmlDocument>(
+            makeZlibMusWithGraphic(terminalType, graphic));
+        expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
+            "A file with an embedded graphic was not classified as zlib legacy");
+        // The point of the fix: the four real blocks survive rather than being discarded.
+        expect(result.report.blocks.size() == 5,
+            "A stored terminal block cost the file its already-decoded blocks");
+        expect(result.report.blocks.front().decodedSize == 3,
+            "The record block was not decoded alongside a stored terminal block");
+
+        const auto& terminal = result.report.blocks.back();
+        expect(terminal.type == terminalType && terminal.stored,
+            "The graphics block was not reported as stored");
+        expect(terminal.decodedSize == graphic.size(),
+            "A stored block's payload begins after six header bytes, not ten");
+        expect(!terminal.checksumPresent,
+            "A stored block was reported as carrying a checksum");
+        expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
+                   [](const finale_mus_reader::Diagnostic& entry) {
+                       return entry.level == musx::util::Logger::LogLevel::Info
+                           && entry.message.find("does not import") != std::string::npos;
+                   }),
+            "An embedded graphic was preserved without being reported at info level");
+        expectCompleteOptionsPool(result);
+        expectNoScoreContent(result);
+    }
+}
+
+// The Coda-banner era in both byte orders. Its Windows documents are little-endian, which the
+// container learns from the banner product rather than by trialling framing, and the only real
+// specimens are Coda's own installer templates, which cannot be committed here. A synthetic
+// pair covers the path and keeps the two orders honest against each other.
+void testCodaBannerByteOrder()
+{
+    using ClefOptions = musx::dom::options::ClefOptions;
+    struct Case
+    {
+        ByteOrder byteOrder;
+        const char* product;
+        SourcePlatform platform;
+        SourcePlatform baseline;
+    };
+    // A `PC` product states Windows, which is little-endian and seeds from the Windows
+    // baseline. A numeric product says nothing about platform, so it stays Unknown and falls
+    // back to macOS, exactly as before this era gained a second platform.
+    const std::array<Case, 2> cases{{
+        {ByteOrder::LittleEndian, "PC 1.0+", SourcePlatform::Windows, SourcePlatform::Windows},
+        {ByteOrder::BigEndian, "2.6", SourcePlatform::Unknown, SourcePlatform::MacOS}}};
+
+    for (const auto& testCase : cases) {
+        const auto result = Reader::read<TestXmlDocument>(
+            makeCodaBannerMus(testCase.byteOrder, testCase.product));
+        const std::string what = std::string("Coda-banner ") + testCase.product;
+        expect(result.report.formatEpoch == FormatEpoch::CodaBanner,
+            what + " was not classified as the Coda-banner era");
+        expect(result.report.byteOrder == testCase.byteOrder,
+            what + " byte order was not taken from the banner product");
+        expect(result.report.sourcePlatform == testCase.platform
+                && result.report.defaultsPlatform == testCase.baseline,
+            what + " selected the wrong platform or baseline");
+        expect(result.report.savingProduct == testCase.product,
+            what + " did not report its product");
+
+        // Both orders must yield the same logical document, which is what shows the order is
+        // being applied rather than the bytes merely being accepted.
+        const auto clefs = result.document->getOptions()->get<ClefOptions>();
+        expect(clefs && clefs->clefDefs.size() == 18,
+            what + " did not complete the clef collection");
+        expect(clefs->getClefDef(0)->middleCPos == -10 && clefs->getClefDef(0)->clefChar == 38
+                && clefs->getClefDef(0)->staffPosition == -6,
+            what + " did not recover its first clef");
+        expect(clefs->getClefDef(4)->clefChar == 214 && clefs->getClefDef(7)->staffPosition == -4,
+            what + " did not recover its later clefs");
+        expect(field(result, "options.clefOptions.clefDefs[7].middleCPos").origin
+                == ValueOrigin::LegacyMus,
+            what + " reported a stored clef as synthesized");
+        expect(clefs->clefChangePercent == 75 && clefs->clefChangeOffset == -12
+                && clefs->clefFrontSepar == 24,
+            what + " did not recover its clef scalars");
+        // The era has no such option, so this is behavior rather than a record or a default.
+        expect(clefs->cautionaryClefChanges
+                && field(result, "options.clefOptions.cautionaryClefChanges").origin
+                    == ValueOrigin::LegacyBehavior,
+            what + " lost the era's unconditional courtesy clef");
+        // These three do not exist in the era either, but the baseline already carries what
+        // Finale 27 produces for them, so they are ordinary defaults.
+        expect(clefs->clefKeySepar == 0 && clefs->clefTimeSepar == 0
+                && !clefs->showClefFirstSystemOnly,
+            what + " invented a value for an option the era does not have");
+        expectNoScoreContent(result);
+    }
 }
 
 void testMalformedInput()
 {
-    bool threw = false;
-    try {
-        static_cast<void>(
-            Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4}));
-    } catch (const std::invalid_argument&) {
-        threw = true;
-    }
-    expect(threw, "Arbitrary input was accepted as a MUS file");
+    // Failure is returned, not thrown: a null document is the signal, and the reason
+    // arrives as an Error diagnostic in the same report every other message uses. A caller
+    // sweeping a corpus can therefore skip a bad file without wrapping each call.
+    const auto result = Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4});
+    expect(result.document == nullptr, "Arbitrary input was accepted as a MUS file");
+    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Error),
+        "A failed import did not report why at error level");
+    // Error is the one level with an absolute meaning, so it must not appear when a
+    // document was produced. Every other level accompanies a usable result.
+    const auto good = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-upstem-flags.mus");
+    expect(good.document != nullptr, "A known-good fixture failed to import");
+    expect(!hasDiagnostic(good.report, musx::util::Logger::LogLevel::Error),
+        "A successful import reported an error-level diagnostic");
 }
 
 } // namespace
@@ -882,6 +1481,8 @@ void testMalformedInput()
 TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
 TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
 TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
+TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
+TEST_CASE("Uncompressed font options", "[reader]") { testUncompressedFontOptions(); }
 TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
 TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }
 TEST_CASE("Big-endian class records", "[reader]") { testBigEndianClassRecords(); }
@@ -900,6 +1501,8 @@ TEST_CASE("Uncompressed epoch and overlays", "[reader]")
 }
 TEST_CASE("Coda banner epoch", "[reader]") { testCodaBannerEpoch(); }
 TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
+TEST_CASE("Embedded graphics", "[reader]") { testEmbeddedGraphics(); }
+TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
 
 // Every banner spelling is recognized through the one parser, so a file that carries the

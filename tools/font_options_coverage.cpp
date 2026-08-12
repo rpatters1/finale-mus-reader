@@ -96,9 +96,22 @@ std::string originName(finale_mus_reader::ValueOrigin origin)
 {
     switch (origin) {
     case finale_mus_reader::ValueOrigin::LegacyMus: return "legacy-mus";
+    case finale_mus_reader::ValueOrigin::LegacyBehavior: return "legacy-behavior";
     case finale_mus_reader::ValueOrigin::Finale27Default: return "finale27-default";
     }
     return "unknown";
+}
+
+// The reader returns failure rather than throwing: a null document means the import failed,
+// and the reason is the Error-level diagnostic in the report.
+std::string importError(const finale_mus_reader::ImportReport& report)
+{
+    for (const auto& entry : report.diagnostics) {
+        if (entry.level == musx::util::Logger::LogLevel::Error) {
+            return entry.message;
+        }
+    }
+    return "import failed without a reported reason";
 }
 
 std::map<std::size_t, Tuple> collectTuples(const finale_mus_reader::ImportReport& report)
@@ -132,7 +145,7 @@ std::set<musx::dom::Cmper> collectSourceFontIds(
         }
         const auto close = field.target.find(']', prefix.size());
         if (close == std::string::npos) continue;
-        result.insert(static_cast<musx::dom::Cmper>(
+        result.insert(musx::dom::Cmper(
             std::stoul(field.target.substr(prefix.size(), close - prefix.size()))));
     }
     return result;
@@ -149,14 +162,15 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         ->get<musx::dom::options::FontOptions>();
     std::size_t completeFieldCount = 0;
     std::size_t recoveredCount = 0;
+    std::size_t behaviorCount = 0;
     std::size_t defaultCount = 0;
     for (const auto& [ordinal, tuple] : tuples) {
         if (ordinal >= 45 || !tuple.fontId || !tuple.fontSize || !tuple.effects) continue;
         ++completeFieldCount;
-        if (tuple.fontId->origin == finale_mus_reader::ValueOrigin::LegacyMus) {
-            ++recoveredCount;
-        } else {
-            ++defaultCount;
+        switch (tuple.fontId->origin) {
+        case finale_mus_reader::ValueOrigin::LegacyMus: ++recoveredCount; break;
+        case finale_mus_reader::ValueOrigin::LegacyBehavior: ++behaviorCount; break;
+        case finale_mus_reader::ValueOrigin::Finale27Default: ++defaultCount; break;
         }
     }
     std::size_t danglingNonzeroCount = 0;
@@ -195,6 +209,7 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         << ",\"font_option_count\":" << (fontOptions ? fontOptions->fontOptions.size() : 0)
         << ",\"complete_font_option_field_count\":" << completeFieldCount
         << ",\"recovered_font_option_count\":" << recoveredCount
+        << ",\"legacy_behavior_font_option_count\":" << behaviorCount
         << ",\"default_font_option_count\":" << defaultCount
         << ",\"font_definition_count\":" << fonts.size()
         << ",\"source_font_definition_count\":" << sourceFontIds.size()
@@ -203,7 +218,7 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         << ",\"duplicate_nonzero_font_name_count\":" << duplicateNonzeroNameCount
         << ",\"introduced_duplicate_nonzero_font_name_count\":"
         << introducedDuplicateNonzeroNameCount
-        << ",\"warning_count\":" << imported.report.warnings.size()
+        << ",\"warning_count\":" << imported.report.diagnostics.size()
         << "}\n";
 }
 
@@ -315,6 +330,9 @@ int main(int argc, char** argv)
         try {
             const auto imported = finale_mus_reader::Reader::read<musx::xml::pugi::Document>(
                 std::filesystem::path(path));
+            if (!imported.document) {
+                throw std::runtime_error(importError(imported.report));
+            }
             const auto tuples = collectTuples(imported.report);
             const auto sourceFontIds = collectSourceFontIds(imported.report);
             writeSummary(output, corpusId, imported, tuples, sourceFontIds);

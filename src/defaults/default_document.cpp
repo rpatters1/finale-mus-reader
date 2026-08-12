@@ -149,10 +149,15 @@ ParsedDefaultDocument parseDefault(
 
     result.options = requireChild(root, "options");
     result.others = requireChild(root, "others");
-    // Most baseline options are structurally safe defaults. FontOptions is not: its ids
-    // belong to the baseline font-definition table, which is deliberately not imported.
+    // Most baseline options are structurally safe defaults. Two are not, for the same
+    // reason: they carry comparators into baseline tables that are deliberately not
+    // imported. FontOptions holds font-definition ids throughout, and ClefOptions holds a
+    // shape id and an optional font id on every clef definition. Both are rebuilt from the
+    // source instead, and completed from the separately owned reference document.
     result.optionsFilter = [](const musx::xml::XmlElementPtr& node) {
-        return node->getTagName() != musx::dom::options::FontOptions::XmlNodeName;
+        const auto name = node->getTagName();
+        return name != musx::dom::options::FontOptions::XmlNodeName
+            && name != musx::dom::options::ClefOptions::XmlNodeName;
     };
     // This allowlist is what keeps the fallback measures, staves, entries, text, parts,
     // and layouts of the baseline out of an imported document.

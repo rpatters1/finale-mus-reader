@@ -148,6 +148,30 @@ const FieldMapping classFontFields[] = {
 
 } // namespace
 
+// The Coda-banner epoch, which needs no version test at all.
+//
+// That epoch lies entirely below the header boundary, so the early layout always applies to it
+// and asking for a version can only lose files. It does lose them: this era's Windows documents
+// state a platform where its Mac documents state a version, so `PC 1.0+` yields no version and
+// a version-gated table skips the document silently, leaving every font name empty.
+//
+// It shares @ref earlyFontFields with the table above rather than restating the layout, because
+// the layout is the same fact; only the question of which files it applies to differs.
+const MappingTable& codaFontDefinitionsTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "others.fontName",
+        .epochs = EpochMask::CodaBanner,
+        .versions = versions::any(),
+        .targetKind = TargetKind::OthersFromRecords,
+        .recordIdentity = records::packTag("FN"),
+        .createTarget = &createOthersTarget<FontDefinitionTarget>,
+        .fields = earlyFontFields,
+        .fieldCount = std::size(earlyFontFields),
+        .finalizeTarget = &convertNameToUtf8};
+    return table;
+}
+
 const MappingTable& classFontDefinitionsTable()
 {
     static const MappingTable table{
@@ -167,7 +191,9 @@ const MappingTable& fontDefinitionsTable()
 {
     static const MappingTable table{
         .reportPrefix = "others.fontName",
-        .epochs = EpochMask::CodaBanner | EpochMask::FixedRow,
+        // Fixed-row epochs only. A Coda-banner document can never be Finale 3.2 or later, so
+        // listing that epoch here could only ever be satisfied by a misread version.
+        .epochs = EpochMask::FixedRow,
         .versions = versions::from(headerFirstVersion, headerFirstMinor),
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
@@ -182,7 +208,8 @@ const MappingTable& earlyFontDefinitionsTable()
 {
     static const MappingTable table{
         .reportPrefix = "others.fontName",
-        .epochs = EpochMask::CodaBanner | EpochMask::FixedRow,
+        // The uncompressed epoch straddles the boundary, so here the version decides.
+        .epochs = EpochMask::FixedRow,
         .versions = versions::upTo(headerFirstVersion, headerFirstMinor - 1),
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),

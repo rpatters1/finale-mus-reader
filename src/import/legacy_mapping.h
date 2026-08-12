@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -342,6 +343,35 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
     const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report);
 
+/// @brief A reference-document object a target field needs, resolved after the pools are complete.
+/// @details Copying an object out of the reference allocates comparators in the target, so it
+/// cannot run while the target's own pools are still being filled: a comparator handed out early
+/// could collide with one the source is about to claim. Capture therefore records what it needs
+/// and leaves the field at zero, and one phase at the end resolves every request at once.
+///
+/// @ref assign writes the resolved comparator wherever it belongs, so the queue stays ignorant of
+/// what is waiting on it. Clef shapes are the only user today; nothing about it is clef-specific.
+struct PendingShapeReference
+{
+    /// @brief The shape's comparator in the reference document, meaningless in the target.
+    musx::dom::Cmper referenceShapeId{};
+    /// @brief Writes the resolved target comparator into the field that needs it.
+    std::function<void(musx::dom::Cmper)> assign;
+    /// @brief The @ref FieldInfo::target whose reported value the resolution updates.
+    std::string reportTarget;
+};
+
+/// @brief Requests accumulated during capture, drained by @ref resolveDeferredReferences.
+using PendingReferences = std::vector<PendingShapeReference>;
+
+/// @brief Copies every requested reference object into the document and fills in its comparator.
+/// @details Runs after every pool is populated. Nothing may allocate an `others` comparator after
+/// this returns. A reference shape requested more than once is copied once, keyed by its
+/// comparator in the reference document rather than by anything about its content.
+void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument,
+    PendingReferences& pending, ImportReport& report);
+
 /// @brief Applies every registered mapping table to a seeded document.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
@@ -370,13 +400,16 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         nullptr \
     }
 
-/// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
-#define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload,
+/// in a record found under an explicit comparator.
+#define MUS_CLASS_SELECTED_BITS(Class, classId, selectorValue, byteOffset, firstBit, \
+                                bitCount, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
+            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             (::finale_mus_reader::BitRange{ \
@@ -390,6 +423,24 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
                 static_cast<const Class*>(instance)->member); }, \
         nullptr \
     }
+
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
+/// @details The comparator is left at zero because the tables that use this are others
+/// tables, where the target object's own comparator selects the record and the field's
+/// comparator is ignored. An options singleton has no such comparator and must name the
+/// record's own, so it uses @ref MUS_CLASS_WORD or @ref MUS_CLASS_BIT instead.
+#define MUS_CLASS_BITS(Class, classId, byteOffset, firstBit, bitCount, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, 0, byteOffset, firstBit, bitCount, member)
+
+/// @brief A whole two-byte field of a class-identified record found under a comparator.
+/// @details The zero bit count is what selects the whole value rather than a range of it,
+/// and a whole value is read signed.
+#define MUS_CLASS_WORD(Class, classId, selector, byteOffset, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, selector, byteOffset, 0, 0, member)
+
+/// @brief A single bit of a class-identified record's payload word, under a comparator.
+#define MUS_CLASS_BIT(Class, classId, selector, byteOffset, bitIndex, member) \
+    MUS_CLASS_SELECTED_BITS(Class, classId, selector, byteOffset, bitIndex, 1, member)
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \

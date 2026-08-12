@@ -8,7 +8,38 @@ Source locations are intentionally omitted from this public document. Resolve ea
 
 ## Coverage gaps
 
-### No Windows document earlier than Finale 3.0
+### No Windows document earlier than Finale 3.0 — supplied and analyzed
+
+**Closed 2026-08-11 with specimens.** The Finale 2.2 for Windows install disks were located and
+their `.LIF` installer archives extracted, yielding 24 `.MUS` files: eight templates and sixteen
+tutorial documents, all Windows-origin and all from inside the Coda-banner era. They are
+little-endian, they carry a previously unrecorded banner spelling, and the reader rejects all of
+them. Findings are in [FORMAT_NOTES.md](FORMAT_NOTES.md#determining-byte-order) and the reader work
+is [P2.6](PRODUCTION_READINESS.md). The specimens live in the installs corpus, not in this
+repository: they are Coda-authored sample content and are not publishable evidence.
+
+The reasoning that preceded them is kept below, because it predicted them correctly from a single
+Microsoft KB article and is a fair record of how the question was closed.
+
+**Answered in principle 2026-08-11; the specimen is still wanted, and now matters more.**
+
+A proposition floated and then withdrawn on the same day was that Finale for Windows began with
+Finale 3.0, which would have made a pre-3.0 Windows document impossible rather than absent. It is
+false. Microsoft Knowledge Base article Q107181, the README for Windows Sound System 2.0, names
+"Finale 2.2 for Windows from Coda Music Technology" and mentions MusicProse for Windows beside it.
+Finale 2.2 falls inside the Coda-banner era, so that era spans both platforms.
+
+The corpus cannot see this: its earliest Windows-origin document is Finale 3.0, out of 20 spanning
+3.0 to 2012, and no Coda-banner file carries a platform string at all. Absence in one corpus was not
+absence in the world, which is the lesson worth keeping.
+
+This raises the value of the request rather than retiring it. The container asserts big-endian for
+the whole Coda-banner era, so a Windows document of that era would be misread, and one is now known
+to be a thing that could exist. Any Windows-origin `.mus` from Finale 1.x or 2.x would settle both
+the byte order and whether the era's pool structure is even the same across platforms.
+
+Source, accessed 2026-08-11:
+[Microsoft KB Q107181, revised 13 June 2001](https://jeffpar.github.io/kbarchive/kb/107/Q107181/).
 
 Every file in the corpus from before Finale 3.x is Mac-origin and big-endian: all 54 Coda-banner then known
 files, and the archive-derived Finale 1.8.7, 2.0.1, and 2.6 members. There is no Windows document
@@ -36,7 +67,9 @@ Consequences for the reader, none of them yet exercised:
 - **A Windows document might not use this record vocabulary at all**, given the separate release
   schedules.
 
-What would close it: any Windows-origin `.mus` predating Finale 3.2, however small. A Finale 98
+What would close it: see the note above. A Windows-origin document predating Finale 3.0 would settle
+it directly; the corpus already holds Windows Finale 3.0 files, so the boundary is somewhere at or
+before that. A Finale 98
 document would additionally settle the two open version questions recorded in
 [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md) and
 [FORMAT_NOTES.md](FORMAT_NOTES.md#font-definitions).
@@ -121,12 +154,24 @@ immediately export `minimal-Fin263.etf` without another edit or resave. Record t
 Preserve the resource fork when moving the MUS file. This pair should expose the early ordinary/detail/entry indexes
 with very little noise; general Finale 27 compatibility through 2.6.3 is already confirmed.
 
-### C5 — Proposed — essential if Finale 1.0 supports ETF
+### C5 — Partly analyzed — Finale 1.0.0 does export ETF
 
 Repeat C4 in Finale 1.0 as `minimal-Fin100.mus` and `minimal-Fin100.etf`. If Finale 1.0 has no ETF export command,
 preserve the MUS file and record that fact rather than exporting it through a later Finale version. Try a `.mus`-
 suffixed copy in Finale 27 and record the result. This is the highest-value test of whether the 1.8.7–2.6 fixed-row/
 indexed model and verified Finale 27 compatibility extend to the first release.
+
+**Answered 2026-08-11 for the export question.** `tests/evidence/F100/F100-clef-baseline.etf` is a Finale 1.0.0 ETF
+export, and `tests/evidence/F263/F263-clef-baseline.etf` its Finale 2.6.3 counterpart. Both carry the era's own
+banner, `ENIGMA transportable file` followed by `ENIGMA Structures Copyright 1987 by Coda.`, so they are written by
+the era rather than by a later Finale reading the file. Finale 1.0 therefore has an ETF export command, and the
+Coda era now has a textual reference of its own.
+
+They already earn their keep. Both show `^NN(65534)` globals with the same six words the MUS rows hold, which
+independently confirms the clef records at selectors 28 through 35 and their word 4 baseline adjustment. The
+Finale 2.6.3 export also shows `^24(65534) 13 69 52 48 65 60`, matching the Finale 1.0.0 census and confirming from
+a second era that selector 24 is not the default-font array in the Coda era. The remaining part of C5, a minimal
+document paired across the C4 matrix, is still worth having.
 
 ### C6 — Proposed — essential for option-map verification
 
@@ -163,6 +208,74 @@ source-location evidence.
 The comparisons resolve IDs independently through normalized font names and compare `(name, size, effects)`, never
 numeric cmpers. The detailed method and remaining early-version work are in
 [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md#fontoptions-sequence-verification-strategy).
+
+### C8 — Analyzed — the two open ClefOptions fields, both now settled
+
+Two `ClefOptions` questions cannot be settled by any corpus file, because every specimen has the
+default value on both sides of the comparison. Both need one controlled toggle. Any Finale from 2003
+to 2006 is the most useful source, because that era is fully covered by other evidence; note the
+exact version, build, platform, and UI value, and save a Finale 27 companion for each.
+
+1. **The clef baseline word.** From a no-libraries baseline, open the Clef Designer and give one
+   clef — index 0 is easiest to find — a distinctive non-default baseline adjustment. This is the
+   only word of the clef tuple that is zero in all 1,268 corpus specimens. It settles three things
+   at once: that tuple word 3 is where the value lands, whether that era stores it in Efix or in
+   harmonic levels, and therefore whether the reader's unit boundary at Finale 2001 is right. A
+   second copy from any pre-2001 Finale, with the same edit, would settle the earlier half directly.
+2. **The courtesy-clef bit.** From the same baseline, turn off "Display Courtesy Clef at End of
+   Staff System" and leave the key and time signature courtesies on. Selector `44` word 3 holds all
+   three as bits; the corpus contains only the values `7` and `5`, which eliminates bit 1 and leaves
+   bits 0 and 2 as candidates for the clef. One save with only the clef courtesy cleared identifies
+   it. A second save clearing only the key courtesy would confirm the assignment rather than infer
+   it by elimination.
+
+**Set 1 supplied and analyzed 2026-08-11**, as `F2005-clef-baseline`, `F100-clef-baseline`, and
+`F263-clef-baseline` with ETF and Finale 27 companions. Results are in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#clef-definitions): the 2001-and-later unit is Efix in a signed
+16-bit word, **confirmed**; the pre-2001 slot is word 4 of the clef's own selector, **confirmed**,
+which corrected a wrong mapping that had been reading word 1 and affected 90 corpus files. The
+harmonic-level-to-Efix conversion stays **weak** and now cannot be settled by a companion at all,
+because Finale 27 discards the early value rather than converting it.
+
+**Set 2 supplied and analyzed 2026-08-11**, as `F2005-courtesy-clef-off`, `F2005-courtesy-key-off`
+and `F263-courtesy-key-off`. `cautionaryClefChanges` is bit 2 of selector 44 word 3 and
+`cautionaryKeySigChanges` is bit 0, **confirmed**; the second save is what distinguishes the clef
+bit from a bit that merely happened to be clear. The Finale 2.6.3 save shows the Coda era storing
+these as separate boolean words in selector 12 rather than as a packed word, so that era is
+excluded and its clef word is the one piece still open. The corpus could not have settled any of
+this: all 1,120 companions have the option set.
+
+### C9 — Proposed — useful for the early clef record
+
+Two questions the Set 1 fixtures raised rather than answered. Both are small and neither blocks
+anything.
+
+1. **The "use baseline adjustments" checkbox. Answered 2026-08-11 for Finale 3.x.** The Finale
+   3.7.2 pair locates it in bit 0 of word 5 of selector 28, governing the document rather than one
+   clef, and Finale 97 turns out to have dropped the checkbox and adjust unconditionally. What
+   remains open is only the Coda era: the Finale 1.0.0 save left no trace anywhere in the others or
+   details pools, so either that era does not persist the setting or it lives in the Coda-banner
+   directory region the container does not decode. A save toggling **only** the checkbox, changing
+   no values, would settle it; byte-identity with its baseline would be the answer.
+2. **Word 1 of the early clef record.** It is populated in the Coda era — `6, 0, -2, -6, 6, -1, -13,
+   -4` for selectors 28 through 35 — and zero from Finale 3.0 onward, and no controlled edit so far
+   has moved it. If any Clef Designer field remains unaccounted for after the checkbox is settled,
+   one save changing it on clef 0 would identify the slot.
+
+### C10 — Proposed — settles the Coda `Name` fan-out
+
+The importer propagates the Coda era's single `Name` font preference to all four modern name
+types (see FORMAT_NOTES, "The single `Name` preference reaches all four modern name types"). The
+57 Coda-era companions cannot confirm or refute this, because all 57 were upgraded under a
+personal Maestro default file: they report `Times 16`, `Monaco 16`, or `Pmusic 12` for the name
+types while the source tuple reads `Times 14` in every one of them, so they describe the default
+file rather than the source.
+
+**What would settle it:** one Coda-era document upgraded to Finale 27 under a *stock* default
+file, with the `Name` preference set to something distinctive — a face and size that appear
+nowhere else in the document. Three outcomes are each decisive: the companion carries that face
+and size on all four name types (fan-out confirmed), on `StaffNames` only (fan-out should be
+dropped), or on none (Finale 27 genuinely discards `Name`, and the divergence is deliberate).
 
 ## Status legend
 

@@ -24,6 +24,18 @@
 #endif
 #include "musx/xml/PugiXmlImpl.h"
 
+// The reader returns failure rather than throwing: a null document means the import failed,
+// and the reason is the Error-level diagnostic in the report.
+std::string importError(const finale_mus_reader::ImportReport& report)
+{
+    for (const auto& entry : report.diagnostics) {
+        if (entry.level == musx::util::Logger::LogLevel::Error) {
+            return entry.message;
+        }
+    }
+    return "import failed without a reported reason";
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
@@ -45,6 +57,9 @@ int main(int argc, char** argv)
         try {
             const auto r = finale_mus_reader::Reader::read<musx::xml::pugi::Document>(
                 std::filesystem::path(path));
+            if (!r.document) {
+                throw std::runtime_error(importError(r.report));
+            }
             const auto fonts = r.document->getOthers()
                 ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID);
             std::size_t named = 0;

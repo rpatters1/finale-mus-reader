@@ -32,6 +32,22 @@ F100-lyric-verse.mus
     raw effects mask `0x001c`. The raw source tuple is `26(65534)` words 3-5:
     `(3, 13, 28)`.
 
+F100-clef-baseline.mus
+    sha256 56cbf72c98e535732319fdb4bcfa73ebabd48eea6933df924ec5a9a4b79da641
+    4,655 bytes. Changes the Clef Designer baseline adjustment on two clefs and
+    checks the box governing whether the adjustments are used. Selector `28(65534)`
+    word 4 moves -2 -> -4 and `29(65534)` word 4 moves -4 -> 2; no other record word
+    in the file changes, so the checkbox leaves no trace in the others or details
+    pools. The values are harmonic levels. Finale 27 discards them: the companion
+    emits no `<baseAdjust>` at all.
+
+F100-clef-baseline.etf
+    sha256 661099e0063db6946e750bfb36407924bb7eaa4d28e6dddf19207b0a89772393
+    A Finale 1.0.0 ETF export of the same document, carrying the era's own
+    `ENIGMA Structures Copyright 1987 by Coda.` banner. This establishes that
+    Finale 1.0.0 has an ETF export command, and its `^28(65534)` and `^29(65534)`
+    rows independently confirm the edited words.
+
 Finale 27 companions are in `-finale27/`. They were generated without manual
 document edits in the same automated Finale 27.4 run described by
 `../finale27-provenance.txt`.

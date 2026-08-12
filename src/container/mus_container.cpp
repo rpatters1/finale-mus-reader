@@ -39,6 +39,10 @@ constexpr std::size_t defaultBodyOffset = 0x200;
 constexpr std::size_t bodyOffsetField = 0x60;
 
 std::size_t readBodyOffset(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder);
+
+// Defined below, beside the banner checks it belongs with; declared here because
+// parseCodaBanner needs it and sits above them.
+std::optional<ByteOrder> codaBannerByteOrder(const std::uint8_t* data, std::size_t size);
 constexpr std::size_t maximumDecodedBlockSize = 64U * 1024U * 1024U;
 
 std::uint16_t read16(const std::uint8_t* data, ByteOrder byteOrder)
@@ -202,6 +206,26 @@ std::optional<ParsedContainer> tryUncompressed(
     return parsed;
 }
 
+// Which block types actually carry a compressed member. This is an allowlist on purpose.
+// Treating every non-empty block as compressed is the wrong default: a document may embed a
+// graphic, and there is no reason to assume it cannot embed audio or something else later.
+// An unknown type is then stored verbatim instead of aborting the whole file, which is what
+// used to happen -- one embedded EPS cost a document its options, fonts, and layers, because
+// the failed member discarded every good block decoded before it.
+//
+// Both lists are exhaustive over the reference corpus: 388 DCL files carry only 0x000f
+// through 0x0013, and 522 zlib files carry only 0x0013 and 0x0016 through 0x001d. Every
+// listed type decoded in every file that has it, and no unlisted type ever did.
+bool isCompressedBlockType(std::uint16_t type, bool dcl)
+{
+    if (dcl) {
+        // 0x0012 is compressed despite also being a terminal type number, so a rule keyed on
+        // terminal types rather than on this list would discard a Finale 2006 block.
+        return type >= 0x000f && type <= 0x0012;
+    }
+    return type == 0x0016 || type == 0x0017 || type == 0x001a || type == 0x001b;
+}
+
 std::optional<ParsedContainer> tryCompressed(
     const std::uint8_t* data, std::size_t size, ByteOrder byteOrder, bool dcl)
 {
@@ -232,12 +256,28 @@ std::optional<ParsedContainer> tryCompressed(
         block.info.type = type;
         block.info.sourceOffset = offset;
         block.info.storedSize = storedSize;
+        const bool isTerminal = dcl
+            ? (type == 0x0012 || type == 0x0013)
+            : (type == 0x0013 || type == 0x001d);
         if (storedSize == 6) {
             parsed.blocks.push_back(std::move(block));
             offset += storedSize;
-            const bool isTerminal = dcl
-                ? (type == 0x0012 || type == 0x0013)
-                : (type == 0x0013 || type == 0x001d);
+            if (isTerminal) {
+                parsed.trailingByteCount = size - offset;
+                return parsed;
+            }
+            continue;
+        }
+        // A block whose type is not known to be compressed is kept verbatim. It has no
+        // checksum word, so its payload begins right after the six-byte header rather than
+        // after ten. In practice these hold embedded graphics; the reader preserves the
+        // bytes and reports them rather than interpreting them.
+        if (!isCompressedBlockType(type, dcl)) {
+            block.info.stored = true;
+            block.info.decodedSize = storedSize - 6;
+            block.data.assign(data + offset + 6, data + offset + storedSize);
+            parsed.blocks.push_back(std::move(block));
+            offset += storedSize;
             if (isTerminal) {
                 parsed.trailingByteCount = size - offset;
                 return parsed;
@@ -254,13 +294,21 @@ std::optional<ParsedContainer> tryCompressed(
             ? inflateDcl(data + offset + 10, compressedSize)
             : inflateZlib(data + offset + 10, compressedSize);
         if (!decoded) {
-            musx::util::Logger::log(musx::util::Logger::LogLevel::Error,
+            // Verbose, not Error. This runs inside a speculative attempt: parse() tries
+            // both byte orders and both codecs and keeps the first that works, so a
+            // rejection here is ordinary format detection and is routinely followed by a
+            // successful parse of the same file. Error would say the import produced no
+            // document, which this cannot know. When every attempt fails the epoch stays
+            // Unknown and the reader raises that as a warning in its own right.
+            musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
                 std::string(dcl ? "DCL" : "zlib") + " decompression failed at MUS offset "
                 + std::to_string(offset));
             return std::nullopt;
         }
         if (!crcMatches(*decoded, expectedCrc)) {
-            musx::util::Logger::log(musx::util::Logger::LogLevel::Error,
+            // Verbose for the same reason as the decompression rejection above: a wrong
+            // speculative byte order can inflate to bytes that simply fail the checksum.
+            musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
                 std::string(dcl ? "DCL" : "zlib") + " checksum failed at MUS offset "
                 + std::to_string(offset));
             return std::nullopt;
@@ -289,16 +337,23 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
 {
     ParsedContainer parsed;
     parsed.formatEpoch = FormatEpoch::CodaBanner;
-    // These are classic Mac documents and their words are big-endian. Every surveyed file
-    // of the era confirms it twice over: each pool prologue's page-size word reads as 0x200
-    // only in big-endian order, and the record tags read as text only in that order.
-    parsed.byteOrder = ByteOrder::BigEndian;
+    // The era states its platform in the banner product, and the platform gives the byte
+    // order: its Windows documents say `PC` and are little-endian, its Mac documents carry a
+    // bare version and are big-endian. This is read from the file rather than asserted about
+    // it, which is what the note in research/FORMAT_NOTES.md was looking for.
+    //
+    // The pool prologue corroborates whichever order the banner selects: its page-size word
+    // reads 0x200 in the right order and 0x0002 in the wrong one, and the record tags read as
+    // text only in the right one. The loop below rejects a wrong order on the first pool.
+    const auto byteOrder =
+        codaBannerByteOrder(data, size).value_or(ByteOrder::BigEndian);
+    parsed.byteOrder = byteOrder;
 
     std::size_t offset = defaultBodyOffset;
     std::uint16_t type = 1;
     while (offset + 8 <= size) {
-        const auto pages = read32(data + offset, ByteOrder::BigEndian);
-        const auto pageSize = read32(data + offset + 4, ByteOrder::BigEndian);
+        const auto pages = read32(data + offset, byteOrder);
+        const auto pageSize = read32(data + offset + 4, byteOrder);
         if (pageSize != defaultBodyOffset || pages == 0) {
             break;
         }
@@ -339,10 +394,37 @@ bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 //
 // The spellings themselves live in banner::parse, which is the only place any of them is
 // recognized.
-bool hasCodaBanner(const std::uint8_t* data, std::size_t size)
+// The byte order a Coda-banner file is written in, or nothing when it is not one of these.
+//
+// This era states its platform in the banner product and its order follows from that: a `PC`
+// product is a Windows document and little-endian, and every other product of the era is
+// big-endian. A numeric product is the Mac form; requiring a number, as this once did,
+// rejected every Windows document of the era outright -- 24 of them in the installs corpus.
+//
+// One function so that the era's order is decided once. It was decided in three places
+// before, and two of them said big-endian unconditionally.
+std::optional<ByteOrder> codaBannerByteOrder(const std::uint8_t* data, std::size_t size)
 {
     const auto parsed = banner::parse(data, size);
-    return parsed.isPreSignature() && parsed.offset == 0 && parsed.hasNumericProduct();
+    if (!parsed.isPreSignature() || parsed.offset != 0) {
+        return std::nullopt;
+    }
+    if (parsed.hasPcProduct()) {
+        return ByteOrder::LittleEndian;
+    }
+    if (parsed.hasNumericProduct()) {
+        return ByteOrder::BigEndian;
+    }
+    return std::nullopt;
+}
+
+// Whether a Coda-banner body begins where one should, read in the order its banner implies.
+// The first pool's prologue is a page count followed by the page size, and that page size is
+// what confirms the era: it reads 0x200 in the right order and 0x0002 in the wrong one.
+bool hasCodaBannerBody(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
+{
+    return size >= defaultBodyOffset + 10
+        && read32(data + defaultBodyOffset + 4, byteOrder) == defaultBodyOffset;
 }
 
 } // namespace
@@ -376,9 +458,8 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
     // itself. That second word, not anything at the top of the file, is what confirms
     // the era: all 54 substantive Coda-banner files in the corpus satisfy both checks,
     // and the one file that satisfies neither is an AppleDouble metadata artifact.
-    if (hasCodaBanner(data, size)
-        && size >= defaultBodyOffset + 10
-        && read32(data + defaultBodyOffset + 4, ByteOrder::BigEndian) == defaultBodyOffset) {
+    if (const auto byteOrder = codaBannerByteOrder(data, size);
+        byteOrder && hasCodaBannerBody(data, size, *byteOrder)) {
         return parseCodaBanner(data, size);
     }
 

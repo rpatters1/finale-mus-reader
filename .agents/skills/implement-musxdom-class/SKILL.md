@@ -24,11 +24,42 @@ without destabilizing the others.
   and semantic changes explicitly, using the file's recovered version and epoch.
 - Make the first implementation a narrow vertical slice with stated coverage. Do not
   wait for universal knowledge, and do not advertise an untested epoch as supported.
+- **Never leave an epoch entirely uncovered by accident.** A gate that excludes a whole
+  epoch must say in a comment at the gate that the exclusion is intended and why: that
+  the era does not store the class, that it stores it somewhere still unlocated, or that
+  the evidence to place it is missing. An epoch silently absent from a gate is a defect,
+  not a scope decision, and it fails quietly: the class populates from reference defaults
+  and every field reports as synthesized, which looks exactly like a document that had
+  nothing to recover. Cover each epoch with at least one test, so that removing an epoch from
+  a gate has to break something.
+- **Prefer an epoch gate to a version gate, and frame any version gate inside its epoch.** A
+  version range excludes eras nobody listed, and it fails closed on a file whose version
+  cannot be recovered — the Coda-banner era's Windows documents state a platform where its Mac
+  documents state a version, so they have none. Where a boundary really is a version, such as
+  a record layout changing at Finale 3.2 inside the uncompressed era, put the range on a table
+  already restricted to that epoch and bound it at both ends. Never invent a version to satisfy
+  a gate: a file that does not state one is telling you something, and a synthetic version
+  would be fabricated evidence.
 - Treat ETF and modern MUSX companions as semantic references. They may normalize,
-  synthesize, reorder, renumber, or discard source data.
+  synthesize, reorder, renumber, or discard source data. Where the reader deliberately
+  disagrees with a companion -- keeping a value the upgrade discards, or declining to
+  reproduce something the upgrade synthesizes -- say so in a comment at the site and in
+  the research notes, so a later companion survey reads it as an intended difference
+  rather than a decoding error.
 - Keep corpora read-only and paths private. Use controlled tracked evidence or ignored
   `private/` output according to repository policy.
-- Record recovered and synthesized values separately in `ImportReport`.
+- Record recovered and synthesized values separately in `ImportReport`, and distinguish a
+  third case from both. A field that a later Finale exposes as a setting is often fixed
+  behavior in an earlier one: the value is known exactly, no record stores it, and the
+  version or epoch that introduced the setting is the boundary. Report that as
+  `ValueOrigin::LegacyBehavior`, not as a recovered value it has no bytes for and not as a
+  synthesized default it is not guessing at. Where a capture pass establishes such a field
+  before the mapping tables run, the tables leave its report entry alone rather than
+  overwriting it with a default.
+  Reserve it for a value the pinned baseline does not already supply, or supplies wrongly.
+  Where the baseline already carries what the era's behaviour implies, leave it there: the
+  baseline is generated from committed resources with recorded hashes, so asserting the same
+  value in code is a second copy of one fact rather than a safeguard against drift.
 - Keep project-owned source files unity-build clean. A future build may combine many
   class-specific translation units, and anonymous namespaces do not isolate names from
   one another after CMake amalgamates those files. Use distinctive file-local aliases,
@@ -263,3 +294,10 @@ Finish with a concise account of the implemented class and fields, supported epo
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, remaining open layouts, and the next smallest evidence request.
 Call the result partial whenever any epoch or field remains unsupported.
+
+**State every completely uncovered epoch explicitly, every time.** Name the epoch, say
+whether the exclusion is intended or merely unevidenced, and give the reason. This is not
+covered by the per-field coverage account: a class can look thoroughly implemented, with
+high field counts and clean companion agreement, while one whole era recovers nothing at
+all. Saying "supported for X, Y and Z" leaves the reader to notice that W is missing.
+Say that W is uncovered.

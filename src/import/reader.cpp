@@ -36,33 +36,91 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     result.report.byteOrder = parsed.byteOrder;
     result.report.sourceSize = size;
     describeSourceIdentity(data, size, result.report);
+    std::size_t storedBlocks = 0;
+    std::size_t storedBytes = 0;
     for (const auto& block : parsed.blocks) {
         result.report.blocks.push_back(block.info);
+        if (block.info.stored) {
+            ++storedBlocks;
+            storedBytes += block.data.size();
+        }
+    }
+    if (storedBlocks != 0) {
+        // Say what is there rather than silently dropping it. These blocks hold embedded
+        // graphics, which are deferred work rather than a permanent limitation: musxdom's
+        // DocumentFactory::CreateOptions already accepts EmbeddedGraphicFiles as in-memory
+        // blobs with filenames, so there is a destination and it needs no filesystem. What
+        // remains is decoding the inner framing, which differs by epoch and is its own
+        // cycle of work. Info rather than a warning: the document is usable without them.
+        // See research/PRODUCTION_READINESS.md.
+        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,"The document embeds " + std::to_string(storedBlocks)
+            + " stored block(s) totalling " + std::to_string(storedBytes)
+            + " byte(s), which hold graphics this reader preserves but does not import."});
     }
     if (parsed.trailingByteCount != 0) {
-        result.report.warnings.push_back(
+        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
             "Preserved classification after a terminal block with "
-            + std::to_string(parsed.trailingByteCount) + " trailing bytes.");
+            + std::to_string(parsed.trailingByteCount) + " trailing bytes."});
     }
 
     result.document = createDocument(
         parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
 
     if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
-        result.report.warnings.emplace_back(
+        // A warning because this era yields no score content at all, only options.
+        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
             "Coda-banner pool directories are unresolved; supported fallback options "
-            "remain at Finale 27 defaults.");
+            "remain at Finale 27 defaults."});
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
-        result.report.warnings.emplace_back(
-            "Only supported later variable logical records are overlaid; other options remain at Finale 27 defaults.");
+        // Info, not a warning: this describes how far recovery currently reaches and fires
+        // for every zlib document ever read. Raising it to a user would report normal
+        // operation as a fault on every single file.
+        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+            "Only supported later variable logical records are overlaid; other options "
+            "remain at Finale 27 defaults."});
     } else if (parsed.formatEpoch == FormatEpoch::Unknown) {
-        result.report.warnings.emplace_back(
-            "The banner header was recovered, but the body framing was not recognized.");
+        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+            "The banner header was recovered, but the body framing was not recognized."});
     }
-    for (const auto& warning : result.report.warnings) {
-        musx::util::Logger::log(musx::util::Logger::LogLevel::Warning, warning);
+    // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
+    // made a routine fallback indistinguishable from an unreadable document.
+    for (const auto& diagnostic : result.report.diagnostics) {
+        musx::util::Logger::log(diagnostic.level, diagnostic.message);
     }
     return result;
+}
+
+// Runs an import and converts a thrown failure into a returned one.
+//
+// Error is the only level that can be asserted rather than judged: inside this catch there
+// is provably no document, because the sole path that produces one has already unwound. The
+// caller sees that as a null `document`, so a failed import is checked the same way a
+// successful one is used, and the reason is carried in the report alongside every other
+// diagnostic instead of arriving through a separate channel.
+//
+// Failure is returned rather than propagated because this reader's whole purpose is
+// rescuing damaged and obsolete documents: a caller sweeping thousands of files should not
+// have to wrap each one to keep going, and a corpus run stopping on its first bad file is
+// the wrong default for that job.
+template <typename Body>
+ImportResult runGuarded(Body&& body)
+{
+    try {
+        return body();
+    } catch (const std::exception& error) {
+        musx::util::Logger::log(musx::util::Logger::LogLevel::Error, error.what());
+        ImportResult failed;
+        failed.report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Error, error.what()});
+        return failed;
+    } catch (...) {
+        constexpr auto unknown = "MUS import failed with an unrecognized exception.";
+        musx::util::Logger::log(musx::util::Logger::LogLevel::Error, unknown);
+        ImportResult failed;
+        failed.report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Error, unknown});
+        return failed;
+    }
 }
 
 } // namespace
@@ -71,6 +129,7 @@ ImportResult Reader::readWithParser(
     const std::filesystem::path& path,
     XmlParser parseXml, DocumentParser parseDocument)
 {
+    return runGuarded([&] {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
         throw std::runtime_error("Unable to open MUS input: " + path.string());
@@ -92,13 +151,15 @@ ImportResult Reader::readWithParser(
         throw std::runtime_error("Unable to read complete MUS input: " + path.string());
     }
     return readImpl(data.data(), data.size(), path, parseXml, parseDocument);
+    });
 }
 
 ImportResult Reader::readWithParser(
     const std::uint8_t* data, std::size_t size,
     XmlParser parseXml, DocumentParser parseDocument)
 {
-    return readImpl(data, size, std::nullopt, parseXml, parseDocument);
+    return runGuarded(
+        [&] { return readImpl(data, size, std::nullopt, parseXml, parseDocument); });
 }
 
 } // namespace finale_mus_reader

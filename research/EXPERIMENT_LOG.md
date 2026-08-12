@@ -443,6 +443,35 @@
 - **Artifacts:** `tests/evidence/F100/`, `data/font_options_mapping.csv`,
   `src/import/mappings/font_options.cpp`, and `tests/reader_tests.cpp`.
 
+## 2026-08-12 — The FontOptions 13/28 boundary is Finale 2012, not Finale 2003
+
+- **Question:** At which version does physical ordinal 13 become `Tablature` and 28 become `Percussion`? The
+  2026-08-11 entry above records Finale 2003, taken from private framework history. **This supersedes that date.**
+- **Method:** Imaged the Finale 2011 install DVD (hybrid APM/HFS + ISO9660; both payloads mined) to obtain the first
+  Finale 2011 specimens in any survey, generated Finale 27 companions for them, and compared our recovered physical
+  13 and 28 against each companion's independently resolved `tablature` and `percussion`. Counted only documents
+  where the companion's two values differ *and* our two slots differ; any other document is consistent with both
+  hypotheses and would inflate whichever was tested first.
+- **Observation:** Of 1,211 discriminating documents — 405 from Finale 2003–2010, 597 from Finale 2011, 209 from
+  Finale 2012 — every pre-2012 document places tablature at physical 28 with 13 a holding slot, and every Finale
+  2012 document places tablature at 13 and percussion at 28. No document contradicts this, on either platform.
+- **Why the earlier date survived so long:** the corpus was said to fit the Finale 2003 boundary, and it did, but not
+  discriminatingly. The test used Finale 2002 sources, and Finale 2002 precedes both candidate boundaries. Finale
+  2011 is the only version whose behavior differs between the two hypotheses, and no Finale 2011 document existed in
+  any survey until this one.
+- **Method caution:** font names must be normalized with musxdom's `normalizeFontName` before comparison.
+  `EngraverTextT` and `Engraver Text T` are one face; comparing raw spellings produced 324 false disagreements and
+  made Finale 2011 look internally inconsistent. The first pass of this analysis would have been reported as
+  inconclusive on that artifact alone.
+- **Conclusion:** **Confirmed.** The boundary is Finale 2012 (major 17). Where measurement and the private framework
+  history disagree, the measurement governs. Decide the layout by epoch first — the uncompressed and DCL epochs are
+  entirely pre-2012 and need no version test, and major 12 occurs in both the DCL epoch (Finale 2006) and the zlib
+  epoch (Finale 2007), so no version range alone separates them.
+- **Impact:** the previous gate cost every Finale 2003–2011 document its tablature font and gave it a percussion font
+  it never stored. 2,516 of the 2,629 FontOptions disagreements then present in the corpus were this single rule.
+- **Artifacts:** `src/import/options/font_options.cpp` (`semanticType`), `tests/reader_tests.cpp`,
+  `tools/options_coverage_probe.cpp`, `scripts/options_coverage_report.py`.
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

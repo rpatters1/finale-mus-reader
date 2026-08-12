@@ -17,3 +17,12 @@ F97-fileinfo-long.mus
 The pair is a controlled difference: they vary only in the length of the
 file-info strings, which makes them the evidence that the record body offset is
 a header field rather than the constant 0x200.
+
+Fin97-baseline.mus / .etf and Fin97-clef-baseline.mus / .etf
+    Finale 97, internally Enigma version 3.8.0. The clef-baseline save changes two
+    clefs' baseline adjustments: selector 28 word 4 moves 0 -> 1 and selector 29
+    word 4 moves 0 -> -2, and nothing else in the record set changes.
+    Finale 97 has no "use baseline adjustments" checkbox and adjusts
+    unconditionally, so its companion converts both values at 768 Efix per harmonic
+    level even though word 5 of selector 28 is 30, whose bit 0 is clear. This pair
+    is what shows the switch is version-gated rather than universal.

@@ -81,12 +81,211 @@ matches the era plus successful decompression and a matching CRC-32 for every bl
 test is strong evidence. The uncompressed test is structural but circumstantial, and the
 Coda-banner era is not detected at all, only asserted, because it has no block framing to trial.
 
-**Suspected but not found: a definitive byte-order marker exists by the 3.x era.** A format that is
+**Found for the Coda-banner era: the product field names the platform.** That era's Windows
+documents carry the banner product `PC 1.0+`, where its Mac documents carry a bare version —
+`1.0.0`, `1.8.7`, `2.0.1`, `2.6`. The `PC` prefix is a statement in the file rather than an
+inference from it, and it discriminates perfectly: 24 Windows documents carry it and are
+little-endian, 252 Mac documents of the same era do not and are big-endian, and no other product
+string in either corpus contains `PC` at all across 11,053 files.
+
+**Test the leading `PC` token and nothing else.** What follows it is a version string and must not
+participate: `1.0+` is the only one observed, but the whole point of the token is that the platform
+is stated separately from the version, and matching `PC 1.0+` whole would reject a Windows document
+from any other release for no reason. The `+` also means this is not a version the reader can parse,
+so such a file will carry no recovered version at all and every version-gated mapping will be
+skipped for it. That is survivable precisely because the era's mappings are gated on the epoch
+rather than on a version.
+
+This is what the paragraph below was looking for, for the one era that most needed it, and it
+arrives from the banner rather than from the uninterpreted header bytes it guessed at. It also
+replaces the classifier's numeric-product test, which is what currently rejects these files: the era
+has a product that is deliberately not a version number.
+
+**Still suspected but not found for the 3.x era onward: a byte-order marker in the header.** A format that is
 written on two platforms with opposite byte order, as the 3.x line demonstrably is, would ordinarily
 record which one it used rather than leaving a reader to infer it. The header holds candidates: the
-six bytes at `0x062` are still uninterpreted, and the Coda-banner era carries a constant `01 03` at
-`0x80` whose meaning is unknown. Finding such a marker would replace a heuristic with a fact, and
+six bytes at `0x062` are still uninterpreted, and the Coda-banner era carries a word at `0x80`
+described below. Finding such a marker would replace a heuristic with a fact, and
 would also give the Coda-banner era a real test in place of its current assertion. This is **open**.
+
+The header version tuples are a second consumer of the answer, and they fail quietly without it.
+Each is a 32-bit value in the file's own byte order, so decoding one requires knowing that order
+already. `header::decodeVersion` accepts a byte order and only guesses when given `Unknown`, by
+trying big-endian and keeping the result if its major version falls inside Finale's 0-27 range.
+That test is far weaker than it looks, because a swapped value frequently lands inside the range
+too. A Windows Finale 3.0 document stores `0f 03 01 03`: big-endian that reads as major 15, which
+passes, while the correct little-endian reading is `0x0301030f`, version 3.0.1 build 15. Its Mac
+counterparts store `03 01 03 0b`, the same version at a different build. The reader is unaffected —
+the container establishes the order before the header is described — but anything that describes a
+header on its own gets a plausible wrong answer with no indication, which is worth knowing when
+writing a probe.
+
+**Half the answer is already in the header, and it is a fact rather than a heuristic.** The platform
+strings at `0x074` and `0x09a` are text, so they are byte-order independent and readable before any
+order is chosen. A document that originated on Windows **must** be little-endian: Finale's Windows
+releases ran on x86, which has no big-endian mode, so there is no such thing as a big-endian
+Windows Finale file. A `WIN` platform string therefore settles the question outright.
+
+The relationship is asymmetric, and only the Mac side is ambiguous. Macs were big-endian on PowerPC
+and little-endian on Intel, so `MAC` says nothing on its own. The corpus shows exactly that shape:
+
+| Platform | Order | Files | Products |
+|---|---|---:|---|
+| `WIN` | LE | 20 | 3.0, 2000, 2001, 2002, 2004b, 2005, 2006, 2007, 2012 |
+| `MAC` | BE | 628 | 3.2–97, 2000–2006, 2007, 2008 |
+| `MAC` | LE | 439 | 2007, 2008, 2009, 2010, 2012 |
+| absent | BE | 62 | 1.8.7, 2.0.1, 2.6 |
+
+No Windows document in the corpus is big-endian, across nine products spanning Finale 3.0 to 2012.
+The Mac split begins at Finale 2007 and genuinely overlaps — 2007 and 2008 appear in both rows —
+which is the Intel transition rather than a format change.
+
+A `WIN` platform string can therefore replace the trial for that whole population, including the
+uncompressed era where the trial is only circumstantial.
+
+**Windows Coda-banner documents exist, are little-endian, and the reader rejects them. Confirmed
+2026-08-11 from specimens.** The Finale 2.2 for Windows install disks yielded 24 `.MUS` files —
+eight templates and sixteen tutorial documents — and they settle every part of this at once.
+
+They carry a previously unseen banner *product*, not a new spelling: `Finale(TM) PC 1.0+ Copyright
+1987 by Coda. All rights reserved.` uses the same `Finale(TM)` spelling the Mac Coda-banner era
+uses, but its product field is `PC 1.0+` rather than a version number. The distinction matters,
+because the banner parser recognises the spelling perfectly well and it is the numeric-product test
+that rejects these files. Their pool prologue reads
+`pages=20, pagesize=512` little-endian and nonsense big-endian, and the first record at `0x208` is
+`fe ff 31 30`: comparator `0xfffe`, the globals comparator, followed by the tag `01`, both
+little-endian. The record model is therefore identical to the Mac era of the same period and only
+the byte order differs.
+
+Two independent things stop the reader from opening one, and both are confirmed by these files. The
+container's classifier requires `hasNumericProduct()`, which `PC 1.0+` fails, so such a file never
+reaches the Coda-banner parser at all. Past that, `parseCodaBanner` asserts big-endian and would
+break at its first prologue check, because the page-size word does not read `0x200` in that order.
+
+The rest of this note is what was known before those specimens arrived, and is left as the reasoning
+that predicted them.
+
+ Every one of its 62 corpus files is big-endian and none carries a platform string, but
+Finale for Windows existed during that era: Microsoft Knowledge Base article Q107181, the README for
+Windows Sound System 2.0, records that "Finale 2.2 for Windows from Coda Music Technology is
+compatible with the Windows Sound System sound board and software if you modify the WIN.INI file",
+and mentions MusicProse for Windows alongside it. Finale 2.2 sits inside this era's 1.8.7-to-2.6
+range.
+
+A little-endian Coda-banner document is therefore a real possibility rather than a hypothetical one,
+and the container would misread it: `parseCodaBanner` hardcodes big-endian, so such a file would
+decode with transposed words and tags that are not text, most likely presenting as an unrecognized
+variant rather than as wrong data. No such file is in any surveyed corpus, so nothing is currently
+misread.
+
+The era does carry a usable test, which is what makes this fixable rather than merely recordable.
+Each pool prologue holds a page-size word that reads as `0x200` in one order and `0x0002` in the
+other, so the order can be trialled against the prologue instead of asserted. That is recorded as a
+gap in [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
+
+Source, accessed 2026-08-11:
+[Microsoft KB Q107181, "Contents of the Windows Sound System 2.0 README.TXT", revised 13 June 2001](https://jeffpar.github.io/kbarchive/kb/107/Q107181/).
+This is `public-source-derived`: it dates Windows Finale to version 2.2 but says nothing about that
+version's file format or byte order.
+
+**The Mac side is determined too, for every era that matters here.** Finale 2007 was the first
+Intel-native release. MakeMusic announced at NAMM in January 2006 that "the next version of Finale
+... will be made as a Universal Binary, running natively on both PowerPC and Intel-based Macs", and
+Finale 2007 shipped that August with "support for Intel-based Macs with a Universal binary
+release". Finale 2006 and earlier were PowerPC binaries, which on an Intel Mac ran under Rosetta —
+emulated PowerPC code, and therefore still writing big-endian regardless of the hardware underneath.
+
+So a Mac-origin document saved by Finale 2006 or earlier must be big-endian, and only Finale 2007
+and later can be either. The corpus matches exactly: every `MAC` little-endian file is 2007 or
+later, and the 2007 and 2008 overlap is a user population still mostly on PowerPC rather than a
+format difference.
+
+Combining the two platform facts leaves nothing circumstantial before Finale 2007:
+
+| Origin | Era | Order |
+|---|---|---|
+| Coda banner, product `PC ...` | Windows, stated in the banner product | little-endian |
+| Coda banner, numeric product | Mac; the era has no other platform | big-endian |
+| `WIN`, any era | x86 has no big-endian mode | little-endian |
+| `MAC`, Finale 2006 or earlier | no Intel-native build existed | big-endian |
+| `MAC`, Finale 2007 or later | universal binary; follows the machine | either |
+
+The uncompressed era spans Finale 3.0 to 2000, so it falls entirely in the rows that a platform
+string determines, and its "structural but circumstantial" trial now has a fact behind it rather
+than only a pattern. The Coda-banner row is the exception: it is still an assertion, because that
+era records no platform. The one
+genuinely ambiguous population, Mac documents from Finale 2007 onward, is also the one where the
+trial is strongest, because the compressed eras validate every block against a stored CRC-32.
+
+This does not remove the value of finding a real marker, which would still let the container decide
+before it has parsed anything and would cover a file whose platform string is missing or wrong. But
+it does mean no era currently depends on a guess.
+
+Sources, accessed 2026-08-11:
+[NAMM announcement, Macworld, 18 January 2006](https://www.macworld.com/article/178521/finale-8.html);
+[Finale 2007 release, Macworld, 6 August 2006](https://www.macworld.com/article/181055/finale-9.html);
+[Finale 2007 release, MacTech, 7 August 2006](https://www.mactech.com/2006/08/07/makemusic-releases-finale-2007-music-software/).
+These are `public-source-derived` and corroborated by the corpus rather than independently verified
+against MakeMusic's own release notes, which are no longer online.
+
+#### The word at 0x80, and the absent application version
+
+**Confirmed across 138 files.** The Coda-banner header is entirely zero from `0x60` to `0x200`
+except for one 16-bit field at `0x80`. It was previously recorded as a constant `01 03`; it is not
+constant, and its value groups the era exactly:
+
+| Product | Bytes at `0x80` | Files |
+|---|---|---:|
+| Finale 1.0.0 | `01 00` | 22 |
+| Finale 1.8.7, 2.0.1, 2.6 | `01 03` | 92 |
+| Windows, banner product `PC 1.0+` | `00 07` | 24 |
+
+Those three pairs are the only ones in the corpus: all 234 distinct Coda-era documents take one of
+them.
+
+**It is not the application version.** It cannot be: it takes the same value for 1.8.7, 2.0.1 and
+2.6, three products that differ. What it does track is the file format — one value for Finale 1.0.0,
+another for the Mac releases after it, a third for Windows — which is consistent with the Windows
+banner declaring a format of `PC 1.0+` rather than an application version.
+
+**The best-fitting reading is that `0x81` is a flags byte and `0x04` marks the Windows build.** Its
+values accumulate rather than enumerate: `0x00` for Finale 1.0.0, `0x03` for the Mac releases after
+it, `0x07` for Windows. Read that way each release sets a further bit, and exactly one bit separates
+Windows from the Mac line of the same period.
+
+This is a better fit than treating `0x80` as the platform byte, for two reasons. First, that byte is
+`1` on Mac and `0` on Windows, and Mac came first — a platform marker introduced when the second
+platform arrived should leave the original at zero, not the newcomer. Second, if the field is a
+16-bit word at all then it is subject to byte order, and `0x80` is therefore the high byte on Mac
+and the low byte on Windows: comparing the two compares different halves of the field, so the
+`1`-versus-`0` pattern is an artefact of the comparison rather than a finding.
+
+What `0x04` actually means is **open**, and one specimen cannot separate the possibilities: with a
+single Windows value observed, "little-endian", "PC build" and "the next feature bit, which happened
+to arrive in the PC release" all predict the data equally. A Mac Coda document with the bit set, or
+a Windows one without it, would distinguish them. Nothing reads this field — the banner's `PC` token
+states the platform outright — so it is recorded rather than relied on.
+
+**The field does not survive the Finale 3.0 redesign.** Across 1,500 signature-era files from
+Finale 3.0 to 2012, `0x80` through `0x8b` is a twelve-byte run of zeros in 1,495 of them. That is
+because the signature header states explicitly what the Coda word encoded implicitly: a Finale 3.7
+document carries its version tuple at `0x6c`, the application `FIN` at `0x70`, the platform `MAC` or
+`WIN` at `0x74`, an application version at `0x78` and a file version at `0x7c`, and the created block
+ends exactly where the Coda field used to be. The modified block then begins at `0x8c`, leaving the
+intervening twelve bytes unused.
+
+Two documents out of roughly a thousand distinct signature-era files carry a single stray byte at
+`0x80` — `01` in a Finale 2000 document and `03` in a Finale 2003 one, with `0x81` onward still zero.
+Neither reproduces a Coda pair, so a stale remnant of an upgraded document is a guess rather than an
+explanation, and the cause is **open**. Nothing reads the byte, so nothing depends on it.
+
+**No application version is stored anywhere in these files.** A search of all 24 Windows documents
+for the version their application reports, 2.2, found no encoding of it — not `0x0202`, `0x0220`,
+decimal 22 or 220, nor the text `2.2` — at any offset common to all of them. Their exact Finale 27
+companions corroborate it from the other side: every one carries a `<modified>` block naming Finale
+27 itself and **no `<created>` block at all**, so Finale 27 recovers no creator version from them
+either. For this era the banner product is the only version there is, which for Mac documents is the
+application version and for Windows documents is a format marker that is not one.
 
 ### Coda-banner files
 
@@ -549,7 +748,51 @@ Both byte orders occur. Length and CRC validate the choice. The recurring block 
 | `0x0016` | entry pool | position and semantic scale; generic frame does not fit |
 | `0x0017` | texts/free-form data | decoded strings and Enigma text commands; generic frame does not fit |
 
-Terminal six-byte markers of types `0x0013` and, in later files, `0x001d` occur after the data blocks. Their meaning is open. No separate central directory was required to walk the four principal blocks; each stored length leads to the next.
+Terminal six-byte markers of types `0x0013` and, in later files, `0x001d` occur after the data blocks. No separate central directory was required to walk the four principal blocks; each stored length leads to the next.
+
+### Which blocks are compressed
+
+**Confirmed** by an exhaustive census of the reference corpus. A block header is the same
+shape whatever the block holds, so the type — not the size — is what says whether the payload
+is a compressed member. Only these types are:
+
+| Era | Compressed types | Everything else |
+|---|---|---|
+| Finale 2001–2006 (DCL) | `0x000f`–`0x0012` | `0x0013`, always an empty marker in 388 files |
+| Finale 2007–2012 (zlib) | `0x0016`, `0x0017`, `0x001a`, `0x001b` | `0x0013` and `0x001d` |
+
+Every listed type decoded in every one of the 388 DCL and 522 zlib files that carries it, and
+no unlisted type ever decoded in any file. Note that DCL `0x0012` carries a compressed
+payload in 380 files despite also being one of that era's terminal type numbers, so a rule
+keyed on terminal types rather than on this list is wrong.
+
+A block outside the list is **stored**: it has no checksum word, so its payload begins
+immediately after the six-byte header rather than after ten. Reading it as a compressed
+member fails, and failing one member used to abandon every block already decoded — which is
+how nineteen otherwise ordinary documents lost their whole options pool, fonts included, to a
+single embedded picture. The reader now decides from the allowlist and preserves an unlisted
+block verbatim, so an unknown type costs nothing.
+
+### Embedded graphics
+
+**Confirmed.** In the zlib era a stored `0x0013` block holds embedded graphics. Nineteen
+distinct corpus files carry one, in three shapes:
+
+| Payload signature | Files |
+|---|---:|
+| `C5 D0 D3 C6`, the binary EPSF header | 12 |
+| `%!PS-Adobe-3.0 EPSF-3.0` or `%!PS-Adobe-2.0 EPSF-1.2` | 6 |
+| `89 50 4E 47 0D 0A 1A 0A`, the PNG signature | 1 |
+
+The stored payload is itself framed: a nested `type` and `size` header precedes the image
+signature — types `0x000f` and `0x0043` are both observed — and a block may hold more than one
+graphic. That inner framing is only partly read and is **open**; nothing depends on it yet,
+because the bytes are preserved and reported rather than interpreted. See
+[PRODUCTION_READINESS.md](PRODUCTION_READINESS.md#p31-embedded-graphics-are-preserved-but-not-imported).
+
+The corresponding `0x001d` block is non-empty in 208 zlib files. The reader does not reach it,
+because the walk stops at the first terminal marker, so those bytes are counted as trailing.
+Its payload does not begin with an image signature and its content is **open**.
 
 ## Finale 2001–2006 physical records and the 16-word hypothesis
 
@@ -695,15 +938,44 @@ physical incidence:
 | odd | `n / 2` | slot 3 | slot 4 | slot 5 |
 
 The framework's zero-based default-font preference numbers are versioned rather than one timeless musxdom enum
-order. From at least Finale 98 through Finale 2002, index 13 is a legacy drawing-time tablature holding slot and
-index 28 is the actual default tablature font; earlier versions remain open. Beginning with Finale 2003, tablature
+order. From at least Finale 98 **through Finale 2011**, index 13 is a legacy drawing-time tablature holding slot and
+index 28 is the actual default tablature font; earlier versions remain open. **Beginning with Finale 2012**, tablature
 uses index 13 and index 28 is percussion. Indices
 40–42 are also present beginning in Finale 2003. The controlled Finale 2002 ETFs contain 20 incidences, enough for
 indices 0–39. The Finale 2003–2005 ETFs contain 22, enough for indices 0–43; index 43 is the zero-filled second tuple
 required to complete the final fixed 16-byte row. Each baseline/changed pair has
 an identical selector-24 array, as expected because the controlled edit changed a note rather than a document font.
 
-The version boundary is private-framework-derived and independently fits the exact-pair corpus. Across 42 distinct
+#### The 13/28 boundary is Finale 2012, not Finale 2003
+
+**Confirmed** by measurement, and it **contradicts the private-framework history** these notes previously followed,
+which places the transition at Finale 2003. Where the two disagree, the measurement governs and is what the importer
+implements; see the comment on `semanticType` in `src/import/options/font_options.cpp`.
+
+The earlier claim that the boundary "independently fits the exact-pair corpus" was true but not discriminating. It
+was tested against Finale 2002 sources, and Finale 2002 precedes *both* candidate boundaries, so those documents are
+consistent with either. Nothing in the corpus distinguished them until Finale 2011 specimens existed, because
+Finale 2011 is the only version whose behavior differs between the two hypotheses.
+
+Across 1,211 documents whose Finale 27 companion assigns tablature and percussion different values — the only
+documents that can discriminate — the arrangement is:
+
+| Source version | Documents | Arrangement |
+|---|---|---|
+| Finale 2003–2010 (majors 8–15) | 405 | index 28 is tablature; 13 is a holding slot |
+| **Finale 2011 (major 16)** | **597** | index 28 is tablature; 13 is a holding slot |
+| Finale 2012 (major 17) | 209 | index 13 is tablature; index 28 is percussion |
+
+No document contradicts this on either side of the boundary, on either platform. Coding the boundary at Finale 2003
+cost every Finale 2003–2011 document its tablature font and gave it a percussion font it never stored: 2,516 of the
+2,629 FontOptions disagreements then present in the corpus were this single rule.
+
+The Finale 2011 specimens that settled it came from the Finale 2011 install DVD; no Finale 2011 document existed in
+any survey before that. Comparison must normalize font names with musxdom's `normalizeFontName`: `EngraverTextT` and
+`Engraver Text T` are one face, and comparing raw spellings produced 324 false disagreements that made Finale 2011
+look internally inconsistent.
+
+Across 42 distinct
 Finale 2002 sources, index 28 carries the value upgraded into modern tablature, while index 13 is not an independent
 modern default. Across all 329 distinct Finale 2003–2006 exact-pair sources, physical index 43 is `(0, 0, 0)`. This
 is structural row fill, not a terminator or a version-encoded collection limit. Physical capture therefore walks
@@ -713,6 +985,16 @@ The selector and packing are established well enough to locate every stored font
 verified range. Their semantic values remain **strong**, not `confirmed`, until a controlled file changes one
 default font at a time. This layout must not be selected merely because a file predates zlib; Finale 1.0.0 proves
 that selector meanings and layouts changed inside the broad pre-zlib era.
+
+The same array is present, with the same packing, well before Finale 2002. The Finale 97 and Finale 2000 fixtures
+each carry 20 incidences of selector `24`, and their tuples agree with their exact Finale 27 companions type for
+type: `(0, 28)`, `(0, 28)`, `(0, 24)`, `(0, 26)`, `(2, 12)` for music, key, clef, time, and chord. Finale 3.7.2
+shows the same array with that document's own sizes.
+
+The reader recovers these. Selector 24 is the default-font array in every fixed-row epoch except the Coda banner, so
+the layout is selected by epoch rather than by a version range, and 6,100 recovered sizes across 173 uncompressed
+files agree with their exact companions. The physical-to-semantic quirks of the era are the same ones the DCL era
+has before Finale 2003: physical slot 13 is not an independent value and physical slot 28 carries tablature.
 
 ### Finale 1.0.0 fonts
 
@@ -751,6 +1033,29 @@ represented Enigma style bits; reporting retains the raw mask while `setEnigmaSt
 Finale 27 drops the controlled historical `Name` change, so its continuation as `StaffNames` is **strong**, not
 confirmed. It also changes some unedited categories, demonstrating upgrade synthesis and shared-preference
 behavior; those changes are not evidence for additional source locations.
+
+#### The single `Name` preference reaches all four modern name types
+
+The Coda-banner era exposes one `Name` font preference. Finale 3.0 replaced it with four — `StaffNames`,
+`AbbrvStaffNames`, `GroupNames`, `AbbrvGroupNames` — which that era stores as separate tuples at physical ordinals
+31, 32, 33 and 39. The importer therefore propagates the one recovered Coda tuple to all four types, and this
+fan-out is gated on the Coda-banner epoch alone so that it can never overwrite the three independently recovered
+values of any later epoch.
+
+Recovering `StaffNames` alone would emit a document whose staff names use one face and size while its group and
+abbreviated names use the Finale 27 default of Times New Roman 14 — a split neither the source nor the Finale 27
+baseline has, since that baseline sets all four identically. The Finale 3.7 `F372-baseline` fixture, which never
+touched these preferences, likewise carries all four as Times 12.
+
+The three propagated types report as `ValueOrigin::LegacyBehavior` rather than `LegacyMus`: the bytes are read from
+the source, but the assignment restores an era behavior rather than an option the source stored.
+
+**This is a deliberate, revisitable divergence from the Finale 27 companions.** Across the 57 Coda-era documents
+with companions, every companion disagrees with the recovered value: 39 report `Times 16`/`Times 14`, 17 report
+`Monaco 16`/`Monaco 14`, and one reports `Pmusic 12` throughout, while the source tuple reads `Times 14` in all 57.
+Those companion values track the personal default file the upgrade was performed under rather than the source
+document, so they do not settle what Finale 27 does with a stored `Name`. Settling it needs a companion produced
+under a stock default file.
 
 The same `02`, `03`, `04`, `05`, `26`, `27`, `36`, `37`, and `39` global families persist through the Finale 1.8.7,
 2.0.1, and 2.6 corpus. Under the working hypothesis that this interval only adds font preferences, the importer
@@ -815,6 +1120,229 @@ The mapping is incomplete: it covers 61 numeric globals while current ETFs conta
 mapped by the framework. Historical and Finale 26.2 replacement locations also prove that mappings can be
 version-dependent. Earlier statements that option code names and layouts were wholly unknown are superseded by this
 partial map.
+
+### Clef definitions
+
+**Confirmed for the collection and its fields; three version boundaries are established and one is inferred.**
+Clef definitions are an ordinary numeric global, not a record type of their own. There is no `cf` tag or
+comparator anywhere in the corpus: a search of the others, details, and class pools of specimens spanning
+Finale 1.8.7 through 2012 found none, and the identity is the numeric selector in every era.
+
+The collection changed size twice and the tuple once. Counts below are distinct corpus files:
+
+| Era | Identity | Layout | Definitions | Files |
+|---|---|---|---|---:|
+| Finale 1.8.7–2.6 | selectors `28`–`35`, comparator `65534` | one 6-word row each | 8 | 63 |
+| Finale 3.0–2000 | the same eight selectors | one 6-word row each | 8 | 208 |
+| Finale 2001–2002 | selector `95`, 24 incidences | 9-word tuples, streamed across rows | 16 | 67 |
+| Finale 2003–2006 | selector `95`, 27 incidences | 9-word tuples | 18 | 403 |
+| Finale 2007–2010 | class `0x006d`, 324 bytes | 9-word tuples | 18 | 292 |
+| Finale 2012 | class `0x006d`, 360 bytes | 10-word tuples | 18 | 235 |
+
+Selector `36` is the tuplet font, so eight is a ceiling the record vocabulary itself imposes on the early eras
+rather than a guess. The class id follows the established `numericGlobalClass` rule, `95 + 0x0e`. Unlike the
+default-font array there is no structural zero fill: 16 and 18 nine-word tuples occupy exactly 24 and 27 rows.
+
+The pre-2001 six-word record is a different layout, not a short tuple:
+
+| Word | Field |
+|---:|---|
+| 0 | `middleCPos` (`adjust`) |
+| 1 | **open**: a per-clef value the Coda era populates and Finale 3.0 stops writing |
+| 2 | `clefChar`, one byte |
+| 3 | `staffPosition` (`clefYDisp`) |
+| 4 | baseline adjustment, in harmonic levels |
+| 5 | **open** |
+
+Word 1 holds `6, 0, -2, -6, 6, -1, -13, -4` across selectors 28 through 35 in the Coda era and zero in almost every
+Finale 3.0 and later file, six of which retain inherited values. The controlled baseline edits leave it untouched,
+so it is not the baseline adjustment and nothing is mapped from it.
+
+The tuple, with the Finale 2012 slot in parentheses where it differs:
+
+| Word | Field | Notes |
+|---:|---|---|
+| 0 | `middleCPos` (`adjust`) | |
+| 1 (1–2) | `clefChar` | one word until Finale 2012, then a long |
+| 2 (3) | `staffPosition` (`clefYDisp`) | |
+| 3 (4) | baseline adjustment, in Efix | signed 16-bit; see below |
+| 4 (5) | `shapeId` | non-zero only at indices 16 and 17 |
+| 5–7 (6–8) | `fontId`, `fontSize`, effects | present only when the own-font bit is set |
+| 8 (9) | flags | bit 0 `isShape`, bit 1 `useOwnFont`, bit 2 `scaleToStaffHeight` |
+
+Two decoding rules are needed. Before Finale 2012 the clef character is a single byte of a symbol font stored in a
+word, and a source may store it either zero-extended or sign-extended: character 139 appears as `0x008b` in some
+files and `0xff8b` in others, so it must be narrowed to its low byte. From Finale 2012 it is a long, which is what
+the tuple's two extra bytes are; MakeMusic's release notes for that version give Unicode text support as a headline
+feature, which is consistent with the widening and places the boundary at 2012 rather than earlier. No Finale 2011
+specimen exists in any surveyed corpus, so the reader treats 2011 as narrow and that half of the boundary is
+**open**. No big-endian Finale 2012 specimen exists in any surveyed corpus either, so the long's word order is
+verified for little-endian files only, and that is unlikely to change.
+
+Finale 2012's published requirements read `OS X 10.7, 10.6, or 10.5. Mac Power PC or Mac Intel`, which is
+internally inconsistent: 10.6 Snow Leopard was the first release to drop PowerPC hardware and 10.7 Lion removed
+Rosetta as well, so a PowerPC Mac can run neither. The line matches the Finale 2009 requirements verbatim, where it
+was coherent, and reads as boilerplate carried forward.
+
+Writing a big-endian Finale 2012 document therefore needs the whole of a narrow intersection: PowerPC hardware,
+which caps at 10.5 Leopard, meeting Finale 2012's 10.5 floor exactly, with a release from late 2011 running on a
+machine Apple had stopped selling five years earlier. Whether MakeMusic still shipped a PowerPC slice at all is
+unverified, given that the requirement line looks carried forward. Such files are unlikely to exist in any number.
+
+That is a reason not to expect a specimen, not a reason to depend on there being none. The reader decodes the
+big-endian case as the symmetric counterpart of the verified little-endian one and warns when it meets one, so an
+unverified path announces itself instead of passing silently.
+
+The flag bits are confirmed both physically and semantically: across 1,268 files, bit 1 occurs 9 times and every one
+of those tuples carries a non-zero font triple whose exact Finale 27 companion shows `<useOwnFont/>` with the same
+`fontID` and `fontSize`; the 15,931 tuples without it never carry one. This closes the previously `not_identified`
+row for `ClefOptions.clefDefs[*].font.fontId` in
+[`data/legacy_option_font_id_locations.csv`](data/legacy_option_font_id_locations.csv).
+
+Word 3 is the difference between the clef's musical baseline, such as the G line of a treble clef, and its
+typographic baseline: a font whose clefs already sit on the musical baseline leaves it zero. It is zero in all 1,268
+corpus specimens, because no unedited document sets it, so three controlled fixtures carry the whole weight here.
+
+**Finale 2001 onward stores Efix. Confirmed.** `F2005-clef-baseline.mus` sets one inch of baseline on the treble
+clef; the stored word is `18432`, which is exactly one inch — 288 Evpu at 64 Efix each — and the exact Finale 27
+companion carries `<baseAdjust>18432</baseAdjust>` through unchanged. The same fixture asks for minus two inches on
+the bass clef, which would be `-36864`, and the file stores `-32768`. **The field is a signed 16-bit word**, so its
+usable range is about ±512 Evpu, and Finale saturates rather than wrapping. Recovering `-32768` is the file being
+read correctly. Finale's own dialog reads that value back as `-1.7778` inches, which is `-32768 / 18432`; the UI and
+the storage agree, and the discrepancy is entirely the clamp.
+
+**From Finale 3.0 through 2000 it is a small signed count of harmonic levels, in word 4 of the clef's own selector
+rather than word 3 of a tuple. Confirmed.** The Coda era stores a value in the same word, but the reader does not
+transfer it: there the number adjusts the baseline of mid-measure clefs only, which is not what musxdom's
+`baselineAdjust` means, and Finale 27 discards it. The gate is the epoch. `F100-clef-baseline.mus` and `F263-clef-baseline.mus` each change two clefs'
+baseline adjustments and move word 4 and nothing else: the Finale 2.6.3 pair differs from its baseline in exactly
+three bytes across the whole file. Each era's own ETF shows the same words. The Coda era ships these populated —
+`-2, -4, -5, -6, -4, 0, 0, 0` for selectors 28 through 35 — while Finale 3.0 onward ships zeros and keeps the field,
+which is why 165 Coda and 143 uncompressed source clefs carry a non-zero value.
+
+**The conversion is one harmonic level to 768 Efix — half a space, since a harmonic level is a staff position.
+Confirmed in two independent eras.** `F372-clef-baseline` stores `1`, `-2` and `-5` and its companion carries
+`768`, `-1536` and `-3840`; `Fin97-clef-baseline` stores `1` and `-2` and its companion carries `768` and `-1536`.
+
+**A stored count only applies when the document switches the feature on.** Before Finale 97 that switch is bit 0 of
+word 5 of the *first* clef's selector, and it governs the whole document rather than one clef: the Finale 3.7.2 pair
+toggles it `0 -> 1` and the companion then converts all eight clefs, including ones that save never touched, while
+the same document with the switch off loses baselines it plainly stores. Finale 97, internally 3.8, dropped the
+checkbox and adjusts unconditionally.
+
+Testing word 5 for non-zero instead of testing bit 0 looks right and is not: Finale 97 files carry 24, 30 and 36 in
+that word for unrelated reasons, and bit 0 is clear in all of them. The always-on window is also bounded at both
+ends, at versions 3.8 through 5.x, rather than left open at "3.8 or later". The early path only ever sees pre-2001
+versions, so the upper bound changes nothing today; it is there so that a file whose version is recovered as
+something wild falls back to the bit test, which reads the document, rather than to an unconditional yes.
+
+The corpus never sets the switch: every one of the 271 pre-2001 files leaves bit 0 clear, and every file from 3.8
+onward leaves all eight counts at zero. Only the controlled fixtures discriminate between the possible rules, which
+is exactly why they were needed. With the switch honoured, `baseAdjust` agrees with all 1,120 adjacent-exact
+companions.
+
+Indices 8–17 do not exist before Finale 2001 and 16–17 do not exist before Finale 2003. Finale's own upgrade
+supplies the missing ones from the version doing the opening, and the shape comparators it assigns to indices 16 and
+17 differ per document — 1/2, 2/3, 3/4, and 25/26 across four controlled companions — which is a direct
+demonstration that a shape comparator must never be carried between documents as an identity.
+
+#### Corpus verification
+
+Every one of the 1,120 adjacent-exact source/Finale 27 pairs was imported and compared with its companion,
+`baseAdjust` included. Of the source-supplied definitions, all fields agree except four, and those four are
+upgrade-time font substitution rather than decoding error.
+
+**The discriminator is the document's music font.** Grouping the 57 Coda-era pairs by the music font and the clef
+character stored at index 4:
+
+| Music font | Stored | Finale 27 wrote | Files |
+|---|---:|---:|---:|
+| Pmusic | 214 | 214 | 34 |
+| Petrucci | 32 | 32 | 16 |
+| Petrucci | 214 | 214 | 3 |
+| **Sonata** | **214** | **32** | **3** |
+| Sonata | 100 | 100 | 1 |
+
+Only Sonata documents are altered, and 214 is kept in every other font including Petrucci. Finale 27 writes 32, a
+space, which musxdom reads as a blank clef.
+
+**Why it substitutes is unknown.** Character 214 is `unpitchedPercussionClef2` in Sonata as well as in Petrucci and
+Pmusic, so this is not a codepoint that means something different in the substituted font, and an encoding
+difference does not explain it. The behaviour is recorded as observed and unexplained. The fourth difference is in
+one of the same three files, whose index 7 also moved from `adjust 0, clefYDisp -4` to `adjust -5, clefYDisp -2`
+while keeping its character; that one is a single unexplained instance of position drift.
+
+Two observations bound the claim. The one Sonata document with a hand-edited clef table — indices 4 through 7 holding
+100, 68, 247 and 175 rather than the stock values — is carried through completely unchanged, so the substitution
+applies to the stock Coda table rather than to Sonata documents generally. And index 7 changed in only one of the
+three files that share an identical table, so whatever selects that adjustment is not the table alone and is
+**open**.
+
+This is the same font that needs a baseline adjustment where Petrucci does not, so both known Sonata-specific
+behaviours involve the same font, but no common cause has been established. **The reader keeps the stored character
+in every case.** Reproducing Finale's substitution is not attempted and is not a goal: the file says 214 and the
+importer says 214.
+
+The scalar options around the collection do **not** share locations across eras, which is the trap in this class:
+
+| Field | Location | Coda | Finale 3.0–2006 | 2007+ |
+|---|---|:--:|:--:|:--:|
+| `defaultClef` | selector `01` word 0 | yes | yes | yes |
+| `endMeasClefPercent` | selector `13` word 2 | yes | yes | yes |
+| `endMeasClefPosAdd` | selector `13` word 3 | yes | yes | yes |
+| `clefFront` | selector `19` word 0 | yes | yes | yes |
+| `clefBack` | selector `19` word 1 | yes | yes | yes |
+| `clefKey` | selector `38` word 5 | **no** | yes | yes |
+| `clefTime` | selector `39` word 4 | **no** | yes | yes |
+| `showClefFirstSystemOnly` | selector `27` word 1 bit 0 | **no** | yes | yes |
+| `cautionaryClefChanges` | selector `44` word 3 bit 2 | **no** | yes | yes |
+
+In the Coda era selector `27` word 1 and selector `39` word 4 are font sizes — the lyric-chorus and clef font tuples
+the FontOptions mapping already reads — and selector `38` word 5 disagrees with the companion on every Coda file
+that has a non-default value. The reader therefore leaves those three at the Finale 27 default before Finale 3.0.
+Agreement for the locations that are used is 57/57 Coda, 173/173 uncompressed, 374/374 DCL, and 497/497 zlib, with
+genuine non-default coverage for `endMeasClefPercent`, `endMeasClefPosAdd`, `clefFront`, and `clefKey`.
+
+`cautionaryClefChanges` is **bit 2** of the courtesy flags at selector `44` word 3, and `cautionaryKeySigChanges`
+is bit 0. **Confirmed** by a controlled Finale 2005 pair: turning off the courtesy clef alone moves that word
+`7 -> 3`, and turning off the courtesy key signature alone moves it `7 -> 6`. The second save is what makes this a
+mapping rather than a guess — without it, any bit that happened to be clear would have fitted.
+
+The corpus could not have settled this at all. All 1,120 companions have the option set, and only the values 5 and 7
+occur, both of which leave bit 2 set. That is the same shape of trap as the Coda-era scalars: a location that is
+never contradicted because nothing in the corpus varies it.
+
+**Four of the nine clef options do not exist in the Coda era.** Alongside the courtesy clef below,
+the reader treats `clefKey`, `clefTime` and `showClefFirstSystemOnly` as absent from that era, on
+four independent grounds:
+
+- the Finale 3.0-and-later locations for all three hold something else entirely before 3.0 —
+  selectors `27` and `39` carry font tuples there, so reading them would report a font size as a
+  spacing value;
+- no Coda document in the corpus has a non-default `clefTime` or `showClefFirstSystemOnly` in its
+  exact Finale 27 companion, in 57 pairs;
+- the three whose companion shows a non-default `clefKey`, of 1, 1 and 12, hold no word matching
+  those values anywhere in their globals, scaled or otherwise, and are the same three Sonata
+  documents that carry every other Coda companion anomaly, so that is upgrade synthesis rather
+  than a value read from the file; and
+- the era's own user interface does not appear to offer them.
+
+This is **strong** rather than confirmed: absence is being inferred, and one Coda document that set
+any of the three would overturn it. The reader leaves all three at the Finale 27 baseline, which
+already carries zero and false — the same values Finale 27 produces when it upgrades one of these
+documents. Only the courtesy clef needs asserting, because there the baseline and the era agree but
+the *record* would disagree.
+
+The Coda era has no courtesy-clef option at all; the earliest version found to offer one is 3.6.2. Those documents
+always show a courtesy clef, so the reader asserts that for the whole era rather than reading a record, and reports
+it as `ValueOrigin::LegacyBehavior`: known exactly, stored nowhere, and not a guess at a default. It must not
+read one: selector `44` word 3 is **zero in all 57 Coda files**, so bit 2 there would assert the opposite. That era
+does store the courtesies it has as separate boolean words — the same controlled edit in Finale 2.6.3 moves selector
+`12` word 1, the key signature's — and which word would hold a clef's is moot, since there is none.
+
+The boundary is the epoch, not version 3.6.2. Finale 3.0 through 3.5 predate the option as well, but their files
+already carry bit 2 set, so reading the bit gives the correct answer for them. Gating on the epoch avoids a version
+test that the three Finale 3.0 files, which recover a major version of 15, would fail anyway.
 
 ## Text and variable-length data
 

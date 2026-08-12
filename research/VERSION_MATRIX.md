@@ -23,9 +23,10 @@ is `Finale 2000`. They are listed separately because the banner really does diff
 | Saving product | main | installs | exact MUSX (main) | Structural family | Header/body characteristic | ETF likely | Notes |
 |---|---:|---:|---:|---|---|---|---|
 | Finale 1.0.0 | 0 | 22 | 0 | early fixed-row/indexed | `Finale` + 0xAA banner at offset 0; no Enigma signature; median body entropy 2.80, no compressed member | uncertain | first Finale 1.0 material in any survey; 14 samples, 6 templates, 2 tool demos; indexes/boundaries unresolved |
-| Finale 1.8.7 | 19 | 0 | 0 | early fixed-row/indexed | Coda banner at offset 0; no Enigma signature; 0x60-0x200 zero apart from `01 03` at 0x80 | three ETF exports analyzed across the era | archive-only in this corpus; indexes/boundaries unresolved |
+| Finale 1.8.7 | 19 | 0 | 0 | early fixed-row/indexed | Coda banner at offset 0; no Enigma signature; 0x60-0x200 zero apart from a format word at 0x80, `01 03` here and `01 00` for 1.0.0 | three ETF exports analyzed across the era | archive-only in this corpus; indexes/boundaries unresolved |
 | Finale 2.0.1 | 33 | 0 | 0 | early fixed-row/indexed | as above | as above | archive-only in this corpus |
 | Finale 2.6 | 177 | 1 | 53 | early fixed-row/indexed | as above | as above | 63 loose in main, the rest archive-derived; Finale 27 opens selected files after adding `.mus`; detail tags and all 11,089 entry rows correlate exactly |
+| Finale PC 1.0+ | 0 | 24 | 0 | early fixed-row/indexed | Coda banner at offset 0, `Finale(TM)` spelling with product `PC 1.0+`; the leading `PC` token names the platform and the rest is a version that does not parse; **little-endian**, unlike every Mac document of the era | uncertain | the only Windows-origin Coda-banner material in any survey; 8 templates and 16 tutorial documents from the Finale 2.2 for Windows install disks; pool prologue and record model match the Mac era exactly, only the byte order differs; the reader opens none of them, see P2.6 |
 | unknown | 2 | 2 | 0 | unclassified | no recognizable banner in any of the three spellings | uncertain | what is left once all three banner spellings are read; the AppleDouble artifact previously counted here is no longer inventoried |
 | Finale 3.0 | 18 | 64 | 3 | uncompressed fixed-row | four typed pools | yes | earliest explicit product in the direct corpus |
 | Finale 3.2 | 18 | 4 | 3 | uncompressed fixed-row | four big-endian typed pools | yes | |
@@ -101,7 +102,9 @@ carry Enigma 3.8.0 build 7, the same Enigma version Finale 97 writes. So Finale 
 Finale-98 banner does not by itself imply a major-4 file layout. Four Windows-origin files decode nonsense at the
 same offset and remain unclassified.
 
-Finale 2011 is still absent from every survey and would be major 16. Not verified.
+Finale 2011 is major 16, **verified**: 723 distinct Finale 2011 documents mined from the Finale 2011 install DVD
+(Mac and Windows payloads) all report `16.0.0.30`. They also settled the FontOptions 13/28 boundary, which no other
+version could: see FORMAT_NOTES.md, "The 13/28 boundary is Finale 2012, not Finale 2003".
 
 ### Renamed releases
 
@@ -178,7 +181,11 @@ Evidence currently supports at least five parsers/codecs, not one parser per Fin
 4. Finale 2001–2006 typed PKWARE DCL with CRC-32;
 5. Finale 2007–2012 typed zlib, with two record serialization variants around 2007–2008.
 
-The explicit 1.0.0–2.6 family shares Finale 3.0's logical record model; the direct apparent-Finale-2/unknown family still needs classification. Exact minimal pairs are the shortest path to its index and boundary rules.
+The explicit 1.0.0–2.6 family shares Finale 3.0's *physical* record model — 16-byte other and detail rows, two-character tags, comparator `65534` for globals — but not its option vocabulary. Finale 3.0 renumbered what those globals hold, and the two must not be conflated when promoting a mapping.
+
+The clef work is the clearest measurement of that discontinuity. Of eight `ClefOptions` scalar locations that hold across Finale 3.0 through 2012, **three mean something else entirely before Finale 3.0**: selector `27` word 1 and selector `39` word 4 are font sizes in the Coda era, and selector `38` word 5 disagrees with the companion on every Coda file with a non-default value. Within the clef record itself, word 1 is populated through 2.6 and abandoned from 3.0. Selector `24` is not the default-font array in the Coda era, confirmed independently from Finale 1.0.0 and 2.6.3, where it holds one row of unrelated values. It **is** the default-font array by Finale 97 at the latest, with the same two-tuples-per-incidence packing the DCL era uses: the Finale 97 and Finale 2000 fixtures both agree tuple for tuple with their exact companions.
+
+Treat Finale 3.0 as a redesign boundary rather than an increment: a location verified from 3.0 onward carries no weight before it, and each earlier era needs its own verification. Extrapolating backward is how three plausible-looking wrong numbers reached a draft. The direct apparent-Finale-2/unknown family still needs classification, and exact minimal pairs remain the shortest path to its index and boundary rules.
 
 Family 1 previously read "archive-derived 1.8.7–2.6", which was true of the corpora available at the time. It is not
 any more: `rpatters1-installs` holds 22 loose Finale 1.0.0 files, so the earliest family now has evidence that is

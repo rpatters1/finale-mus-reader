@@ -181,8 +181,11 @@ from a separate baseline document with font-definition remapping.
    established byte order.
 4. Construct one fresh, document-owned `FontOptions`. For each complete source tuple, construct a fresh `FontInfo`,
    assign `fontId`, assign signed `fontSize`, and pass the unsigned effects word to `setEnigmaStyles`. Insert it only
-   through the era-specific semantic map: in Finale 2002, skip physical 13 and map physical 28 to `Tablature`;
-   from Finale 2003 onward, map 13 to `Tablature` and 28 to `Percussion`. Do not encode a tuple-count limit: walk
+   through the era-specific semantic map: through Finale 2011, skip physical 13 and map physical 28 to `Tablature`;
+   from Finale 2012 onward, map 13 to `Tablature` and 28 to `Percussion`. Decide which layout applies by epoch first:
+   the uncompressed and DCL epochs are entirely pre-2012 and need no version test, and only the zlib epoch spans the
+   boundary. Major 12 occurs in both the DCL epoch (Finale 2006) and the zlib epoch (Finale 2007), so no version
+   range alone separates them. Do not encode a tuple-count limit: walk
    what the file carries, ignoring an all-zero second tuple at the end of the final two-tuple unit as structural
    fill. This applies to fixed rows and to the tuple-pair grouping preserved in the zlib payload. Add
    the `FontOptions` object to the pool exactly once. Do not duplicate the six effect bit constants in this
@@ -227,8 +230,11 @@ from a separate baseline document with font-definition remapping.
 ### FontOptions sequence-verification strategy
 
 The physical sequence has not always used the current `FontType` semantics. Private framework history places the
-tablature transition at Finale 2003: from at least Finale 98 through Finale 2002, physical 13 is a holding slot and
-physical 28 is default tablature; beginning in Finale 2003, 13 is tablature and 28 is percussion. Physical 43 is
+tablature transition at Finale 2003; **measurement places it at Finale 2012, and the measurement governs.** From at
+least Finale 98 through **Finale 2011**, physical 13 is a holding slot and physical 28 is default tablature;
+**beginning in Finale 2012**, 13 is tablature and 28 is percussion. See FORMAT_NOTES.md, "The 13/28 boundary is
+Finale 2012, not Finale 2003", for the 1,211 discriminating documents behind this and for why the corpus appeared to
+agree with the framework history until Finale 2011 specimens existed. Physical 43 is
 reserved through Finale 2006 and becomes `TimeParts` in Finale 2007. The sequence before Finale 98 and the physical
 location before the verified Finale 2002 layout remain **open**.
 Finale 27 upgrades of exact legacy files remain the primary semantic reference for observing the associated upgrade
@@ -347,6 +353,43 @@ before Finale 3.2 carry no header incidence.
 
 This measures recovery, not accuracy. Only the fixtures with ETF counterparts independently confirm
 that the recovered values are correct.
+
+### Clef scalars: the same selector does not always mean the same thing
+
+**Confirmed 2026-08-11** against all 1,120 adjacent-exact Finale 27 companions. Eight distilled rows
+name locations for `ClefOptions` scalars: `clefDefault`, `clefReduction`, `clefDefaultOffset`,
+`clefBefore`, `clefAfter`, `clefKeySpace`, `clefTimeSpace`, and `clefOnlyOnFirstSys`. Checking each
+against its companion, per era rather than in aggregate, shows the distilled table is right for
+Finale 3.0 onward and wrong for three rows before it:
+
+| Rows | Coda banner | Finale 3.0–2000 | Finale 2001–2006 | Finale 2007+ |
+|---|:--:|:--:|:--:|:--:|
+| `01` w0, `13` w2, `13` w3, `19` w0, `19` w1 | 57/57 | 173/173 | 374/374 | 497/497 |
+| `38` w5, `39` w4, `27` w1 bit 0 | **0/57** | 173/173 | 374/374 | 497/497 |
+| `44` w3 bit 2, the courtesy clef | **absent** | consistent | confirmed by fixture | consistent |
+
+The courtesy row is a ninth location, not one of the distilled eight: `courtesyFlags` packs the clef, key and time
+courtesies into selector `44` word 3, at bits 2, 0 and 1. Controlled Finale 2005 saves identify the clef and key
+bits. The Coda era stores the same three as separate boolean words in selector `12`, which is a further instance of
+the same renumbering.
+
+In the Coda era selector `27` word 1 and selector `39` word 4 hold font sizes, and are already read
+as such by the FontOptions mapping; selector `38` word 5 disagrees with the companion on every Coda
+file with a non-default value. The reader gates those three to Finale 3.0 and later.
+
+Two general lessons follow, and both apply to the 429 rows still unpromoted:
+
+- **A distilled row is an era-scoped claim, not a universal one.** These eight came from one
+  preference-table snapshot. Five hold across every era observed; three do not, and nothing in the
+  distilled CSV marks the difference. Verification must be per era.
+- **A wrong location is quiet.** All three bad Coda rows read a real record and return a plausible
+  number. Only comparison with a companion distinguishes that from a correct read, which is why
+  aggregate agreement counts hide it: the three rows still show 54/57 overall agreement, because
+  most files have the default value on both sides.
+
+The zlib era needs no separate distillation. The same eight logical options are reached through the
+established `numericGlobalClass` rule, comparator `65534` and byte offsets in place of word slots,
+and all eight agree on all 497 compared files.
 
 ## Confidence and validation plan
 

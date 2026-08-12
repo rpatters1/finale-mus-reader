@@ -1,0 +1,20 @@
+Finale 3.7.2, classic Mac OS.
+    Recovered Enigma version 3.7.0. Fill in the exact application build and host
+    environment from the machine that produced these files.
+
+F372-baseline.mus / .etf
+    7,908 bytes. The unedited document. Its eight clefs already carry baseline
+    adjustment counts (-2, -4, -5, -6, ...) in word 4 of selectors 28-35, but word 5
+    of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
+    accordingly emits no <baseAdjust> at all.
+
+F372-clef-baseline.mus / .etf
+    sha256 recorded by the survey. Changes two clefs' baseline adjustments and
+    toggles the "use baseline adjustments" checkbox on. Selector 28 word 4 moves
+    -2 -> 1, selector 28 word 5 moves 0 -> 1, and selector 29 word 4 moves -4 -> -2.
+    Finale 27 then converts every clef, including selector 30 which this save never
+    touched, at 768 Efix per harmonic level: 768, -1536, -3840. This pair is what
+    establishes both the conversion factor and the switch.
+    Selectors 62 and 63 also move 415 -> 414, which is unrelated to clefs.
+
+Finale 27 companions are in `-finale27/`.

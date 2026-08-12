@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "musx/dom/Document.h"
+#include "musx/util/Logger.h"
 #include "musx/factory/DocumentFactory.h"
 #include "musx/xml/XmlInterface.h"
 
@@ -59,7 +60,22 @@ enum class SourcePlatform
 
 enum class ValueOrigin
 {
+    /// @brief Read from the source file's own bytes.
     LegacyMus,
+    /// @brief Supplied from how the source version behaved, because it had no option to
+    /// store.
+    /// @details A field that later Finale versions expose as a setting is often fixed
+    /// behavior in an earlier one. Such a value is neither read from the file nor guessed:
+    /// the era's behavior determines it, and the version or epoch that introduced the
+    /// setting is the boundary. Reporting it as a synthesized default would understate it,
+    /// and reporting it as recovered would claim bytes that do not exist.
+    ///
+    /// Coda-banner clef courtesies are the motivating case. No version before 3.6.2 offers
+    /// the option and every such document shows a courtesy clef, so the value is known
+    /// exactly while nothing in the file records it.
+    LegacyBehavior,
+    /// @brief Left at the value the pinned Finale 27 baseline supplies, because this source
+    /// neither records the field nor determines it by behavior.
     Finale27Default
 };
 
@@ -96,6 +112,12 @@ struct BlockInfo
     std::size_t decodedSize{};
     bool checksumPresent{};
     bool checksumValid{};
+    /// @brief The block's payload is held verbatim rather than decompressed.
+    /// @details The two terminal block types are usually empty markers, but when a document
+    /// embeds a graphic they carry its bytes, uncompressed and with no checksum word. Such a
+    /// block is reported so a caller can see that the document contains data this reader
+    /// preserves but does not yet interpret.
+    bool stored{};
 };
 
 struct FieldInfo
@@ -105,6 +127,27 @@ struct FieldInfo
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
     std::int64_t rawValue{};
+};
+
+/// @brief One message about the import, with the level that decides where it surfaces.
+/// @details The level is musxdom's own @c Logger::LogLevel rather than a parallel enum, so a
+/// host can forward a diagnostic straight to its logging callback without translating.
+///
+/// Choosing it is a statement about the state the document is left in, not about how
+/// interesting the cause was:
+///
+/// - @c Verbose: a designed-in fallback took effect and the document is complete.
+///   Substituting a reference value the source could not supply is routine, and surfacing it
+///   where a user sees it presents normal operation as a problem. The per-field
+///   @ref ValueOrigin already carries that fact in a form a caller can act on.
+/// - @c Info: the document is usable, but something in the source did not come across.
+/// - @c Warning: the document is likely unusable, or content the user had is gone. A
+///   considered choice that leaves a usable document is never a warning, however unusual
+///   the input was.
+struct Diagnostic
+{
+    musx::util::Logger::LogLevel level = musx::util::Logger::LogLevel::Warning;
+    std::string message;
 };
 
 struct ImportReport
@@ -127,11 +170,21 @@ struct ImportReport
     std::string savingProduct;
     std::vector<BlockInfo> blocks;
     std::vector<FieldInfo> fields;
-    std::vector<std::string> warnings;
+    std::vector<Diagnostic> diagnostics;
 };
 
+/// @brief The outcome of an import, successful or not.
+/// @details A failed import is returned, not thrown. Check @ref document: it is null exactly
+/// when the import failed, and @ref ImportReport::diagnostics then carries one entry at
+/// @c LogLevel::Error saying why. That is the only level whose meaning is absolute -- every
+/// other level accompanies a document that exists.
+///
+/// Failure is returned rather than propagated because this reader exists to rescue damaged
+/// and obsolete documents. A caller sweeping a corpus should be able to keep going past a
+/// file that turns out not to be a Finale document at all, without wrapping every call.
 struct ImportResult
 {
+    /// @brief The imported document, or null when the import failed.
     std::shared_ptr<musx::dom::Document> document;
     ImportReport report;
 };

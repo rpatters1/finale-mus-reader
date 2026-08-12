@@ -60,8 +60,16 @@ struct EarlyTuple
 };
 
 // One row per variable-length physical representation. Tuple counts come from the file.
+//
+// The fixed-row row is gated on the epoch rather than on a version range. Selector 24 is the
+// default-font array in every epoch that uses fixed rows except the Coda-banner era, where it
+// holds one row of unrelated values, and `EpochMask::FixedRow` excludes exactly that era. A
+// version range would add nothing and would cost real files: it previously read `Dcl` only,
+// so every Finale 3.0 through 2000 document reported all 45 font options as Finale 27
+// defaults while its source held 40 of them. Verified against the exact Finale 27 companions
+// of the Finale 97 and Finale 2000 fixtures, which agree tuple for tuple.
 const std::array<FontOptionsLayout, 2> layouts{{
-    {EpochMask::Dcl, versions::between({7, 0}, {11, 0xff}),
+    {EpochMask::FixedRow, versions::any(),
         RecordEncoding::FixedRow, records::packTag("24")},
     {EpochMask::Zlib, versions::any(), RecordEncoding::ClassRecord,
         numericGlobalClass(fontOptionsSelector)},
@@ -80,8 +88,9 @@ constexpr EarlyTuple contiguousEarlyTuple(
 }
 
 // Confirmed by controlled Finale 1.0.0 source edits and their exact Finale 27 upgrades,
-// except StaffNames: Finale 1.0 calls the source preference "Name", but Finale 27 drops it.
-// Its continuation as StaffNames is strong under the additive-only early-version hypothesis.
+// except StaffNames: Finale 1.0 calls the source preference "Name", and this era has exactly
+// one of it where Finale 3.0 and later store four. Its continuation as StaffNames is strong
+// under the additive-only early-version hypothesis. See @ref codaNameCompanionTypes.
 const std::array<EarlyTuple, 13> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::Music, "02", 0),
     contiguousEarlyTuple(FontType::Key, "03", 3),
@@ -98,6 +107,30 @@ const std::array<EarlyTuple, 13> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::LyricSection, "27", 3),
     contiguousEarlyTuple(FontType::StaffNames, "04", 3),
 }};
+
+// The Coda-banner era exposes a single "Name" font preference. Finale 3.0 split it into the
+// four modern name types, which that era stores as separate tuples at physical ordinals 31,
+// 32, 33 and 39 -- so this fan-out belongs to the Coda epoch alone and must not be applied
+// to any later one.
+//
+// Recovering only StaffNames would leave the other three at Finale 27 defaults and so emit a
+// document whose staff names use one face and size while its group and abbreviated names use
+// another. The source never had that split, and neither does the Finale 27 baseline, which
+// sets all four identically. Propagating the one preference to all four is the reading that
+// preserves the source's own behavior.
+//
+// This is a deliberate divergence from the Finale 27 companions, which is recorded in
+// research/FORMAT_NOTES.md and is open to revision. Those companions disagree among
+// themselves about the four name types in a way that tracks the default file the upgrade was
+// performed under rather than the source document, so they do not settle the question. The
+// three propagated types report as ValueOrigin::LegacyBehavior, not LegacyMus: the bytes are
+// read from the source, but the assignment restores an era behavior rather than an option
+// the source stored.
+constexpr std::array<FontType, 3> codaNameCompanionTypes{
+    FontType::AbbrvStaffNames,
+    FontType::GroupNames,
+    FontType::AbbrvGroupNames,
+};
 
 const FontOptionsLayout* layoutFor(const SourceProfile& profile)
 {
@@ -124,8 +157,8 @@ std::size_t tupleCount(const FontOptionsLayout& layout,
     }
     const auto bytes = index.getClassRecords().payloadOf(*row);
     if (const auto trailing = bytes.size() % tupleByteSize; trailing != 0) {
-        report.warnings.push_back("Ignored " + std::to_string(trailing)
-            + " trailing byte(s) after the last complete legacy font-options tuple.");
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,"Ignored " + std::to_string(trailing)
+            + " trailing byte(s) after the last complete legacy font-options tuple."});
     }
     return bytes.size() / tupleByteSize;
 }
@@ -211,37 +244,61 @@ void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
         static_cast<std::uint16_t>(effects.value));
 }
 
+/// @brief First major version whose physical font ordinals match the modern enum.
+/// @details Finale 2012 renumbered the tail of the array: through Finale 2011 physical 13 is
+/// a holding slot and physical 28 carries the default tablature font, and from Finale 2012
+/// physical 13 is tablature and 28 is percussion. The boundary is named rather than written
+/// as a literal because it is the whole content of the rule.
+///
+/// This is deliberately NOT shared with the Unicode boundary in clef_options.cpp even though
+/// both fall at major 17. Nothing establishes a common cause -- this is an array
+/// renumbering, not a text-encoding change -- and merging them would assert one.
+constexpr std::uint8_t firstModernOrdinalMajorVersion = 17; // Finale 2012
+
+/// @brief Maps a stored tuple position to the modern FontType it means.
+/// @details Two layouts exist, and which applies is decided by epoch first. The uncompressed
+/// and DCL epochs are entirely pre-2012, so they need no version test at all and keep working
+/// on a file whose header version cannot be recovered. Only the zlib epoch spans the boundary,
+/// so only it carries a version gate, framed inside that epoch.
+///
+/// Epoch has to lead here rather than version: major 12 occurs in both the DCL epoch
+/// (Finale 2006) and the zlib epoch (Finale 2007), so no version range separates them.
 std::optional<FontType> semanticType(
     const SourceProfile& profile, std::size_t physicalOrdinal)
 {
-    if (profile.epoch == FormatEpoch::ZlibLegacy) {
+    // This boundary is Finale 2012 on the evidence of measurement, NOT on the documentation.
+    // Finale's own documentation, and this project's notes following it, place the 13/28
+    // renumbering at Finale 2003. Every document tested says otherwise, so the measurement
+    // is what is implemented here and the notes were corrected to match. If a future reader
+    // finds the 2003 claim in some MakeMusic source, it does not override this: check a file.
+    //
+    // Verified against 1,211 documents whose Finale 27 companion distinguishes tablature
+    // from percussion: 405 from Finale 2003-2010 and 597 from Finale 2011 place tablature at
+    // physical 28, and 209 from Finale 2012 place it at 13 with percussion at 28. No document
+    // contradicts it on either side, on either platform. Coding the boundary at Finale 2003
+    // cost every 2003-2011 document its tablature font and gave it a bogus percussion font --
+    // 2,516 of the 2,629 FontOptions disagreements in the corpus were this one rule.
+    const bool modernOrdinals = profile.epoch == FormatEpoch::ZlibLegacy
+        && profile.version
+        && profile.version->major >= firstModernOrdinalMajorVersion;
+    if (modernOrdinals) {
         if (physicalOrdinal < fontTypeCount) {
             return static_cast<FontType>(physicalOrdinal);
         }
         return std::nullopt;
     }
 
-    if (!profile.version) {
+    // A zlib file whose version will not parse falls here, which is the safe direction: the
+    // pre-2012 layout is what every epoch before it uses, and the epochs that cannot reach
+    // 2012 at all never consult the version.
+    if (physicalOrdinal == 13) {
         return std::nullopt;
     }
-    if (profile.version->major >= 3 // Finale 3.0
-        && profile.version->major <= 7) { // Finale 2002
-        if (physicalOrdinal == 13) {
-            return std::nullopt;
-        }
-        if (physicalOrdinal == 28) {
-            return FontType::Tablature;
-        }
-        if (physicalOrdinal < fontTypeCount) {
-            return static_cast<FontType>(physicalOrdinal);
-        }
-        return std::nullopt;
+    if (physicalOrdinal == 28) {
+        return FontType::Tablature;
     }
-    if (profile.version->major >= 8 // Finale 2003
-        && profile.version->major <= 11) { // Finale 2006
-        if (physicalOrdinal < fontTypeCount) {
-            return static_cast<FontType>(physicalOrdinal);
-        }
+    if (physicalOrdinal < fontTypeCount) {
+        return static_cast<FontType>(physicalOrdinal);
     }
     return std::nullopt;
 }
@@ -269,92 +326,69 @@ bool isStructuralTupleFill(std::size_t tupleCount, std::size_t physicalOrdinal,
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<FontOptionsTarget>& target, FontType type,
     const ResolvedValue& fontId, const ResolvedValue& size,
-    const ResolvedValue& effects, ImportReport& report)
+    const ResolvedValue& effects, ImportReport& report,
+    ValueOrigin origin = ValueOrigin::LegacyMus)
 {
     auto font = std::make_shared<FontInfo>(document);
-    font->fontId = static_cast<musx::dom::Cmper>(
-        static_cast<std::uint16_t>(fontId.value));
+    font->fontId = musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value));
     font->fontSize = static_cast<std::int16_t>(size.value);
     font->setEnigmaStyles(static_cast<std::uint16_t>(effects.value));
     target->fontOptions.insert_or_assign(type, std::move(font));
 
-    reportField(report, type, "fontId", ValueOrigin::LegacyMus,
+    reportField(report, type, "fontId", origin,
         static_cast<std::uint16_t>(fontId.value), fontId.blockOffset, fontId.decodedOffset);
-    reportField(report, type, "fontSize", ValueOrigin::LegacyMus,
+    reportField(report, type, "fontSize", origin,
         static_cast<std::int16_t>(size.value), size.blockOffset, size.decodedOffset);
-    reportField(report, type, "effects", ValueOrigin::LegacyMus,
+    reportField(report, type, "effects", origin,
         static_cast<std::uint16_t>(effects.value), effects.blockOffset, effects.decodedOffset);
 }
 
-musx::dom::Cmper cloneOrMatchFont(const musx::dom::DocumentPtr& document,
+/// @brief Resolves a reference font into this document, reporting when it cannot be done.
+/// @details musxdom owns the rule: match by normalized name, never by comparator, and treat 0 as
+/// the default-music-font sentinel. This only adapts the result to the importer's reporting, which
+/// is why the legacy side keeps no font-matching logic of its own.
+musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, musx::dom::Cmper referenceId,
-    std::unordered_map<std::string, musx::dom::Cmper>& targetFonts,
-    std::uint32_t& nextCmper, ImportReport& report)
+    ImportReport& report)
 {
-    if (referenceId == 0) {
-        return 0;
-    }
     const auto referenceFont = referenceDocument->getOthers()->get<FontDefinition>(
         musx::dom::SCORE_PARTID, referenceId);
     if (!referenceFont) {
-        report.warnings.push_back("Finale 27 FontOptions referenced missing font definition "
-            + std::to_string(referenceId) + "; substituted font id 0.");
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+            "Finale 27 FontOptions referenced missing font definition "
+            + std::to_string(referenceId) + "; substituted font id 0."});
         return 0;
     }
-
-    const auto key = musx::dom::normalizeFontName(referenceFont->name);
-    if (const auto found = targetFonts.find(key); found != targetFonts.end()) {
-        return found->second;
+    if (const auto resolved = musx::dom::importFontDefinitionInto(document, referenceFont)) {
+        return *resolved;
     }
-    if (nextCmper > (std::numeric_limits<musx::dom::Cmper>::max)()) {
-        report.warnings.push_back("No free font comparator remained for Finale 27 font \""
-            + referenceFont->name + "\"; substituted font id 0.");
-        return 0;
-    }
-
-    // The comparator belongs to the target document's id space. Never carry the
-    // reference comparator across documents: allocate directly after the target's
-    // highest existing font comparator.
-    const auto cmper = static_cast<musx::dom::Cmper>(nextCmper++);
-    auto clone = std::make_shared<FontDefinition>(document, musx::dom::SCORE_PARTID,
-        musx::dom::EnigmaBase::ShareMode::All, cmper);
-    clone->charsetBank = referenceFont->charsetBank;
-    clone->charsetVal = referenceFont->charsetVal;
-    clone->pitch = referenceFont->pitch;
-    clone->family = referenceFont->family;
-    // Normalization is only a matching rule. A definition newly introduced from the
-    // platform baseline retains that baseline's exact spelling in the output document.
-    clone->name = referenceFont->name;
-    document->getOthers()->add(FontDefinition::XmlNodeName, clone);
-    targetFonts.emplace(key, cmper);
-    return cmper;
+    report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+        "No free font comparator remained for Finale 27 font \"" + referenceFont->name
+        + "\"; substituted font id 0."});
+    return 0;
 }
 
-struct TargetFontState
+/// @brief Restates an already-reported FontOptions field as coming from the reference.
+/// @details The capture pass reports each recovered tuple as @ref ValueOrigin::LegacyMus.
+/// When the substitution below replaces one, that report becomes untrue, so the existing
+/// entry is rewritten in place rather than appended to: a second entry for the same target
+/// would leave the diagnostics claiming both origins at once.
+void retargetReportedOrigin(ImportReport& report, FontType type,
+    const char* member, std::int64_t rawValue)
 {
-    std::unordered_map<std::string, musx::dom::Cmper> byName;
-    std::uint32_t nextCmper = 1;
-};
-
-TargetFontState collectTargetFonts(const musx::dom::DocumentPtr& document)
-{
-    TargetFontState result;
-    // Comparator zero has default-music semantics and is never a safe destination for a
-    // concrete nonzero font copied from the reference document.
-    for (const auto& font : document->getOthers()
-            ->getArray<FontDefinition>(musx::dom::SCORE_PARTID)) {
-        if (font->getCmper() != 0) {
-            const auto key = musx::dom::normalizeFontName(font->name);
-            const auto found = result.byName.find(key);
-            if (found == result.byName.end() || font->getCmper() < found->second) {
-                result.byName.insert_or_assign(key, font->getCmper());
-            }
+    const auto target = "options.fontOptions["
+        + std::to_string(static_cast<std::size_t>(type)) + "]." + member;
+    for (auto& info : report.fields) {
+        if (info.target != target) {
+            continue;
         }
-        if (font->getCmper() >= result.nextCmper) {
-            result.nextCmper = static_cast<std::uint32_t>(font->getCmper()) + 1;
-        }
+        info.origin = ValueOrigin::Finale27Default;
+        info.rawValue = rawValue;
+        // The value no longer comes from anywhere in the source file.
+        info.blockOffset = 0;
+        info.decodedOffset = 0;
+        return;
     }
-    return result;
 }
 
 void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& document,
@@ -366,7 +400,6 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
         throw std::logic_error("FontOptions reference document is incomplete");
     }
 
-    auto targetFonts = collectTargetFonts(document);
     for (const auto& [type, font] : target->fontOptions) {
         const auto missingId = font->fontId;
         if (missingId == 0 || document->getOthers()->get<FontDefinition>(
@@ -378,19 +411,45 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
         // reference definition by semantic FontOptions type instead. That selected face
         // may reuse an existing target definition by normalized name; otherwise it is
         // cloned into the next sequential target comparator.
+        //
+        // The whole tuple is taken, not just the face. Point size is not independent of
+        // the face it was chosen for -- the same number renders at visibly different sizes
+        // across faces, and the effects mask can be equally face-specific -- so pairing a
+        // substituted face with the source's size produces a combination that existed in
+        // neither document. The source tuple has already been judged untrustworthy by the
+        // time this runs, since its font id names nothing.
+        //
+        // It also removes the era's worst recovered values. Sixteen documents carry a
+        // negative fretboard point size, and every one of them reaches it through a
+        // dangling font id; Finale 27 rewrites those to zero, which is no more renderable
+        // than the negative and is a guard for its own renderer rather than a judgment
+        // about the value. Taking the reference size yields the only usable result.
         const auto referenceFont = reference->getFontInfo(type);
-        const auto resolvedId = cloneOrMatchFont(document, referenceDocument,
-            referenceFont->fontId, targetFonts.byName, targetFonts.nextCmper, report);
+        const auto resolvedId = resolveReferenceFont(
+            document, referenceDocument, referenceFont->fontId, report);
         auto replacement = std::make_shared<FontInfo>(document);
         replacement->fontId = resolvedId;
-        replacement->fontSize = font->fontSize;
-        replacement->setEnigmaStyles(font->getEnigmaStyles());
+        replacement->fontSize = referenceFont->fontSize;
+        replacement->setEnigmaStyles(referenceFont->getEnigmaStyles());
         target->fontOptions.insert_or_assign(type, std::move(replacement));
-        report.warnings.push_back("Legacy FontOptions type "
+
+        // Nothing in this tuple came from the source any more, so the report must stop
+        // saying it did. Leaving these as LegacyMus made a substituted value look
+        // recovered, which is exactly the claim a coverage survey relies on.
+        retargetReportedOrigin(report, type, "fontId", resolvedId);
+        retargetReportedOrigin(report, type, "fontSize", referenceFont->fontSize);
+        retargetReportedOrigin(report, type, "effects", referenceFont->getEnigmaStyles());
+
+        // Verbose, not a warning: a designed-in fallback that leaves the document usable.
+        // The three retargeted entries above already say Finale27Default, which is the
+        // machine-readable form of the same fact, so this exists only for someone reading
+        // a log to understand why.
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
+            "Legacy FontOptions type "
             + std::to_string(static_cast<std::size_t>(type))
             + " referenced missing font definition " + std::to_string(missingId)
-            + "; used same-type Finale 27 reference font as target font id "
-            + std::to_string(resolvedId) + '.');
+            + "; used the same-type Finale 27 reference font, size and effects as target"
+              " font id " + std::to_string(resolvedId) + '.'});
     }
 }
 
@@ -403,8 +462,6 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         throw std::logic_error("FontOptions reference document is incomplete");
     }
 
-    auto targetFonts = collectTargetFonts(document);
-
     for (std::size_t ordinal = 0; ordinal < fontTypeCount; ++ordinal) {
         const auto type = static_cast<FontType>(ordinal);
         if (target->fontOptions.contains(type)) {
@@ -412,8 +469,8 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         }
         const auto source = reference->getFontInfo(type);
         auto font = std::make_shared<FontInfo>(document);
-        font->fontId = cloneOrMatchFont(document, referenceDocument, source->fontId,
-            targetFonts.byName, targetFonts.nextCmper, report);
+        font->fontId = resolveReferenceFont(
+            document, referenceDocument, source->fontId, report);
         font->fontSize = source->fontSize;
         font->setEnigmaStyles(source->getEnigmaStyles());
         target->fontOptions.emplace(type, font);
@@ -442,8 +499,12 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     auto target = std::make_shared<FontOptionsTarget>(document);
     document->getOptions()->add(FontOptionsTarget::XmlNodeName, target);
 
-    if (profile.epoch == FormatEpoch::CodaBanner
-        && versions::between({1, 0}, {2, 0xff}).includes(profile.version)) {
+    // The epoch alone, with no version test. The range this used to carry, 1.0 through 2.ff,
+    // is simply a restatement of the Coda-banner era, so it could never exclude a Mac document
+    // -- but it excluded every Windows one, because that era states a platform where it states
+    // a version and `PC 1.0+` yields none. The tuple locations below hold for both: all 24
+    // Windows documents agree with their exact Finale 27 companions on every recovered type.
+    if (profile.epoch == FormatEpoch::CodaBanner) {
         for (const auto& tuple : earlyCodaTuples) {
             const auto fontId = readEarlyTupleField(
                 index, tuple, TupleField::FontId, profile.byteOrder);
@@ -454,6 +515,13 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
             if (fontId && size && effects) {
                 insertRecoveredTuple(document, target, tuple.type,
                     *fontId, *size, *effects, report);
+                if (tuple.type == FontType::StaffNames) {
+                    for (const auto companion : codaNameCompanionTypes) {
+                        insertRecoveredTuple(document, target, companion,
+                            *fontId, *size, *effects, report,
+                            ValueOrigin::LegacyBehavior);
+                    }
+                }
             }
         }
     } else if (const auto* layout = layoutFor(profile)) {
@@ -466,8 +534,8 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
             const auto effects = readTupleField(
                 *layout, index, profile, physicalOrdinal, TupleField::Effects);
             if (!fontId || !size || !effects) {
-                report.warnings.push_back("Ignored an incomplete legacy font-options tuple at ordinal "
-                    + std::to_string(physicalOrdinal) + '.');
+                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Ignored an incomplete legacy font-options tuple at ordinal "
+                    + std::to_string(physicalOrdinal) + '.'});
                 continue;
             }
 
@@ -479,9 +547,9 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
             } else {
                 reportPhysicalTuple(report, physicalOrdinal, *fontId, *size, *effects);
                 if (!isZeroTuple(*fontId, *size, *effects) && profile.epoch == FormatEpoch::ZlibLegacy) {
-                    report.warnings.push_back("Captured nonzero legacy font-options tuple "
+                    report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,"Captured nonzero legacy font-options tuple "
                         + std::to_string(physicalOrdinal)
-                        + " beyond musxdom's current FontType range.");
+                        + " beyond musxdom's current FontType range."});
                 }
             }
         }

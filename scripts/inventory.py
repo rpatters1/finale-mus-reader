@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """Inventory legacy Finale files without modifying the source corpus.
 
-Matching assumption (reported, not hidden): a source ``name.mus`` normally maps
-to ``source-parent/<export-dir-name>/name<export-suffix>``.  A normalized,
-case-insensitive basename search is used only when that exact convention does
-not match.
+A companion is defined by its path: a source ``name.mus`` pairs with
+``source-parent/<export-dir-name>/name<export-suffix>`` and with nothing else.
+If that file is absent, the source has no companion and is reported ``missing``.
+
+There is deliberately no basename fallback.  A corpus of application installs is
+many copies of one product, so the same filename recurs in every version
+directory by design; searching for a stem corpus-wide then pairs a Finale 2008
+source with a Finale 2011 export and labels the result by how rare the stem is
+rather than by how likely the pairing is.  One such run produced 7,266 ambiguous
+and 112 "unique" pairings, all of them false.  A guess that is labelled is still
+a guess, and a downstream comparison that trusts it reports one version's upgrade
+behavior as another's.
 
 The naming convention is not baked in, because it describes one corpus rather
 than the format: ``--export-dir-name`` and ``--export-suffix`` are required and
@@ -55,7 +63,7 @@ def norm(value: str) -> str:
     return unicodedata.normalize("NFC", value).casefold()
 
 
-def make_exclude_filter(patterns: list[str]):
+def make_exclude_filter(patterns: list[str], keep_patterns: list[str] | None = None):
     """Build a predicate over corpus-relative paths from glob patterns.
 
     A pattern is tested against the path itself *and* against every directory
@@ -74,11 +82,21 @@ def make_exclude_filter(patterns: list[str]):
         return lambda relative: False
 
     folded = [pattern.casefold() for pattern in patterns]
+    kept = [pattern.casefold() for pattern in (keep_patterns or [])]
 
-    def excluded(relative: str) -> bool:
+    def matches(relative: str, against: list[str]) -> bool:
         path = PurePosixPath(relative.casefold())
         candidates = [str(path)] + [str(parent) for parent in path.parents if str(parent) != "."]
-        return any(fnmatch(candidate, pattern) for candidate in candidates for pattern in folded)
+        return any(fnmatch(candidate, pattern) for candidate in candidates for pattern in against)
+
+    def excluded(relative: str) -> bool:
+        # A keep pattern overrides an exclusion, because the two are not always
+        # separable by directory. Finale's stock font-default documents sit inside the
+        # library tree that otherwise holds no documents at all, so excluding the tree
+        # by path would silently drop the specimens that tree was kept for.
+        if kept and matches(relative, kept):
+            return False
+        return matches(relative, folded)
 
     return excluded
 
@@ -137,42 +155,16 @@ def parse_banner(header: bytes) -> tuple[str, str]:
     return raw, match.group(1).decode("ascii", "replace")
 
 
-def export_source_dir(candidate: Path, export_dir_depth: int) -> Path:
-    """Directory a candidate export would sit beside, undoing the export dir."""
-    directory = candidate.parent
-    for _ in range(export_dir_depth):
-        directory = directory.parent
-    return directory
-
-
 def find_export(
     source: Path,
-    exports_by_stem: dict[str, list[Path]],
     export_dir_name: str,
     export_suffix: str,
 ) -> tuple[Path | None, str]:
+    """Pair a source with its companion by path, or report that it has none."""
     expected = source.parent / export_dir_name / f"{source.stem}{export_suffix}"
     if expected.is_file():
         return expected, "adjacent-exact"
-    candidates = exports_by_stem.get(norm(source.stem), [])
-    if not candidates:
-        return None, "missing"
-    # Prefer the candidate with the longest common parent prefix.  Ambiguous
-    # fallback matches remain visibly labelled and are not treated as exact.
-    source_parts = source.parent.parts
-    export_dir_depth = len(Path(export_dir_name).parts)
-    ranked: list[tuple[int, str, Path]] = []
-    for candidate in candidates:
-        common = 0
-        for left, right in zip(source_parts, export_source_dir(candidate, export_dir_depth).parts):
-            if norm(left) != norm(right):
-                break
-            common += 1
-        ranked.append((common, str(candidate), candidate))
-    ranked.sort(key=lambda item: (-item[0], item[1]))
-    best = ranked[0]
-    ties = [item for item in ranked if item[0] == best[0]]
-    return best[2], "fallback-unique" if len(ties) == 1 else "fallback-ambiguous"
+    return None, "missing"
 
 
 def main() -> None:
@@ -204,6 +196,14 @@ def main() -> None:
              "E.g. --exclude='*/Libraries*'",
     )
     parser.add_argument(
+        "--keep",
+        action="append",
+        default=[],
+        metavar="GLOB",
+        help="Re-admit paths matching this glob even when --exclude would drop them; "
+             "repeatable. E.g. --exclude='*/Libraries*' --keep='*Font Default*'",
+    )
+    parser.add_argument(
         "--include-archives",
         action="store_true",
         help="Also inventory candidate members of ZIP/StuffIt archives (slow on first run)",
@@ -225,18 +225,13 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    excluded = make_exclude_filter(args.exclude)
+    excluded = make_exclude_filter(args.exclude, args.keep)
     sources = discover_sources(root, excluded, args.sniff_content)
     exports = sorted(
         (path for path in root.rglob(f"*{export_suffix}")
          if not excluded(path.relative_to(root).as_posix())),
         key=lambda path: norm(str(path.relative_to(root))),
     )
-    exports_by_stem: dict[str, list[Path]] = {}
-    for export in exports:
-        stem = export.name[: -len(export_suffix)]
-        exports_by_stem.setdefault(norm(stem), []).append(export)
-
     # A specimen is anything to inventory: a loose file, or a cached archive
     # member.  Both are real files by this point, so the loop below does not
     # care which is which except when pairing exports.
@@ -280,11 +275,10 @@ def main() -> None:
         with source.open("rb") as handle:
             header = handle.read(0x200)
         banner, product = parse_banner(header)
-        # Archive members have no export counterpart, and the fallback matcher
-        # ranks by path prefix, so letting it run would invent a pairing from a
-        # coincidental basename match against some unrelated loose export.
+        # Archive members live in a cache rather than beside a companion
+        # directory, so the path convention cannot apply to them at all.
         if specimen["origin"] == "filesystem":
-            export, match_kind = find_export(source, exports_by_stem, export_dir_name, export_suffix)
+            export, match_kind = find_export(source, export_dir_name, export_suffix)
         else:
             export, match_kind = None, "not-applicable"
         stat = source.stat()
@@ -341,6 +335,7 @@ def main() -> None:
         # from two runs are only comparable when these agree.
         "sniff_content": bool(args.sniff_content),
         "exclude": list(args.exclude),
+        "keep": list(args.keep),
         # source_* count loose files only, so these stay comparable with surveys
         # taken before archives could be included.
         "source_count": len(sources),

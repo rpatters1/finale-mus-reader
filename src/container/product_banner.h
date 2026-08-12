@@ -65,6 +65,24 @@ struct ProductBanner
     {
         return !product.empty() && product.front() >= '0' && product.front() <= '9';
     }
+
+    /// @brief Whether the product's leading token is `PC`, which names the platform.
+    /// @details The pre-signature era states its platform here and nowhere else: its
+    /// Windows documents carry `PC 1.0+` where its Mac documents carry a bare version such
+    /// as `2.6`. Across both surveyed corpora the token discriminates perfectly -- 24
+    /// documents carry it and are little-endian, 252 do not and are big-endian, and no
+    /// other product string anywhere contains `PC`.
+    ///
+    /// Only the token is matched. What follows is a version and must not participate:
+    /// `1.0+` is the only value observed, but the platform is stated separately from the
+    /// version on purpose, and matching the whole string would reject a Windows document
+    /// from any other release. That version does not parse either, so such a file carries
+    /// no recovered version and every version-gated mapping skips it.
+    [[nodiscard]] bool hasPcProduct() const
+    {
+        return product.rfind("PC", 0) == 0
+            && (product.size() == 2 || product[2] == ' ');
+    }
 };
 
 /// @brief Finds and parses the product banner in a header.
