@@ -478,6 +478,33 @@ marker and those bytes fall into `trailingByteCount`. They are not graphics — 
 payload shape differs — and what they hold is unexamined. If embedded audio or
 other attachments exist, that is where to look first.
 
+### P3.2 The 94 residual FontOptions disagreements
+
+**Status:** open, low priority. **Confidence:** measured 2026-08-12 across 2,700
+adjacent-exact companions.
+
+After the 13/28 gate correction and the whole-tuple font substitution, 94 recovered
+FontOptions values still disagree with their companion, against 111,131 that agree.
+They are recorded here so they are not rediscovered as if new. Three groups, and
+only the last is genuinely unexplained:
+
+- **77 `staffNames`.** The Coda-banner era stores one `Name` preference where
+  Finale 3.0 and later store four, and the importer propagates it to all four. The
+  companions disagree among themselves in a way that tracks the default file each
+  upgrade ran under rather than the source document, so they cannot settle it. See
+  FORMAT_NOTES, "The single `Name` preference reaches all four modern name types",
+  and evidence request C10, which names the one file that would decide it.
+- **12 `ending` and 1 `tuplet`.** Not disagreements at all on inspection: ours reads
+  `New Century Schlbk` and the companion `New Century Schoolbook`, at identical
+  sizes. Classic Mac truncated file and font names to 31 characters, and
+  `normalizeFontName` strips punctuation without expanding abbreviations, so the two
+  spellings of one face compare unequal. Any future name comparison across this
+  boundary needs to account for truncation, not just normalization.
+- **4 `fretboard`.** Unexplained. Worth knowing that every anomalous font size in
+  the corpus — 16 negative and 10 above 200, out of 282,983 recovered sizes — falls
+  on this one ordinal and nowhere else. That concentration is the thread to pull if
+  fretboard misbehaves again.
+
 ## Allowlist reference
 
 The pinned macOS baseline `<others>` holds 127 direct children across 31 tags.
