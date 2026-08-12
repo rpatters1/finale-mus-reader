@@ -1360,8 +1360,10 @@ void testEmbeddedGraphics()
 {
     // A PNG signature and an EPS header: the two shapes the corpus actually contains.
     for (const auto& [terminalType, graphic] :
-         {std::pair<std::uint16_t, std::string_view>{0x0013, "\x89PNG\r\n\x1a\n padding"},
-          std::pair<std::uint16_t, std::string_view>{0x001d, "%!PS-Adobe-3.0 EPSF-3.0"}}) {
+         {std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x0013),
+              "\x89PNG\r\n\x1a\n padding"},
+          std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x001d),
+              "%!PS-Adobe-3.0 EPSF-3.0"}}) {
         const auto result = Reader::read<TestXmlDocument>(
             makeZlibMusWithGraphic(terminalType, graphic));
         expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
