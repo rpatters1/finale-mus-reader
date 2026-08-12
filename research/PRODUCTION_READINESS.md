@@ -60,6 +60,13 @@ Finale 1.0.0 Music,
 TextBlock, and LyricVerse are recovered from confirmed locations; other early categories safely
 remain synthesized.
 
+`ClefOptions` is the second class removed from this hazard, for the same reason and by the
+same means: every one of its eighteen clef definitions can carry a font id, live whenever the
+own-font flag bit is set. It is filtered out of the seeding and rebuilt, so a clef font id in
+an imported document is always the source's own. The two pinned baselines give no clef its own
+font, so extending a short collection from the baseline introduces no font id at all, and the
+reader asserts that rather than assuming it.
+
 The blocker remains for the other seeded option classes containing font ids. Those objects are
 still copied from the baseline with numeric references that have not been reconciled.
 
@@ -141,6 +148,41 @@ despite layers existing by then, which is unexplained. Per-era detail is in
 This measures recovery, not accuracy. Only the fixtures with ETF counterparts
 confirm that recovered values are correct.
 
+**FontOptions now reads the uncompressed era. Fixed 2026-08-11.** Selector `24` is the
+default-font array in every fixed-row epoch except the Coda banner, but the layout row had
+been gated to `EpochMask::Dcl`, so all 208 uncompressed-era corpus files reported 45 of 45
+font options as Finale 27 defaults while the source held 40 of them. No test covered the era,
+which is why it went unnoticed.
+
+Both the layout row and the semantic layout now key on the epoch. `EpochMask::FixedRow`
+excludes exactly the one era where selector 24 means something else, so no version range is
+needed and none is used; and `semanticType` takes the earlier layout for the whole
+uncompressed epoch rather than asking for a major version, which keeps it true of any file
+the container classifies, including one whose header version cannot be recovered.
+
+Verified against every adjacent-exact companion in the era: 6,100 recovered font sizes across
+173 files, with no disagreement. Finale 3.7.2, Finale 97 and Finale 2000 fixtures cover the
+span, and a synthetic file with an out-of-range major version covers the Finale 3.0 shape.
+
+`ClefOptions`, added 2026-08-11, is the first mapping to cover every epoch including
+zlib, and the first verified against the whole adjacent-exact companion set rather
+than against fixtures alone. Over the 1,150 distinct direct corpus files:
+
+| Epoch | Files | With source clef definitions | Definitions recovered |
+|---|---:|---:|---:|
+| Coda banner | 62 | 62 | 496 |
+| Uncompressed | 177 | 177 | 1,416 |
+| DCL | 388 | 388 | 6,892 |
+| zlib | 522 | 503 | 9,054 |
+
+The nineteen zlib files that recover nothing are the unframed files of
+[P1.4](#p14-twenty-zlib-era-files-are-not-framed), not a clef gap. Accuracy was
+measured separately against all 1,120 adjacent-exact Finale 27 companions: of the
+source-supplied definitions every field agrees except four, in three Finale 2.6 files
+the companion itself rewrote. Seven of the eight scalar options agree on every
+compared file in every era where the reader reads them. Detail is in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#clef-definitions).
+
 `ImportReport::fields` already distinguishes recovered from synthesized values,
 which is what keeps this a gap rather than a correctness problem. Promotion of
 further mappings should stay evidence-led and version-aware.
@@ -175,7 +217,7 @@ inflation, which is a separate defect from the undecoded records.
 
 ### P1.4 Twenty zlib-era files are not framed
 
-**Status:** gap. **Confidence:** confirmed 2026-08-09.
+**Status:** resolved 2026-08-11. **Confidence:** confirmed.
 
 This item previously read "thirty-seven banner-era files are not framed" and
 attributed them to known variant framings. That diagnosis was wrong twice over,
@@ -190,8 +232,25 @@ and both causes are now fixed:
   [FORMAT_NOTES.md](FORMAT_NOTES.md#banner-era-files); the controlled pair under
   `tests/evidence/F97/` is the evidence and the regression test.
 
-Twenty files remain unrecognized, all of them zlib-era. They are covered by P1.3
-rather than by anything specific to framing.
+**Resolved 2026-08-11.** The remaining twenty files, all zlib-era and nineteen
+distinct by content, were not unrecognized framing either, and were not covered by
+P1.3. Every one of them framed correctly and decoded four blocks with valid CRCs,
+including `0x001a`, the record block that holds the whole options pool. The parse
+then threw all four away, because the container assumed any block longer than the
+six-byte empty marker was a compressed member and returned nothing on the first
+failure.
+
+The block that failed holds an **embedded graphic**, stored uncompressed: twelve
+files carry a DOS/binary EPSF header, six carry `%!PS-Adobe`, and one carries a PNG
+signature. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#which-blocks-are-compressed). The container now
+decides compression from an allowlist of block types rather than assuming it, so an
+unknown type is preserved verbatim instead of failing the document. All 1,150
+distinct corpus files now parse, and the nineteen recover their options like any
+other file.
+
+The bytes are preserved and reported but not imported; that is
+[P3.1](#p31-embedded-graphics-are-preserved-but-not-imported).
 
 ### P1.5 Legacy text encoding is not converted
 
@@ -238,12 +297,22 @@ version-aware category decoding.
 
 ### P2.2 Dangling shape references in seeded options
 
-**Status:** gap. **Confidence:** confirmed 2026-08-09.
+**Status:** gap, narrowed 2026-08-11. **Confidence:** confirmed.
 
 Two baseline clef definitions set `isShape` and point at shape records, and
 `MultimeasureRestOptions` points at one more. None are seeded. Unlike fonts,
 every `ShapeDef` lookup in musxdom is null-tolerant, so these degrade quietly
 rather than throwing: the shape clefs behave as though they have no shape.
+
+`ClefOptions` is no longer seeded, so a shape clef now reaches an imported document by
+one of two routes. When the source stores its own clef table, which every Finale 2001
+and later file does, the shape comparator is the source's own and will resolve once
+shape records are decoded. Only when the collection has to be extended from the
+baseline — every pre-2001 file, whose eight stored clefs cannot include indices 16 and
+17 — is a baseline comparator carried, and the reader emits a warning saying so. The
+controlled companions show Finale's own upgrade assigning a different shape comparator
+per document, which is independent confirmation that these ids are not portable
+identities.
 
 The reasoning in [P0.2](#p02-font-definitions-must-come-from-the-mus-file)
 applies unchanged. Shape ids share the same single id space, and the two
@@ -252,6 +321,58 @@ pinned shape records would fabricate identity now and collide with source shape
 records later. Clear the references instead, so the document does not claim
 shapes it lacks, or leave them until shapes are decoded from the source. Lower
 priority than fonts only because nothing throws.
+
+### P2.6 Coda-banner byte order is asserted, and Windows Finale existed then
+
+**Status:** blocker. **Confidence:** confirmed 2026-08-11, with specimens.
+
+`parseCodaBanner` hardcodes big-endian, and 24 documents that need the other order are
+now in hand: the `.MUS` templates and tutorial files from the Finale 2.2 for Windows
+install disks. This item was written as a gap awaiting a specimen; the specimens exist,
+so it is a blocker for that population.
+
+Two independent fixes are needed, and one marker answers both. The era's banner states
+its platform: Windows documents carry the product `PC 1.0+` and Mac documents carry a
+bare version. So the classifier's `hasNumericProduct()` test should admit a `PC` product
+instead of rejecting it, and the same token should select little-endian rather than the
+hardcoded big-endian.
+
+Test the leading `PC` token alone. The rest of the field is a version string and must not
+be part of the test: `1.0+` is the only value seen, but the token exists precisely because
+the platform is stated separately from the version, and matching the whole string would
+reject a Windows document from any other release. Note that `1.0+` will not parse as a
+version either, so these files will carry no recovered version and every version-gated
+mapping will skip them; the era's mappings are gated on the epoch, so that is survivable.
+
+The marker discriminates perfectly over both corpora — 24 `PC` documents, all
+little-endian; 252 numeric-product documents, all big-endian; no other product string
+anywhere contains `PC`. The pool prologue remains available as a cross-check, since its
+page-size word reads `0x200` in one order and `0x0002` in the other, but it is no longer
+the primary test.
+
+Both directions are now verifiable against real files, which is what this entry was
+waiting for.
+
+The original entry follows.
+
+`parseCodaBanner` hardcodes big-endian. That was recorded as an untested assumption
+supported by all 62 corpus files; it is now known to be incomplete. Microsoft KB
+Q107181, the Windows Sound System 2.0 README, names "Finale 2.2 for Windows from Coda
+Music Technology", and Finale 2.2 falls inside this era's 1.8.7-to-2.6 range, so the
+era spans both platforms even though no surveyed file does.
+
+A little-endian document of this era would decode with transposed words and tags that
+are not text. It would most likely present as an unrecognized variant rather than as
+plausible wrong data, which is the better failure of the two, but it would not be read.
+No such file is in any surveyed corpus, so nothing is misread today.
+
+Unlike the other eras this one has no block framing to trial, but it is not untestable:
+each pool prologue holds a page-size word that reads `0x200` in one order and `0x0002`
+in the other. Trialling the prologue would replace the assertion with a test and would
+handle a Windows document of the era correctly if one ever appears. That is a small,
+self-contained container change, deliberately not made without a specimen to verify it
+against; the risk of writing an untested second path is comparable to the risk it
+removes.
 
 ### P2.3 Early version ordering
 
@@ -317,6 +438,38 @@ interfaces the reader depends on: the factory construction session (musxdom
 `main` revisions.
 
 ---
+
+## P3 — deferred until everything above is done
+
+### P3.1 Embedded graphics are preserved but not imported
+
+**Status:** open, near-last priority. **Confidence:** confirmed 2026-08-11.
+
+Nineteen distinct corpus files embed a graphic in a stored block: twelve a binary
+EPSF, six a `%!PS-Adobe` EPS, one a PNG. The container keeps the bytes and
+`ImportReport` names them, so nothing is silently dropped, but nothing consumes
+them. See [FORMAT_NOTES.md](FORMAT_NOTES.md#which-blocks-are-compressed).
+
+Two things are unresolved and neither needs solving soon:
+
+- **musxdom has no destination for picture data.** Whatever is decided must not
+  become a second document model here, per the repository boundary.
+- **There is no filesystem to write to.** The reader is expected to work under
+  WebAssembly, so "extract the EPS next to the document" is not available as a
+  general answer. Whatever the destination is, it has to be in-memory and carried
+  by the document or handed to the caller.
+
+The inner framing is only partly read: the stored payload begins with a nested
+`type` and `size` header — `0x000f` and `0x0043` both observed — before the image
+signature, and a block may hold more than one graphic. Decoding that is the first
+step whenever this is picked up, and it needs no new evidence; the corpus already
+has the specimens.
+
+A related observation, also deferred: **208 zlib files carry a non-empty `0x001d`
+block** that the reader never reaches, because the walk stops at the first terminal
+marker and those bytes fall into `trailingByteCount`. They are not graphics — the
+payload shape differs — and what they hold is unexamined. If embedded audio or
+other attachments exist, that is where to look first.
 
 ## Allowlist reference
 

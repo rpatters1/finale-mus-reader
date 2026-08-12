@@ -127,7 +127,19 @@ words, and multi-incidence rows may form one logical object.
   confidence/provenance in diagnostics where useful.
 - Validate declared sizes, decompressed sizes, CRCs, and complete input/output
   consumption as appropriate to the era.
-- Keep record layouts and option mappings explicitly version-aware.
+- Keep record layouts and option mappings explicitly version-aware, but **prefer an epoch gate
+  to a version gate wherever the boundary is really the epoch.** A version gate is the more
+  fragile instrument: it fails closed on any file whose version cannot be recovered, and it
+  fails silently, leaving the class populated from reference defaults and every field reported
+  as synthesized. That looks exactly like a document with nothing to recover. The Coda-banner
+  era's Windows documents state a platform where its Mac documents state a version, so they
+  have no version at all and a version-gated table skips them without a word.
+- **Where a version gate is genuinely required, frame it inside the epoch it is gating.** A
+  boundary that falls within one epoch — the font-definition header arriving in Finale 3.2,
+  inside the uncompressed era — belongs to that epoch and should be expressed as a version
+  range on a table already restricted to it. Listing extra epochs alongside it can only ever be
+  satisfied by a misread version, and bounding the range at both ends keeps a wild version from
+  landing in the wrong case.
 - Treat sharing, tag-specific fields, early directory spans, and other matters
   labeled open in the research as open.
 - When evidence conflicts with an assumption, preserve the evidence and update
@@ -164,8 +176,17 @@ with this sequence:
    the configured musxdom XML backend.
 3. Seed or clone only the complete options pool into the imported document.
 4. Overlay every confidently recovered legacy option value.
-5. Leave absent, unknown, or unsupported values at the Finale 27 default.
-6. Report recovered values separately from synthesized defaults.
+5. Leave absent, unknown, or unsupported values at the Finale 27 default. Prefer this even
+   where the source era's behaviour is known, whenever the baseline already carries the value
+   that behaviour implies. The baseline is generated from committed resources whose hashes
+   this document records, so it is effectively as fixed as a constant, and a value asserted
+   in code beside a baseline that already agrees is a second copy of the same fact.
+6. Report recovered values separately from synthesized defaults, and separately again from
+   values determined by how the source version behaved when it had no option to store them.
+   `ValueOrigin` names the three: `LegacyMus`, `LegacyBehavior`, and `Finale27Default`.
+   Reserve `LegacyBehavior` for a value the baseline does **not** already supply, or supplies
+   wrongly — an era that always did something later versions let you turn off, where reading
+   the later location would assert the opposite.
 
 Never leak fallback measures, staves, entries, text, document identity, header
 values, or other score content into an imported document. The fallback document
@@ -296,10 +317,18 @@ the same local musxdom source override, for example:
 ```bash
 cmake -S . -B /tmp/finale-mus-reader-unity -G Ninja \
   -DCMAKE_UNITY_BUILD=ON \
+  -DFINALE_MUS_READER_BUILD_TESTING=ON \
   -DFINALE_MUS_READER_MUSXDOM_SOURCE_DIR=../musxdom
 cmake --build /tmp/finale-mus-reader-unity
 ctest --test-dir /tmp/finale-mus-reader-unity --output-on-failure
 ```
+
+This runs against the fetched zlib, not an installed one, so the smoke test covers the
+default dependency configuration. `CMakeLists.txt` sets `UNITY_BUILD OFF` on the fetched
+zlib targets: zlib's own C sources do not amalgamate, because `inftrees.h` is included by
+several of them and is not idempotent. That is the dependency's build policy to keep rather
+than this project's to fix, and opting those two targets out is what keeps
+`-DCMAKE_UNITY_BUILD=ON` a single-flag test of project-owned code.
 
 Do not modify large evidence or default fixtures unless the task requires it.
 If exact-source files change intentionally, verify and document their hashes and

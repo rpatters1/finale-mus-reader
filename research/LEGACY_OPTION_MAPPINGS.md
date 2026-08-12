@@ -348,6 +348,43 @@ before Finale 3.2 carry no header incidence.
 This measures recovery, not accuracy. Only the fixtures with ETF counterparts independently confirm
 that the recovered values are correct.
 
+### Clef scalars: the same selector does not always mean the same thing
+
+**Confirmed 2026-08-11** against all 1,120 adjacent-exact Finale 27 companions. Eight distilled rows
+name locations for `ClefOptions` scalars: `clefDefault`, `clefReduction`, `clefDefaultOffset`,
+`clefBefore`, `clefAfter`, `clefKeySpace`, `clefTimeSpace`, and `clefOnlyOnFirstSys`. Checking each
+against its companion, per era rather than in aggregate, shows the distilled table is right for
+Finale 3.0 onward and wrong for three rows before it:
+
+| Rows | Coda banner | Finale 3.0–2000 | Finale 2001–2006 | Finale 2007+ |
+|---|:--:|:--:|:--:|:--:|
+| `01` w0, `13` w2, `13` w3, `19` w0, `19` w1 | 57/57 | 173/173 | 374/374 | 497/497 |
+| `38` w5, `39` w4, `27` w1 bit 0 | **0/57** | 173/173 | 374/374 | 497/497 |
+| `44` w3 bit 2, the courtesy clef | **absent** | consistent | confirmed by fixture | consistent |
+
+The courtesy row is a ninth location, not one of the distilled eight: `courtesyFlags` packs the clef, key and time
+courtesies into selector `44` word 3, at bits 2, 0 and 1. Controlled Finale 2005 saves identify the clef and key
+bits. The Coda era stores the same three as separate boolean words in selector `12`, which is a further instance of
+the same renumbering.
+
+In the Coda era selector `27` word 1 and selector `39` word 4 hold font sizes, and are already read
+as such by the FontOptions mapping; selector `38` word 5 disagrees with the companion on every Coda
+file with a non-default value. The reader gates those three to Finale 3.0 and later.
+
+Two general lessons follow, and both apply to the 429 rows still unpromoted:
+
+- **A distilled row is an era-scoped claim, not a universal one.** These eight came from one
+  preference-table snapshot. Five hold across every era observed; three do not, and nothing in the
+  distilled CSV marks the difference. Verification must be per era.
+- **A wrong location is quiet.** All three bad Coda rows read a real record and return a plausible
+  number. Only comparison with a companion distinguishes that from a correct read, which is why
+  aggregate agreement counts hide it: the three rows still show 54/57 overall agreement, because
+  most files have the default value on both sides.
+
+The zlib era needs no separate distillation. The same eight logical options are reached through the
+established `numericGlobalClass` rule, comparator `65534` and byte offsets in place of word slots,
+and all eight agree on all 497 compared files.
+
 ## Confidence and validation plan
 
 | Claim | Status |
