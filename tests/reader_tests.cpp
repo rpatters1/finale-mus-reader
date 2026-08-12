@@ -296,6 +296,16 @@ const FieldInfo& field(const ImportResult& result, std::string_view target)
     return *found;
 }
 
+// Whether the report carries any diagnostic at the given level. Tests assert the level a
+// message was raised at, not merely that some message exists: the whole point of the level
+// is that a routine fallback and an unreadable document must not look alike to a host.
+bool hasDiagnostic(const finale_mus_reader::ImportReport& report,
+    musx::util::Logger::LogLevel level)
+{
+    return std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+        [&](const finale_mus_reader::Diagnostic& entry) { return entry.level == level; });
+}
+
 template <typename T>
 void expectOption(const ImportResult& result)
 {
@@ -543,10 +553,26 @@ void testFontOptionsCapture()
             && field(f2007, "options.fontOptionsPhysical[45].effects").rawValue == 0,
         "The terminal physical zlib tuple was not captured in the report");
 
+    // The 13/28 renumbering happens at Finale 2012, not Finale 2003 as the documentation
+    // said. Finale 2007 is inside the zlib epoch but before the boundary, so it must still
+    // take the earlier layout: tablature comes from physical 28, and percussion is not
+    // stored at all. Pinning this side matters more than the modern side, because the
+    // previous code got precisely this wrong for every 2003-2011 document.
+    expect(field(f2007, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus,
+        "Finale 2007 tablature was not recovered from physical slot 28");
+    expect(field(f2007, "options.fontOptions[28].fontId").origin
+            == ValueOrigin::Finale27Default,
+        "Finale 2007 percussion was not left to the baseline; it is not stored before 2012");
+
     const auto f2012 = read("evidence/F2012/F2012-upstem-flags.mus");
     const auto littleEndianZlib = f2012.document->getOptions()->get<FontOptions>();
     expect(littleEndianZlib && littleEndianZlib->fontOptions.size() == 45,
         "The little-endian zlib font-options payload was not captured");
+    // The far side of the same boundary: Finale 2012 stores both, at the modern ordinals.
+    expect(field(f2012, "options.fontOptions[13].fontId").origin == ValueOrigin::LegacyMus
+            && field(f2012, "options.fontOptions[28].fontId").origin
+                == ValueOrigin::LegacyMus,
+        "Finale 2012 did not recover both tablature and percussion from stored tuples");
     const auto music = littleEndianZlib->getFontInfo(FontType::Music);
     expect(music->fontId == 0 && music->fontSize == 24
             && field(f2012, "options.fontOptions[0].fontSize").rawValue == 24,
@@ -1262,7 +1288,8 @@ void testCodaBannerEpoch()
     expect(result.report.sourcePlatform == SourcePlatform::Unknown
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
-    expect(!result.report.warnings.empty(), "Coda-banner limitation was not reported");
+    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Warning),
+        "Coda-banner limitation was not reported as a warning");
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported Coda-banner option was not retained as a default");
@@ -1285,7 +1312,16 @@ void testZlibEpoch()
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported zlib-era option was not retained as a default");
-    expect(!result.report.warnings.empty(), "Zlib-era overlay limitation was not reported");
+    // Info, not a warning: this message fires for every zlib document ever read and
+    // describes how far recovery reaches, so raising it to a user would report normal
+    // operation as a fault on every file. Other diagnostics from this synthetic fixture
+    // may legitimately be warnings, so the level is asserted on this message alone.
+    expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
+               [](const finale_mus_reader::Diagnostic& entry) {
+                   return entry.message.find("variable logical records") != std::string::npos
+                       && entry.level == musx::util::Logger::LogLevel::Info;
+               }),
+        "The zlib overlay limitation was not reported at info level");
     expectNoScoreContent(result);
 }
 
@@ -1316,11 +1352,12 @@ void testEmbeddedGraphics()
             "A stored block's payload begins after six header bytes, not ten");
         expect(!terminal.checksumPresent,
             "A stored block was reported as carrying a checksum");
-        expect(std::any_of(result.report.warnings.begin(), result.report.warnings.end(),
-                   [](const std::string& warning) {
-                       return warning.find("does not import") != std::string::npos;
+        expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
+                   [](const finale_mus_reader::Diagnostic& entry) {
+                       return entry.level == musx::util::Logger::LogLevel::Info
+                           && entry.message.find("does not import") != std::string::npos;
                    }),
-            "An embedded graphic was preserved without being reported");
+            "An embedded graphic was preserved without being reported at info level");
         expectCompleteOptionsPool(result);
         expectNoScoreContent(result);
     }
@@ -1393,14 +1430,21 @@ void testCodaBannerByteOrder()
 
 void testMalformedInput()
 {
-    bool threw = false;
-    try {
-        static_cast<void>(
-            Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4}));
-    } catch (const std::invalid_argument&) {
-        threw = true;
-    }
-    expect(threw, "Arbitrary input was accepted as a MUS file");
+    // Failure is returned, not thrown: a null document is the signal, and the reason
+    // arrives as an Error diagnostic in the same report every other message uses. A caller
+    // sweeping a corpus can therefore skip a bad file without wrapping each call.
+    const auto result = Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4});
+    expect(result.document == nullptr, "Arbitrary input was accepted as a MUS file");
+    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Error),
+        "A failed import did not report why at error level");
+    // Error is the one level with an absolute meaning, so it must not appear when a
+    // document was produced. Every other level accompanies a usable result.
+    const auto good = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-upstem-flags.mus");
+    expect(good.document != nullptr, "A known-good fixture failed to import");
+    expect(!hasDiagnostic(good.report, musx::util::Logger::LogLevel::Error),
+        "A successful import reported an error-level diagnostic");
 }
 
 } // namespace

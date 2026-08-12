@@ -102,6 +102,18 @@ std::string originName(finale_mus_reader::ValueOrigin origin)
     return "unknown";
 }
 
+// The reader returns failure rather than throwing: a null document means the import failed,
+// and the reason is the Error-level diagnostic in the report.
+std::string importError(const finale_mus_reader::ImportReport& report)
+{
+    for (const auto& entry : report.diagnostics) {
+        if (entry.level == musx::util::Logger::LogLevel::Error) {
+            return entry.message;
+        }
+    }
+    return "import failed without a reported reason";
+}
+
 std::map<std::size_t, Tuple> collectTuples(const finale_mus_reader::ImportReport& report)
 {
     constexpr std::string_view prefix = "options.fontOptions[";
@@ -206,7 +218,7 @@ void writeSummary(std::ostream& output, std::string_view corpusId,
         << ",\"duplicate_nonzero_font_name_count\":" << duplicateNonzeroNameCount
         << ",\"introduced_duplicate_nonzero_font_name_count\":"
         << introducedDuplicateNonzeroNameCount
-        << ",\"warning_count\":" << imported.report.warnings.size()
+        << ",\"warning_count\":" << imported.report.diagnostics.size()
         << "}\n";
 }
 
@@ -318,6 +330,9 @@ int main(int argc, char** argv)
         try {
             const auto imported = finale_mus_reader::Reader::read<musx::xml::pugi::Document>(
                 std::filesystem::path(path));
+            if (!imported.document) {
+                throw std::runtime_error(importError(imported.report));
+            }
             const auto tuples = collectTuples(imported.report);
             const auto sourceFontIds = collectSourceFontIds(imported.report);
             writeSummary(output, corpusId, imported, tuples, sourceFontIds);

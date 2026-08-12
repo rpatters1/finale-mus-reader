@@ -308,9 +308,9 @@ bool captureFromWordStream(const std::vector<std::int16_t>& words, std::size_t t
     ImportReport& report)
 {
     if (tupleWords == 0 || words.size() % tupleWords != 0) {
-        report.warnings.push_back("Legacy clef table holds " + std::to_string(words.size())
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table holds " + std::to_string(words.size())
             + " word(s), which is not a whole number of " + std::to_string(tupleWords)
-            + "-word clef definitions; no clef definitions were recovered from the source.");
+            + "-word clef definitions; no clef definitions were recovered from the source."});
         return false;
     }
     for (std::size_t first = 0; first + tupleWords <= words.size(); first += tupleWords) {
@@ -421,9 +421,9 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
         // remaining shape-definition gap is tracked in research/PRODUCTION_READINESS.md.
         def->shapeId = source->shapeId;
         if (def->isShape && def->shapeId != 0 && !warnedAboutShapes) {
-            report.warnings.push_back("Synthesized clef definitions carry Finale 27 shape "
+            report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Synthesized clef definitions carry Finale 27 shape "
                 "comparators whose shape definitions are not imported; those clefs read as "
-                "blank until shape definitions are recovered.");
+                "blank until shape definitions are recovered."});
             warnedAboutShapes = true;
         }
         // Neither pinned baseline gives a clef its own font, so there is no baseline font
@@ -559,10 +559,10 @@ void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& r
     // very thing worth knowing. Every corpus file is in range, so this fires only on
     // something genuinely unexpected.
     if (target->defaultClef >= target->clefDefs.size()) {
-        report.warnings.push_back("The recovered default clef index "
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"The recovered default clef index "
             + std::to_string(target->defaultClef) + " is outside the "
             + std::to_string(target->clefDefs.size())
-            + " clef definitions this document has; it is reported as read, not corrected.");
+            + " clef definitions this document has; it is reported as read, not corrected."});
     }
 }
 
@@ -633,15 +633,15 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
                     // clef table of nonsense is worth interrupting for. The level costs
                     // nothing when no such file exists and costs a silently broken document
                     // when one does.
-                    report.warnings.push_back("This document uses the Finale 2012 clef layout "
+                    report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"This document uses the Finale 2012 clef layout "
                         "in big-endian order, which no surveyed file does; the clef "
-                        "character's word order is unverified for it.");
+                        "character's word order is unverified for it."});
                 }
                 captureFromWordStream(words, *tupleWords, provenance, target, report);
             } else {
-                report.warnings.push_back("Legacy clef table payload of "
+                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table payload of "
                     + std::to_string(bytes.size())
-                    + " byte(s) matches neither clef-definition tuple width.");
+                    + " byte(s) matches neither clef-definition tuple width."});
             }
         }
     } else {
@@ -658,16 +658,16 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
             // reader would fabricate eight clef definitions and report them as recovered.
             captureEarlyClefs(index, profile, target, report);
         } else {
-            report.warnings.push_back("The clef table is absent from a source era that "
-                "stores one; every clef definition came from the Finale 27 baseline.");
+            report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"The clef table is absent from a source era that "
+                "stores one; every clef definition came from the Finale 27 baseline."});
         }
     }
 
     if (target->clefDefs.size() > modernClefCount) {
-        report.warnings.push_back("Legacy clef table holds "
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,"Legacy clef table holds "
             + std::to_string(target->clefDefs.size())
             + " clef definitions, more than the " + std::to_string(modernClefCount)
-            + " Finale 27 stores.");
+            + " Finale 27 stores."});
     }
     completeFromReference(referenceDocument, target, report);
 }

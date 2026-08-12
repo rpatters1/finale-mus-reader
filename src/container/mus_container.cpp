@@ -294,13 +294,21 @@ std::optional<ParsedContainer> tryCompressed(
             ? inflateDcl(data + offset + 10, compressedSize)
             : inflateZlib(data + offset + 10, compressedSize);
         if (!decoded) {
-            musx::util::Logger::log(musx::util::Logger::LogLevel::Error,
+            // Verbose, not Error. This runs inside a speculative attempt: parse() tries
+            // both byte orders and both codecs and keeps the first that works, so a
+            // rejection here is ordinary format detection and is routinely followed by a
+            // successful parse of the same file. Error would say the import produced no
+            // document, which this cannot know. When every attempt fails the epoch stays
+            // Unknown and the reader raises that as a warning in its own right.
+            musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
                 std::string(dcl ? "DCL" : "zlib") + " decompression failed at MUS offset "
                 + std::to_string(offset));
             return std::nullopt;
         }
         if (!crcMatches(*decoded, expectedCrc)) {
-            musx::util::Logger::log(musx::util::Logger::LogLevel::Error,
+            // Verbose for the same reason as the decompression rejection above: a wrong
+            // speculative byte order can inflate to bytes that simply fail the checksum.
+            musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
                 std::string(dcl ? "DCL" : "zlib") + " checksum failed at MUS offset "
                 + std::to_string(offset));
             return std::nullopt;

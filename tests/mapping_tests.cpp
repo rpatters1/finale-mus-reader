@@ -213,38 +213,56 @@ void testMissingRecoveredFontDefinitionFallback()
     const auto referenceDocument = referenceSession.getDocument();
     auto referenceOptions = std::make_shared<FontOptions>(referenceDocument);
     referenceDocument->getOptions()->add(FontOptions::XmlNodeName, referenceOptions);
-    const auto addReference = [&](FontType type, musx::dom::Cmper cmper, const char* name) {
+    // The reference carries a size and effects distinct from the source's, so the
+    // assertions below can tell which document each part of the tuple came from.
+    const auto addReference = [&](FontType type, musx::dom::Cmper cmper, const char* name,
+                                  int size, std::uint16_t effects) {
         auto definition = std::make_shared<FontDefinition>(referenceDocument,
             musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
         definition->name = name;
         referenceDocument->getOthers()->add(FontDefinition::XmlNodeName, definition);
         auto font = std::make_shared<musx::dom::FontInfo>(referenceDocument);
         font->fontId = cmper;
+        font->fontSize = size;
+        font->setEnigmaStyles(effects);
         referenceOptions->fontOptions.emplace(type, font);
     };
-    addReference(FontType::Fretboard, 3, "Seville");
-    addReference(FontType::Tablature, 4, " arIAL ");
+    addReference(FontType::Fretboard, 3, "Seville", 24, 4);
+    addReference(FontType::Tablature, 4, " arIAL ", 18, 5);
 
     ImportReport report;
     finale_mus_reader::options::repairMissingRecoveredFontDefinitions(
         targetDocument, referenceDocument, targetOptions, report);
 
+    // The whole tuple comes from the reference, not just the face. A point size is not
+    // independent of the face it was chosen for, so pairing a substituted face with the
+    // source's size would produce a combination present in neither document. The source
+    // values here are 36/1 and 12/2; both must be gone.
     const auto fretboard = targetOptions->getFontInfo(FontType::Fretboard);
-    expectMapping(fretboard->fontId == 6 && fretboard->fontSize == 36
-            && fretboard->getEnigmaStyles() == 1,
+    expectMapping(fretboard->fontId == 6 && fretboard->fontSize == 24
+            && fretboard->getEnigmaStyles() == 4,
         "A same-type reference face was not cloned after the highest target comparator");
     expectMapping(targetDocument->getOthers()->get<FontDefinition>(
             musx::dom::SCORE_PARTID, 6)->name == "Seville",
         "The cloned same-type reference face did not retain its reference spelling");
     const auto tablature = targetOptions->getFontInfo(FontType::Tablature);
-    expectMapping(tablature->fontId == 5 && tablature->fontSize == 12
-            && tablature->getEnigmaStyles() == 2,
+    expectMapping(tablature->fontId == 5 && tablature->fontSize == 18
+            && tablature->getEnigmaStyles() == 5,
         "A normalized nonzero target face was not reused by the fallback");
     expectMapping(targetDocument->getOthers()->getArray<FontDefinition>(
             musx::dom::SCORE_PARTID).size() == 3,
         "The fallback introduced a duplicate nonzero font name");
-    expectMapping(report.warnings.size() == 2,
-        "Missing recovered font definitions were not reported");
+    // The fallback is silent by design: it is a considered substitution that leaves the
+    // document usable, and a warning would surface it in user interfaces as though
+    // something had gone wrong. Callers distinguish substituted values from recovered ones
+    // through the reported ValueOrigin, not through a message.
+    expectMapping(std::none_of(report.diagnostics.begin(), report.diagnostics.end(),
+                      [](const finale_mus_reader::Diagnostic& entry) {
+                          return entry.level == musx::util::Logger::LogLevel::Warning;
+                      }),
+        "The designed-in font substitution emitted a user-facing warning");
+    expectMapping(report.diagnostics.size() == 2,
+        "The font substitution was not recorded at verbose level");
 }
 
 // The target is taken by value rather than by const reference so that a literal call site
@@ -600,15 +618,15 @@ void testClefTupleDecoding()
         finale_mus_reader::options::validateClefOptions(document, report);
         expectMapping(options->defaultClef == 99,
             "An out-of-range default clef index was silently corrected");
-        expectMapping(std::any_of(report.warnings.begin(), report.warnings.end(),
-                          [](const std::string& w) {
-                              return w.find("default clef index 99") != std::string::npos;
+        expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+                          [](const finale_mus_reader::Diagnostic& entry) {
+                              return entry.message.find("default clef index 99") != std::string::npos;
                           }),
             "An out-of-range default clef index was accepted without a warning");
         ImportReport clean;
         options->defaultClef = 17;
         finale_mus_reader::options::validateClefOptions(document, clean);
-        expectMapping(clean.warnings.empty(), "A valid default clef index warned");
+        expectMapping(clean.diagnostics.empty(), "A valid default clef index warned");
     }
 
     // Pre-2001 clefs are eight separate globals whose baseline word is in harmonic levels,
@@ -702,9 +720,9 @@ void testClefTupleDecoding()
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::BigEndian)),
             profile, document, makeClefReferenceDocument(), report);
-        expectMapping(std::any_of(report.warnings.begin(), report.warnings.end(),
-                          [](const std::string& w) {
-                              return w.find("unverified") != std::string::npos;
+        expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+                          [](const finale_mus_reader::Diagnostic& entry) {
+                              return entry.message.find("unverified") != std::string::npos;
                           }),
             "A big-endian Finale 2012 clef layout was decoded without saying it is unverified");
         expectMapping(document->getOptions()->get<ClefOptions>()->getClefDef(0)->clefChar == 38,
@@ -726,9 +744,9 @@ void testClefTupleDecoding()
         expectMapping(document->getOptions()->get<ClefOptions>()->clefDefs.size() == 20,
             "The pre-Unicode reading of an ambiguous payload did not use the narrow tuple");
     }
-    expectMapping(std::any_of(report.warnings.begin(), report.warnings.end(),
-                      [](const std::string& warning) {
-                          return warning.find("more than the 18") != std::string::npos;
+    expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+                      [](const finale_mus_reader::Diagnostic& entry) {
+                          return entry.message.find("more than the 18") != std::string::npos;
                       }),
         "An over-long clef collection was accepted without a warning");
 }

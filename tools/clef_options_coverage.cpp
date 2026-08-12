@@ -58,6 +58,18 @@ const char* originOf(const finale_mus_reader::ImportReport& report, std::size_t 
 
 } // namespace
 
+// The reader returns failure rather than throwing: a null document means the import failed,
+// and the reason is the Error-level diagnostic in the report.
+std::string importError(const finale_mus_reader::ImportReport& report)
+{
+    for (const auto& entry : report.diagnostics) {
+        if (entry.level == musx::util::Logger::LogLevel::Error) {
+            return entry.message;
+        }
+    }
+    return "import failed without a reported reason";
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
@@ -84,6 +96,11 @@ int main(int argc, char** argv)
             const auto result =
                 finale_mus_reader::Reader::read<musx::xml::pugi::Document>(
                     std::filesystem::path(path));
+            if (!result.document) {
+                out << ",\"error\":" << jsonString(importError(result.report)) << '}';
+                std::cout << out.str() << '\n';
+                continue;
+            }
             const auto options =
                 result.document->getOptions()->get<musx::dom::options::ClefOptions>();
             out << ",\"product\":" << jsonString(result.report.savingProduct);

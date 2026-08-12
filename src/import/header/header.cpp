@@ -180,10 +180,10 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     if (selected.major <= maximumFinaleMajorVersion) {
         report.sourceVersion = selected;
     } else {
-        report.warnings.push_back("Recovered Finale major version "
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Recovered Finale major version "
             + std::to_string(selected.major) + " is outside the valid range 0-"
             + std::to_string(maximumFinaleMajorVersion)
-            + "; version-gated mappings are skipped.");
+            + "; version-gated mappings are skipped."});
     }
 }
 
