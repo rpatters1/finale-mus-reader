@@ -17,4 +17,20 @@ F372-clef-baseline.mus / .etf
     establishes both the conversion factor and the switch.
     Selectors 62 and 63 also move 415 -> 414, which is unrelated to clefs.
 
+F372-revstem-halfstem.mus
+    sha256 8922e544921e225af14e6ad960653eeedcdb7dcaaee685bc94ddfe1c41327ca6
+    7,908 bytes. Changes the half-stem length and switches off "Display Reverse
+    Stemming". Exactly two record words move: `03(65534)` word 2 goes 18 -> 19,
+    and `41(65534)` word 1 goes 0 -> 1. The companion follows with
+    `<halfStemLength>19</halfStemLength>` and `<noReverseStems/>`.
+    This pair settles two rows the corpus cannot: no surveyed document varies the
+    half-stem length, and none has reverse stemming switched off. It also shows
+    that this era spells the flag in **bit 0**, not the bit 2 the framework names
+    for its own era -- the only stem row known to have moved between eras.
+
+F372-revstem-halfstem.etf
+    sha256 e7bdc9b872cc2c2e6866b0c545e80aad2599987fcf8602d5dc955c7970c3b3a3
+    The matching Finale 3.7.2 ETF export, whose `^03(65534)` and `^41(65534)`
+    rows confirm both edited words independently of the MUS decoding.
+
 Finale 27 companions are in `-finale27/`.

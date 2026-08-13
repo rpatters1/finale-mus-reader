@@ -5,11 +5,11 @@ Origin: controlled test documents created by Robert G. Patterson in Finale
 musical content are released by their author under this repository's MIT
 license.
 
-All three changed files were derived from the same newly created baseline. Each
-changes one default-font control. Pairwise comparison among the changed files
-localizes the intended changes to the named physical tuples; the baseline has a
-smaller save allocation and is therefore a semantic rather than byte-for-byte
-control for those files.
+Every changed file below was derived from the same newly created baseline, and
+each alters one named control or a small named set of them. Pairwise comparison
+among the changed files localizes the intended changes to the named physical
+tuples; the baseline has a smaller save allocation and is therefore a semantic
+rather than byte-for-byte control for those files.
 
 F100-baseline.mus
     sha256 9b6605da705949155d2690bc51680576b87872272406077fb59160fb599f00b9
@@ -47,6 +47,68 @@ F100-clef-baseline.etf
     `ENIGMA Structures Copyright 1987 by Coda.` banner. This establishes that
     Finale 1.0.0 has an ETF export command, and its `^28(65534)` and `^29(65534)`
     rows independently confirm the edited words.
+
+F100-stemopts-changed.mus
+    sha256 3800ba1964aaa754f1aa2223b79450885e4078a428b2c996fe3de6842db03330
+    4,655 bytes. Lengthens the normal and shortened stems by one staff position
+    each and switches off "Display Reverse Stemming". Selector `20(65534)` word 4
+    moves 7 -> 8 and word 5 moves 5 -> 6, and `41(65534)` word 1 moves 0 -> 1.
+    Its companion moves the two lengths to 96 and 72 and gains
+    `<noReverseStems/>`, which is what makes the pre-Finale-3.5 lengths a
+    measured staff-position count rather than an inference, and what shows this
+    era keeps the reverse-stemming flag in bit 0 where later ones use bit 2.
+    `21(65534)` word 0 also moves 4 -> 5: the Finale 1.0.0 dialog offers "Offset"
+    beside the two lengths, and that word is the augmentation-dot upstem-flag
+    adjustment from Finale 3.0 on. Finale 27 discards it when converting a Coda
+    document, so the companion cannot say whether it means the same thing here.
+    It is not `revStemAdj`, which is word 2 of the same selector and does not
+    move. Two further rows differ, `54(65534)` and `55(65534)`.
+
+F100-stemopts-changed.etf
+    sha256 99376da589685aa327caae85e1c55541360e47463e8f2670d228998fc2d1dae2
+    A Finale 1.0.0 ETF export of the same document, whose `^20(65534)` and
+    `^41(65534)` rows independently confirm the edited words.
+
+F100-revstem-25.mus
+    sha256 19ced7ea65905d118a665f63ccc30061546a3b8fed41545bdf8c2cb39a13adee
+    4,143 bytes. Sets the reverse stem adjustment to 25. Selector `21(65534)`
+    word 2 moves 18 -> 25 and the companion carries `<revStemAdj>300</revStemAdj>`,
+    which is twelve times the stored number and the same factor the two stem
+    lengths establish. That makes every pre-Finale-3.5 length a measured
+    staff-position count.
+    This save has the baseline's smaller save allocation, so unlike the other
+    controlled files it also differs in font, text and layout rows that no edit
+    touched. Those are allocation noise; the ETF confirms the intended word
+    independently.
+
+F100-revstem-25.etf
+    sha256 80afb94d3f9e8e265bba3301b8a27e60b603f3fe4ee7f56dadda9efe5b58c19a
+    The matching Finale 1.0.0 ETF export, whose `^21(65534) 4 8 25 6 4 4` row
+    carries the edited word.
+
+F100-stemconn-enabled.mus
+    sha256 c2fd3b21b523fdffbf03fc8e3c44c6bdae2b1f0dff0376da1efd500fb1bd83d1
+    5,167 bytes. Enables stem connections. Selector `31(65534)` word 5 moves
+    0 -> 1 and no other record word in the file changes, which is what pins
+    `useStemConnections` to that word in an era whose corpus files never vary it.
+    The companion gains `<useStemConnections/>` where the baseline has none.
+
+F100-stemconn-enabled.etf
+    sha256 5fa19785fa827015ebefcf49bda2b27a4ec19382711cfcf662b5b5f669282ad6
+    The matching Finale 1.0.0 ETF export. Its `^31(65534) 2 -6 63 -2 -6 1` row
+    confirms the edited word from a direction independent of the MUS decoding.
+
+F100-stemconn-disabled.mus
+    sha256 cba0bb58a68e770dfd93f4a101fd3a57c6c374c933eb97afc58fa8907121df27
+    4,655 bytes. Chose "Disable" on a document that was already disabled, the
+    Finale 1.0.0 dialog giving no indication of the current state. No option
+    record differs from the baseline, so this is a no-op save. Kept because it is
+    the regression test for finding no difference where there is none.
+
+F100-stemconn-disabled.etf
+    sha256 cccb1ff44cfd5c740b6eec58378cc072dd2f0b4f28e95086d8b59d4c08cdf35c
+    The matching Finale 1.0.0 ETF export, whose `^31(65534)` row is identical to
+    the baseline's and whose trailing 0 contrasts with the enabled save's 1.
 
 Finale 27 companions are in `-finale27/`. They were generated without manual
 document edits in the same automated Finale 27.4 run described by

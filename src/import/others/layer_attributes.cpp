@@ -23,8 +23,6 @@ const FieldMapping layerFields[] = {
     MUS_WORD(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0, restOffset),
 };
 
-} // namespace
-
 const MappingTable& layerAttributesTable()
 {
     static const MappingTable table{
@@ -35,6 +33,14 @@ const MappingTable& layerAttributesTable()
         .fields = layerFields,
         .fieldCount = std::size(layerFields)};
     return table;
+}
+
+} // namespace
+
+void importLayerAttributes(const ImportContext& context)
+{
+    applyMappingTables({&layerAttributesTable()},
+        context.index, context.profile, context.document, context.report);
 }
 
 } // namespace others

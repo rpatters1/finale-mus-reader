@@ -250,7 +250,7 @@ void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
 /// physical 13 is tablature and 28 is percussion. The boundary is named rather than written
 /// as a literal because it is the whole content of the rule.
 ///
-/// This is deliberately NOT shared with the Unicode boundary in clef_options.cpp even though
+/// This is deliberately NOT shared with @ref versions::firstUnicodeMajorVersion even though
 /// both fall at major 17. Nothing establishes a common cause -- this is an array
 /// renumbering, not a text-encoding change -- and merging them would assert one.
 constexpr std::uint8_t firstModernOrdinalMajorVersion = 17; // Finale 2012
@@ -558,6 +558,15 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     repairMissingRecoveredFontDefinitions(
         document, referenceDocument, target, report);
     completeFromReference(document, referenceDocument, target, report);
+}
+
+void importFontOptions(const ImportContext& context)
+{
+    // No mapping table: every type is either a recovered physical tuple translated through a
+    // versioned semantic map or a baseline entry completed with a remapped font id, and
+    // neither is a fixed source location a table row could name.
+    captureFontOptions(context.index, context.profile, context.document,
+        context.referenceDocument, context.report);
 }
 
 } // namespace options

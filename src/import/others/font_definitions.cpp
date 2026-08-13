@@ -146,8 +146,6 @@ const FieldMapping classFontFields[] = {
     MUS_CLASS_TEXT(FontDefinitionTarget, fontDefinitionClass, nameOffset, name),
 };
 
-} // namespace
-
 // The Coda-banner epoch, which needs no version test at all.
 //
 // That epoch lies entirely below the header boundary, so the early layout always applies to it
@@ -218,6 +216,19 @@ const MappingTable& earlyFontDefinitionsTable()
         .fieldCount = std::size(earlyFontFields),
         .finalizeTarget = &convertEarlyNameToUtf8};
     return table;
+}
+
+} // namespace
+
+void importFontDefinitions(const ImportContext& context)
+{
+    // Four layouts, one destination. The uncompressed epoch straddles the Finale 3.2 header
+    // boundary and so needs both of the first two; the Coda epoch is decided by its epoch
+    // alone, and the zlib epoch reads the same definitions as class records. Listing them
+    // together is what lets one file match exactly one of them.
+    applyMappingTables({&fontDefinitionsTable(), &earlyFontDefinitionsTable(),
+                           &codaFontDefinitionsTable(), &classFontDefinitionsTable()},
+        context.index, context.profile, context.document, context.report);
 }
 
 } // namespace others

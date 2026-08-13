@@ -103,6 +103,12 @@ int main(int argc, char** argv)
     }
 
     const auto parsed = container::parse(data.data(), data.size());
+    // A class-record payload is printed as raw bytes, so a caller decoding one needs the
+    // order the container settled on. Guessing it from the header outside this tool is what
+    // made an earlier probe read four little-endian files as big-endian.
+    std::printf("epoch=%d byteOrder=%s\n", static_cast<int>(parsed.formatEpoch),
+        parsed.byteOrder == ByteOrder::BigEndian ? "big"
+            : parsed.byteOrder == ByteOrder::LittleEndian ? "little" : "unknown");
     const auto index = records::LegacyRecordIndex::build(parsed);
     dumpPool("others", index.getOthers(), filters);
     dumpPool("details", index.getDetails(), filters);

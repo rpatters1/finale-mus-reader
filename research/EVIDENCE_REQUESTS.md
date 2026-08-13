@@ -277,6 +277,55 @@ nowhere else in the document. Three outcomes are each decisive: the companion ca
 and size on all four name types (fan-out confirmed), on `StaffNames` only (fan-out should be
 dropped), or on none (Finale 27 genuinely discards `Name`, and the divergence is deliberate).
 
+### S1 — Supplied/Analyzed — settles the pre-Finale-3.5 stem lengths
+
+Two controlled Finale 1.0.0 saves are now tracked as `tests/evidence/F100/F100-stemopts-changed.*`
+and `F100-stemconn-disabled.*`. The first lengthens the normal and shortened stems by one staff
+position each and switches off "Display Reverse Stemming", which moved selector `20(65534)` words
+4-5 from 7 and 5 to 8 and 6 and selector `41(65534)` word 1 from 0 to 1. Its companion moves the
+lengths to 96 and 72 and gains `<noReverseStems/>`, confirming both the staff-position unit and
+the Coda era's own bit for that flag.
+
+### S2 — Supplied/Analyzed — the Finale 1.0.0 stem-connection switch
+
+Settled by `tests/evidence/F100/F100-stemconn-enabled.*`. Enabling stem connections moves selector
+`31(65534)` word 5 from 0 to 1 and moves nothing else in the file; the companion gains
+`<useStemConnections/>` and the era's own ETF shows the same word. The earlier "Disable" save
+remains as the no-op control: it was made on a document that was already disabled, which the
+Finale 1.0.0 dialog does not indicate.
+
+### S3 — Supplied/Analyzed — the half-stem length and the early reverse-stemming bit
+
+Settled by `tests/evidence/F372/F372-revstem-halfstem.*`. Two words move and no others:
+`03(65534)` word 2 goes 18 -> 19 and `41(65534)` word 1 goes 0 -> 1, with the companion following
+on both. That confirms the half-stem location, and shows Finale 3.7.2 spells the flag in bit 0
+rather than the framework's bit 2. The Finale 3.0-3.4 question it was also meant to answer is now
+moot: the reader dates the spelling from the word's own contents rather than from a version
+boundary.
+
+### S4 — Supplied/Analyzed — the packed reverse-stemming bit, and the modern stem length
+
+Settled by `tests/evidence/F2002/F2002-norevstem-len96.*`. Exactly the predicted words move:
+`41(65534)` word 1 goes 26 -> 30, a gain of 4, and `20(65534)` word 4 goes 84 -> 96. The companion
+carries `<noReverseStems/>` and `<stemLength>96</stemLength>`. Every StemOptions location is now
+measured rather than distilled.
+
+### S6 — Proposed — what the Coda "Offset" means
+
+`21(65534)` word 0 is the augmentation-dot upstem-flag adjustment from Finale 3.0 on, confirmed
+against companions. A Finale 1.0.0 save reached the same word through a stem dialog labelled
+"Offset", and Finale 27 discards the value when converting that era, so the companion cannot
+adjudicate. If Finale 1.0.0 or 2.6.3 exposes an augmentation-dot adjustment anywhere else in its
+UI, changing it and seeing whether `21(65534)` word 0 moves would settle whether the era shares the
+later meaning. Low priority: nothing reads that word today.
+
+### S5 — Supplied/Analyzed — the last stem inference
+
+Closed by `tests/evidence/F100/F100-revstem-25.*`. Setting the reverse stem adjustment to 25 moves
+`21(65534)` word 2 from 18, the ETF shows `^21(65534) 4 8 25 6 4 4`, and the companion carries
+**300** — twelve times the stored number, matching the factor the two stem lengths establish.
+`StemOptions` now has no inferred location, unit or bit anywhere in its four epochs.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

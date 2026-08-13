@@ -171,9 +171,8 @@ std::vector<std::uint8_t> makeUncompressedMus()
 }
 
 // An uncompressed-era file carrying a selector 24 default-font array. Its banner version is
-// major 12, deliberately outside the Finale 3.0 through 2002 range, because that is the shape
-// of the three real Finale 3.0 documents whose header recovers a major version of 15: the
-// epoch has to carry the semantic layout when the version cannot.
+// major 12, deliberately outside the Finale 3.0 through 2002 range, so that the epoch has to
+// carry the semantic layout rather than the version.
 std::vector<std::uint8_t> makeUncompressedMusWithFontOptions()
 {
     constexpr auto byteOrder = ByteOrder::LittleEndian;
@@ -1007,6 +1006,276 @@ void testClefOptionsCapture()
     }
 }
 
+// Stem connections are a source-owned collection: nothing is seeded, and a document gets
+// exactly the connections its own record states. One fixture per epoch, because the element
+// changed unit at Finale 3.5 and width at Finale 2012, and because an epoch left out of the
+// gate would recover nothing while looking like a document that stores nothing.
+void testStemConnectionCapture()
+{
+    using StemOptions = musx::dom::options::StemOptions;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+    const auto stems = [](const ImportResult& result) {
+        const auto options = result.document->getOptions()->get<StemOptions>();
+        expect(static_cast<bool>(options), "The imported document has no stem options");
+        return options;
+    };
+    // Every era stores this connection for the default music font, so agreement across all
+    // of them is what shows the three physical layouts describe one logical table. The
+    // adjustments are Efix here even where the source stated Evpu.
+    const auto expectDefaultConnection = [&](const auto& options, const char* era) {
+        expect(!options->stemConnections.empty(),
+            std::string("No stem connection was recovered from ") + era);
+        const auto& first = options->stemConnections.front();
+        expect(first->fontId == 0 && first->symbol == 192,
+            std::string("The default stem connection was not recovered from ") + era);
+        expect(first->upStemVert == 768 && first->downStemVert == -768
+                && first->upStemHorz == 0 && first->downStemHorz == 0,
+            std::string("The default stem adjustments were wrong for ") + era);
+    };
+
+    // Coda banner. This era states the adjustments in Evpu, so 12 and -12 must arrive as 768
+    // and -768; both exact Finale 27 companions carry exactly those Efix numbers. The report
+    // keeps the stored Evpu word, which is the only place the original number survives.
+    const auto f100 = read("evidence/F100/F100-baseline.mus");
+    expect(f100.report.formatEpoch == FormatEpoch::CodaBanner,
+        "The Finale 1.0.0 fixture is not the Coda-banner epoch");
+    expectDefaultConnection(stems(f100), "Finale 1.0.0");
+    expect(field(f100, "options.stemOptions.stemConnections[0].upStemVert").rawValue == 12,
+        "The stored Evpu adjustment was not reported for Finale 1.0.0");
+    expect(field(f100, "options.stemOptions.stemConnections[0].upStemVert").origin
+            == ValueOrigin::LegacyMus,
+        "A recovered stem adjustment was not reported as read from the source");
+    expectDefaultConnection(stems(read("evidence/F263/F263-baseline.mus")), "Finale 2.6.3");
+
+    // Uncompressed, from Finale 3.5 on: the same words, already in Efix. The raw report
+    // value separates the two eras, because the assigned Efix cannot.
+    const auto f372 = read("evidence/F372/F372-baseline.mus");
+    expect(f372.report.formatEpoch == FormatEpoch::UncompressedLegacy,
+        "The Finale 3.7.2 fixture is not the uncompressed epoch");
+    expectDefaultConnection(stems(f372), "Finale 3.7.2");
+    expect(field(f372, "options.stemOptions.stemConnections[0].upStemVert").rawValue == 768,
+        "A Finale 3.7.2 adjustment was scaled as though it were Evpu");
+    expectDefaultConnection(stems(read("evidence/F2000/F2000-baseline.mus")), "Finale 2000");
+
+    // Finale 97 is the one tracked fixture with a full table, and it is also the terminator
+    // case: 32 of its 128 incidences carry data, but only three precede the first element
+    // with no symbol. The 29 after it are what Finale ignores and its Finale 27 conversion
+    // nevertheless writes out, so this reader deliberately reports fewer connections than
+    // the companion does.
+    const auto f97 = read("evidence/F97/Fin97-baseline.mus");
+    const auto f97Stems = stems(f97);
+    expectDefaultConnection(f97Stems, "Finale 97");
+    expect(f97Stems->stemConnections.size() == 3,
+        "The stem-connection table did not stop at its terminator");
+    const auto& flagUp = f97Stems->stemConnections[1];
+    expect(flagUp->symbol == 131 && flagUp->upStemVert == -2304
+            && flagUp->downStemVert == 2304 && flagUp->upStemHorz == -1024
+            && flagUp->downStemHorz == 1024,
+        "The Finale 97 flag connection was not recovered");
+    expect(f97Stems->stemConnections[2]->symbol == 132,
+        "The third Finale 97 connection was not recovered");
+
+    // DCL, then the zlib era's two element widths. Finale 2007 keeps the twelve-byte element
+    // in a big-endian class record; Finale 2012 widened the symbol to a long, so reading it
+    // as the narrow element would leave upStemVert at zero and slide the pair one word down.
+    const auto f2005 = read("evidence/F2005/F2005-baseline.mus");
+    expect(f2005.report.formatEpoch == FormatEpoch::DclLegacy,
+        "The Finale 2005 fixture is not the DCL epoch");
+    expectDefaultConnection(stems(f2005), "Finale 2005");
+
+    const auto f2007 = read("evidence/F2007/F2007-lyric-hyphens.mus");
+    expect(f2007.report.byteOrder == ByteOrder::BigEndian,
+        "The Finale 2007 fixture is not big-endian");
+    expectDefaultConnection(stems(f2007), "Finale 2007");
+
+    const auto f2012 = read("evidence/F2012/F2012-upstem-flags.mus");
+    expect(f2012.report.formatEpoch == FormatEpoch::ZlibLegacy,
+        "The Finale 2012 fixture is not the zlib epoch");
+    expectDefaultConnection(stems(f2012), "Finale 2012");
+
+    // Nothing may come from the baseline. Every recovered connection is reported, and a
+    // document that stores one connection has one, not the Finale 27 table's three.
+    for (const auto* result : {&f100, &f372, &f2005, &f2007, &f2012}) {
+        expect(result->document->getOptions()->get<StemOptions>()->stemConnections.size() == 1,
+            "A single-connection document did not keep exactly its own connection");
+    }
+    expect(std::none_of(f100.report.fields.begin(), f100.report.fields.end(),
+               [](const FieldInfo& value) {
+                   return value.target.find("stemConnections") != std::string::npos
+                       && value.origin != ValueOrigin::LegacyMus;
+               }),
+        "A stem connection was reported as anything other than recovered");
+}
+
+// The eight StemOptions scalars are scattered across five numeric globals, and two of them
+// change meaning before Finale 3.5. Every expected value below is what that fixture's exact
+// Finale 27 companion carries.
+void testStemScalarRecovery()
+{
+    using StemOptions = musx::dom::options::StemOptions;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+    struct Expected
+    {
+        const char* path;
+        const char* era;
+        int halfStemLength;
+        int stemLength;
+        int shortStemLength;
+        int revStemAdj;
+        int stemWidth;
+        int stemOffset;
+        bool useStemConnections;
+    };
+    // Coda banner: the three lengths are stated in staff positions and scale by twelve, the
+    // half-stem length is not stored at all, and the thickness and offset selectors hold
+    // something else entirely, so all three keep the pinned baseline's 18, 115 and 256.
+    // Finale 1.0.0 does not even carry the latter two selectors. Note that Finale 27's own
+    // conversion of these files invents a thickness of its own -- 224 for the Finale 1.0.0
+    // fixture and 128 for the Finale 2.6.3 one -- which is why the companion is not the
+    // expectation here: neither number is in the source.
+    const Expected fixtures[] = {
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", 18, 84, 60, 216, 115, 256, false},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", 18, 84, 60, 216, 115, 256, true},
+        // Finale 3.7 onward: every field in its own place, in Evpu and Efix.
+        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", 18, 84, 60, 432, 118, 128, false},
+        {"evidence/F97/Fin97-baseline.mus", "Finale 97", 18, 84, 60, 216, 128, 128, true},
+        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", 18, 84, 60, 432, 118, 256, false},
+        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", 18, 84, 60, 432, 224, 256, false},
+        // The zlib era addresses the same options by byte offset. Finale 2007 is big-endian
+        // and Finale 2012 little-endian, and the stem offset is the field that tells them
+        // apart: it is two payload words, high word first, not a plain four-byte read.
+        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", 18, 84, 60, 432, 224, 256, false},
+        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", 18, 84, 60, 216, 115, 256, true},
+    };
+    for (const auto& fixture : fixtures) {
+        const auto result = read(fixture.path);
+        const auto stems = result.document->getOptions()->get<StemOptions>();
+        expect(static_cast<bool>(stems),
+            std::string("No stem options for ") + fixture.era);
+        const auto wrong = [&](const char* field) {
+            return std::string("The stem ") + field + " was wrong for " + fixture.era;
+        };
+        expect(stems->halfStemLength == fixture.halfStemLength, wrong("half length"));
+        expect(stems->stemLength == fixture.stemLength, wrong("length"));
+        expect(stems->shortStemLength == fixture.shortStemLength, wrong("short length"));
+        expect(stems->revStemAdj == fixture.revStemAdj, wrong("reverse adjustment"));
+        expect(stems->stemWidth == fixture.stemWidth, wrong("width"));
+        expect(stems->stemOffset == fixture.stemOffset, wrong("offset"));
+        expect(stems->useStemConnections == fixture.useStemConnections,
+            wrong("connection switch"));
+        // No corpus document in either survey sets this bit, so every fixture must be false.
+        expect(!stems->noReverseStems, wrong("reverse-stemming bit"));
+    }
+
+    // What separates the two eras is provenance, not the value. Before Finale 3.5 the stored
+    // word is a twelfth of the Evpu it becomes, and the report keeps that stored word; the
+    // half-stem length and the two sizes report as Finale 27 defaults, because that era
+    // states none of them.
+    const auto f263 = read("evidence/F263/F263-baseline.mus");
+    expect(field(f263, "options.stemOptions.stemLength").rawValue == 7
+            && field(f263, "options.stemOptions.stemLength").origin == ValueOrigin::LegacyMus,
+        "The stored staff-position stem length was not reported for the Coda era");
+    for (const char* target : {"options.stemOptions.halfStemLength",
+             "options.stemOptions.stemWidth", "options.stemOptions.stemOffset"}) {
+        expect(field(f263, target).origin == ValueOrigin::Finale27Default,
+            std::string("A Coda-era field the source does not state was claimed as read: ")
+                + target);
+    }
+    const auto f97 = read("evidence/F97/Fin97-baseline.mus");
+    expect(field(f97, "options.stemOptions.stemLength").rawValue == 84,
+        "A Finale 97 stem length was scaled as though it were staff positions");
+    expect(field(f97, "options.stemOptions.stemWidth").origin == ValueOrigin::LegacyMus,
+        "The Finale 97 stem thickness was not recovered from the source");
+
+    // A controlled Finale 2002 pair, which is what settles the packed spelling of the
+    // reverse-stemming flag. Switching it off moves selector 41 word 1 from 26 to 30 -- a gain
+    // of 4, so bit 2 -- where the same edit in Finale 1.0.0 and 3.7.2 moves the word to 1. The
+    // same save lengthens the normal stem to 96, the one Evpu-era row the corpus never varies.
+    const auto f2002Edit = read("evidence/F2002/F2002-norevstem-len96.mus");
+    const auto f2002EditStems = f2002Edit.document->getOptions()->get<StemOptions>();
+    expect(f2002EditStems->stemLength == 96,
+        "The controlled Finale 2002 stem length was not recovered");
+    expect(f2002EditStems->noReverseStems,
+        "The packed reverse-stemming flag was not read from bit 2");
+    expect(f2002EditStems->shortStemLength == 60 && f2002EditStems->halfStemLength == 18
+            && f2002EditStems->revStemAdj == 432,
+        "A controlled Finale 2002 stem edit disturbed a field it did not touch");
+
+    // A controlled Finale 3.7.2 pair, which settles two rows the corpus never varies. The
+    // half-stem length moves 18 -> 19 in selector 03 word 2, and "Display Reverse Stemming"
+    // moves selector 41 word 1 from 0 to **1** -- bit 0, the same spelling Finale 1.0.0 uses
+    // and not the bit 2 the framework names for its own era. Only those two rows differ.
+    const auto f372Edit = read("evidence/F372/F372-revstem-halfstem.mus");
+    const auto f372EditStems = f372Edit.document->getOptions()->get<StemOptions>();
+    expect(f372EditStems->halfStemLength == 19,
+        "The controlled Finale 3.7.2 half-stem length was not recovered");
+    expect(f372EditStems->noReverseStems,
+        "The Finale 3.7.2 reverse-stemming flag was not read from bit 0");
+    expect(f372EditStems->stemLength == 84 && f372EditStems->shortStemLength == 60
+            && f372EditStems->revStemAdj == 432 && f372EditStems->stemWidth == 118,
+        "A controlled Finale 3.7.2 stem edit disturbed a field it did not touch");
+
+    // Two controlled Finale 1.0.0 saves. The first lengthens the normal and shortened stems by
+    // one staff position each and switches off "Display Reverse Stemming"; nothing else in its
+    // record stream moves. It is what makes the staff-position unit a measurement rather than
+    // an inference, because the corpus only ever stores the era's defaults.
+    const auto changed = read("evidence/F100/F100-stemopts-changed.mus");
+    const auto changedStems = changed.document->getOptions()->get<StemOptions>();
+    expect(changedStems->stemLength == 96 && changedStems->shortStemLength == 72,
+        "The controlled Finale 1.0.0 stem lengths were not converted from staff positions");
+    expect(field(changed, "options.stemOptions.stemLength").rawValue == 8,
+        "The stored staff-position count for the edited length was not reported");
+    // The Coda era keeps this flag in bit 0 where every later era uses bit 2. Reading the
+    // later bit here would leave it false, which is what the whole corpus looks like.
+    expect(changedStems->noReverseStems,
+        "The Coda-era reverse-stemming flag was not recovered from its own bit");
+    expect(!changedStems->useStemConnections
+            && changedStems->revStemAdj == 216 && changedStems->halfStemLength == 18,
+        "A controlled stem edit disturbed the fields it did not touch");
+
+    // The reverse stem adjustment is the third length that era states in staff positions.
+    // Setting it to 25 moves selector 21 word 2 from 18, and the companion carries 300 --
+    // twelve times the stored number, the same factor the two lengths above establish.
+    const auto revstem = read("evidence/F100/F100-revstem-25.mus");
+    const auto revstemStems = revstem.document->getOptions()->get<StemOptions>();
+    expect(revstemStems->revStemAdj == 300,
+        "The controlled Finale 1.0.0 reverse stem adjustment was not converted");
+    expect(field(revstem, "options.stemOptions.revStemAdj").rawValue == 25,
+        "The stored staff-position reverse adjustment was not reported");
+    expect(revstemStems->stemLength == 84 && revstemStems->shortStemLength == 60,
+        "The reverse-adjustment save disturbed the two stem lengths");
+
+    // Enabling stem connections in Finale 1.0.0 moves selector 31 word 5 from 0 to 1 and
+    // moves nothing else in the file, so this pair is what pins that location in an era whose
+    // corpus files never vary it. The companion gains <useStemConnections/> where the baseline
+    // has none.
+    const auto enabled = read("evidence/F100/F100-stemconn-enabled.mus");
+    const auto enabledStems = enabled.document->getOptions()->get<StemOptions>();
+    expect(enabledStems->useStemConnections,
+        "The controlled Finale 1.0.0 connection switch was not recovered");
+    expect(field(enabled, "options.stemOptions.useStemConnections").origin
+            == ValueOrigin::LegacyMus,
+        "The recovered connection switch was not reported as read from the source");
+    expect(enabledStems->stemLength == 84 && enabledStems->shortStemLength == 60
+            && !enabledStems->noReverseStems && enabledStems->stemConnections.size() == 1,
+        "Enabling stem connections disturbed a field the save did not touch");
+
+    // The third save chose "Disable" on a document that was already disabled and changed no
+    // record at all, the Finale 1.0.0 dialog giving no indication of the current state. It is
+    // the regression test for finding no difference where there is none.
+    const auto disabled = read("evidence/F100/F100-stemconn-disabled.mus");
+    const auto disabledStems = disabled.document->getOptions()->get<StemOptions>();
+    expect(!disabledStems->useStemConnections && disabledStems->stemLength == 84
+            && disabledStems->shortStemLength == 60 && !disabledStems->noReverseStems,
+        "The Finale 1.0.0 connection switch save did not read like its baseline");
+}
+
 // Selector 24 is the default-font array from well before the DCL era, but the reader used to
 // gate that layout to DCL alone, so every Finale 3.0 through 2000 document reported all 45
 // font options as Finale 27 defaults while its source held 40 of them.
@@ -1482,6 +1751,8 @@ TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
 TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
 TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
 TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
+TEST_CASE("Stem connection capture", "[reader]") { testStemConnectionCapture(); }
+TEST_CASE("Stem scalar recovery", "[reader]") { testStemScalarRecovery(); }
 TEST_CASE("Uncompressed font options", "[reader]") { testUncompressedFontOptions(); }
 TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
 TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }

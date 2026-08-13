@@ -1,2 +1,20 @@
 Version 2002a.r1
 Mac OS 9.0.4 running in SheepShaver
+
+F2002-norevstem-len96.mus
+    sha256 4f3603b58bee6f24a475f895346c98df887a0699cde50bbbeff8d3c7d81b67d6
+    2,649 bytes. Changes the normal stem length from 84 to 96 and switches off
+    "Display Reverse Stemming". Both option words move and no others:
+    `20(65534)` word 4 goes 84 -> 96, and `41(65534)` word 1 goes 26 -> 30, a
+    gain of 4. The companion follows with `<stemLength>96</stemLength>` and
+    `<noReverseStems/>`.
+    This pair confirms the two rows the corpus cannot reach. No surveyed document
+    varies the normal stem length from 84, and none has reverse stemming switched
+    off, so bit 2 of the packed beam-flags word rested on the framework's word
+    alone until this save. It also fixes the boundary from the other side: Finale
+    1.0.0 and 3.7.2 spell the same flag in bit 0.
+
+F2002-norevstem-len96.etf
+    sha256 0e5c93ce954b7c27eb8bee9f4ce682c6cebaaa9bce0ceb4a9444678e6910847c
+    The matching Finale 2002 ETF export, whose `^20(65534)` and `^41(65534)` rows
+    confirm both edited words independently of the MUS decoding.

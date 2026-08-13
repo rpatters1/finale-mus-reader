@@ -8,7 +8,8 @@
 namespace finale_mus_reader {
 namespace entries {
 
-// Entry-pool tables will be added here as entry classes are recovered.
+// One importer per musxdom entry class will be declared here as entry classes are
+// recovered, and registered once in the central registry in legacy_mapping.cpp.
 
 } // namespace entries
 } // namespace finale_mus_reader
