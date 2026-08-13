@@ -12,6 +12,14 @@ The principal snapshot used for the published mapping is `RGPPDKFramework` commi
 `37326071691ba6ce67a4c894ec3c5a0a616ab434`. The inspected `finaleframework.cpp` was unmodified in each snapshot;
 unrelated local changes in the historical worktree were not consulted.
 
+The `StemOptions` scalar locations were taken from `JWPDKFramework` at that initial import,
+commit `37326071691ba6ce67a4c894ec3c5a0a616ab434`, which is the original distribution and the
+snapshot closest to Finale 2012. Its `finaleframework.cpp` has SHA-256
+`9fa4ab822adb503fbc3aa92cf499309904f5e556633f627271304b6aa1c82a91`, and the flag-bit meanings
+come from the corresponding `ff_prefs.h`. The framework distributes one logical options class
+across several omnibus preference structures, so those eight fields are spread over
+`SizePrefs`, `DistancePrefs` and `MiscDocPrefs` and over five numeric globals.
+
 These findings are labeled **private-framework-derived**. They are not clean-room findings and should not be
 described as public-PDK-derived. The provenance is historically mixed: the compatibility routines are described as
 originating in `finalepdk.cpp`, while the user reports that Jari wrote routines later adopted by MakeMusic. This note
@@ -129,9 +137,21 @@ Five legacy option structures bypass the synthetic field map but still have expl
 | Grids and guides | `^88(65534)` | eleven fixed incidences | currently unsupported document settings |
 | Stem connections | `^40(65534)` | variable incidence collection | `StemOptions` |
 
-All five selectors occur in the available ETF evidence. Their internal field layouts remain source-derived. Stem
-connection elements use one layout before Finale 2012 and a different layout from Finale 2012 onward, an explicit
-format-era boundary that a reader must honor.
+All five selectors occur in the available ETF evidence. Four of the five field layouts remain source-derived.
+
+The stem-connection block is now decoded and implemented: one connection per incidence, six words in the order
+`fontId`, `symbol`, `upStemVert`, `downStemVert`, `upStemHorz`, `downStemHorz`, with the symbol widening to a long
+at Finale 2012 and the adjustments stated in Evpu rather than Efix before Finale 3.5. The framework's claim that the
+font is the element's first 16-bit member is **independently binary-verified**, and its Finale 2012 layout caveat is
+confirmed. See [FORMAT_NOTES.md](FORMAT_NOTES.md#stem-connections) for the per-era table, the terminator rule, and
+the stale pre-Unicode copy that Finale 2012 leaves in the record.
+
+The eight `StemOptions` scalars around that collection are distilled and implemented as well; their locations,
+per-era caveats and verification counts are in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#the-eight-stem-scalars-and-the-marker-that-dates-them). Six are corpus-confirmed
+against non-default companions. Two — the half-stem length and the normal stem length — are consistent everywhere
+and exercised nowhere, because no companion in either corpus states anything but 18 and 84 for them, and the
+reverse-stemming bit is likewise never set. Those three remain **strong**.
 
 ## Options-pool font IDs
 
@@ -390,6 +410,21 @@ Two general lessons follow, and both apply to the 429 rows still unpromoted:
 The zlib era needs no separate distillation. The same eight logical options are reached through the
 established `numericGlobalClass` rule, comparator `65534` and byte offsets in place of word slots,
 and all eight agree on all 497 compared files.
+
+### One row verified in passing: the augmentation-dot upstem-flag adjustment
+
+`DistancePrefs.dotFlagAdjust`, selector `21(65534)` word 0, is musxdom's
+`AugmentationDotOptions::dotUpFlagOffset`. It is **corpus-confirmed from Finale 3.0 onward**: across
+every sampled file with an exact companion, from Finale 3.0 through Finale 2012, the stored word and
+the companion's `<dotUpFlagOffset>` agree, on values that vary between documents (0, 4, 8 and 24).
+Nothing is implemented for it yet; this is recorded so that whoever implements
+`AugmentationDotOptions` starts from a checked location rather than a distilled one.
+
+The Coda era is **open**. Its files store 4 there while every companion reports 0, so Finale 27
+discards the value as it discards that era's clef baselines. A controlled Finale 1.0.0 save reached
+the word through a dialog offering "Offset" beside the two stem lengths
+(`tests/evidence/F100/F100-stemopts-changed.mus`, 4 -> 5), which is consistent with the same option
+under an older label but does not establish it.
 
 ## Confidence and validation plan
 

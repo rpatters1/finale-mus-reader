@@ -14,9 +14,14 @@ FetchContent_MakeAvailable(Catch2)
 # across many translation units. Unity compilation keeps those upstream files together
 # without merging this project's independent test files, where separate diagnostics and
 # translation-unit boundaries are useful.
+#
+# This is a deliberate choice about one dependency's build time, made in both configurations,
+# and is not the same thing as letting -DCMAKE_UNITY_BUILD=ON reach code this repository does
+# not own. Its companion target has no such reason, so it follows the general rule.
 set_target_properties(Catch2 PROPERTIES
     UNITY_BUILD ON
     UNITY_BUILD_BATCH_SIZE 15)
+finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp text_encoding_tests.cpp)
 

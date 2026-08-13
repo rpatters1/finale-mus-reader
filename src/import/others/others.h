@@ -8,17 +8,16 @@
 namespace finale_mus_reader {
 namespace others {
 
-// Concrete tables are grouped by the musxdom pool they populate. Accessors are used
-// instead of static registration so a static archive cannot discard an otherwise
-// unreferenced table object.
-[[nodiscard]] const MappingTable& layerAttributesTable();
-[[nodiscard]] const MappingTable& fontDefinitionsTable();
-[[nodiscard]] const MappingTable& earlyFontDefinitionsTable();
+// One importer per musxdom others class, and the registry calls nothing else. The tables a
+// class needs, and which epoch each of them covers, stay inside that class's own translation
+// unit. Accessors are used instead of static registration so a static archive cannot discard
+// an importer nothing else references.
 
-/// @brief Font definitions for the Coda-banner epoch, which is entirely below the header
-/// boundary and therefore needs no version test. Its Windows documents have no version to test.
-[[nodiscard]] const MappingTable& codaFontDefinitionsTable();
-[[nodiscard]] const MappingTable& classFontDefinitionsTable();
+/// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
+void importFontDefinitions(const ImportContext& context);
+
+/// @brief Recovers the four others::LayerAttributes objects.
+void importLayerAttributes(const ImportContext& context);
 
 } // namespace others
 } // namespace finale_mus_reader

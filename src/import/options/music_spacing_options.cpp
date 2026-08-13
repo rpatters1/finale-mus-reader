@@ -27,8 +27,6 @@ const FieldMapping spacingFields[] = {
     MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, minDistTiedNotes),
 };
 
-} // namespace
-
 const MappingTable& musicSpacingOptionsTable()
 {
     static const MappingTable table{
@@ -39,6 +37,14 @@ const MappingTable& musicSpacingOptionsTable()
         .fields = spacingFields,
         .fieldCount = std::size(spacingFields)};
     return table;
+}
+
+} // namespace
+
+void importMusicSpacingOptions(const ImportContext& context)
+{
+    applyMappingTables({&musicSpacingOptionsTable()},
+        context.index, context.profile, context.document, context.report);
 }
 
 } // namespace options

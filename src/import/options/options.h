@@ -8,29 +8,38 @@
 namespace finale_mus_reader {
 namespace options {
 
-[[nodiscard]] const MappingTable& musicSpacingOptionsTable();
+// One importer per musxdom options class, and the registry calls nothing else. Everything a
+// class needs -- how many physical layouts it has, which epochs each covers, whether a
+// collection must be captured before its scalars are overlaid -- is decided inside that
+// class's own translation unit. The entries below are what the registry lists; the
+// declarations after them exist so tests can drive one stage of a class on its own.
 
-/// @brief The scalar ClefOptions fields, overlaid onto the object @ref captureClefOptions made.
-/// @details Three tables because the eras disagree about what these selectors hold, not
-/// merely about how they are framed. They share a report prefix and layer as one group.
-[[nodiscard]] const MappingTable& clefOptionsTable();
+/// @brief Recovers options::ClefOptions: its definition collection and its scalars.
+void importClefOptions(const ImportContext& context);
 
-/// @brief The Coda-banner subset: the five scalars that era stores where later ones do.
-[[nodiscard]] const MappingTable& earlyClefOptionsTable();
+/// @brief Recovers options::FontOptions and completes the modern type set.
+void importFontOptions(const ImportContext& context);
 
-/// @brief The Finale 2007 and later scalars, as class records addressed by byte offset.
+/// @brief Recovers options::MusicSpacingOptions.
+void importMusicSpacingOptions(const ImportContext& context);
+
+/// @brief Recovers options::StemOptions, whose connections are a source-owned collection.
+void importStemOptions(const ImportContext& context);
+
+/// @brief The Finale 2007 and later clef scalars, as class records addressed by byte offset.
+/// @details Exposed so a test can apply one era's table in isolation.
 [[nodiscard]] const MappingTable& classClefOptionsTable();
 
 /// @brief Checks recovered ClefOptions values that only make sense once the tables have run.
-/// @details Runs after @ref clefOptionsTable, because the default clef index is a mapped
-/// scalar and the collection it indexes is built by @ref captureClefOptions before that.
+/// @details Runs after the clef scalar tables, because the default clef index is a mapped
+/// scalar and the collection it indexes is built before them.
 void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report);
 
 /// @brief Recovers source clef definitions and completes the modern 18-definition collection.
 /// @details The collection is rebuilt rather than seeded: its shape and font comparators
 /// belong to the baseline's own tables. Definitions the source does not store are copied
 /// from the reference document, which is what Finale's own upgrade does. Runs before the
-/// mapping tables so that @ref clefOptionsTable has an object to overlay.
+/// clef scalar tables so that they have an object to overlay.
 void captureClefOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
@@ -49,6 +58,19 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
 void repairMissingRecoveredFontDefinitions(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
     const std::shared_ptr<musx::dom::options::FontOptions>& target, ImportReport& report);
+
+/// @brief Recovers the source's stem connections into the seeded StemOptions object.
+/// @details The collection is dropped and rebuilt rather than overlaid: stem connections
+/// are a document's own table, naming that document's fonts, so the baseline's connections
+/// are never a default for another document. A source that stores none leaves the
+/// collection empty. The scalars around it stay seeded from the pinned baseline.
+void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
+    const musx::dom::DocumentPtr& document, ImportReport& report);
+
+/// @brief Checks the font references of recovered stem connections against the font pool.
+/// @details Runs after the font definitions are decoded and after FontOptions has repaired
+/// what it needed, because both may add to the pool a connection could be naming.
+void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report);
 
 } // namespace options
 } // namespace finale_mus_reader

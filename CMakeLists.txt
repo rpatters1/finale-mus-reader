@@ -33,6 +33,24 @@ set(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR "" CACHE PATH
 
 include(FetchContent)
 
+# A unity build is this project's invariant, not a dependency's. -DCMAKE_UNITY_BUILD=ON is a
+# smoke test of project-owned translation units, and it must not impose an amalgamation policy
+# on code this repository does not own: a dependency that does not amalgamate would otherwise
+# turn the smoke test into a build failure that says nothing about this project. zlib is the
+# standing example -- its inftrees.h is included by several of its sources and is not
+# idempotent -- but the rule is about ownership rather than about zlib.
+#
+# Stated once here and applied at each dependency, so a target added later is opted out by
+# calling this rather than by remembering a policy written somewhere else.
+function(finale_mus_reader_keep_out_of_unity)
+    foreach(finale_mus_reader_foreign_target IN LISTS ARGN)
+        if(TARGET ${finale_mus_reader_foreign_target})
+            set_target_properties(${finale_mus_reader_foreign_target} PROPERTIES
+                UNITY_BUILD OFF)
+        endif()
+    endforeach()
+endfunction()
+
 if(TARGET ZLIB::ZLIB)
     set(FINALE_MUS_READER_ZLIB_TARGET ZLIB::ZLIB)
 elseif(TARGET zlibstatic)
@@ -62,17 +80,7 @@ else()
             EXCLUDE_FROM_DEFAULT_BUILD TRUE)
     endif()
 
-    # A unity build is this project's invariant, not the dependency's. zlib's own C sources
-    # do not amalgamate: inftrees.h is included by several of them and is not idempotent, so
-    # combining them redefines its types. Opting the fetched targets out keeps
-    # -DCMAKE_UNITY_BUILD=ON a single-flag smoke test of project-owned code rather than
-    # something that needs an installed zlib to get past a dependency's build policy.
-    foreach(finale_mus_reader_zlib_target zlib zlibstatic)
-        if(TARGET ${finale_mus_reader_zlib_target})
-            set_target_properties(${finale_mus_reader_zlib_target} PROPERTIES
-                UNITY_BUILD OFF)
-        endif()
-    endforeach()
+    finale_mus_reader_keep_out_of_unity(zlib zlibstatic)
 
     if(TARGET zlibstatic)
         set(FINALE_MUS_READER_ZLIB_TARGET zlibstatic)
@@ -122,15 +130,18 @@ endif()
 message(STATUS
     "Legacy Finale MUS Reader musxdom: ${FINALE_MUS_READER_MUSXDOM_ORIGIN} at ${FINALE_MUS_READER_MUSXDOM_SOURCE}")
 
-if(CMAKE_UNITY_BUILD AND TARGET musx)
-    # musxdom is a separately owned dependency; this client's unity smoke build covers
-    # project-owned translation units without imposing a unity policy on that target.
-    set_target_properties(musx PROPERTIES UNITY_BUILD OFF)
-    message(STATUS "Legacy Finale MUS Reader: unity build limited to project-owned targets")
+finale_mus_reader_keep_out_of_unity(musx)
+if(CMAKE_UNITY_BUILD)
+    message(STATUS
+        "Legacy Finale MUS Reader: unity build limited to project-owned translation units")
 endif()
 
 add_library(finale_mus_reader_blast OBJECT
     third_party/blast/blast.c)
+
+# Pinned upstream source rather than this project's, so it follows the same rule as the
+# fetched dependencies even though the target is declared here.
+finale_mus_reader_keep_out_of_unity(finale_mus_reader_blast)
 
 if(MSVC)
     # C4244 remains enabled at /W3. Suppress it for the unmodified upstream
@@ -154,6 +165,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/clef_options.cpp
     src/import/options/font_options.cpp
     src/import/options/music_spacing_options.cpp
+    src/import/options/stem_options.cpp
     src/import/reader.cpp
     src/import/text_encoding.cpp
     src/records/legacy_others.cpp
@@ -210,6 +222,7 @@ if(FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_TOOLS)
             URL_HASH SHA256=655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
             DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
         FetchContent_MakeAvailable(pugixml)
+        finale_mus_reader_keep_out_of_unity(pugixml pugixml-static)
         set(FINALE_MUS_READER_PUGIXML_TARGET pugixml)
     endif()
 endif()

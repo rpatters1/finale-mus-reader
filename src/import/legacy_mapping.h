@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <optional>
 #include <functional>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -88,6 +89,69 @@ inline constexpr musx::dom::Cmper CMPER_FROM_TARGET = 0;
     return static_cast<records::LegacyTag>(selector + 0x000eU);
 }
 
+/// @brief The fixed-row tag of a numeric global: the two decimal characters of its selector.
+/// @details A numeric global is not a record type of its own. Through Finale 2006 it is
+/// spelled as the digits ETF prints, so selector 40 is the tag `40`, and only from Finale
+/// 2007 does it become the class id @ref numericGlobalClass derives. Deriving the spelling
+/// keeps a selector stated once as a number rather than again as a two-character literal.
+[[nodiscard]] records::LegacyTag numericGlobalTag(std::uint16_t selector);
+
+/// @brief One numeric global's whole incidence family, read as a single word stream.
+struct GlobalSelectorWords
+{
+    /// @brief Every payload word of every incidence, in incidence order.
+    /// @details A logical element may therefore straddle an incidence boundary, and a
+    /// collection is simply as many elements as the stream holds.
+    std::vector<std::int16_t> words;
+    /// @brief Whether the family is present at all, which zero words cannot express.
+    bool present{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+};
+
+/// @brief Collects a numeric global's fixed-row incidence family into one word stream.
+/// @details Offsets come from the first incidence, which is where the family begins.
+[[nodiscard]] GlobalSelectorWords readNumericGlobalWords(
+    const records::LegacyRecordIndex& index, std::uint16_t selector);
+
+/// @brief The byte offset a class record keeps the given word slot at.
+/// @details The zlib eras address the same option by byte where the fixed rows address it by
+/// word slot, so a class table's offsets are its fixed-row slots doubled. Stating that once
+/// keeps a table from spelling out byte numbers whose relationship to the slots is silent.
+[[nodiscard]] constexpr std::uint32_t classWordOffset(std::uint32_t slot)
+{
+    return slot * 2U;
+}
+
+/// @brief One word of a stream, or zero past its end.
+/// @details Every collection decoder reads a fixed shape out of a stream whose length is the
+/// file's business, so running off the end is an ordinary event and yields the same zero a
+/// short final element would carry.
+[[nodiscard]] std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index);
+
+/// @brief Reads a class-record payload as signed words in the file's own byte order.
+/// @details The zlib eras keep the word stream the fixed rows carried and merely coalesce
+/// it into one payload, so a collection decoder can work in words for every era rather than
+/// once per encoding. A trailing odd byte cannot belong to a word and is dropped.
+[[nodiscard]] std::vector<std::int16_t> payloadWords(
+    std::span<const std::uint8_t> payload, ByteOrder byteOrder);
+
+/// @brief The 8-bit character a pre-Unicode record stores in a 16-bit word.
+/// @details A source may store one either zero-extended or sign-extended: the same
+/// character 139 appears as `0x008b` in some files and `0xff8b` in others. Narrowing to the
+/// low byte is what makes the two spellings agree. It must not be applied to a codepoint
+/// that a Unicode-era record stores as a long.
+[[nodiscard]] std::uint32_t narrowCodepoint(std::int16_t stored);
+
+/// @brief The codepoint a Unicode-era record stores across two consecutive words.
+/// @details The words are in the order the container has already normalized each one into,
+/// and the low half comes first. No big-endian Finale 2012 specimen exists in any surveyed
+/// corpus, so that half of the rule is untested and likely to stay that way: such a file
+/// needs the 2012 release on a PowerPC Mac, which its stated requirements allow only by
+/// implication and the operating systems mostly forbid. A caller that can reach the
+/// big-endian case should say so rather than rely on the absence.
+[[nodiscard]] std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high);
+
 /// @brief One end of a version gate, ordered by major then minor.
 /// @details Minor participates because the major version alone does not order Finale's
 /// whole history: Finale 97 and the Finale 3.x line both appear to carry major 3, so an
@@ -152,6 +216,27 @@ namespace versions {
 [[nodiscard]] inline VersionRange between(VersionBound minVersion, VersionBound maxVersion)
 {
     return {minVersion, maxVersion};
+}
+
+/// @brief The first Enigma major version that stores a symbol codepoint as a long.
+/// @details Finale 2012 gained Unicode text, and every option that names a glyph widened
+/// with it: the clef table's character and the stem-connection table's symbol were both
+/// 8-bit characters stored in a 16-bit word, and both became full 32-bit codepoints
+/// occupying two words, shifting every field after them in their tuple.
+///
+/// This is one boundary shared by several classes, not a general "Finale 2012" constant.
+/// The font-ordinal renumbering in font_options.cpp also falls at major 17 and is
+/// deliberately kept separate: it is an array renumbering rather than a text-encoding
+/// change, and nothing establishes a common cause that a shared constant would assert.
+inline constexpr std::uint8_t firstUnicodeMajorVersion = 17; // Finale 2012
+
+/// @brief Whether a source stores symbol codepoints as longs rather than as words.
+/// @details A version that could not be recovered reads as pre-Unicode. That is the safe
+/// direction and costs nothing: only the zlib epoch reaches Finale 2012 at all, and every
+/// earlier epoch stores the narrow form regardless of what its header says.
+[[nodiscard]] inline bool storesUnicodeCodepoints(const std::optional<SourceVersion>& version)
+{
+    return version && version->major >= firstUnicodeMajorVersion;
 }
 } // namespace versions
 
@@ -273,6 +358,14 @@ struct MappingTable
     const char* reportPrefix{};
     EpochMask epochs = EpochMask::FixedRow;
     VersionRange versions{};
+    /// @brief Optional extra test, for a boundary neither the epoch nor the version states.
+    /// @details Some layouts change at a release that sits inside one epoch, at a version no
+    /// surveyed file occupies, or in a way the record stream states more directly than the
+    /// header does. Where the stream says which layout a file uses, a predicate reads that
+    /// instead of dating the file, which is the same preference for self-description that
+    /// decides the clef tuple width from its payload size. Prefer an epoch gate to this, and
+    /// this to a version gate.
+    bool (*applies)(const records::LegacyRecordIndex& index, const SourceProfile& profile){};
     RecordEncoding encoding = RecordEncoding::FixedRow;
     TargetKind targetKind = TargetKind::OptionsSingleton;
     std::vector<MappingTarget> (*enumerateTargets)(const musx::dom::DocumentPtr& document){};
@@ -364,6 +457,29 @@ struct PendingShapeReference
 /// @brief Requests accumulated during capture, drained by @ref resolveDeferredReferences.
 using PendingReferences = std::vector<PendingShapeReference>;
 
+/// @brief Everything the importer for one musxdom class is handed.
+/// @details Passed by reference and outlived by nothing: it is built once per import and
+/// exists only for the duration of the pass over the registered importers.
+struct ImportContext
+{
+    const records::LegacyRecordIndex& index;
+    const SourceProfile& profile;
+    const musx::dom::DocumentPtr& document;
+    /// @brief The separately owned pinned baseline, read-only. An object owned by it must
+    /// never be inserted into @ref document; copy what is needed instead.
+    const musx::dom::DocumentPtr& referenceDocument;
+    ImportReport& report;
+    /// @brief Reference objects a class needs copied, drained after every pool is filled.
+    PendingReferences& pending;
+};
+
+/// @brief Recovers one musxdom class, from record identity to finished object.
+/// @details One per class. An importer owns every decision its class needs -- which tables
+/// apply to which epoch, which capture pass builds a collection, and what must be checked
+/// afterwards -- so that the registry states only which classes are imported and in what
+/// order. Nothing outside the class's own translation unit knows how many layouts it has.
+using ClassImporter = void (*)(const ImportContext& context);
+
 /// @brief Copies every requested reference object into the document and fills in its comparator.
 /// @details Runs after every pool is populated. Nothing may allocate an `others` comparator after
 /// this returns. A reference shape requested more than once is copied once, keyed by its
@@ -441,6 +557,28 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @brief A single bit of a class-identified record's payload word, under a comparator.
 #define MUS_CLASS_BIT(Class, classId, selector, byteOffset, bitIndex, member) \
     MUS_CLASS_SELECTED_BITS(Class, classId, selector, byteOffset, bitIndex, 1, member)
+
+/// @brief A four-byte field of a class-identified record, spanning two payload words.
+/// @details The order is the mapping's own, not the container's: the zlib serialization kept
+/// the word pair the fixed rows carried, so the same word-order rule applies to both.
+#define MUS_CLASS_LONG(Class, classId, selector, byteOffset, order, member) \
+    ::finale_mus_reader::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
+            (classId), static_cast<std::uint16_t>(selector), 0, \
+            static_cast<std::uint32_t>(byteOffset), \
+            ::finale_mus_reader::ValueWidth::Long, (order), \
+            ::finale_mus_reader::BitRange{} }, \
+        ::finale_mus_reader::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            ::finale_mus_reader::assignFrom( \
+                static_cast<Class*>(instance)->member, value); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \

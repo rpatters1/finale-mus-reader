@@ -20,8 +20,9 @@ without destabilizing the others.
 - Inspect the musxdom class and its EnigmaXML parsing behavior directly. Construct
   that class; never introduce a parallel document model or duplicate behavior already
   implemented by musxdom.
-- Keep physical framing separate from logical interpretation. Version-gate layouts
-  and semantic changes explicitly, using the file's recovered version and epoch.
+- Keep physical framing separate from logical interpretation. Gate layouts and semantic
+  changes explicitly, choosing the instrument by the hierarchy below rather than reaching
+  for the version first.
 - Make the first implementation a narrow vertical slice with stated coverage. Do not
   wait for universal knowledge, and do not advertise an untested epoch as supported.
 - **Never leave an epoch entirely uncovered by accident.** A gate that excludes a whole
@@ -32,6 +33,16 @@ without destabilizing the others.
   and every field reports as synthesized, which looks exactly like a document that had
   nothing to recover. Cover each epoch with at least one test, so that removing an epoch from
   a gate has to break something.
+- **Prefer a structural marker to any gate.** If the record stream states which layout it is in --
+  a payload size, a collection length, a field that is quiescent in one era and packed in the next
+  -- read that rather than dating the file. Version coverage is permanently incomplete: whole
+  releases are missing from every corpus, the earliest era states no version on one platform, and a
+  version read without the container's byte order is wrong rather than absent. Prove the marker
+  against the corpus before relying on it, state what it costs on an ambiguous file, and say
+  whether a version gate would also have worked -- a preference stated as a necessity is a claim
+  that will not survive the next specimen. A test over unbounded content is a heuristic rather
+  than a marker: nothing distinguishes a header row from the first bytes of every font name a
+  user could install, so that boundary rightly stays a version range.
 - **Prefer an epoch gate to a version gate, and frame any version gate inside its epoch.** A
   version range excludes eras nobody listed, and it fails closed on a file whose version
   cannot be recovered — the Coda-banner era's Windows documents state a platform where its Mac
@@ -195,11 +206,26 @@ other fields remain open.
 Prefer the existing table-driven mapping framework when a field has a stable source
 location and a direct assignment or bit extraction. Add a class-specific mapping file
 under the class's musxdom pool directory (`src/import/others/`, `src/import/options/`,
-`src/import/details/`, or `src/import/entries/`). Expose only its table or capture entry
-from that pool's `<pool>.h`, and register it once in the central mapping registry. Keep
-the shared table machinery in `src/import/legacy_mapping.*`; there is no intermediate
-`mappings/` directory. Concrete table declarations and implementations should use the
-corresponding pool namespace (`others`, `options`, `details`, or `entries`).
+`src/import/details/`, or `src/import/entries/`). Keep the shared table machinery in
+`src/import/legacy_mapping.*`; there is no intermediate `mappings/` directory. Concrete
+table declarations and implementations should use the corresponding pool namespace
+(`others`, `options`, `details`, or `entries`).
+
+**Expose one `ClassImporter` per musxdom class from that pool's `<pool>.h`, and register
+that single entry point in the registry in `legacy_mapping.cpp`.** The registry states
+which classes are imported and in what order, and nothing else. Everything era-specific
+belongs inside the class's own translation unit: how many physical layouts it has, which
+epoch or version gate selects each, whether a capture pass must build a collection before
+the scalar tables overlay it, and what must be checked once they have run. A class with
+four layouts and a capture pass is still one registry entry. Keeping that knowledge in the
+class file is what lets a later era be added by editing one translation unit, and what
+stops the generic mapping code from accumulating a branch per class.
+
+Order within a pool is free; order between pools is a dependency statement and belongs in
+a comment at the registry. Anything that must run after every pool is complete, such as
+copying reference objects, is a separate phase after the importers rather than an
+importer's responsibility. Tables and helpers that only the importer uses should be
+file-local; expose a stage separately only where a test needs to drive it alone.
 
 Choose target construction deliberately:
 

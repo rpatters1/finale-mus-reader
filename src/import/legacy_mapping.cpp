@@ -19,19 +19,31 @@ namespace finale_mus_reader {
 
 namespace {
 
-/// @brief Every table, in the order they are layered.
-const std::vector<const MappingTable*>& registeredTables()
+/// @brief Every musxdom class this reader recovers, one entry each, grouped by pool.
+/// @details The registry says what is imported and in what order, and nothing else. How many
+/// physical layouts a class has, which epochs each covers, and whether it needs a capture
+/// pass before its tables or a check after them are decisions its own translation unit owns.
+///
+/// Order within a pool is free. Order between pools is a dependency statement: the others
+/// pool is filled first because option classes name its comparators. FontOptions validates
+/// recovered font ids against the definitions and may add one, and stem connections are
+/// checked against the pool after that, so it follows FontOptions rather than merely the
+/// definitions.
+///
+/// The list is written out rather than assembled by self-registration, so that a static
+/// archive cannot discard an importer nothing else references.
+const std::vector<ClassImporter>& registeredImporters()
 {
-    static const std::vector<const MappingTable*> result = {
-        &others::fontDefinitionsTable(),
-        &others::earlyFontDefinitionsTable(),
-        &others::codaFontDefinitionsTable(),
-        &others::classFontDefinitionsTable(),
-        &options::musicSpacingOptionsTable(),
-        &options::clefOptionsTable(),
-        &options::earlyClefOptionsTable(),
-        &options::classClefOptionsTable(),
-        &others::layerAttributesTable()};
+    static const std::vector<ClassImporter> result = {
+        // others
+        &others::importFontDefinitions,
+        &others::importLayerAttributes,
+        // options
+        &options::importClefOptions,
+        &options::importFontOptions,
+        &options::importMusicSpacingOptions,
+        &options::importStemOptions
+    };
     return result;
 }
 
@@ -52,26 +64,39 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
         return std::nullopt;
     }
     // Payload numbers follow the file's byte order, as everything numeric does. Finale 2007
-    // in particular is mostly big-endian.
+    // in particular is mostly big-endian. Each width is read through its own signed type,
+    // because the fixed-row path reads one through a signed word and the two encodings must
+    // not disagree about the same logical option: an Evpu of -12 read unsigned arrives as
+    // 65524 and is assigned as such. A bit range is exempt, being a magnitude rather than a
+    // number with a sign, and takes its value from the unsigned payload below.
+    const auto readWord = [&](std::size_t at) {
+        return byteOrder == ByteOrder::BigEndian
+            ? static_cast<std::uint16_t>(
+                  (static_cast<std::uint16_t>(payload[at]) << 8U) | payload[at + 1])
+            : static_cast<std::uint16_t>(
+                  payload[at] | (static_cast<std::uint16_t>(payload[at + 1]) << 8U));
+    };
     std::int64_t value = 0;
-    for (std::size_t i = 0; i < width; ++i) {
-        const auto shift = byteOrder == ByteOrder::BigEndian ? (width - 1 - i) : i;
-        value |= static_cast<std::int64_t>(payload[source.wordSlot + i]) << (8U * shift);
+    if (width == 4) {
+        // Not a plain four-byte read: the zlib serialization kept the two payload words the
+        // fixed rows carried, so their order is the mapping's own and the same
+        // MACFOURBYTE/WINFOURBYTE rule decides it. On a little-endian file the two differ,
+        // and the stem offset is the field that shows it.
+        const auto first = readWord(source.wordSlot);
+        const auto second = readWord(source.wordSlot + 2);
+        const std::uint32_t combined = source.longOrder == LongWordOrder::HighFirst
+            ? (static_cast<std::uint32_t>(first) << 16U) | second
+            : (static_cast<std::uint32_t>(second) << 16U) | first;
+        value = static_cast<std::int32_t>(combined);
+    } else if (width == 2) {
+        value = static_cast<std::int16_t>(readWord(source.wordSlot));
+    } else {
+        value = static_cast<std::int8_t>(payload[source.wordSlot]);
     }
     if (source.bits.bitCount != 0) {
         const auto mask = (std::uint64_t{1} << source.bits.bitCount) - 1U;
         value = static_cast<std::int64_t>(
             (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
-    } else {
-        // A whole field is signed, because the fixed-row path reads one through a signed
-        // word and the two encodings must not disagree about the same logical option. A bit
-        // range is exempt: extracted bits are a magnitude, not a number with a sign. Without
-        // this an Evpu of -12 arrives as 65524 and is assigned as such.
-        const auto bitCount = 8U * width;
-        const auto signBit = std::uint64_t{1} << (bitCount - 1U);
-        if ((static_cast<std::uint64_t>(value) & signBit) != 0) {
-            value |= static_cast<std::int64_t>(~std::uint64_t{0} << bitCount);
-        }
     }
     return ResolvedValue{value, row->blockOffset, row->decodedOffset};
 }
@@ -190,12 +215,14 @@ struct EffectiveTable
 /// so a document from an era the tables do not cover still shows its supported fields
 /// sitting at their synthesized defaults. The gates decide only what is readable.
 std::vector<EffectiveTable> buildEffectiveTables(
-    const std::vector<const MappingTable*>& tables, const SourceProfile& profile)
+    const std::vector<const MappingTable*>& tables,
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     std::vector<EffectiveTable> result;
     for (const auto* table : tables) {
         const bool tableApplies = epochMatches(table->epochs, profile.epoch)
-            && table->versions.includes(profile.version);
+            && table->versions.includes(profile.version)
+            && (!table->applies || table->applies(index, profile));
         const auto found = std::find_if(result.begin(), result.end(),
             [&](const EffectiveTable& candidate) {
                 return std::string_view(candidate.table->reportPrefix) == table->reportPrefix;
@@ -277,6 +304,62 @@ std::optional<ResolvedValue> readSourceValue(
         : readValue(index, cmper, source);
 }
 
+records::LegacyTag numericGlobalTag(std::uint16_t selector)
+{
+    const char text[2] = {static_cast<char>('0' + (selector / 10) % 10),
+        static_cast<char>('0' + selector % 10)};
+    return records::packTag(std::string_view(text, std::size(text)));
+}
+
+GlobalSelectorWords readNumericGlobalWords(
+    const records::LegacyRecordIndex& index, std::uint16_t selector)
+{
+    GlobalSelectorWords result;
+    const auto rows = index.getOthers().getArray(numericGlobalTag(selector), GLOBALS_CMPER);
+    result.present = !rows.empty();
+    if (result.present) {
+        result.blockOffset = rows.front().blockOffset;
+        result.decodedOffset = rows.front().decodedOffset;
+    }
+    for (const auto& row : rows) {
+        for (std::uint8_t slot = 0; slot < row.wordCount; ++slot) {
+            result.words.push_back(row.words[slot]);
+        }
+    }
+    return result;
+}
+
+std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index)
+{
+    return index < words.size() ? words[index] : static_cast<std::int16_t>(0);
+}
+
+std::vector<std::int16_t> payloadWords(
+    std::span<const std::uint8_t> payload, ByteOrder byteOrder)
+{
+    std::vector<std::int16_t> words;
+    words.reserve(payload.size() / 2);
+    for (std::size_t offset = 0; offset + 2 <= payload.size(); offset += 2) {
+        words.push_back(byteOrder == ByteOrder::BigEndian
+            ? static_cast<std::int16_t>(
+                  (static_cast<std::uint16_t>(payload[offset]) << 8U) | payload[offset + 1])
+            : static_cast<std::int16_t>(
+                  payload[offset] | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U)));
+    }
+    return words;
+}
+
+std::uint32_t narrowCodepoint(std::int16_t stored)
+{
+    return static_cast<std::uint32_t>(static_cast<std::uint8_t>(stored));
+}
+
+std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high)
+{
+    return static_cast<std::uint32_t>(static_cast<std::uint16_t>(low))
+        | (static_cast<std::uint32_t>(static_cast<std::uint16_t>(high)) << 16U);
+}
+
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
@@ -285,16 +368,15 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         throw std::logic_error(
             "Legacy mappings require a separate, fully formed reference document");
     }
-    // ClefOptions is rebuilt rather than seeded, so its object must exist before the tables
-    // run: the clef tables overlay that object's scalars and report the ones this source
-    // cannot supply as Finale 27 defaults.
     PendingReferences pending;
-    options::captureClefOptions(index, profile, document, referenceDocument, report, pending);
-    applyMappingTables(registeredTables(), index, profile, document, report);
-    options::validateClefOptions(document, report);
-    options::captureFontOptions(index, profile, document, referenceDocument, report);
+    const ImportContext context{
+        index, profile, document, referenceDocument, report, pending};
+    for (const auto importer : registeredImporters()) {
+        importer(context);
+    }
     // Last, and it must stay last. Copying a reference object allocates comparators, so this
-    // cannot run while any pool is still being filled.
+    // cannot run while any pool is still being filled. It is the one phase that belongs to no
+    // single class: it drains what every importer asked for.
     resolveDeferredReferences(document, referenceDocument, pending, report);
 }
 
@@ -347,7 +429,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
     const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report)
 {
-    for (const auto& effective : buildEffectiveTables(tables, profile)) {
+    for (const auto& effective : buildEffectiveTables(tables, index, profile)) {
         const auto& table = *effective.table;
         std::vector<MappingTarget> targets;
         if (table.targetKind == TargetKind::OthersFromRecords) {

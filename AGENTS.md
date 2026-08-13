@@ -135,6 +135,18 @@ words, and multi-incidence rows may form one logical object.
   confidence/provenance in diagnostics where useful.
 - Validate declared sizes, decompressed sizes, CRCs, and complete input/output
   consumption as appropriate to the era.
+- **Where the data or the record structure states which layout a file uses, read that instead of
+  dating the file.** This outranks both gates below, and not as a stylistic preference: version
+  coverage is incomplete and always will be. No Finale 3.3 or 3.4 document exists in either
+  surveyed corpus, so a boundary in that window can only be guessed at; the Coda-banner era's
+  Windows documents state no version at all; and a version read without the container's byte
+  order gives a plausible wrong answer rather than no answer. A structural marker is also one
+  step closer to the evidence, because a version boundary is usually inferred from the same
+  observation the structure makes directly. Two mappings already work this way: the clef tuple
+  width comes from the payload size, and the whole stem family's units come from the size of its
+  connection collection. Say at the site why the marker is trustworthy, and what it costs when
+  the file is ambiguous.
+  A test over unbounded content is not a marker but a heuristic: font names are whatever a user or system could install, so no rule distinguishes a header incidence from the first bytes of every possible name, and that boundary rightly stays a version range. A marker must be a fact about the record's shape, not a guess about its contents.
 - Keep record layouts and option mappings explicitly version-aware, but **prefer an epoch gate
   to a version gate wherever the boundary is really the epoch.** A version gate is the more
   fragile instrument: it fails closed on any file whose version cannot be recovered, and it
@@ -332,11 +344,21 @@ ctest --test-dir /tmp/finale-mus-reader-unity --output-on-failure
 ```
 
 This runs against the fetched zlib, not an installed one, so the smoke test covers the
-default dependency configuration. `CMakeLists.txt` sets `UNITY_BUILD OFF` on the fetched
-zlib targets: zlib's own C sources do not amalgamate, because `inftrees.h` is included by
-several of them and is not idempotent. That is the dependency's build policy to keep rather
-than this project's to fix, and opting those two targets out is what keeps
-`-DCMAKE_UNITY_BUILD=ON` a single-flag test of project-owned code.
+default dependency configuration. **A unity build is this project's invariant and must never
+be imposed on code this repository does not own.** `CMakeLists.txt` states that rule once, as
+`finale_mus_reader_keep_out_of_unity()`, and calls it at each dependency: the zlib targets,
+musxdom, pugixml, Catch2's companion target, and the pinned `blast` source. zlib is the
+standing example of why -- its `inftrees.h` is included by several of its own sources and is
+not idempotent -- but the rule is about ownership, not about zlib, and a dependency added
+later is opted out by calling that function rather than by remembering a policy written
+elsewhere. Catch2 itself is the one deliberate exception: `tests/CMakeLists.txt` amalgamates
+it in *both* configurations for build speed, which is a choice about one dependency rather
+than a consequence of the flag.
+
+That leaves `-DCMAKE_UNITY_BUILD=ON` a single-flag test of project-owned translation units.
+Verify it by configuring the smoke build and confirming that no dependency target has a
+`Unity/` source: only `finale_mus_reader`, `finale_mus_reader_tests` and the deliberate
+Catch2 should appear.
 
 Do not modify large evidence or default fixtures unless the task requires it.
 If exact-source files change intentionally, verify and document their hashes and

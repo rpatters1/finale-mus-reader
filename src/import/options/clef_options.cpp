@@ -70,8 +70,8 @@ constexpr std::size_t narrowTupleWords = 9;
 constexpr std::size_t wideTupleWords = 10;
 constexpr std::size_t clefWordSize = 2;
 
-// The Enigma major version of Finale 2012, the first release whose clef character is a long.
-constexpr std::uint8_t firstUnicodeMajorVersion = 17;
+// The clef character is a long from Finale 2012, which is the shared Unicode boundary in
+// legacy_mapping.h rather than a clef-specific version test.
 
 // A harmonic level is one staff position, so the conversion of a pre-2001 baseline
 // difference into Efix is musxdom's own two constants multiplied. Composing them rather
@@ -135,21 +135,6 @@ struct PhysicalClef
     std::size_t decodedOffset{};
 };
 
-/// @brief Legacy clef characters are single bytes of a symbol font.
-/// @details A source may store one either zero-extended or sign-extended: the same
-/// character 139 appears as 0x008b in some files and 0xff8b in others. Narrowing to the
-/// low byte is what makes the two spellings agree, and it is safe for every era whose
-/// character is one word. It must not be applied once the character is a long.
-std::uint32_t narrowClefChar(std::int16_t stored)
-{
-    return static_cast<std::uint32_t>(static_cast<std::uint8_t>(stored));
-}
-
-std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index)
-{
-    return index < words.size() ? words[index] : static_cast<std::int16_t>(0);
-}
-
 /// @brief Reads one tuple out of a flat word stream, in either of the two tuple widths.
 PhysicalClef decodeTuple(
     const std::vector<std::int16_t>& words, std::size_t first, std::size_t tupleWords)
@@ -160,19 +145,9 @@ PhysicalClef decodeTuple(
     const std::size_t shift = tupleWords == wideTupleWords ? 1 : 0;
     PhysicalClef result;
     result.middleCPos = wordAt(words, first);
-    if (shift == 0) {
-        result.clefChar = narrowClefChar(wordAt(words, first + 1));
-    } else {
-        // The long's two words are in the same order the container already normalized each
-        // word into, so the low half comes first. No big-endian Finale 2012 specimen exists
-        // in any surveyed corpus, so this half of the rule is untested and likely to stay
-        // that way: such a file needs the 2012 release on a PowerPC Mac, which its stated
-        // requirements allow only by implication and the operating systems mostly forbid.
-        result.clefChar = static_cast<std::uint32_t>(
-                static_cast<std::uint16_t>(wordAt(words, first + 1)))
-            | (static_cast<std::uint32_t>(
-                   static_cast<std::uint16_t>(wordAt(words, first + 2))) << 16U);
-    }
+    result.clefChar = shift == 0
+        ? narrowCodepoint(wordAt(words, first + 1))
+        : wideCodepoint(wordAt(words, first + 1), wordAt(words, first + 2));
     result.staffPosition = wordAt(words, first + 2 + shift);
     result.baselineDifference = wordAt(words, first + 3 + shift);
     // Only the clef table has this word in Efix; the pre-2001 per-clef globals hold
@@ -211,8 +186,7 @@ std::optional<std::size_t> classTupleWords(
     }
     // Both widths divide the payload, which happens at 360 bytes. Finale 2012 introduced
     // Unicode text and with it the long clef character, so the version separates the two.
-    return version && version->major >= firstUnicodeMajorVersion
-        ? wideTupleWords : narrowTupleWords;
+    return versions::storesUnicodeCodepoints(version) ? wideTupleWords : narrowTupleWords;
 }
 
 void reportClefField(ImportReport& report, std::size_t index, const char* member,
@@ -283,26 +257,6 @@ void insertRecoveredClef(const std::shared_ptr<ClefOptionsTarget>& target,
     }
 }
 
-/// @brief Collects the clef table's word stream from the fixed-row era.
-std::vector<std::int16_t> selectorWords(const records::LegacyRecordIndex& index,
-    PhysicalClef& provenance, bool& present)
-{
-    std::vector<std::int16_t> words;
-    const auto rows = index.getOthers().getArray(
-        records::packTag("95"), GLOBALS_CMPER);
-    present = !rows.empty();
-    if (present) {
-        provenance.blockOffset = rows.front().blockOffset;
-        provenance.decodedOffset = rows.front().decodedOffset;
-    }
-    for (const auto& row : rows) {
-        for (std::uint8_t slot = 0; slot < row.wordCount; ++slot) {
-            words.push_back(row.words[slot]);
-        }
-    }
-    return words;
-}
-
 bool captureFromWordStream(const std::vector<std::int16_t>& words, std::size_t tupleWords,
     const PhysicalClef& provenance, const std::shared_ptr<ClefOptionsTarget>& target,
     ImportReport& report)
@@ -327,10 +281,8 @@ bool captureEarlyClefs(const records::LegacyRecordIndex& index, const SourceProf
     const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report)
 {
     // Read the document-wide switch from the first clef's record before any clef is built.
-    const char firstText[2] = {static_cast<char>('0' + earlyFirstSelector / 10),
-        static_cast<char>('0' + earlyFirstSelector % 10)};
     const auto* firstRow = index.getOthers().get(
-        records::packTag(std::string_view(firstText, std::size(firstText))), GLOBALS_CMPER, 0, 0);
+        numericGlobalTag(earlyFirstSelector), GLOBALS_CMPER, 0, 0);
     // The Coda era is excluded outright. Its word 4 is a mid-measure-clef baseline rather
     // than the general clef baseline musxdom means, its switch is never set in any corpus
     // file, and Finale 27 discards the value. Transferring it would invent an offset from a
@@ -344,10 +296,8 @@ bool captureEarlyClefs(const records::LegacyRecordIndex& index, const SourceProf
     std::vector<PhysicalClef> stored;
     for (std::size_t i = 0; i < earlyClefCount; ++i) {
         const auto selector = static_cast<std::uint16_t>(earlyFirstSelector + i);
-        const char text[2] = {static_cast<char>('0' + selector / 10),
-            static_cast<char>('0' + selector % 10)};
         const auto* row = index.getOthers().get(
-            records::packTag(std::string_view(text, std::size(text))), GLOBALS_CMPER, 0, 0);
+            numericGlobalTag(selector), GLOBALS_CMPER, 0, 0);
         if (!row) {
             // The eight are written as a set. A partial set is a source this layout does
             // not describe, so nothing is taken from it rather than half a table.
@@ -355,7 +305,7 @@ bool captureEarlyClefs(const records::LegacyRecordIndex& index, const SourceProf
         }
         PhysicalClef clef;
         clef.middleCPos = row->words[earlyMiddleCPosSlot];
-        clef.clefChar = narrowClefChar(row->words[earlyClefCharSlot]);
+        clef.clefChar = narrowCodepoint(row->words[earlyClefCharSlot]);
         clef.staffPosition = row->words[earlyStaffPositionSlot];
         clef.baselineDifference = row->words[earlyBaselineDifferenceSlot];
         clef.baselineEnabled = baselineEnabled;
@@ -491,23 +441,19 @@ const FieldMapping earlyClefScalarFields[] = {
 // Finale 2007 and later. The same eight logical options, reached through the shared
 // numericGlobalClass rule and addressed by byte offset rather than word slot. All eight
 // agree with 497 companions.
-constexpr std::uint32_t wordOffset(std::uint32_t slot) { return slot * clefWordSize; }
-
 const FieldMapping classClefScalarFields[] = {
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(1), GLOBALS_CMPER, wordOffset(0), defaultClef),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, wordOffset(2), clefChangePercent),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, wordOffset(3), clefChangeOffset),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, wordOffset(0), clefFrontSepar),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, wordOffset(1), clefBackSepar),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(38), GLOBALS_CMPER, wordOffset(5), clefKeySepar),
-    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(39), GLOBALS_CMPER, wordOffset(4), clefTimeSepar),
-    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(27), GLOBALS_CMPER, wordOffset(1),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(1), GLOBALS_CMPER, classWordOffset(0), defaultClef),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, classWordOffset(2), clefChangePercent),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, classWordOffset(3), clefChangeOffset),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, classWordOffset(0), clefFrontSepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(19), GLOBALS_CMPER, classWordOffset(1), clefBackSepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(38), GLOBALS_CMPER, classWordOffset(5), clefKeySepar),
+    MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(39), GLOBALS_CMPER, classWordOffset(4), clefTimeSepar),
+    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(27), GLOBALS_CMPER, classWordOffset(1),
         /*bit*/ 0, showClefFirstSystemOnly),
-    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(44), GLOBALS_CMPER, wordOffset(3),
+    MUS_CLASS_BIT(ClefOptionsTarget, numericGlobalClass(44), GLOBALS_CMPER, classWordOffset(3),
         /*bit*/ 2, cautionaryClefChanges),
 };
-
-} // namespace
 
 const MappingTable& clefOptionsTable()
 {
@@ -532,6 +478,8 @@ const MappingTable& earlyClefOptionsTable()
         .fieldCount = std::size(earlyClefScalarFields)};
     return table;
 }
+
+} // namespace
 
 const MappingTable& classClefOptionsTable()
 {
@@ -607,16 +555,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
         if (row) {
             const auto bytes = index.getClassRecords().payloadOf(*row);
             if (const auto tupleWords = classTupleWords(bytes.size(), profile.version)) {
-                std::vector<std::int16_t> words;
-                words.reserve(bytes.size() / clefWordSize);
-                for (std::size_t offset = 0; offset + clefWordSize <= bytes.size();
-                     offset += clefWordSize) {
-                    words.push_back(profile.byteOrder == ByteOrder::BigEndian
-                        ? static_cast<std::int16_t>(
-                              (static_cast<std::uint16_t>(bytes[offset]) << 8U) | bytes[offset + 1])
-                        : static_cast<std::int16_t>(
-                              bytes[offset] | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U)));
-                }
+                const auto words = payloadWords(bytes, profile.byteOrder);
                 PhysicalClef provenance;
                 provenance.blockOffset = row->blockOffset;
                 provenance.decodedOffset = row->decodedOffset;
@@ -645,11 +584,12 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
             }
         }
     } else {
+        const auto family = readNumericGlobalWords(index, clefTableSelector);
         PhysicalClef provenance;
-        bool present = false;
-        const auto words = selectorWords(index, provenance, present);
-        if (present) {
-            captureFromWordStream(words, narrowTupleWords, provenance, target, report);
+        provenance.blockOffset = family.blockOffset;
+        provenance.decodedOffset = family.decodedOffset;
+        if (family.present) {
+            captureFromWordStream(family.words, narrowTupleWords, provenance, target, report);
         } else if (profile.epoch == FormatEpoch::CodaBanner
             || profile.epoch == FormatEpoch::UncompressedLegacy) {
             // Only these two eras keep clefs in selectors 28 through 35. Falling back on the
@@ -670,6 +610,20 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
             + " Finale 27 stores."});
     }
     completeFromReference(referenceDocument, target, report, pending);
+}
+
+void importClefOptions(const ImportContext& context)
+{
+    // The definition collection is rebuilt from the source rather than seeded, so it has to
+    // exist before the scalar tables overlay the object it belongs to. The three tables are
+    // one logical group: they share a report prefix and disagree only about where this era
+    // keeps the scalars.
+    captureClefOptions(context.index, context.profile, context.document,
+        context.referenceDocument, context.report, context.pending);
+    applyMappingTables(
+        {&clefOptionsTable(), &earlyClefOptionsTable(), &classClefOptionsTable()},
+        context.index, context.profile, context.document, context.report);
+    validateClefOptions(context.document, context.report);
 }
 
 } // namespace options
