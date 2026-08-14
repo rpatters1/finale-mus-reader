@@ -71,7 +71,7 @@ int main(int argc, char** argv)
             std::printf("%s\t", path.c_str());
             censusPool("o", index.getOthers());
             censusPool("d", index.getDetails());
-            censusPool("c", index.getClassRecords());
+            censusPool("c", index.getClassOthers());
             std::printf("\n");
         } catch (const std::exception& e) {
             std::printf("%s\tFAILED: %s\n", path.c_str(), e.what());

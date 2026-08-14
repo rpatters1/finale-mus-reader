@@ -19,3 +19,28 @@ F2012-upstem-flags.mus
     none of the physical one: records are class-identified and length-governed
     rather than fixed 16-byte rows. It carries sixteen font definitions and is
     the regression test for that separate decoding pathway.
+
+GifSample.gif — Public domain, released by author Cuddlyable3. https://commons.wikimedia.org/wiki/File:GifSample.gif
+
+Example-retouch-1.jpg — Public domain; derived from a public-domain Library of Congress photograph. https://commons.wikimedia.org/wiki/File:Example-retouch-1.jpg
+
+not_encrypted.pdf — MIT License; from ArturT/Test-PDF-Files. https://github.com/ArturT/Test-PDF-Files/blob/master/not_encrypted.pdf
+
+F2012-graphics-types.mus
+    sha256 80f8c631de435726c75d12481d816492bcf33f3bf63db346e2a2b00b07e729da
+    Six embedded occurrences from four source files: GIF assigned to measure 2
+    and used in the shape; JPEG assigned to page 1 and used in the shape; TIFF
+    used in the shape; and PDF assigned to measure 10. Repeated uses store
+    independent payload items rather than sharing one graphic comparator.
+
+-finale27/F2012-graphics-types.musx
+    sha256 4cdeb7803c3cadc336897f3d6d63d11294564b18a84e573614a41edd036c64e1
+    Finale 27 preserves all six occurrences as graphics/1.gif through
+    graphics/6.pdf. Members 1 and 4 are byte-identical GIFs; members 2 and 3
+    are byte-identical JPEGs. The TIFF and PDF each occur once.
+
+Source payload hashes:
+    Example-retouch-1.jpg sha256 cf9a1f599a00495cc2e9a8798bac7465426a42eeff568c33c118cc4367561639
+    GifSample.gif sha256 722b2cde42fb87c26c5ca3a6ecca10339c73e593523816a89640f94a39fb5de3
+    Photo_tiff.tiff sha256 48a219c47c60a492d69ae714c60cabcfda9dc7fdc851c9dabed54f563fa8e10c
+    not_encrypted.pdf sha256 18dc07d4deecdba337912f360ac5ec4253e7610e4ab6478b570f0c0b015e5ecb

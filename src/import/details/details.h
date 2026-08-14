@@ -8,8 +8,8 @@
 namespace finale_mus_reader {
 namespace details {
 
-// One importer per musxdom detail class will be declared here as detail classes are
-// recovered, and registered once in the central registry in legacy_mapping.cpp.
+/// @brief Recovers graphics anchored to a staff and measure.
+void importMeasureGraphicAssignments(const ImportContext& context);
 
 } // namespace details
 } // namespace finale_mus_reader

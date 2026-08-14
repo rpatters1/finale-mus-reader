@@ -550,10 +550,10 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     }
 
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        const auto* row = index.getClassRecords().get(
+        const auto* row = index.getClassOthers().get(
             numericGlobalClass(clefTableSelector), GLOBALS_CMPER, 0, 0);
         if (row) {
-            const auto bytes = index.getClassRecords().payloadOf(*row);
+            const auto bytes = index.getClassOthers().payloadOf(*row);
             if (const auto tupleWords = classTupleWords(bytes.size(), profile.version)) {
                 const auto words = payloadWords(bytes, profile.byteOrder);
                 PhysicalClef provenance;

@@ -470,8 +470,12 @@ instruction sequence and data from the old `SD` bounds. That is deliberate upgra
 source content: reproducing it would make the imported shapes nonblank when the source application
 shows them blank. Companion comparison must therefore classify these 32 shapes as `synthesized`
 rather than as a reader discrepancy.
-Thirty-one recovered instructions reference embedded graphics; their instruction and operands are
-preserved, but the graphic payload is outside these three DOM classes and is not imported.
+Thirty-one recovered instructions reference graphics. `ShapeGraphicAssign` uses fixed-row tag
+`sg` through Finale 2006 and zlib class `0x00d8`; its payload is the same 18-word placement tuple
+described for page graphics below. Thirty of the 31 instruction operands resolve through
+musxdom's assignment lookup. The remaining DCL source names graphic 3 but defines assignments only
+for graphics 1 and 2, so the dangling reference is source content rather than a dropped record.
+**Confirmed** across `rpatters1-main` and `rpatters1-installs`.
 
 The tag spellings and revision-1 conversion agree with Finale 2000 PDK `SHAPETAG.H` and `edata.h`
 at immutable commit
@@ -522,17 +526,27 @@ excluded.
 **Confirmed** for the font record against Finale 27's own conversion of the same document, and
 **strong** for the general shape, which is inferred from that one record type.
 
-The 2007 serialization abandons the fixed 16-byte row. Records in block `0x001a` are
-variable-length and self-describing, little-endian:
+The 2007 serialization abandons the fixed 16-byte row. Ordinary records in block `0x001a`
+are variable-length and self-describing:
 
 | Field | Width | Meaning |
 |---|---|---|
 | class id | 2 | numeric identifier standing in for what EnigmaXML names as an element |
-| cmper | 2 | comparator, as in every earlier era |
+| cmper1 | 2 | primary comparator, as in every earlier era |
 | incidence | 2 | incidence, as in every earlier era |
 | length | 4 | payload size |
 | payload | length | per class |
 | padding | 4 | zero in every observed record |
+
+Detail records in block `0x001b` add a 2-byte `cmper2` between `cmper1` and incidence. The
+big-endian form then carries a 16-bit payload length; the little-endian transition form carries
+the length across the next two words and begins its payload two bytes later. This is **strong**:
+class `0x041d` supplies six
+`MeasureGraphicAssign` records in two distinct Finale 2008 documents; its second header
+comparator exactly supplies the companion measure numbers, while the primary comparator supplies
+staff IDs and the payload is the same 20-word tuple stored by pre-zlib `mg` details. It is also
+the same relative placement used by the fixed detail row. The reader treats this as the zlib
+detail invariant, subject to revision if a contrary detail class is found.
 
 The logical model is therefore unchanged. What moved is the physical encoding: the
 two-character tag became a numeric class id, and the fixed six-word payload became a
@@ -831,20 +845,69 @@ block verbatim, so an unknown type costs nothing.
 
 ### Embedded graphics
 
-**Confirmed.** In the zlib era a stored `0x0013` block holds embedded graphics. Nineteen
-distinct corpus files carry one, in three shapes:
+**Confirmed across controlled Finale 2006 evidence, `rpatters1-main`, and
+`rpatters1-installs`.** From Finale 2006 onward a stored `0x0013` block holds embedded graphics.
+The three controlled Finale 2006 documents carry one EPS and four TIFF files; twenty-seven distinct zlib-era
+corpus documents carry 66 EPS or PNG files. Each item is exactly:
 
-| Payload signature | Files |
-|---|---:|
-| `C5 D0 D3 C6`, the binary EPSF header | 12 |
-| `%!PS-Adobe-3.0 EPSF-3.0` or `%!PS-Adobe-2.0 EPSF-1.2` | 6 |
-| `89 50 4E 47 0D 0A 1A 0A`, the PNG signature | 1 |
+`16-bit type, 32-bit byte length, raw graphic bytes, 32-bit footer version 1, 8-bit footer value`
 
-The stored payload is itself framed: a nested `type` and `size` header precedes the image
-signature — types `0x000f` and `0x0043` are both observed — and a block may hold more than one
-graphic. That inner framing is only partly read and is **open**; nothing depends on it yet,
-because the bytes are preserved and reported rather than interpreted. See
-[PRODUCTION_READINESS.md](PRODUCTION_READINESS.md#p31-embedded-graphics-are-preserved-but-not-imported).
+Every numeric field follows the container byte order. Walking `6 + length + 5` bytes per item
+consumes every observed block exactly, including blocks holding as many as nine graphics. The
+final footer byte varies and remains **open**; it is not needed for delimiting or identifying the
+raw file. Binary EPSF, `%!PS-Adobe` EPS, TIFF, and PNG signatures select the extension without
+depending on the nested type.
+
+The nested items carry no comparator. Their one-based encounter order is the graphic comparator:
+for every adjacent-exact Finale 27 companion, item sizes in encounter order exactly match
+`graphics/1.<extension>`, `graphics/2.<extension>`, and so on, even where ZIP member enumeration
+is shuffled. The reader supplies this map to musxdom before document construction finishes.
+
+No stored embedded payload was found in the Coda-banner or uncompressed epochs, nor in the
+uncontrolled DCL corpus. Controlled Finale 2006 linked and embedded saves prove that embedding
+begins inside the DCL epoch: the linked file's `0x0013` block is empty, while otherwise comparable
+embedded files carry one or two nested EPS/TIFF items. A controlled measure-assigned EPS followed
+by a page-assigned TIFF becomes comparators 1 and 2, confirming that encounter order is independent
+of assignment type. Their ETF exports retain the score structures
+but cannot carry the binary attachments. Finale 2005 and earlier remain uncovered for embedded
+payloads because the application did not offer the feature.
+
+The controlled Finale 2012 `F2012-graphics-types` fixture confirms embedded GIF, JPEG, TIFF, and
+PDF payloads in the zlib epoch. Its six stored items correspond one-for-one with six assignment
+occurrences: repeated use of the same GIF and JPEG produces distinct, byte-identical items and
+comparators, while the singly used TIFF and PDF each produce one. Measure assignments resolve
+comparators 1 and 6, the page assignment resolves comparator 2, and the three ShapeDef graphic
+assignments resolve comparators 3, 4, and 5. Finale 27 preserves the same order and duplication.
+
+### Page graphic assignments
+
+**Confirmed across `rpatters1-main` and `rpatters1-installs` for the uncompressed, DCL, and zlib
+epochs; structurally supported but corpus-unverified for Coda-banner.** Page graphics use tag `pg`
+through Finale 2006 and class `0x00bc` in the zlib era. All 56 observed assignments in 26 documents
+are exact 18-word tuples: three six-word fixed rows per assignment, or successive 36-byte tuples
+inside a zlib class payload. The assignment comparator remains the DOM cmper and tuple order is its
+zero-based incidence.
+
+Words 0-17 are `version`, `left`, `bottom`, `width`, `height`, `fDescId`, `hidden`, `displayType`,
+packed left/all-page positioning, `startPage`, `endPage`, `savedRecord`, `origWidth`, `origHeight`,
+`rightPgLeft`, `rightPgBottom`, packed right-page positioning, and `graphicCmper`. The positioning
+word uses one-hot bits: horizontal left/right/center are `0x01/0x02/0x04`, vertical top/bottom/center
+are `0x08/0x10/0x20`, margins/page-edge are `0x40/0x80`, and preserve-aspect is `0x100`.
+
+### Earliest controlled graphic placement
+
+**Confirmed in Finale 3.7.2; absent from the Finale 2.6.3-and-earlier UI.** The controlled
+`F372-measure-graphic` fixture places a linked EPS on staff 1 at measure 3. Its MUS and ETF both
+carry four `mg(1,3)` rows forming the same 20-word assignment used through Finale 2006, including
+file-description cmper 1 and `graphicCmper` zero. No stored graphic block exists, as expected for
+a linked file. The user who produced the fixture observed the Graphics Tool in Finale 3.7.2's Tool
+menu and observed it absent in Finale 2.6.3 and earlier.
+
+This establishes external placement by 3.7.2 and brackets its UI introduction after 2.6.3. It
+does not determine which intervening 3.x release first supplied the tool. The controlled
+`F372-page-graphic` fixture independently establishes `pg` at the same boundary: its three rows
+contain the standard 18-word page assignment and refer to the linked `Photo_tiff.tiff`. Finale 27
+preserves both the assignment and path in `score.dat`, but does not put the TIFF in the MUSX ZIP.
 
 The corresponding `0x001d` block is non-empty in 208 zlib files. The reader does not reach it,
 because the walk stops at the first terminal marker, so those bytes are counted as trailing.
@@ -925,7 +988,7 @@ outer framing and broad type sequence.
 
 ## Record fields
 
-In the big-endian `0x001a` variant, the first five words behave as:
+In the big-endian `0x001a` ordinary variant, the first five words behave as:
 
 1. numeric record type;
 2. primary key/`cmper` or `0xfffe` option sentinel;
@@ -935,7 +998,9 @@ In the big-endian `0x001a` variant, the first five words behave as:
 
 Fields 2–4 are not fully named. For ordinary “other” records, field 2 tracks the `cmper` sequence and fields 3–4 are often zero. The `0xfffe` records at the front of `0x001a` are singletons with codes beginning at `0x000f` and are strongly interpreted as options. This shows that options are not wholly free-form in 2007+, although their code-to-option and field mappings remain open.
 
-For details, codes around `0x03ef`–`0x0455` correlate with EnigmaXml detail names. The multiple key fields are consistent with `entnum` plus `inci` and possibly part/sharing scope.
+For `0x001b` details, the corresponding fields are numeric type, `cmper1`, `cmper2`, incidence,
+and payload byte count. Class `0x041d` establishes `cmper1` as staff and `cmper2` as measure for
+`MeasureGraphicAssign`; part and sharing scope remain open.
 
 See [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md) for all observed identifiers. Examples of exact corpus-wide matches include:
 

@@ -59,6 +59,8 @@ struct LegacyRow
     /// @brief Always zero for an others row.
     std::uint16_t cmper2{};
     std::uint32_t inci{};
+    /// @brief Whether @ref inci was explicitly carried by the variable record header.
+    bool explicitIncidence{};
     /// @brief Payload words in source order, six for an other and five for a detail.
     /// @details Numeric fields are byte-order corrected, so these are logical values.
     std::array<std::int16_t, 6> words{};
@@ -107,6 +109,10 @@ public:
     /// @brief Returns every distinct first comparator carried by a tag, in ascending order.
     [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(LegacyTag tag) const;
 
+    /// @brief Returns every distinct second comparator for a tag and first comparator.
+    [[nodiscard]] std::vector<std::uint16_t> secondCmpersForTag(
+        LegacyTag tag, std::uint16_t cmper1) const;
+
     [[nodiscard]] bool empty() const { return m_rows.empty(); }
     [[nodiscard]] std::size_t size() const { return m_rows.size(); }
 
@@ -136,12 +142,16 @@ public:
     [[nodiscard]] const LegacyRowPool& getOthers() const { return m_others; }
     /// @brief Tagged 16-byte details rows, for every epoch through Finale 2006.
     [[nodiscard]] const LegacyRowPool& getDetails() const { return m_details; }
-    /// @brief Class-identified variable-length records, for Finale 2007 and later.
+    /// @brief Class-identified variable-length others records, for Finale 2007 and later.
     /// @details A separate pathway on purpose. The 2007 encoding shares the logical model of
     /// class, comparator, and incidence, but nothing of the physical one: records are
     /// length-governed byte payloads rather than six fixed words, so a mapping table
     /// addresses them by byte offset and must say which encoding it targets.
-    [[nodiscard]] const LegacyRowPool& getClassRecords() const { return m_classRecords; }
+    [[nodiscard]] const LegacyRowPool& getClassOthers() const { return m_classOthers; }
+    /// @brief Class-identified variable-length detail records, for Finale 2007 and later.
+    /// @details Finale reuses numeric class ids between physical pools, so details must not
+    /// share a searchable pool with others even though their record framing is related.
+    [[nodiscard]] const LegacyRowPool& getClassDetails() const { return m_classDetails; }
 
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
@@ -150,12 +160,17 @@ public:
     [[nodiscard]] std::optional<RecordWord> word(
         LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const;
 
-    [[nodiscard]] bool empty() const { return m_others.empty() && m_details.empty(); }
+    [[nodiscard]] bool empty() const
+    {
+        return m_others.empty() && m_details.empty()
+            && m_classOthers.empty() && m_classDetails.empty();
+    }
 
 private:
     LegacyRowPool m_others;
     LegacyRowPool m_details;
-    LegacyRowPool m_classRecords;
+    LegacyRowPool m_classOthers;
+    LegacyRowPool m_classDetails;
 };
 
 } // namespace records

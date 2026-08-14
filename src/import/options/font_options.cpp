@@ -151,11 +151,11 @@ std::size_t tupleCount(const FontOptionsLayout& layout,
         return rows.size() * records::otherWordCount / tupleFieldCount;
     }
 
-    const auto* row = index.getClassRecords().get(layout.identity, GLOBALS_CMPER, 0, 0);
+    const auto* row = index.getClassOthers().get(layout.identity, GLOBALS_CMPER, 0, 0);
     if (!row) {
         return 0;
     }
-    const auto bytes = index.getClassRecords().payloadOf(*row);
+    const auto bytes = index.getClassOthers().payloadOf(*row);
     if (const auto trailing = bytes.size() % tupleByteSize; trailing != 0) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,"Ignored " + std::to_string(trailing)
             + " trailing byte(s) after the last complete legacy font-options tuple."});

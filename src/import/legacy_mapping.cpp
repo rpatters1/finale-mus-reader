@@ -38,7 +38,11 @@ const std::vector<ClassImporter>& registeredImporters()
         // others
         &others::importFontDefinitions,
         &others::importLayerAttributes,
+        &others::importPageGraphicAssignments,
+        &others::importShapeGraphicAssignments,
         &others::importShapeDefinitions,
+        // details
+        &details::importMeasureGraphicAssignments,
         // options
         &options::importClefOptions,
         &options::importFontOptions,
@@ -53,12 +57,12 @@ const std::vector<ClassImporter>& registeredImporters()
 std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder)
 {
-    const auto* row = index.getClassRecords().get(
+    const auto* row = index.getClassOthers().get(
         source.identity, cmper, 0, source.incidence);
     if (!row) {
         return std::nullopt;
     }
-    const auto payload = index.getClassRecords().payloadOf(*row);
+    const auto payload = index.getClassOthers().payloadOf(*row);
     const std::size_t width = source.width == ValueWidth::Long ? 4
         : source.width == ValueWidth::Byte ? 1 : 2;
     if (source.wordSlot + width > payload.size()) {
@@ -107,11 +111,11 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
 std::optional<std::string> readClassText(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
-    const auto* row = index.getClassRecords().get(source.identity, cmper, 0, 0);
+    const auto* row = index.getClassOthers().get(source.identity, cmper, 0, 0);
     if (!row) {
         return std::nullopt;
     }
-    const auto payload = index.getClassRecords().payloadOf(*row);
+    const auto payload = index.getClassOthers().payloadOf(*row);
     if (source.wordSlot >= payload.size()) {
         return std::nullopt;
     }
@@ -437,7 +441,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
             // The legacy file is the only source of these objects, so they are created from
             // the comparators the records themselves carry rather than found in the pool.
             const auto& pool = table.encoding == RecordEncoding::ClassRecord
-                ? index.getClassRecords() : index.getOthers();
+                ? index.getClassOthers() : index.getOthers();
             for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
                 targets.push_back({cmper, table.createTarget(document, cmper)});
             }
