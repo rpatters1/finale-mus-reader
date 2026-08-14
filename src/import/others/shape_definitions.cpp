@@ -46,7 +46,7 @@ struct ShapeSourceFamily
 ShapeSourceFamily sourceFamily(const ImportContext& context)
 {
     if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-        return {&context.index.getClassRecords(), shapeDefinitionClass,
+        return {&context.index.getClassOthers(), shapeDefinitionClass,
             shapeInstructionClass, shapeDataClass, false};
     }
     if (context.profile.epoch == FormatEpoch::CodaBanner) {

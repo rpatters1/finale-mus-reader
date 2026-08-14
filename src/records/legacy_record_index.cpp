@@ -125,7 +125,7 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 // to the older mg tuple. Keep this structural interpretation revisable if contrary data
 // appears, but do not discard the field by treating it as an incidence.
 std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
-    std::vector<std::uint8_t>& payload)
+    bool details, std::vector<std::uint8_t>& payload)
 {
     constexpr std::uint16_t otherRecordBlockType = 0x001a;
     constexpr std::uint16_t detailRecordBlockType = 0x001b;
@@ -136,7 +136,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
     std::vector<LegacyRow> result;
     for (const auto& block : parsed.blocks) {
         const bool isDetail = block.info.type == detailRecordBlockType;
-        if (block.info.type != otherRecordBlockType && !isDetail) {
+        if (block.info.type != (details ? detailRecordBlockType : otherRecordBlockType)) {
             continue;
         }
         // The transition-era detail stream spells its length as the fifth 16-bit field in
@@ -231,15 +231,18 @@ std::span<const LegacyRow> LegacyRowPool::getArray(
                 return left < familyKey(right);
             }
         });
-    return std::span<const LegacyRow>(&*range.first, static_cast<std::size_t>(
-        std::distance(range.first, range.second)));
+    if (range.first == range.second) return {};
+    return std::span<const LegacyRow>(&*range.first,
+        static_cast<std::size_t>(std::distance(range.first, range.second)));
 }
 
 const LegacyRow* LegacyRowPool::get(
     LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci) const
 {
     const auto family = getArray(tag, cmper1, cmper2);
-    return inci < family.size() ? &family[inci] : nullptr;
+    const auto found = std::lower_bound(family.begin(), family.end(), inci,
+        [](const LegacyRow& row, std::uint32_t value) { return row.inci < value; });
+    return found != family.end() && found->inci == inci ? &*found : nullptr;
 }
 
 std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag) const
@@ -278,9 +281,15 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
         auto detailRows = decodeRows(parsed, types->details, true, detailsPayload);
         result.m_details = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload));
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
-        std::vector<std::uint8_t> recordPayload;
-        auto records = decodeClassRecords(parsed, recordPayload);
-        result.m_classRecords = LegacyRowPool::build(std::move(records), std::move(recordPayload));
+        std::vector<std::uint8_t> othersPayload;
+        auto othersRows = decodeClassRecords(parsed, false, othersPayload);
+        result.m_classOthers = LegacyRowPool::build(
+            std::move(othersRows), std::move(othersPayload));
+
+        std::vector<std::uint8_t> detailsPayload;
+        auto detailRows = decodeClassRecords(parsed, true, detailsPayload);
+        result.m_classDetails = LegacyRowPool::build(
+            std::move(detailRows), std::move(detailsPayload));
     }
     return result;
 }

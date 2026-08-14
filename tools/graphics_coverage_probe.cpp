@@ -75,7 +75,7 @@ std::vector<std::uint16_t> pageGraphicWords(
 {
     std::vector<std::uint16_t> result;
     const auto& pool = epoch == FormatEpoch::ZlibLegacy
-        ? index.getClassRecords() : index.getOthers();
+        ? index.getClassOthers() : index.getOthers();
     const auto identity = epoch == FormatEpoch::ZlibLegacy
         ? pageGraphicClass : pageGraphicTag;
     for (const auto cmper : pool.cmpersForTag(identity)) {
@@ -110,7 +110,7 @@ std::vector<MeasureGraphicRecord> measureGraphicRecords(
     const auto epoch = parsed.formatEpoch;
     const auto order = parsed.byteOrder;
     if (epoch == FormatEpoch::ZlibLegacy) {
-        const auto& pool = index.getClassRecords();
+        const auto& pool = index.getClassDetails();
         for (const auto cmper1 : pool.cmpersForTag(measureGraphicClass)) {
             for (const auto cmper2 : pool.secondCmpersForTag(measureGraphicClass, cmper1)) {
                 for (const auto& row : pool.getArray(measureGraphicClass, cmper1, cmper2)) {

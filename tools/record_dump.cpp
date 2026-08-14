@@ -114,6 +114,7 @@ int main(int argc, char** argv)
     const auto index = records::LegacyRecordIndex::build(parsed);
     dumpPool("others", index.getOthers(), filters);
     dumpPool("details", index.getDetails(), filters);
-    dumpPool("class", index.getClassRecords(), filters);
+    dumpPool("class-other", index.getClassOthers(), filters);
+    dumpPool("class-detail", index.getClassDetails(), filters);
     return 0;
 }

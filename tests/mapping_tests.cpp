@@ -1103,7 +1103,7 @@ void testGraphicAssignmentsAcrossEpochs()
             index, profile, document, reference, report, pending};
         finale_mus_reader::others::importPageGraphicAssignments(context);
         const auto assignment = document->getOthers()
-            ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 4, 0);
+            ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 4, musx::dom::Inci(0));
         expectMapping(assignment && assignment->version == 0x100
                 && assignment->left == 120 && assignment->bottom == -48
                 && assignment->width == 640 && assignment->height == 320
@@ -1264,7 +1264,7 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
             index, profile, document, reference, report, pending};
         finale_mus_reader::details::importMeasureGraphicAssignments(context);
         const auto assignment = document->getDetails()->get<Target>(
-            musx::dom::SCORE_PARTID, 1, 2, 0);
+            musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
         expectMapping(assignment && assignment->version == 0x100
                 && assignment->left == 120 && assignment->bottom == -324
                 && assignment->width == 336 && assignment->height == 168
@@ -1278,9 +1278,12 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
     }
     const auto bigEndian = makeDetailClassContainer(7, 12, 2, tuple, ByteOrder::BigEndian);
     const auto bigEndianIndex = LegacyRecordIndex::build(bigEndian);
-    const auto bigEndianRows = bigEndianIndex.getClassRecords().getArray(0x041d, 7, 12);
+    const auto bigEndianRows = bigEndianIndex.getClassDetails().getArray(0x041d, 7, 12);
     expectMapping(bigEndianRows.size() == 1 && bigEndianRows.front().inci == 2
-            && bigEndianIndex.getClassRecords().payloadOf(bigEndianRows.front()).size() == 40,
+            && bigEndianIndex.getClassDetails().get(0x041d, 7, 12, 0) == nullptr
+            && bigEndianIndex.getClassDetails().get(0x041d, 7, 12, 2)
+                == &bigEndianRows.front()
+            && bigEndianIndex.getClassDetails().payloadOf(bigEndianRows.front()).size() == 40,
         "A big-endian zlib detail did not preserve cmper2, incidence, and payload length");
 }
 

@@ -35,7 +35,7 @@ AssignmentSource assignmentSource(const ImportContext& context,
     records::LegacyTag fixedTag, records::LegacyTag classId)
 {
     if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-        return {&context.index.getClassRecords(), classId, true};
+        return {&context.index.getClassOthers(), classId, true};
     }
     return {&context.index.getOthers(), fixedTag, false};
 }

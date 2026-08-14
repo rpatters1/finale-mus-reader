@@ -95,10 +95,10 @@ int main(int argc, char** argv)
             const int major = report.sourceVersion ? report.sourceVersion->major : -1;
             std::printf("%s\tv%d ", path.c_str(), major);
 
-            const auto* classRow = index.getClassRecords().get(clefClassId, globalsCmper, 0, 0);
+            const auto* classRow = index.getClassOthers().get(clefClassId, globalsCmper, 0, 0);
             const auto selectorRows = index.getOthers().getArray(selectorTag(clefSelector), globalsCmper);
             if (classRow) {
-                const auto bytes = index.getClassRecords().payloadOf(*classRow);
+                const auto bytes = index.getClassOthers().payloadOf(*classRow);
                 // 18 bytes while the clef character is one word, 20 once it is a long.
                 // A byte count alone cannot decide the stride -- 360 divides by both 18
                 // and 20 -- so the observed sizes are named rather than divided blindly.

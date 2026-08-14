@@ -95,7 +95,7 @@ void importMeasureGraphicAssignments(const ImportContext& context)
         break;
     case FormatEpoch::ZlibLegacy:
         importMeasureGraphicFamily(
-            context, context.index.getClassRecords(), measureGraphicAssignClass, true);
+            context, context.index.getClassDetails(), measureGraphicAssignClass, true);
         break;
     case FormatEpoch::Unknown:
         // An unknown container has no trustworthy detail-pool framing.

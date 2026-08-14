@@ -414,9 +414,9 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     std::size_t blockOffset = 0;
     std::size_t decodedOffset = 0;
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        if (const auto* row = index.getClassRecords().get(
+        if (const auto* row = index.getClassOthers().get(
                 numericGlobalClass(stemConnectionSelector), GLOBALS_CMPER, 0, 0)) {
-            words = payloadWords(index.getClassRecords().payloadOf(*row), profile.byteOrder);
+            words = payloadWords(index.getClassOthers().payloadOf(*row), profile.byteOrder);
             present = true;
             blockOffset = row->blockOffset;
             decodedOffset = row->decodedOffset;

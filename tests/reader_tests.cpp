@@ -1505,7 +1505,8 @@ void testFinale2006EmbeddedTiff()
             && orderedGraphics.at(2).bytes == oneGraphic.at(1).bytes,
         "Finale 2006 embedded comparators did not follow EPS-then-TIFF insertion order");
     const auto measureGraphic = epsThenTiff.document->getDetails()
-        ->get<musx::dom::details::MeasureGraphicAssign>(musx::dom::SCORE_PARTID, 1, 2, 0);
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
     expect(measureGraphic && measureGraphic->version == 0x100
             && measureGraphic->left == 120 && measureGraphic->bottom == -324
             && measureGraphic->width == 336 && measureGraphic->height == 168
@@ -1522,7 +1523,8 @@ void testFinale372MeasureGraphic()
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F372/F372-measure-graphic.mus");
     const auto assignment = result.document->getDetails()
-        ->get<musx::dom::details::MeasureGraphicAssign>(musx::dom::SCORE_PARTID, 1, 3, 0);
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 3, musx::dom::Inci(0));
     expect(assignment && assignment->version == 0x100
             && assignment->left == 116 && assignment->bottom == -348
             && assignment->width == 336 && assignment->height == 168
@@ -1541,7 +1543,7 @@ void testFinale372PageGraphic()
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F372/F372-page-graphic.mus");
     const auto assignment = result.document->getOthers()
-        ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 1, 0);
+        ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
     expect(assignment && assignment->version == 0x100
             && assignment->left == 920 && assignment->bottom == -508
             && assignment->width == 727 && assignment->height == 764
@@ -1577,11 +1579,14 @@ void testFinale2012GraphicTypes()
         "The Finale 2012 graphic types or per-assignment copies were not recovered");
 
     const auto page = result.document->getOthers()
-        ->get<musx::dom::others::PageGraphicAssign>(musx::dom::SCORE_PARTID, 1, 0);
+        ->get<musx::dom::others::PageGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
     const auto gifMeasure = result.document->getDetails()
-        ->get<musx::dom::details::MeasureGraphicAssign>(musx::dom::SCORE_PARTID, 1, 2, 0);
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
     const auto pdfMeasure = result.document->getDetails()
-        ->get<musx::dom::details::MeasureGraphicAssign>(musx::dom::SCORE_PARTID, 1, 10, 0);
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 10, musx::dom::Inci(0));
     expect(page && page->graphicCmper == 2 && graphics.contains(page->graphicCmper)
             && gifMeasure && gifMeasure->graphicCmper == 1
             && graphics.contains(gifMeasure->graphicCmper)
