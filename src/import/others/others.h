@@ -19,5 +19,8 @@ void importFontDefinitions(const ImportContext& context);
 /// @brief Recovers the four others::LayerAttributes objects.
 void importLayerAttributes(const ImportContext& context);
 
+/// @brief Recovers ShapeDef objects and their owned instruction and data lists.
+void importShapeDefinitions(const ImportContext& context);
+
 } // namespace others
 } // namespace finale_mus_reader
