@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
-#include "import/header/header.h"
+#include "import/header.h"
 #include "records/legacy_record_index.h"
 
 using namespace finale_mus_reader;

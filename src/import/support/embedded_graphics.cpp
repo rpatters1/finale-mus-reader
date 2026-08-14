@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/embedded_graphics.h"
+#include "import/support/embedded_graphics.h"
 
 #include <algorithm>
 #include <cstdint>

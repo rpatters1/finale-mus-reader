@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "import/legacy_mapping.h"
+#include "import/support/legacy_mapping.h"
 
 namespace finale_mus_reader {
 namespace options {

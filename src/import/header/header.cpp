@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/header/header.h"
+#include "import/header.h"
 
 #include <algorithm>
 #include <cstring>

@@ -158,20 +158,20 @@ add_library(finale_mus_reader STATIC
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/details/measure_graphic_assign.cpp
-    src/import/document_factory.cpp
-    src/import/embedded_graphics.cpp
     src/import/header/header.cpp
-    src/import/legacy_mapping.cpp
-    src/import/others/font_definitions.cpp
-    src/import/others/graphic_assignments.cpp
-    src/import/others/layer_attributes.cpp
-    src/import/others/shape_definitions.cpp
     src/import/options/clef_options.cpp
     src/import/options/font_options.cpp
     src/import/options/music_spacing_options.cpp
     src/import/options/stem_options.cpp
-    src/import/reader.cpp
-    src/import/text_encoding.cpp
+    src/import/others/font_definitions.cpp
+    src/import/others/graphic_assignments.cpp
+    src/import/others/layer_attributes.cpp
+    src/import/others/shape_definitions.cpp
+    src/import/support/embedded_graphics.cpp
+    src/import/support/legacy_mapping.cpp
+    src/import/support/text_encoding.cpp
+    src/reader/document_factory.cpp
+    src/reader/reader.cpp
     src/records/legacy_others.cpp
     src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)

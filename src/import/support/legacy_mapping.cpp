@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/legacy_mapping.h"
+#include "import/support/legacy_mapping.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -10,10 +10,10 @@
 #include <string_view>
 #include <vector>
 
-#include "import/details/details.h"
-#include "import/entries/entries.h"
-#include "import/options/options.h"
-#include "import/others/others.h"
+#include "import/details.h"
+#include "import/entries.h"
+#include "import/options.h"
+#include "import/others.h"
 
 namespace finale_mus_reader {
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/details/details.h"
+#include "import/details.h"
 
 #include <cstdint>
 #include <memory>
@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "import/graphic_assignment.h"
+#include "import/support/graphic_assignment.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {

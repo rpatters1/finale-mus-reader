@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/options/options.h"
+#include "import/options.h"
 
 #include <array>
 #include <cstddef>

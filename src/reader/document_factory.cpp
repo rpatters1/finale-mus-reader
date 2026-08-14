@@ -1,15 +1,15 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/document_factory.h"
+#include "reader/document_factory.h"
 
 #include <memory>
 #include <utility>
 
 #include "defaults/default_document.h"
-#include "import/embedded_graphics.h"
-#include "import/header/header.h"
-#include "import/legacy_mapping.h"
+#include "import/support/embedded_graphics.h"
+#include "import/header.h"
+#include "import/support/legacy_mapping.h"
 #include "records/legacy_record_index.h"
 #include "musx/factory/DocumentFactory.h"
 #include "musx/factory/PoolFactory.h"

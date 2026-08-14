@@ -49,6 +49,7 @@ that task rather than reconstructing the procedure:
   framing, checksums, and bounds validation.
 - `src/defaults/`: embedded Finale-default resources and options seeding.
 - `src/import/`: direct construction and overlay of musxdom objects.
+- `src/reader/`: reader orchestration and document-construction coordination.
 - `src/records/`: version-aware wire-record decoding.
 - `resources/defaults/`: authoritative Finale 27 New Document Without Libraries
   fallback resources for macOS and Windows.
@@ -169,7 +170,7 @@ words, and multi-incidence rows may form one logical object.
 
 Legacy MUS stores text in whatever encoding the machine that saved it used; EnigmaXML and
 musxdom are always UTF-8. Converting between the two is this project's job and not
-musxdom's, which is why `src/import/text_encoding.*` exists here.
+musxdom's, which is why `src/import/support/text_encoding.*` exists here.
 
 The encoding is named per font rather than per document: `charsetBank` selects the
 platform's charset numbering and `charsetVal` selects within it, so a Mac font in a document

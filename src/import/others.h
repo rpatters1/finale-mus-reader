@@ -3,15 +3,15 @@
 
 #pragma once
 
-#include "import/legacy_mapping.h"
+#include "import/support/legacy_mapping.h"
 
 namespace finale_mus_reader {
 namespace others {
 
 // One importer per musxdom others class, and the registry calls nothing else. The tables a
-// class needs, and which epoch each of them covers, stay inside that class's own translation
-// unit. Accessors are used instead of static registration so a static archive cannot discard
-// an importer nothing else references.
+// class needs, and which epoch each of them covers, stay inside that class's own
+// translation unit. Accessors are used instead of static registration so a static archive
+// cannot discard an importer nothing else references.
 
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
