@@ -19,6 +19,12 @@ void importFontDefinitions(const ImportContext& context);
 /// @brief Recovers the four others::LayerAttributes objects.
 void importLayerAttributes(const ImportContext& context);
 
+/// @brief Recovers page graphic assignments and their embedded-graphic references.
+void importPageGraphicAssignments(const ImportContext& context);
+
+/// @brief Recovers graphic assignments referenced by ShapeDef instructions.
+void importShapeGraphicAssignments(const ImportContext& context);
+
 /// @brief Recovers ShapeDef objects and their owned instruction and data lists.
 void importShapeDefinitions(const ImportContext& context);
 

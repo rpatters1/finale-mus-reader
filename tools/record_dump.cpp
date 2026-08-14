@@ -51,18 +51,20 @@ void dumpPool(const char* name, const records::LegacyRowPool& pool, const Filter
         if (filters.identity && tag != *filters.identity) continue;
         for (const auto cmper : pool.cmpersForTag(tag)) {
             if (filters.cmper && cmper != *filters.cmper) continue;
-            const auto rows = pool.getArray(tag, cmper);
-            for (const auto& row : rows) {
-                if (!identityMatches(filters, row)) continue;
-                std::printf("%-4s 0x%04x cmper=%-6u cmper2=%-6u inci=%-4u words=[",
-                    records::tagText(tag).c_str(), tag, row.cmper1, row.cmper2, row.inci);
-                for (std::uint8_t i = 0; i < row.wordCount; ++i) {
-                    std::printf("%s%6d", i ? " " : "", row.words[i]);
+            for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper)) {
+                const auto rows = pool.getArray(tag, cmper, cmper2);
+                for (const auto& row : rows) {
+                    if (!identityMatches(filters, row)) continue;
+                    std::printf("%-4s 0x%04x cmper=%-6u cmper2=%-6u inci=%-4u words=[",
+                        records::tagText(tag).c_str(), tag, row.cmper1, row.cmper2, row.inci);
+                    for (std::uint8_t i = 0; i < row.wordCount; ++i) {
+                        std::printf("%s%6d", i ? " " : "", row.words[i]);
+                    }
+                    std::printf("] bytes=");
+                    const auto bytes = pool.payloadOf(row);
+                    for (const auto byte : bytes) std::printf("%02x", byte);
+                    std::printf(" block=0x%zx decoded=0x%zx\n", row.blockOffset, row.decodedOffset);
                 }
-                std::printf("] bytes=");
-                const auto bytes = pool.payloadOf(row);
-                for (const auto byte : bytes) std::printf("%02x", byte);
-                std::printf(" block=0x%zx decoded=0x%zx\n", row.blockOffset, row.decodedOffset);
             }
         }
     }

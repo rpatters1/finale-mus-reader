@@ -116,22 +116,37 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
     return result;
 }
 
-// The 2007 encoding replaces the fixed row with a stream of self-describing records:
-// a class id standing in for the element name, a comparator, an incidence, a payload
-// length, the payload, and four bytes of padding. Walking a block with this framing
-// consumes it exactly, to the byte, which is what distinguishes it from a guess.
+// The 2007 encoding replaces the fixed row with streams of self-describing records. Other
+// records in block 0x001a carry class, cmper1, incidence, and a 32-bit payload length. Detail
+// records in block 0x001b retain the pre-zlib second comparator between cmper1 and incidence;
+// the endian-specific length geometry is handled below.
+// This is strongly supported by six assignments in two Finale 2008 documents: the field
+// equals the companion's measure comparator, and the remaining 20-word payload is identical
+// to the older mg tuple. Keep this structural interpretation revisable if contrary data
+// appears, but do not discard the field by treating it as an incidence.
 std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
     std::vector<std::uint8_t>& payload)
 {
-    constexpr std::uint16_t recordBlockType = 0x001a;
-    constexpr std::size_t headerSize = 10;
+    constexpr std::uint16_t otherRecordBlockType = 0x001a;
+    constexpr std::uint16_t detailRecordBlockType = 0x001b;
+    constexpr std::size_t otherHeaderSize = 10;
+    constexpr std::size_t littleEndianDetailHeaderSize = 12;
     constexpr std::size_t paddingSize = 4;
 
     std::vector<LegacyRow> result;
     for (const auto& block : parsed.blocks) {
-        if (block.info.type != recordBlockType) {
+        const bool isDetail = block.info.type == detailRecordBlockType;
+        if (block.info.type != otherRecordBlockType && !isDetail) {
             continue;
         }
+        // The transition-era detail stream spells its length as the fifth 16-bit field in
+        // big-endian files. Little-endian files widen that same location to a 32-bit value,
+        // making the header two bytes longer. Complete-member consumption establishes both
+        // geometries independently of the saving version.
+        const auto headerSize = isDetail
+            ? (parsed.byteOrder == ByteOrder::BigEndian
+                    ? otherHeaderSize : littleEndianDetailHeaderSize)
+            : otherHeaderSize;
         std::size_t offset = 0;
         while (offset + headerSize <= block.data.size()) {
             const auto* header = block.data.data() + offset;
@@ -140,7 +155,9 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             // order too. Composing it from two 16-bit reads in a fixed order yields an
             // enormous length on a big-endian file and aborts the walk at the first record,
             // which is what most Finale 2007 documents are.
-            const auto length = readLong(header + 6, parsed.byteOrder);
+            const auto length = isDetail && parsed.byteOrder == ByteOrder::BigEndian
+                ? static_cast<std::uint32_t>(readCmper(header + 8, parsed.byteOrder))
+                : readLong(header + (isDetail ? 8U : 6U), parsed.byteOrder);
             if (classId == 0 || length > block.data.size() - offset - headerSize) {
                 break;
             }
@@ -148,7 +165,13 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             LegacyRow decoded;
             decoded.tag = classId;
             decoded.cmper1 = readCmper(header + 2, parsed.byteOrder);
-            decoded.inci = readCmper(header + 4, parsed.byteOrder);
+            if (isDetail) {
+                decoded.cmper2 = readCmper(header + 4, parsed.byteOrder);
+                decoded.inci = readCmper(header + 6, parsed.byteOrder);
+            } else {
+                decoded.inci = readCmper(header + 4, parsed.byteOrder);
+            }
+            decoded.explicitIncidence = true;
             decoded.payloadOffset = static_cast<std::uint32_t>(payload.size());
             decoded.payloadSize = length;
             const auto* body = header + headerSize;
@@ -167,15 +190,15 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
 
 LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload)
 {
-    // Sorting by family keeps each family contiguous, so an incidence is an offset from the
-    // start of its range and a lookup is a binary search rather than a hashed allocation.
+    // Sorting by family keeps each family contiguous, so a lookup is a binary search rather
+    // than a hashed allocation. Fixed rows have no incidence field and derive it from encounter
+    // order; variable records carry one explicitly and must retain it.
     //
     // Incidence is defined by encounter order, so decode order is carried into the sort key
     // rather than left to the algorithm's stability. Relying on std::stable_sort would work
     // but would silently break if the comparator were ever reused with std::sort.
-    for (std::size_t i = 0; i < rows.size(); ++i) {
-        rows[i].inci = static_cast<std::uint32_t>(i);
-    }
+    for (std::size_t i = 0; i < rows.size(); ++i)
+        if (!rows[i].explicitIncidence) rows[i].inci = static_cast<std::uint32_t>(i);
     std::sort(rows.begin(), rows.end(),
         [](const LegacyRow& left, const LegacyRow& right) {
             return std::tuple_cat(familyKey(left), std::tie(left.inci))
@@ -183,12 +206,11 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
         });
     std::uint32_t inci = 0;
     for (std::size_t i = 0; i < rows.size(); ++i) {
-        if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) {
-            ++inci;
-        } else {
-            inci = 0;
+        if (!rows[i].explicitIncidence) {
+            if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) ++inci;
+            else inci = 0;
+            rows[i].inci = inci;
         }
-        rows[i].inci = inci;
     }
 
     LegacyRowPool result;
@@ -226,6 +248,19 @@ std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag) const
     for (const auto& row : m_rows) {
         if (row.tag == tag && (result.empty() || result.back() != row.cmper1)) {
             result.push_back(row.cmper1);
+        }
+    }
+    return result;
+}
+
+std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(
+    LegacyTag tag, std::uint16_t cmper1) const
+{
+    std::vector<std::uint16_t> result;
+    for (const auto& row : m_rows) {
+        if (row.tag == tag && row.cmper1 == cmper1
+            && (result.empty() || result.back() != row.cmper2)) {
+            result.push_back(row.cmper2);
         }
     }
     return result;

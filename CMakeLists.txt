@@ -120,7 +120,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG c3179f4b67ac6c0734af39beff4e39326da4eae2
+            GIT_TAG 2fe21eacc9df526f0fce4215a06238641520da3a
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -157,10 +157,13 @@ add_library(finale_mus_reader STATIC
     src/container/product_banner.cpp
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
+    src/import/details/measure_graphic_assign.cpp
     src/import/document_factory.cpp
+    src/import/embedded_graphics.cpp
     src/import/header/header.cpp
     src/import/legacy_mapping.cpp
     src/import/others/font_definitions.cpp
+    src/import/others/graphic_assignments.cpp
     src/import/others/layer_attributes.cpp
     src/import/others/shape_definitions.cpp
     src/import/options/clef_options.cpp

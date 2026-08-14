@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "defaults/default_document.h"
+#include "import/embedded_graphics.h"
 #include "import/header/header.h"
 #include "import/legacy_mapping.h"
 #include "records/legacy_record_index.h"
@@ -59,6 +60,7 @@ musx::dom::DocumentPtr createDocument(
 {
     musx::factory::DocumentFactory::ConstructionOptions constructionOptions;
     constructionOptions.sourcePath = sourcePath;
+    constructionOptions.embeddedGraphics = recoverEmbeddedGraphics(parsed, report);
     auto session = musx::factory::DocumentFactory::begin(std::move(constructionOptions));
     const auto& document = session.getDocument();
 

@@ -33,4 +33,38 @@ F372-revstem-halfstem.etf
     The matching Finale 3.7.2 ETF export, whose `^03(65534)` and `^41(65534)`
     rows confirm both edited words independently of the MUS decoding.
 
+F372-measure-graphic.mus / .etf
+    sha256 MUS 2dd081285a025b81aa3d9a5e96716d01cab8efe603be68f12f1fdcd0361bd2ea
+    sha256 ETF 0723b5e2c37b11d7b2c3c4f60218e198435cc74cde3c60c5390c616813058590
+    Places a linked EPS on staff 1 at measure 3. The ETF carries four `mg(1,3)`
+    rows forming the same 20-word tuple used by later versions; word 17 is zero,
+    consistent with a linked graphic rather than an embedded payload. The Graphics
+    Tool was present in Finale 3.7.2 but absent in Finale 2.6.3 and earlier.
+
+CrotalePitches.eps
+    sha256 bb9d4d80175f744c93755ec71bebee37f531a56bbfc07e80a64a30bbbe093921
+    Source EPS linked by F372-measure-graphic. Authored by Robert G. Patterson.
+    The ETF preserves its classic-Mac path as the two `Fp(1)` text rows
+    `CrotalePitch` and `es.eps`; the bytes are not embedded in the MUS.
+
+-finale27/F372-measure-graphic.musx
+    sha256 c61635de2be9092d66a762f04c92123d369b262ded0e5f030fca4322c59c3284
+    Finale 27 semantic companion for the measure-attached graphic.
+
+F372-page-graphic.mus / .etf
+    sha256 MUS 2944e9ddde4278b372d9462149e32c23da757fcd308a0e0a41fa27d76d4a925f
+    sha256 ETF d7b7ed53e785379fd5ff143681f0a390b4a6f01980053ff95e7cf656a2492a70
+    Places a linked TIFF on page 1. The ETF carries three `pg(1)` rows forming
+    the 18-word page-assignment tuple and preserves `Photo_tiff.tiff` in its two
+    `Fp(1)` path rows. Word 17 is zero, so no embedded payload is referenced.
+
+Photo_tiff.tiff
+    CC0 1.0 https://commons.wikimedia.org/wiki/File%3APhoto_tiff.tiff
+    sha256 48a219c47c60a492d69ae714c60cabcfda9dc7fdc851c9dabed54f563fa8e10c
+
+-finale27/F372-page-graphic.musx
+    sha256 ce2a495394cdd42e04e7d287d061b53a0c8cf93c821131aa1c2ff72ac8871fca
+    Finale 27 preserves the page assignment and external file path in score.dat,
+    but the package contains no TIFF member.
+
 Finale 27 companions are in `-finale27/`.

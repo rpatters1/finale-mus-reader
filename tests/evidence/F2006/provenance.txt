@@ -11,3 +11,41 @@ F2006-single-title.mus
     all whole multiples of the row size and a class-record walk consumes none of
     them. The only structural difference from Finale 2005 is a fifth, empty
     0x0013 block, which this file carries.
+
+Photo_tiff.tiff
+    CC0 1.0 https://commons.wikimedia.org/wiki/File%3APhoto_tiff.tiff
+    sha256 48a219c47c60a492d69ae714c60cabcfda9dc7fdc851c9dabed54f563fa8e10c
+
+F2006-linked-tiff.mus
+    sha256 f3e9167821b468c40570217843cbf70636a46e5cf65a2ff90d6e53df41fc987d
+F2006-linked-tiff.etf
+    sha256 3e7a58d9bc3e63e3e6f554a58a0b5b6931fec38fcc1d0aa1e1c763ab5d27cf52
+F2006-linked-tiff.musx
+    sha256 5b5fb8b2a22f003f675a51f5b18933c1a29755ef054b95e08f524d5f9b92f437
+    One page-assigned TIFF linked to its external file.
+
+F2006-embedded-tif.mus
+    sha256 5ab602da3fff05cd75c9244dc7b94b0aa45087416711acda732dd3b08fd8a353
+F2006-embedded-tif.etf
+    sha256 d47daa4934538c0c07ceaefc880f35bf52f65daadd86f47ae94cb4265abf0657
+F2006-embedded-tif.musx
+    sha256 e8d02d1ea8e13352841dacdd732c6a0b5e3653336f437deb7e6fd70ecc79b0a9
+    One page-assigned TIFF embedded from a source carrying the .tif extension.
+
+F2006-embedded-tiff.mus
+    sha256 4a1b5812b77c79dcbe6651ae324bb2e376f2f65fe33520ea8203e6dd04ed02da
+F2006-embedded-tiff.etf
+    sha256 14a41604f4aeeb5854e1ccbabc70a15dc6af0e741af4f01a04132e1cd063694c
+F2006-embedded-tiff.musx
+    sha256 8ee242a392200990607f77b125de62aeda93bf08fb9774c88a905593cb8e9e54
+    One page-assigned TIFF plus one ShapeDef TIFF, both embedded from a source
+    carrying the .tiff extension. Finale 27 names both converted members .tif.
+
+F2006-eps-then-tiff.mus
+    sha256 a71f66b69433c38db3be91c4658398e98ebbed58b4cf0011268d4a960ded3a01
+F2006-eps-then-tiff.etf
+    sha256 995576ca57fb97a58fd01eb45fbad87bfa14aca5e67d836cdece44217488e67b
+F2006-eps-then-tiff.musx
+    sha256 e2aa1508952eb07d89c04697042c80eeb714ba5efa9de48d979d76ad39586dda
+    One measure-assigned embedded EPS followed by one page-assigned embedded TIFF.
+    Finale 27 preserves that insertion order as graphics/1.eps and graphics/2.tif.

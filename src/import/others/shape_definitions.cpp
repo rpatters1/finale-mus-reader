@@ -311,6 +311,7 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
     std::size_t unresolved = 0;
     std::size_t insufficient = 0;
     std::size_t externalGraphics = 0;
+    std::size_t unresolvedGraphicAssignments = 0;
     for (const auto cmper : source.pool->cmpersForTag(source.definition)) {
         const auto shape = context.document->getOthers()->get<ShapeDefTarget>(
             musx::dom::SCORE_PARTID, cmper);
@@ -325,10 +326,24 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
         }
         std::size_t required = 0;
         for (const auto& instruction : instructions->instructions) {
-            required += static_cast<std::size_t>(instruction->numData);
             if (instruction->type == ShapeInstructionType::ExternalGraphic) {
                 ++externalGraphics;
+                // ExternalGraphic consumes width, height, then the ShapeGraphicAssign
+                // cmper. Resolve that intermediate assignment rather than treating the
+                // operand as an embedded-file id.
+                if (required + 2 >= data->values.size()) {
+                    ++unresolvedGraphicAssignments;
+                } else {
+                    const auto assignmentCmper = static_cast<musx::dom::Cmper>(
+                        data->values[required + 2]);
+                    const auto assignment = musx::dom::others::ShapeGraphicAssign::findForGraphic(
+                        context.document, musx::dom::SCORE_PARTID, assignmentCmper);
+                    if (!assignment) {
+                        ++unresolvedGraphicAssignments;
+                    }
+                }
             }
+            required += static_cast<std::size_t>(instruction->numData);
         }
         if (required > data->values.size()) ++insufficient;
     }
@@ -339,10 +354,13 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
                 + " have less data than their instructions consume."});
     }
     if (externalGraphics != 0) {
-        context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-            std::to_string(externalGraphics)
-                + " shape instruction(s) reference embedded graphics, whose stored bytes are "
-                  "preserved but are not represented by the imported shape DOM classes."});
+        const auto level = unresolvedGraphicAssignments == 0
+            ? musx::util::Logger::LogLevel::Verbose
+            : musx::util::Logger::LogLevel::Info;
+        context.report.diagnostics.push_back({level,
+            std::to_string(externalGraphics) + " shape external-graphic instruction(s) were "
+                + "checked; " + std::to_string(unresolvedGraphicAssignments)
+                + " do not resolve to a ShapeGraphicAssign."});
     }
 }
 

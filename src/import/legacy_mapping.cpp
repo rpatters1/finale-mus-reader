@@ -38,7 +38,11 @@ const std::vector<ClassImporter>& registeredImporters()
         // others
         &others::importFontDefinitions,
         &others::importLayerAttributes,
+        &others::importPageGraphicAssignments,
+        &others::importShapeGraphicAssignments,
         &others::importShapeDefinitions,
+        // details
+        &details::importMeasureGraphicAssignments,
         // options
         &options::importClefOptions,
         &options::importFontOptions,

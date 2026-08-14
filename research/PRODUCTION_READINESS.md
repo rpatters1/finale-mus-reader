@@ -249,8 +249,8 @@ unknown type is preserved verbatim instead of failing the document. All 1,150
 distinct corpus files now parse, and the nineteen recover their options like any
 other file.
 
-The bytes are preserved and reported but not imported; that is
-[P3.1](#p31-embedded-graphics-are-preserved-but-not-imported).
+The bytes are now decoded and imported; see
+[P3.1](#p31-embedded-graphics-are-imported).
 
 ### P1.5 Legacy text encoding is not converted
 
@@ -441,14 +441,16 @@ interfaces the reader depends on: the factory construction session (musxdom
 
 ## P3 — deferred until everything above is done
 
-### P3.1 Embedded graphics are preserved but not imported
+### P3.1 Embedded graphics are imported
 
-**Status:** open, near-last priority. **Confidence:** confirmed 2026-08-11.
+**Status:** resolved 2026-08-14. **Confidence:** confirmed.
 
-Nineteen distinct corpus files embed a graphic in a stored block: twelve a binary
-EPSF, six a `%!PS-Adobe` EPS, one a PNG. The container keeps the bytes and
-`ImportReport` names them, so nothing is silently dropped, but nothing consumes
-them. See [FORMAT_NOTES.md](FORMAT_NOTES.md#which-blocks-are-compressed).
+Three controlled Finale 2006 documents embed one EPS and four TIFF files, and twenty-seven distinct documents
+across `rpatters1-main` and `rpatters1-installs` embed 66 EPS or PNG graphics in stored zlib-era
+blocks. The reader decodes their common nested framing, identifies EPS, TIFF, and PNG payloads by
+signature, assigns comparators by one-based encounter order, and passes
+the resulting map into musxdom's construction session. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#embedded-graphics).
 
 **Corrected 2026-08-12.** This entry previously listed two blockers and both were
 wrong. musxdom does have a destination: `DocumentFactory::CreateOptions` carries
@@ -457,20 +459,12 @@ document creation. That also disposes of the filesystem objection, since the blo
 are in-memory and the filename is just a label. Nothing about WebAssembly prevents
 this, and no second document model is needed.
 
-What actually remains is decoding, and it is a self-contained cycle of work rather
-than an open question:
-
-- **The inner framing differs by epoch** and has to be worked out per era, the way
-  every other structure here has been.
-- **The framing is only partly read.** The stored payload begins with a nested
-  `type` and `size` header — `0x000f` and `0x0043` both observed — before the image
-  signature, and a block may hold more than one graphic. That is the first step
-  whenever this is picked up, and it needs no new evidence; the corpus already has
-  the specimens.
-
-The expectation is that these will eventually be carried across. Until then the
-bytes are preserved, the report names them at info level, and the document is
-usable without them.
+The framing is a 6-byte type/length header, the stated raw file bytes, and a 5-byte footer.
+Every observed footer starts with version 1; its last byte varies and remains opaque, but is
+not needed to recover the file. Adjacent-exact companions confirm the encounter-order comparator
+mapping independently of ZIP member order. The controlled Finale 2006 MUS/ETF pairs show that ETF
+does not carry the embedded bytes; linked and embedded saves instead differ in the stored DCL
+`0x0013` block.
 
 A related observation, also deferred: **208 zlib files carry a non-empty `0x001d`
 block** that the reader never reaches, because the walk stops at the first terminal
