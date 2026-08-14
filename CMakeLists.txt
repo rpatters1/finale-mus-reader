@@ -120,7 +120,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 4385baf98e6244c6c96b42cab5cb416fa09a3d69
+            GIT_TAG c3179f4b67ac6c0734af39beff4e39326da4eae2
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -162,6 +162,7 @@ add_library(finale_mus_reader STATIC
     src/import/legacy_mapping.cpp
     src/import/others/font_definitions.cpp
     src/import/others/layer_attributes.cpp
+    src/import/others/shape_definitions.cpp
     src/import/options/clef_options.cpp
     src/import/options/font_options.cpp
     src/import/options/music_spacing_options.cpp

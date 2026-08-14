@@ -316,6 +316,8 @@ Apply these as questions, not universal rules:
 
 ## Completion standard
 
+After the user has approved the completed work and its pull request, identify the exact transient analysis artifacts that are unlikely to help with the next musxdom class, prompt for explicit approval, and clean up only the approved artifacts. Preserve reusable corpus inventories, path and companion mappings, and expensive archive caches.
+
 Finish with a concise account of the implemented class and fields, supported epochs and
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, remaining open layouts, and the next smallest evidence request.

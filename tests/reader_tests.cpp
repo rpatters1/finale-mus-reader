@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 #include <stdexcept>
 #include <set>
 #include <string>
@@ -196,7 +197,8 @@ std::vector<std::uint8_t> makeUncompressedMusWithFontOptions()
 // little-endian, anything else is big-endian. Both are built here from one description so the
 // two paths cannot drift apart, and so that neither needs a committed fixture -- the only real
 // Windows documents of this era are Coda's own installer templates.
-std::vector<std::uint8_t> makeCodaBannerMus(ByteOrder byteOrder, std::string_view product)
+std::vector<std::uint8_t> makeCodaBannerMus(
+    ByteOrder byteOrder, std::string_view product, bool includeBlankShape = false)
 {
     std::vector<std::uint8_t> result(0x200, 0);
     const std::string banner = "Finale(TM) " + std::string(product)
@@ -221,6 +223,10 @@ std::vector<std::uint8_t> makeCodaBannerMus(ByteOrder byteOrder, std::string_vie
     appendOther(pool, 0xfffe, "01", words(0, 0, 0, 0, 0, 0), byteOrder);
     appendOther(pool, 0xfffe, "13", words(4, 24, 75, -12, 0, 0), byteOrder);
     appendOther(pool, 0xfffe, "19", words(24, 0, 0, 0, 0, 0), byteOrder);
+    if (includeBlankShape) {
+        appendOther(pool, 19, "SD", words(19, 19, 0, 0, -584, 868), byteOrder);
+        appendOther(pool, 19, "SL", words(0, 0, 0, 0, 0, 0), byteOrder);
+    }
     pool.resize(0x200, 0);
 
     // One pool: a page count and a page size, then that many 512-byte pages. The page size is
@@ -382,7 +388,13 @@ void expectNoScoreContent(const ImportResult& result)
         }
         for (const auto& shape : result.document->getOthers()
                 ->getArray<others::ShapeDef>(SCORE_PARTID)) {
-            expect(referencedShapes.count(shape->getCmper()) != 0,
+            const auto target = "others.shapeDef[" + std::to_string(shape->getCmper())
+                + "].instructionList";
+            const auto recovered = std::any_of(result.report.fields.begin(),
+                result.report.fields.end(), [&](const FieldInfo& info) {
+                    return info.target == target && info.origin == ValueOrigin::LegacyMus;
+                });
+            expect(recovered || referencedShapes.count(shape->getCmper()) != 0,
                 "Output contains a baseline shape no clef definition references");
         }
     }
@@ -1745,6 +1757,95 @@ void testMalformedInput()
         "A successful import reported an error-level diagnostic");
 }
 
+void testShapeDefinitions()
+{
+    using namespace musx::dom;
+    const auto readShapeFixture = [](std::string_view relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+
+    const auto verifyModern = [&](std::string_view path, const std::string& what) {
+        const auto result = readShapeFixture(path);
+        const auto shape = result.document->getOthers()->get<others::ShapeDef>(SCORE_PARTID, 1);
+        const auto instructions = result.document->getOthers()
+            ->get<others::ShapeInstructionList>(SCORE_PARTID, 1);
+        const auto data = result.document->getOthers()->get<others::ShapeData>(SCORE_PARTID, 1);
+        expect(shape && shape->instructionList == 1 && shape->dataList == 1
+                && shape->shapeType == others::ShapeDef::ShapeType::Other,
+            what + " did not recover the shape definition");
+        // The fixed rows contain 21 slots, but the last is the zero terminator/padding.
+        expect(instructions && instructions->instructions.size() == 20,
+            what + " did not recover the complete instruction list");
+        expect(instructions->instructions[0]->type == ShapeDefInstructionType::StartGroup
+                && instructions->instructions[0]->numData == 11
+                && instructions->instructions[1]->type == ShapeDefInstructionType::StartObject
+                && instructions->instructions.back()->type == ShapeDefInstructionType::EndGroup,
+            what + " mistranslated packed instruction tags");
+        expect(data && data->values.size() == 66 && data->values[0] == 0
+                && data->values[2] == (std::numeric_limits<int>::max)()
+                && data->values[3] == (std::numeric_limits<int>::min)(),
+            what + " did not recover signed 32-bit shape data");
+        expect(field(result, "others.shapeDef[1].instructionList").origin
+                    == ValueOrigin::LegacyMus
+                && field(result, "others.shapeList[1].instructions[0].numData").rawValue == 11
+                && field(result, "others.shapeData[1].values[3]").rawValue
+                    == (std::numeric_limits<int>::min)(),
+            what + " did not report shape provenance and raw values");
+    };
+
+    // Same logical record in the fixed-row and both zlib byte orders.
+    verifyModern("evidence/F2002/F2002-baseline.mus", "Finale 2002");
+    verifyModern("evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007");
+    verifyModern("evidence/F2012/F2012-upstem-flags.mus", "Finale 2012");
+
+    // Shape list 2 in the fixed-row fixture has two stale packed instructions after
+    // its zero terminator. Finale's own ETF/MUSX representation stops at the zero.
+    const auto terminated = readShapeFixture("evidence/F2002/F2002-baseline.mus");
+    const auto terminatedList = terminated.document->getOthers()
+        ->get<others::ShapeInstructionList>(SCORE_PARTID, 2);
+    const auto terminatedData = terminated.document->getOthers()
+        ->get<others::ShapeData>(SCORE_PARTID, 2);
+    expect(terminatedList && terminatedList->instructions.size() == 12
+            && terminatedData && terminatedData->values.size() == 45,
+        "A zero shape-instruction terminator did not suppress stale trailing instructions");
+
+    const auto early = readShapeFixture("evidence/F263/F263-baseline.mus");
+    const auto earlyShape = early.document->getOthers()
+        ->get<others::ShapeDef>(SCORE_PARTID, 1);
+    const auto earlyInstructions = early.document->getOthers()
+        ->get<others::ShapeInstructionList>(SCORE_PARTID, 1);
+    const auto earlyData = early.document->getOthers()->get<others::ShapeData>(SCORE_PARTID, 1);
+    expect(earlyShape && earlyShape->instructionList == 1 && earlyShape->dataList == 1
+            && earlyShape->shapeType == others::ShapeDef::ShapeType::Other,
+        "Finale 2.6 bounding words were mistaken for a modern shape type");
+    expect(earlyInstructions && earlyInstructions->instructions.size() == 9
+            && earlyInstructions->instructions[0]->type == ShapeDefInstructionType::LineWidth
+            && earlyInstructions->instructions[0]->numData == 1,
+        "Finale 2.6 revision-1 instructions were not translated");
+    expect(earlyData && earlyData->values.size() == 15 && earlyData->values[0] == 1024,
+        "Finale 2.6 hundredths-of-a-point line width was not converted to Efix (size "
+            + std::to_string(earlyData ? earlyData->values.size() : 0) + ", first "
+            + std::to_string(earlyData && !earlyData->values.empty()
+                    ? earlyData->values.front() : 0)
+            + ")");
+    expect(field(early, "others.shapeData[1].values[0]").rawValue == 400,
+        "The converted Finale 2.6 line width did not retain its source value in the report");
+
+    const auto blank = Reader::read<TestXmlDocument>(makeCodaBannerMus(
+        ByteOrder::LittleEndian, "PC 1.0+", true));
+    const auto blankShape = blank.document->getOthers()
+        ->get<others::ShapeDef>(SCORE_PARTID, 19);
+    expect(blankShape && blankShape->instructionList == 19 && blankShape->dataList == 19
+            && blankShape->recognize() == KnownShapeDefType::Blank,
+        "An intentionally blank Coda shape was not recognized as Blank without losing its references");
+    expect(field(blank, "others.shapeDef[19].instructionList").origin == ValueOrigin::LegacyMus
+            && field(blank, "others.shapeDef[19].instructionList").rawValue == 19
+            && field(blank, "others.shapeDef[19].dataList").origin == ValueOrigin::LegacyMus
+            && field(blank, "others.shapeDef[19].dataList").rawValue == 19,
+        "A blank Coda shape did not retain its source references in the report");
+}
+
 } // namespace
 
 TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
@@ -1775,6 +1876,7 @@ TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
 TEST_CASE("Embedded graphics", "[reader]") { testEmbeddedGraphics(); }
 TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
+TEST_CASE("Shape definitions", "[reader]") { testShapeDefinitions(); }
 
 // Every banner spelling is recognized through the one parser, so a file that carries the
 // Finale 1.0.0 spelling reports a product and a version like any other era. Before the
