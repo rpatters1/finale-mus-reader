@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
-#include "import/document_factory.h"
+#include "reader/document_factory.h"
 #include "musx/util/Logger.h"
 
 namespace finale_mus_reader {

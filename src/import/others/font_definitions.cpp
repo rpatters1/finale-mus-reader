@@ -1,11 +1,11 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/others/others.h"
+#include "import/others.h"
 
 #include <iterator>
 
-#include "import/text_encoding.h"
+#include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {

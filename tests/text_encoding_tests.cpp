@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "import/text_encoding.h"
+#include "import/support/text_encoding.h"
 
 using finale_mus_reader::text::CodePage;
 using finale_mus_reader::text::codePageForCharset;

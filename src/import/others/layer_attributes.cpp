@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/others/others.h"
+#include "import/others.h"
 
 #include <iterator>
 

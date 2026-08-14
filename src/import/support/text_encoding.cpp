@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "import/text_encoding.h"
+#include "import/support/text_encoding.h"
 
 #if defined(_WIN32)
 #include <windows.h>

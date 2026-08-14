@@ -16,11 +16,11 @@
 #include <vector>
 
 #include "container/mus_container.h"
-#include "import/embedded_graphics.h"
-#include "import/details/details.h"
-#include "import/legacy_mapping.h"
-#include "import/others/others.h"
-#include "import/options/options.h"
+#include "import/support/embedded_graphics.h"
+#include "import/details.h"
+#include "import/support/legacy_mapping.h"
+#include "import/others.h"
+#include "import/options.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
