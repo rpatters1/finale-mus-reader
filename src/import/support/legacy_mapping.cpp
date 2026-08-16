@@ -46,6 +46,7 @@ const std::vector<ClassImporter>& registeredImporters()
         // options
         &options::importClefOptions,
         &options::importFontOptions,
+        &options::importMultimeasureRestOptions,
         &options::importMusicSpacingOptions,
         &options::importStemOptions
     };
@@ -365,26 +366,13 @@ std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high)
         | (static_cast<std::uint32_t>(static_cast<std::uint16_t>(high)) << 16U);
 }
 
-void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
-{
-    if (!referenceDocument || referenceDocument == document) {
-        throw std::logic_error(
-            "Legacy mappings require a separate, fully formed reference document");
-    }
-    PendingReferences pending;
-    const ImportContext context{
-        index, profile, document, referenceDocument, report, pending};
-    for (const auto importer : registeredImporters()) {
-        importer(context);
-    }
-    // Last, and it must stay last. Copying a reference object allocates comparators, so this
-    // cannot run while any pool is still being filled. It is the one phase that belongs to no
-    // single class: it drains what every importer asked for.
-    resolveDeferredReferences(document, referenceDocument, pending, report);
-}
+namespace {
 
+/// @brief Copies every requested reference object into the document and fills in its comparator.
+/// @details The one phase that belongs to no single class: it drains what every importer asked
+/// for. File-local because @ref applyLegacyMappings is its only caller and the ordering rule --
+/// that this runs after every pool is filled, and that nothing may allocate an `others`
+/// comparator afterwards -- is enforced there rather than by any caller of this header.
 void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
     PendingReferences& pending, ImportReport& report)
@@ -429,6 +417,29 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
             + std::to_string(pending.size()) + " clef definition(s)."});
     }
 }
+
+} // namespace
+
+void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
+    const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+{
+    if (!referenceDocument || referenceDocument == document) {
+        throw std::logic_error(
+            "Legacy mappings require a separate, fully formed reference document");
+    }
+    PendingReferences pending;
+    const ImportContext context{
+        index, profile, document, referenceDocument, report, pending};
+    for (const auto importer : registeredImporters()) {
+        importer(context);
+    }
+    // Last, and it must stay last. Copying a reference object allocates comparators, so this
+    // cannot run while any pool is still being filled. It is the one phase that belongs to no
+    // single class: it drains what every importer asked for.
+    resolveDeferredReferences(document, referenceDocument, pending, report);
+}
+
 
 void applyMappingTables(const std::vector<const MappingTable*>& tables,
     const records::LegacyRecordIndex& index, const SourceProfile& profile,

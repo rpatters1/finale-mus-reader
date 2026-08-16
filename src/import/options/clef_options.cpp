@@ -3,6 +3,8 @@
 
 #include "import/options.h"
 
+#include "import/options/test_access.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>

@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-// Emit one private observation per legacy document for the three related option
-// classes that recovery currently covers: options::ClefOptions, options::FontOptions,
-// and the others::FontDefinition pool they both reference.
+// Emit one private observation per legacy document for the option classes that recovery
+// currently covers: options::ClefOptions, options::FontOptions,
+// options::MultimeasureRestOptions, and the others::FontDefinition pool the first two
+// reference.
 //
 // Input is a TSV of `corpus_id<TAB>source_path` rows. Output is JSON Lines and
 // deliberately contains no source path, so it may be aggregated into tracked findings.
@@ -236,6 +237,46 @@ void writeFontOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
     out << ']';
 }
 
+void writeMultimeasureRestOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    const auto options =
+        document->getOptions()->get<musx::dom::options::MultimeasureRestOptions>();
+    if (!options) {
+        out << ",\"mmrest_options\":null";
+        return;
+    }
+    // A shape comparator that names no shape leaves the H-bar undrawable, and comparator zero
+    // means no shape rather than a missing one.
+    const bool danglingShape = options->shapeDef != 0
+        && !document->getOthers()->get<musx::dom::others::ShapeDef>(
+            musx::dom::SCORE_PARTID, options->shapeDef);
+    out << ",\"mmrest_options\":{"
+        << "\"meas_width\":" << options->measWidth
+        << ",\"num_adj_y\":" << options->numAdjY
+        << ",\"shape_def\":" << options->shapeDef
+        << ",\"num_start\":" << options->numStart
+        << ",\"use_syms_threshold\":" << options->useSymsThreshold
+        << ",\"sym_spacing\":" << options->symSpacing
+        << ",\"num_adj_x\":" << options->numAdjX
+        << ",\"start_adjust\":" << options->startAdjust
+        << ",\"end_adjust\":" << options->endAdjust
+        << ",\"use_symbols\":" << (options->useSymbols ? "true" : "false")
+        << ",\"no_horizontal_stretch\":"
+        << (options->noHorizontalStretch ? "true" : "false")
+        << ",\"auto_update_mm_rests\":"
+        << (options->autoUpdateMmRests ? "true" : "false")
+        << ",\"dangling_shape\":" << (danglingShape ? "true" : "false");
+    for (const auto* member : {"measWidth", "numAdjY", "shapeDef", "numStart",
+             "useSymsThreshold", "symSpacing", "numAdjX", "startAdjust", "endAdjust",
+             "useSymbols", "noHorizontalStretch", "autoUpdateMmRests"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(
+                   originOf(fields, std::string("options.multimeasureRestOptions.") + member));
+    }
+    out << '}';
+}
+
 void writeFontDefinitions(std::ostream& out, const musx::dom::DocumentPtr& document,
     const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
 {
@@ -303,6 +344,7 @@ int main(int argc, char** argv)
                 << ",\"warning_count\":" << report.diagnostics.size();
             writeClefOptions(out, result.document, fields);
             writeFontOptions(out, result.document, fields);
+            writeMultimeasureRestOptions(out, result.document, fields);
             writeFontDefinitions(out, result.document, fields);
             out << '}';
         } catch (const std::exception& error) {

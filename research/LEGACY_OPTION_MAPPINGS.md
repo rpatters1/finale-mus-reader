@@ -426,6 +426,39 @@ the word through a dialog offering "Offset" beside the two stem lengths
 (`tests/evidence/F100/F100-stemopts-changed.mus`, 4 -> 5), which is consistent with the same option
 under an older label but does not establish it.
 
+### MMRestDefaultsPrefs: right for Finale 3.5 on, and a different record before it
+
+**Confirmed 2026-08-16** against every adjacent-exact Finale 27 companion in the reference corpus. The group's
+thirteen distilled rows name twelve locations on selector `25` and one on selector `83`, and all of them hold from
+Finale 3.5 onward: 1,130 companion-backed documents agree on all nine scalars and on the character-rest-style flag,
+with no disagreement in any era. The group covers every field of `MultimeasureRestOptions` except
+`noHorizontalStretch`, which is a Finale 27 option no legacy format stores.
+
+Before Finale 3.5 the record is a different shape. Selector `25` carries **one** incidence of six words rather than
+two, and two of the three fields it still holds have moved: `vertNumAdj` is word 4 and `shapeID` word 5, where the
+later layout puts them at words 2 and 3. All 264 Finale 1.8.7 through 3.2 documents of the reference corpus are on
+that side of the line and all 3,458 later ones on the other; no file carries any other word count. That corpus has no
+Finale 1.0.0 document at all, so the era's lower bound comes from the `tracked-evidence` survey, whose 19 Finale 1.0.0
+fixtures carry the six-word record and are the only companion-backed documents of that version anywhere. This is the third instance of the same
+lesson the clef scalars taught — a distilled row is an era-scoped claim — and the second boundary found at Finale
+3.5, after the stem family's units.
+
+The boundary cannot be expressed as an epoch gate, because it falls inside the uncompressed epoch, and a version
+range would have to guess a cut point between 3.2 and 3.5 that no corpus can narrow. The reader reads the family's
+own word count instead. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#multimeasure-rest-defaults) for both per-era tables.
+
+Two further findings about the group:
+
+- `mmautoupdate` is selector `83` **word 4**, as distilled, and word 2 of the same record is a different thing. 468
+  companion-backed documents carry word 2 set with word 4 clear and none of their conversions has
+  `<autoUpdateMmRests/>`; all 73 that carry word 4 do. The selector first appears in Finale 97.
+- The two words the framework leaves as `AAAA` and `BBBB` are zero in all 3,458 later-layout documents, so nothing
+  in the corpus can name them. They stay **open**.
+- `noHorizontalStretch` is not open and is not a gap in the distilled table. "Stretch Horizontally" is a Finale 27
+  feature, so no legacy format has a bit for it and the framework had none to name. Bit 0 is the only bit of the
+  flags word any document uses, and the reader asserts the option false in every era.
+
 ## Confidence and validation plan
 
 | Claim | Status |

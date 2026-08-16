@@ -32,7 +32,29 @@ EPOCH_ORDER = ["coda-banner", "uncompressed", "dcl", "zlib", "unknown"]
 CLASSES = [
     ("clef_options", "ClefOptions"),
     ("font_options", "FontOptions"),
+    ("mmrest_options", "MultimeasureRestOptions"),
     ("font_definitions", "FontDefinition"),
+]
+
+# MultimeasureRestOptions: probe key, companion element, musxdom member. The element names
+# are musxdom's own XML mapping and are not the member names -- measWidth is <meaSpace>,
+# numAdjY is <numdec>, useSymsThreshold is <threshold>, symSpacing is <spacing> and
+# useSymbols is <useCharRestStyle>. An absent element means the field is 0 or false.
+MMREST_NUMERIC = [
+    ("meas_width", "meaSpace", "measWidth"),
+    ("num_adj_y", "numdec", "numAdjY"),
+    ("shape_def", "shapeDef", "shapeDef"),
+    ("num_start", "numStart", "numStart"),
+    ("use_syms_threshold", "threshold", "useSymsThreshold"),
+    ("sym_spacing", "spacing", "symSpacing"),
+    ("num_adj_x", "numAdjX", "numAdjX"),
+    ("start_adjust", "startAdjust", "startAdjust"),
+    ("end_adjust", "endAdjust", "endAdjust"),
+]
+MMREST_BOOLEAN = [
+    ("use_symbols", "useCharRestStyle", "useSymbols"),
+    ("no_horizontal_stretch", "noHorizontalStretch", "noHorizontalStretch"),
+    ("auto_update_mm_rests", "autoUpdateMmRests", "autoUpdateMmRests"),
 ]
 
 FONT_TYPE_NAMES = {}  # ordinal -> companion XML type name, filled from the baseline
@@ -84,6 +106,27 @@ def font_option_coverage(obs):
         "count": len(fonts),
         "recovered": recovered_origins(origins),
         "dangling": sum(1 for f in fonts if f.get("dangling")),
+        "any_recovered": recovered_origins(origins) > 0,
+    }
+
+
+# Fields the reader asserts for every document regardless of what it read. They carry no
+# information about coverage -- counting them would make every epoch pass the acceptance rule
+# by construction, including one where nothing was decoded at all -- so they are excluded from
+# the coverage counts. They are still compared against companions like any other field.
+UNCONDITIONAL_MMREST_FIELDS = {"origin_noHorizontalStretch"}
+
+
+def mmrest_coverage(obs):
+    mmrest = obs.get("mmrest_options")
+    if not mmrest:
+        return None
+    origins = [v for k, v in mmrest.items()
+               if k.startswith("origin_") and k not in UNCONDITIONAL_MMREST_FIELDS]
+    return {
+        "recovered": recovered_origins(origins),
+        "total": len(origins),
+        "dangling_shapes": 1 if mmrest.get("dangling_shape") else 0,
         "any_recovered": recovered_origins(origins) > 0,
     }
 
@@ -153,9 +196,18 @@ def read_companion(path):
                 "shape_id": num("shapeID"),
                 "is_shape": "<isShape/>" in d,
             })
+    mmrest = {}
+    mo = re.search(r"<multimeasureRestOptions>(.*?)</multimeasureRestOptions>", xml, re.S)
+    if mo:
+        body = mo.group(1)
+        for _, tag, _ in MMREST_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (tag, tag), body)
+            mmrest[tag] = int(m.group(1)) if m else 0
+        for _, tag, _ in MMREST_BOOLEAN:
+            mmrest[tag] = bool(re.search(r"<%s/>|<%s>1</%s>" % (tag, tag, tag), body))
     return {"fonts": fonts,
             "font_names": {normalize_font(v) for v in names.values() if v},
-            "clefs": clefs, "clef_scalars": scalars}
+            "clefs": clefs, "clef_scalars": scalars, "mmrest": mmrest}
 
 
 def compare_companion(obs, comp):
@@ -212,6 +264,13 @@ def compare_companion(obs, comp):
                  "cautionaryClefChanges")):
             outcome = "preserved" if clef[key] == comp["clef_scalars"][tag] else "differs"
             out[("ClefOptions." + tag, clef.get("origin_" + member, "absent"), outcome)] += 1
+
+    mmrest = obs.get("mmrest_options")
+    if mmrest and comp["mmrest"]:
+        for key, tag, member in MMREST_NUMERIC + MMREST_BOOLEAN:
+            outcome = "preserved" if mmrest[key] == comp["mmrest"][tag] else "differs"
+            out[("MultimeasureRestOptions." + tag,
+                 mmrest.get("origin_" + member, "absent"), outcome)] += 1
 
     ours_names = {normalize_font(d["name"]) for d in (obs.get("font_definitions") or [])
                   if d.get("name")}
@@ -281,6 +340,13 @@ def main():
             e["fo_recovered"] += f["recovered"]
             e["fo_total"] += f["count"]
             e["fo_dangling"] += f["dangling"]
+        m = mmrest_coverage(obs)
+        if m:
+            e["mm_docs"] += 1
+            e["mm_any"] += 1 if m["any_recovered"] else 0
+            e["mm_recovered"] += m["recovered"]
+            e["mm_total"] += m["total"]
+            e["mm_dangling_shapes"] += m["dangling_shapes"]
         d = font_definition_coverage(obs)
         if d:
             e["fd_docs"] += 1
@@ -303,7 +369,8 @@ def main():
     print("READER COVERAGE BY EPOCH  (recovered = legacy-mus or legacy-behavior)")
     print("=" * 78)
     header = (f"{'epoch':<14}{'docs':>7}{'occurs':>8}  "
-              f"{'ClefOptions':>22}  {'FontOptions':>20}  {'FontDefinition':>20}")
+              f"{'ClefOptions':>22}  {'FontOptions':>20}  {'MmRestOptions':>20}  "
+              f"{'FontDefinition':>20}")
     print(header)
     for epoch in EPOCH_ORDER + sorted(k for k in by_epoch if k not in EPOCH_ORDER):
         if epoch not in by_epoch:
@@ -315,9 +382,10 @@ def main():
         clef = (f"{e['clef_any']}/{e['clef_docs']} docs "
                 f"{e['clef_def_recovered'] + e['clef_scalar_recovered']}f")
         fo = f"{e['fo_any']}/{e['fo_docs']} docs {e['fo_recovered']}f"
+        mm = f"{e['mm_any']}/{e['mm_docs']} docs {e['mm_recovered']}f"
         fd = f"{e['fd_any']}/{e['fd_docs']} docs {e['fd_recovered']}f"
         print(f"{epoch:<14}{e['docs']:>7}{e.get('occurrences', 0):>8}  "
-              f"{clef:>22}  {fo:>20}  {fd:>20}")
+              f"{clef:>22}  {fo:>20}  {mm:>20}  {fd:>20}")
     print()
     print("  'x/y docs' = documents with at least one source-derived value / documents")
     print("  'Nf'       = total source-derived fields recovered across the epoch")
@@ -332,6 +400,7 @@ def main():
             continue
         e = by_epoch[epoch]
         for key, label in (("clef_any", "ClefOptions"), ("fo_any", "FontOptions"),
+                           ("mm_any", "MultimeasureRestOptions"),
                            ("fd_any", "FontDefinition")):
             if e.get(key, 0) == 0:
                 print(f"  FAIL  {epoch:<14} {label}: no document recovered any value")
@@ -382,10 +451,10 @@ def main():
                 by_ep[obs["epoch"]][(k[0], k[2])] += v
         quality_ok = seen
         print(f"  compared {seen} document(s)\n")
-        print(f"  {'field':<34}{'origin':<18}{'outcome':<24}{'count':>8}")
+        print(f"  {'field':<42}{'origin':<18}{'outcome':<24}{'count':>8}")
         for (field, origin, outcome), n in sorted(
                 outcomes.items(), key=lambda kv: (-kv[1], kv[0])):
-            print(f"  {field:<34}{origin:<18}{outcome:<24}{n:>8}")
+            print(f"  {field:<42}{origin:<18}{outcome:<24}{n:>8}")
 
     print()
     print("RESULT:", "ACCEPTED" if ok else "NOT ACCEPTED")

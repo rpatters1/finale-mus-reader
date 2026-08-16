@@ -248,6 +248,15 @@ copying reference objects, is a separate phase after the importers rather than a
 importer's responsibility. Tables and helpers that only the importer uses should be
 file-local; expose a stage separately only where a test needs to drive it alone.
 
+**`<pool>.h` declares importers and nothing else.** A stage a test drives on its own goes in
+`<pool>/test_access.h`, which no library code may include; a stage no test drives is
+file-local, in the class's own anonymous namespace. Do not export a stage for symmetry with a
+neighbouring class -- check who calls it. The distinction is worth keeping mechanical, because
+a pool header that mixes the registry's contract with a test seam stops being readable as
+either, and an unused export looks like API to whoever reads it next. The same rule applies to
+the shared framework header: a helper whose only caller lives in its own translation unit
+belongs in that file's anonymous namespace, however general it looks.
+
 Choose target construction deliberately:
 
 - `OptionsSingleton`: overlay a complete seeded options object.

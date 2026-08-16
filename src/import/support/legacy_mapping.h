@@ -480,15 +480,10 @@ struct ImportContext
 /// order. Nothing outside the class's own translation unit knows how many layouts it has.
 using ClassImporter = void (*)(const ImportContext& context);
 
-/// @brief Copies every requested reference object into the document and fills in its comparator.
-/// @details Runs after every pool is populated. Nothing may allocate an `others` comparator after
-/// this returns. A reference shape requested more than once is copied once, keyed by its
-/// comparator in the reference document rather than by anything about its content.
-void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument,
-    PendingReferences& pending, ImportReport& report);
-
 /// @brief Applies every registered mapping table to a seeded document.
+/// @details Runs the registered importers in order, then drains @ref PendingReferences in one
+/// final phase. That phase allocates `others` comparators, so nothing may allocate one after
+/// this returns.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);

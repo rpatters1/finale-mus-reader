@@ -297,12 +297,25 @@ version-aware category decoding.
 
 ### P2.2 Dangling shape references in seeded options
 
-**Status:** gap, narrowed 2026-08-11. **Confidence:** confirmed.
+**Status:** gap, narrowed 2026-08-11 and again 2026-08-16. **Confidence:** confirmed.
 
 Two baseline clef definitions set `isShape` and point at shape records, and
 `MultimeasureRestOptions` points at one more. None are seeded. Unlike fonts,
 every `ShapeDef` lookup in musxdom is null-tolerant, so these degrade quietly
 rather than throwing: the shape clefs behave as though they have no shape.
+
+The multimeasure-rest H-bar no longer carries a *baseline* comparator: every era's record
+holds the shape id — word 3 of the later layout, word 5 of the early one — so the recovered
+value is the source's own and matches the companion in all 2,305 compared documents. It can
+still dangle, and measurably does. **319 zlib documents name an H-bar shape their own file
+does not define**, and no document of the other three epochs does. Those files carry no
+shape records at all — none of classes `0x00d5`, `0x00d6` or `0x00d7` — while other zlib
+documents in the same corpus carry all three, so this is a fact about those sources rather
+than a decoding gap; their Finale 27 conversions materialize a shape library the source
+never stored. The reader keeps the comparator exactly as read and notes it at `Info`, not
+`Warning`: naming a shape the file does not carry is ordinary Finale behavior, and flagging
+several hundred normal documents as suspect is how a diagnostic channel stops being read.
+Whether a reader should materialize an equivalent shape is **open**.
 
 `ClefOptions` is no longer seeded, so a shape clef now reaches an imported document by
 one of two routes. When the source stores its own clef table, which every Finale 2001

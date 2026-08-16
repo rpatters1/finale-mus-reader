@@ -11,8 +11,6 @@ section below; do not expand the TODO bullets into investigation notes.
   references.
 - `LyricOptions::altHyphenFont` -> `others::FontDefinition`. Find its legacy
   location, recover the font tuple, and resolve its definition.
-- `MultimeasureRestOptions::shapeDef` -> `others::ShapeDef`. Recover and
-  resolve the H-bar shape.
 - `RepeatOptions::showOnStaffListNumber` -> `others::StaffListRepeatName`,
   `StaffListRepeatScore`, `StaffListRepeatParts`, and their override classes.
   Recover the linked repeat staff-list family.
@@ -32,3 +30,6 @@ section below; do not expand the TODO bullets into investigation notes.
 - `ClefOptions::ClefDef::shapeId` — clefs 17 and 18 import their source-owned
   shapes on demand.
 - `StemOptions::StemConnection::fontId`
+- `MultimeasureRestOptions::shapeDef` — the source's own comparator in every
+  era; a reference the source does not define is kept as stored and noted at
+  `Info`, which 319 zlib documents trigger and Finale treats as normal.

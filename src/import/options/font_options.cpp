@@ -3,6 +3,8 @@
 
 #include "import/options.h"
 
+#include "import/options/test_access.h"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
