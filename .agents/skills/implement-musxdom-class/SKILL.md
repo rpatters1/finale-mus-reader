@@ -100,6 +100,27 @@ Finale version and platform desired, and any ETF or modern re-save that would ma
 result more useful. Prefer a baseline plus one changed field over a realistic score
 whose unrelated changes create noise.
 
+**A fixture added to `tests/evidence/` is not finished until it is in the corpus index.**
+Re-survey that tree, which is registered as a corpus in its own right: `./private/regenerate.sh
+tracked-evidence` where the private configuration exists, or `scripts/inventory.py` against
+`tests/evidence/` with the export convention from `research/data/surveys.csv`, which needs no
+private configuration at all. Then update that row — the source count, the date, the
+`tool_commit`, and the `corpus_fingerprint`, which changes whenever a file is added — and
+re-run any class-coverage cohort that draws on it.
+
+Do this because the fixture tree is a *survey*, not a pile of test inputs, and it is the
+only one that is both fully companion-backed and reproducible at all by anyone but its owner.
+It is also where the earliest evidence lives: the private corpora begin at Finale 1.8.7, so
+every Finale 1.0.0 document with a companion is a tracked fixture. A fixture left out of the
+index is invisible to every coverage survey and to every count published from one, which is
+exactly how an era comes to look unrepresented when it is not. Keep the fixture cohort in the
+scope you agree with the user at Step 7 whenever the class reaches an era the private corpora
+cover thinly or not at all.
+
+Nothing about that tree is private, so its conventions still live in
+`private/corpora/tracked-evidence.conf` only because that is where `regenerate.sh` looks;
+say so rather than treating the file as sensitive.
+
 ## Step 1 — Define the vertical slice
 
 Identify:
@@ -282,6 +303,17 @@ Run the focused test, the full test suite, generated-resource checks when releva
 Once the narrow implementation passes controlled fixtures, read and use
 `../survey-class-coverage/SKILL.md`. Define the cohort with the user: all fixtures,
 loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
+
+**Name the surveys as well as the cohort, and say what each one can and cannot answer.**
+Every registered survey in `research/data/surveys.csv` is in scope, and they are not
+interchangeable. The reference corpus has the companions and the volume but starts at Finale
+1.8.7. The installs corpus has no authored documents and thin companion coverage, but it is
+the only place several releases exist at all, and the only place the Coda-era Windows
+documents that state no version are found — the population any version gate silently drops.
+The tracked fixtures are tiny and must never be read as a percentage, but every one has a
+companion and they hold the controlled one-variable pairs. A claim about a release absent
+from the survey you ran is not a finding; check whether another survey has it before calling
+an era covered.
 
 Make the targeted survey answer at least:
 
