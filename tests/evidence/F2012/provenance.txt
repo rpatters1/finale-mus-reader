@@ -3,6 +3,10 @@ Finale 2012 (internal version 17.0), zlib era, little-endian.
 Origin: a test case authored for the Note Spacing plug-in and released for
 publication by its author.
 
+The fixtures authored here were saved under Mac OS X 10.7.5 running in UTM, which
+is the host for every Finale after 2006. The exact application build is not
+recorded.
+
 This file is a back-save. Finale 2014 through Finale 27 can write a musx document
 out as a Finale 2012 MUS file, and that is what happened here, which is why the
 name in the original collection refers to Finale 2014 while the banner reads
@@ -44,3 +48,30 @@ Source payload hashes:
     GifSample.gif sha256 722b2cde42fb87c26c5ca3a6ecca10339c73e593523816a89640f94a39fb5de3
     Photo_tiff.tiff sha256 48a219c47c60a492d69ae714c60cabcfda9dc7fdc851c9dabed54f563fa8e10c
     not_encrypted.pdf sha256 18dc07d4deecdba337912f360ac5ec4253e7610e4ab6478b570f0c0b015e5ecb
+
+F2012-baseline.mus
+    sha256 aa95324d39ef94f1340133d637b52206eeddaf1c7442fb0ac1a81c3e444639f3
+    The unedited control for the Finale 2012 text saves below.
+
+F2012-insert-flat-tracking.mus
+    sha256 09f662ca4ef7c61c34e2810b6c8c4a63cc8f5b25f9dc77256ed024136df49aa5
+    The same edit as F2005-insert-flat-tracking, in the 20-byte element layout: tracking
+    before 1000, tracking after 250, baseline shift -25. A little-endian file stores 1000 as
+    00 00 e8 03, which is the same two-words-high-word-first rule the big-endian era uses
+    rather than a plain long.
+
+F2012-textopts-scalars.mus
+    sha256 5fbf82896510f7f60cb99149aefee34518c691d481a045a5ac5d5607ff376ce7
+    The fourteen scalars again in the zlib epoch and in little-endian order, reached through
+    the numericGlobalClass rule. Its line spacing is absolute, so it is also the second
+    document anywhere whose companion carries <textLineSpacingEvpu>.
+
+F2012-dblsharp-insert-outside-BMP.mus
+    sha256 e44f2e985b0213baf494eb4bfb5c0456e6536432182257a21df5d3e011c755a0
+    From F2012-baseline, the double-sharp insert's character set to U+26469 in LiSong Pro.
+    The element stores 69 64 02 00 at byte 16 and 19 at byte 10; the companion reads
+    <symChar>156777</symChar> with fontID 19. A character above the basic multilingual plane
+    is the only value that can fix the byte order of that era's widened character: low word
+    first gives 156777, while the high-word-first order the two trackings use in the same
+    element would give 0x64690002, which is not a codepoint. One element therefore holds two
+    different 32-bit conventions.

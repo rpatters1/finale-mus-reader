@@ -34,5 +34,10 @@ void importMusicSpacingOptions(const ImportContext& context);
 /// @brief Recovers options::StemOptions, whose connections are a source-owned collection.
 void importStemOptions(const ImportContext& context);
 
+/// @brief Recovers the scalar fields of options::TextOptions across all four epochs.
+/// @details The accidental symbol inserts are not implemented yet and keep the pinned
+/// baseline's values; see the note at the end of the importer.
+void importTextOptions(const ImportContext& context);
+
 } // namespace options
 } // namespace finale_mus_reader

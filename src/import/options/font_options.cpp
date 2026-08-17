@@ -404,7 +404,7 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
 
     for (const auto& [type, font] : target->fontOptions) {
         const auto missingId = font->fontId;
-        if (missingId == 0 || document->getOthers()->get<FontDefinition>(
+        if (document->getOthers()->get<FontDefinition>(
                 musx::dom::SCORE_PARTID, missingId)) {
             continue;
         }

@@ -1,6 +1,6 @@
 Finale 2.6.3, classic Mac OS.
-    The precise application build and host environment are not yet recorded here;
-    fill them in from the machine that produced these files.
+    Mac OS 9.0.4 running in SheepShaver, which is the host for every Finale before
+    2004. The exact application build is not recorded.
 
 F263-baseline.mus
     12,848 bytes. The unedited document the other F263 fixtures derive from.
@@ -32,3 +32,10 @@ F263-courtesy-key-off.mus / .etf
     the Coda era stores the three courtesies as separate boolean words. Which word
     holds the clef's is still open, so the reader leaves cautionaryClefChanges at the
     Finale 27 default for this era.
+
+F263-dateform-tab.mus
+    sha256 f87de69e8e79ea9a15d222a3e18c26894d2d702462b5fedf16ec490986807016
+    From F263-baseline, the date format set to Abbreviated and the tab stop to 7 spaces.
+    Selector 05 word 5 moves 0 -> 2 and selector 13 word 0 moves 4 -> 7, against a companion
+    reading <dateFormat>abbrev</dateFormat>. The value distinguishes the third DateFormat
+    member from the second, which the Finale 1.0.0 save fixes.

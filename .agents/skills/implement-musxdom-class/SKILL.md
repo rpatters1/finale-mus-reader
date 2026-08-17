@@ -86,6 +86,21 @@ Ask one focused question when new user evidence is genuinely needed. If the exis
 evidence supports a safe narrow implementation, continue without asking the user to
 reconfirm the implementation request.
 
+**Write the provisional implementation as soon as one epoch's mapping is supported by
+bytes, before anything else.** Not after the other epochs are located, not after the
+open fields are closed, not after the research notes are written, and above all not
+after a corpus survey -- Step 7 exists to refine an implementation and cannot be run
+before there is one. A class that has been studied for hours with nothing in `src/` is
+the failure this workflow is shaped to prevent, and it does not announce itself: every
+individual step looks like diligence.
+
+The trap is that evidence compounds. Each located field makes the next one cheaper, so
+gathering never reaches a natural stopping point and the moment to start writing code
+never arrives on its own. Treat the first supported epoch as that moment. Ship the
+narrow slice with the other epochs reporting synthesized defaults, then widen it. Field
+mappings landing in a table one at a time is normal and cheap; a first implementation
+deferred until the picture is complete is neither.
+
 Useful user contributions include:
 
 - a suspected pre-zlib tag, selector, comparator, incidence, or word offset;
@@ -310,7 +325,11 @@ Run the focused test, the full test suite, generated-resource checks when releva
 ## Step 7 — Refine with class coverage
 
 Once the narrow implementation passes controlled fixtures, read and use
-`../survey-class-coverage/SKILL.md`. Define the cohort with the user: all fixtures,
+`../survey-class-coverage/SKILL.md`. **Do not run a corpus survey before that point.**
+A survey answers questions about an implementation -- which fields it recovers, which
+epochs it fails, where companions disagree with it -- and none of those questions has a
+meaning yet if the class exists only as notes. A survey run early is not a head start;
+it is Step 7 performed on nothing, and it has to be run again afterwards anyway. Define the cohort with the user: all fixtures,
 loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
 
 **Name the surveys as well as the cohort, and say what each one can and cannot answer.**

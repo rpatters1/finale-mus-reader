@@ -292,11 +292,30 @@ void assignFrom(T& target, std::int64_t value)
     target = static_cast<T>(value);
 }
 
+/// @brief Assigns to an optional member, engaging it.
+/// @details musxdom uses an optional where an absent element means something other than a
+/// zero value -- for a mutually exclusive pair of spellings, which one the document used.
+/// A table row that reaches such a member has by definition found the value in the source,
+/// so the member is engaged; leaving a member disengaged is the business of whatever decides
+/// the row does not apply.
+template <typename T>
+void assignFrom(std::optional<T>& target, std::int64_t value)
+{
+    target = static_cast<T>(value);
+}
+
 /// @brief Reads a member as a report value.
 template <typename T>
 [[nodiscard]] std::int64_t readAs(const T& source)
 {
     return static_cast<std::int64_t>(source);
+}
+
+/// @brief Reads an optional member as a report value, treating a disengaged one as zero.
+template <typename T>
+[[nodiscard]] std::int64_t readAs(const std::optional<T>& source)
+{
+    return source ? static_cast<std::int64_t>(*source) : 0;
 }
 
 /// @brief What a mapped field reads out of the record stream.
@@ -576,6 +595,33 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
+/// @brief A transformed bit range of a class-identified record, in a record found under an
+/// explicit comparator.
+/// @details The counterpart of @ref MUS_CLASS_SELECTED_BITS for a value that needs converting
+/// on the way in. An @ref TargetKind::OptionsSingleton table takes its comparator from the
+/// field rather than from the target, so a singleton needs this form wherever
+/// @ref MUS_CLASS_BITS_AS would leave the comparator at zero and find no record.
+#define MUS_CLASS_SELECTED_BITS_AS(Class, classId, selectorValue, byteOffset, firstBit, \
+                                   bitCount, member, ...) \
+    ::finale_mus_reader::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
+            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            static_cast<std::uint32_t>(byteOffset), \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::BitRange{ \
+                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+        ::finale_mus_reader::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \

@@ -183,6 +183,12 @@ framework models clef overrides through clef definitions outside its preference 
 the other two legacy fields. The complete five-row audit, including these open results and the Finale 2012 stem-layout
 caveat, is in [`data/legacy_option_font_id_locations.csv`](data/legacy_option_font_id_locations.csv).
 
+The text inserted-symbol font is no longer open. It is word slot 5 of each element of the direct block at
+`78(65534)`, and it is a source-document `FontDefinition` comparator like the others; see
+[TextOptions](#textoptions-three-distilled-rows-and-a-class-the-framework-does-not-model) below. That location came
+from the corpus rather than from the framework, which confirms the audit's own caution: the framework not exposing a
+field says nothing about whether the file stores it.
+
 ### FontOptions implementation plan
 
 The implementation follows this staged data flow: filter the unsafe baseline object, recover every era-verified
@@ -458,6 +464,46 @@ Two further findings about the group:
 - `noHorizontalStretch` is not open and is not a gap in the distilled table. "Stretch Horizontally" is a Finale 27
   feature, so no legacy format has a bit for it and the framework had none to name. Bit 0 is the only bit of the
   flags word any document uses, and the reader asserts the option false in every era.
+
+### TextOptions: three distilled rows, and a class the framework does not model
+
+**Confirmed 2026-08-16** against all 1,189 adjacent-exact Finale 27 companions of the reference corpus. This is the
+first class where the framework survey was mostly a negative result and the corpus supplied the rest, so it is worth
+recording what each source was actually good for.
+
+The framework has no text-preferences class at all — 31 `__FCPrefsBase` subclasses and none for text — and the
+437-row union contains exactly three rows that reach `TextOptions`: `MiscDocPrefs.secondsInTimeStamp` at `05` word 4,
+`MiscDocPrefs.dateFormat` at `05` word 5, and `MiscDocPrefs.textTabChars` at `13` word 0. All three are now
+corpus-confirmed on every era including Coda-banner, with no per-era exception of the kind the clef scalars turned
+up. The framework also supplies the `DATEFORMAT_SHORT/LONG/MACLONG` values, and they match musxdom's `DateFormat`
+one-for-one. Nothing in the tables or anywhere in the framework tree mentions the accidental symbol inserts.
+
+The remaining eleven scalars and the whole insert array were located instead by searching the record stream for the
+Finale 27 default values as a byte pattern, then diffing controlled one-variable saves. That method cost about the
+same as reading the framework and produced more: five numeric globals for the scalars, and a direct five-element
+block at `78(65534)` for the inserts. Full locations, per-era layouts and verification counts are in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#text-options) and
+[`data/text_options_mapping.csv`](data/text_options_mapping.csv).
+
+Four lessons generalize to the 429 rows still unpromoted:
+
+- **A defaults fingerprint locates a record without any fixture.** The Finale 27 baseline states what the values
+  should be; searching for that tuple across the record stream found the insert block in one pass. This works
+  wherever a class has distinctive defaults, and it is cheaper than a controlled save.
+- **Finale orders its alignment enums first, opposite, centre.** `textJustify` stores `Left, Right, Center, Full,
+  ForcedFull` where musxdom has `Left, Center, Right, Full, ForcedFull`, and `textVertAlign` stores `Top, Bottom,
+  Center` where musxdom has `Top, Center, Bottom`; both need positions 1 and 2 exchanged. `textHorzAlign` needs
+  no change only because `AlignJustify` already uses Finale's order. Each was settled by exactly one specimen —
+  two corpus documents and one controlled save. Assume no enum matches, and check the rest of the enum-valued
+  rows the same way.
+- **A companion can be wrong in a way that is stable and era-specific.** Finale 27 mis-converts the Finale 3.7–2000
+  insert layout on all 179 documents that have one, so aggregate companion agreement would have scored that era at
+  zero and looked like a decoding failure. Eight later documents carry the same corruption frozen into the file,
+  which is what proves the direction of the error.
+- **The corpus is nearly useless for options nobody changes.** All 1,108 documents carrying selectors `82` and `83`
+  hold identical values in four of their words. Two one-word fixtures closed three of those four and left the last
+  identified by elimination; the corpus could not have closed any of them at any size. Volume does not substitute
+  for variation.
 
 ## Confidence and validation plan
 

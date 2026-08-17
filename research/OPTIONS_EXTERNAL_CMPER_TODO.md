@@ -17,10 +17,6 @@ section below; do not expand the TODO bullets into investigation notes.
 - `SmartShapeOptions::ssLineStyleCmp*` -> `others::SmartShapeCustomLine`
   (four fields: custom, glissando, tab slide, tab bend curve). Recover the
   referenced line styles; include their `CharParams::font` references.
-- `TextOptions::symbolInserts[*].symFont` -> `others::FontDefinition`. Find
-  the legacy location, recover the inserted-symbol font tuples, and resolve
-  their definitions.
-
 
 ## Completed
 
@@ -33,3 +29,7 @@ section below; do not expand the TODO bullets into investigation notes.
 - `MultimeasureRestOptions::shapeDef` — the source's own comparator in every
   era; a reference the source does not define is kept as stored and noted at
   `Info`, which 319 zlib documents trigger and Finale treats as normal.
+- `TextOptions::symbolInserts[*].symFont` — offset 10 of each element of
+  `78(65534)` in all three insert layouts; Coda-banner has no such record and
+  keeps the baseline tuple. Definitions resolve through
+  `importFontDefinitionInto`.

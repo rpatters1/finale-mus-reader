@@ -16,3 +16,47 @@ F2005-courtesy-key-off: from F2005-baseline, only the courtesy key signature tur
   off. Selector 44 word 3 moves 7 -> 6, so the key signature's courtesy is bit 0.
   This is the save that distinguishes the clef bit from a bit that merely happened to
   be clear; time is bit 1 by elimination.
+
+F2005-insert-sharp-font.mus
+    sha256 5646429f2f86fac67023b645874b32b81facf53294f2702d750dccda3d99439b
+    From F2005-baseline, the sharp accidental insert's symbol font set to Petrucci at 79%
+    with bold. Bytes 10, 12 and 14 of the block's first element move to 9, 79 and 1. The
+    source's own ^FN(9) is "Petrucci", and the companion resolves the same face, which is
+    what shows the field is a font-definition comparator in the source's numbering.
+
+F2005-insert-sharp-font-it-und.mus
+    sha256 95bbed8fa04b9511c5593d91eb8212a769d39e9c55aa17caeeabc4ccbabad792
+    The same font with the styles changed to italic and underline. The effects word moves
+    1 -> 6, so the field is the ordinary Enigma style bitmask and musxdom's setEnigmaStyles
+    reads it unchanged.
+
+F2005-insert-flat-tracking.mus
+    sha256 7b1b3e27813135d06d18067e21682bf65d019c70787bdbbeaa6e985f9c3e4543
+    From F2005-baseline, the flat insert's tracking before set to 1000, tracking after to
+    250 and baseline shift to -25. Fixes both 32-bit widths, their high-word-first order and
+    the sign of the 16-bit shift in one save; all three are zero or default in every
+    unedited document.
+
+F2005-textopts-scalars.mus
+    sha256 a369692d9b8dcee728ed64be33904633ea1af8049346f627ae0adce472944ed1
+    From F2005-baseline, every Document Options > Text value changed at once. Five records
+    move: selector 05 words 4 and 5, selector 13 word 0, all three of selector 81's 32-bit
+    values, selector 82 words 0, 2, 3 and 4, and selector 83 words 0, 1 and 3. One save
+    locates eleven fields that no corpus document varies.
+
+F2005-textvert-center.mus
+    sha256 4fee0d73fa505cba481431c695d4df9d01f1a69bd319209b6e764a2a17e404d3
+    From F2005-baseline, the vertical alignment set to Center and nothing else. Selector 83
+    word 1 moves 0 -> 2, the ETF reads ^83(65534) 0 2 0 0 0 0, and the companion gains
+    <textVertAlign>center</textVertAlign>. Centre at 2, against the scalars save reading
+    bottom from a stored 1, fixes the legacy list as Top, Bottom, Centre -- the same
+    first/opposite/centre order as AlignJustify -- and leaves word 3 as the page-edge flag.
+
+F2005-linespace-to-evpu.mus
+    sha256 4e03b6187689ad6daa21c81709d3e6751eff8d8acdce179f9bede390150e4494
+    From F2005-baseline, the line spacing switched from 100 percent to an absolute 72 Evpu.
+    Selector 82 words 0 and 1 move, 100 -> 72 and 1 -> 0, and the companion replaces
+    <textLineSpacingPercent>100</> with <textLineSpacingEvpu>72</> while keeping
+    <textExpandSingleWord/>. Word 1 selects which of the two musxdom members word 0
+    populates. Finale 27 has no boolean for that mode -- it writes one element or the other --
+    so only a save that moves the units alone can fix the word.

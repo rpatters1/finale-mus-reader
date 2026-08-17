@@ -83,7 +83,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x003b` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xc58) |
 | `0x003c` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xc72) |
 | `0x003d` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xc8c) |
-| `0x003e` | unknown | unknown/options | open | 2012 | 84 | `mus-80f8c631de435726` (0:0xdae) |
+| `0x003e` | unknown | unknown/options | open | 2012 | 84 | `mus-aa95324d39ef94f1` (0:0xdae) |
 | `0x0040` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xca6) |
 | `0x0041` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xcc0) |
 | `0x0042` | unknown | unknown/options | open | 2007, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0xcda) |
@@ -130,7 +130,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x006d` | unknown | unknown/options | open | 2007, 2012 | 324, 360 | `mus-86fafceb1ef2ebe2` (0:0x1380) |
 | `0x006f` | unknown | unknown/options | open | 2007, 2012 | 24, 36 | `mus-86fafceb1ef2ebe2` (0:0x14d2) |
 | `0x0070` | unknown | unknown/options | open | 2007, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x14f8) |
-| `0x0071` | unknown | unknown/options | open | 2012 | 84 | `mus-80f8c631de435726` (0:0x17d6) |
+| `0x0071` | unknown | unknown/options | open | 2012 | 84 | `mus-aa95324d39ef94f1` (0:0x17d6) |
 | `0x007a` | unknown | unknown/options | open | 2012 | 84, 108, 144 | `mus-f95d2ea21b99022e` (0:0x1838) |
 | `0x0086` | textBlock | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
 | `0x0089` | unknown | unknown/options | open | 2012 | 396, 408, 420, 432 | `mus-80f8c631de435726` (0:0x1852) |
@@ -141,7 +141,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0092` | frameSpec | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1732) |
 | `0x0095` | textBlock | others | weak | 2007, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x179a) |
 | `0x0097` | textBlock | others | weak | 2007, 2012 | 156 | `mus-86fafceb1ef2ebe2` (0:0x17f0) |
-| `0x009f` | measSpec | others | weak | 2007, 2012 | 24, 48 | `mus-86fafceb1ef2ebe2` (0:0x189a) |
+| `0x009f` | shapeList | others | weak | 2007, 2012 | 24, 48 | `mus-86fafceb1ef2ebe2` (0:0x189a) |
 | `0x00a3` | layerAtts | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x18fe) |
 | `0x00a4` | unknown | unknown/options | open | 2012 | 360 | `mus-f95d2ea21b99022e` (0:0x2220) |
 | `0x00a7` | metaClef | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1966) |
@@ -170,20 +170,20 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0112` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2360) |
 | `0x011a` | textBlock | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x237a) |
 | `0x0120` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2394) |
-| `0x0122` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x23ae) |
+| `0x0122` | moviePlayerState | others | weak | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x23ae) |
 | `0x012c` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x383e) |
-| `0x012d` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x3872) |
-| `0x012e` | unknown | unknown/options | open | 2012 | 24, 36 | `mus-80f8c631de435726` (0:0x39d0) |
-| `0x0130` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x3b16) |
-| `0x0132` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x3be6) |
+| `0x012d` | markingsCategoryName | others | weak | 2012 | 36 | `mus-aa95324d39ef94f1` (0:0x26b8) |
+| `0x012e` | markingsCategoryName | others | weak | 2012 | 24, 36 | `mus-aa95324d39ef94f1` (0:0x2816) |
+| `0x0130` | categoryStaffListScore | others | weak | 2012 | 12 | `mus-aa95324d39ef94f1` (0:0x295c) |
+| `0x0132` | categoryStaffListScore | others | weak | 2012 | 12 | `mus-aa95324d39ef94f1` (0:0x2a2c) |
 | `0x013b` | unknown | unknown/options | open | 2012 | 12 | `mus-f95d2ea21b99022e` (0:0x355a) |
 | `0x013c` | unknown | unknown/options | open | 2012 | 12 | `mus-f95d2ea21b99022e` (0:0x3644) |
-| `0x03f2` | unknown | unknown/options | open | 2012 | 10 | `mus-80f8c631de435726` (1:0x0) |
-| `0x03f3` | unknown | unknown/options | open | 2012 | 10 | `mus-80f8c631de435726` (1:0x1a) |
-| `0x03f4` | unknown | unknown/options | open | 2012 | 10 | `mus-80f8c631de435726` (1:0x34) |
-| `0x03f6` | unknown | unknown/options | open | 2012 | 100 | `mus-80f8c631de435726` (1:0x4e) |
-| `0x03f7` | unknown | unknown/options | open | 2012 | 100 | `mus-80f8c631de435726` (1:0xc2) |
-| `0x03f8` | unknown | unknown/options | open | 2012 | 100 | `mus-80f8c631de435726` (1:0x136) |
+| `0x03f2` | baselinesExprBelowStaff | details | weak | 2012 | 10 | `mus-aa95324d39ef94f1` (1:0x0) |
+| `0x03f3` | baselinesExprBelowStaff | details | weak | 2012 | 10 | `mus-aa95324d39ef94f1` (1:0x1a) |
+| `0x03f4` | baselinesExprBelowStaff | details | weak | 2012 | 10 | `mus-aa95324d39ef94f1` (1:0x34) |
+| `0x03f6` | baselinesExprBelowStaff | details | weak | 2012 | 100 | `mus-aa95324d39ef94f1` (1:0x4e) |
+| `0x03f7` | baselinesExprBelowStaff | details | weak | 2012 | 100 | `mus-aa95324d39ef94f1` (1:0xc2) |
+| `0x03f8` | baselinesExprBelowStaff | details | weak | 2012 | 100 | `mus-aa95324d39ef94f1` (1:0x136) |
 | `0x0402` | unknown | unknown/options | open | 2012 | 20 | `mus-f95d2ea21b99022e` (1:0x1aa) |
-| `0x0414` | unknown | unknown/options | open | 2012 | 20 | `mus-80f8c631de435726` (1:0x1aa) |
+| `0x0414` | gfhold | details | weak | 2012 | 20 | `mus-aa95324d39ef94f1` (1:0x1aa) |
 | `0x041d` | unknown | unknown/options | open | 2012 | 40 | `mus-80f8c631de435726` (1:0x336) |

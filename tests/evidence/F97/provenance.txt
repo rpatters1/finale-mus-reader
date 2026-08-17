@@ -3,6 +3,10 @@ Finale 97 (internal version 3.8), uncompressed fixed-row era, big-endian.
 Origin: test cases authored for the Settings Scrapbook plug-in and released for
 publication by their author.
 
+The fixtures authored here were saved under Mac OS 9.0.4 running in SheepShaver,
+which is the host for every Finale before 2004. The exact application build is
+not recorded.
+
 F97-fileinfo-short.mus
     sha256 35b764881cf54f67e2e4dfcd3d1f7071a330fd03e0f7a5afb6314a6b4857eb29
     A document whose file-info text fits inside the usual header, so its record
@@ -26,3 +30,12 @@ Fin97-baseline.mus / .etf and Fin97-clef-baseline.mus / .etf
     unconditionally, so its companion converts both values at 768 Efix per harmonic
     level even though word 5 of selector 28 is 30, whose bit 0 is clear. This pair
     is what shows the switch is version-gated rather than universal.
+
+F97-expword-off.mus
+    sha256 81c257a37daaa0c9ed7fac90affb978bb03fc70748f4bff01dfbf197ba9532cf
+    From Fin97-baseline, "Expand Single Word" turned off and nothing else touched.
+    Selector 82 word 5 moves 1 -> 0, the ETF reads ^82(65534) 100 1 1 0 0 0, and the
+    companion loses <textExpandSingleWord/> while keeping <textLineSpacingPercent>100</>.
+    Words 1 and 5 of that record are 1 in every other known document and moved together in
+    the one earlier fixture that touched either, so this save is what separates them: word 5
+    is the flag, which leaves word 1 as the line-spacing units selector.

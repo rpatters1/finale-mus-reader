@@ -443,12 +443,9 @@ last-saver block.
 
 ### P2.5 musxdom dependency pin
 
-**Status:** done 2026-08-09. **Confidence:** confirmed.
+**Status:** done 2026-08-09, pin moved 2026-08-16. **Confidence:** confirmed.
 
-`CMakeLists.txt` pins musxdom at `3df7602` on `main`, which carries both
-interfaces the reader depends on: the factory construction session (musxdom
-#157) and `musx::factory::NodeFilter` (musxdom #158). Keep the pin on merged
-`main` revisions.
+Do not restate commit pin values notes here. They can become stale and waste time.
 
 ---
 

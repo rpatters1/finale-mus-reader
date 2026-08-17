@@ -490,15 +490,13 @@ void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& r
     if (!target) {
         return;
     }
-    // A connection names a font by comparator, and comparator zero means the document's
-    // default music font rather than a pooled object. A nonzero one that no recovered
-    // definition answers is preserved exactly as stored: it is what the source says, and
-    // replacing it with a default would invent a typeface the document never named.
+    // A connection names a font by comparator, and one that no recovered definition answers is
+    // preserved exactly as stored: it is what the source says, and replacing it with a default
+    // would invent a typeface the document never named. The test is whether the document
+    // defines the comparator, not whether the comparator is zero -- what zero means belongs to
+    // musxdom, which resolves it to the default music font and guarantees a definition for it.
     for (std::size_t index = 0; index < target->stemConnections.size(); ++index) {
         const auto& connection = target->stemConnections[index];
-        if (connection->fontId == 0) {
-            continue;
-        }
         if (!document->getOthers()->get<musx::dom::others::FontDefinition>(
                 musx::dom::SCORE_PARTID, connection->fontId)) {
             report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,

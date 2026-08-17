@@ -48,7 +48,8 @@ const std::vector<ClassImporter>& registeredImporters()
         &options::importFontOptions,
         &options::importMultimeasureRestOptions,
         &options::importMusicSpacingOptions,
-        &options::importStemOptions
+        &options::importStemOptions,
+        &options::importTextOptions
     };
     return result;
 }
