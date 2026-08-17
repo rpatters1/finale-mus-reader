@@ -521,6 +521,74 @@ and later where the header is always present. The exact boundary is **open**: th
 Finale 3.1, and its only Finale 3.0 files are Windows-origin, so a platform explanation cannot be
 excluded.
 
+#### Unresolvable comparators and the `Missing Font (n)` placeholder
+
+**Confirmed.** Finale names a font it cannot resolve with a placeholder definition called
+`Missing Font (n)`, where `n` is the comparator itself. Across 2,756 Finale 27 companions the record
+is invariant in all 641 occurrences spanning 354 documents: bank `Mac`, `charsetVal` 0, `pitch` 0,
+`family` 0, and the name formed from the comparator in every single case. It does not vary with era,
+product, or comparator. The commonest comparators are 131, 512 and 100, at 193, 193 and 182
+occurrences.
+
+**It is not a conversion artifact.** Finale wrote the same placeholder into the legacy font table at
+save time as far back as Finale 2009, so most documents carrying one recover it as `legacy-mus` and
+agree with the companion with nothing done on our side. Finale 27 applies the rule unconditionally,
+including to comparators that are plainly garbage: one corpus document has a corrupt font table whose
+comparators decode as ASCII character pairs — 12596 (`"14"`), 25203 (`"bs"`), 26990 (`"in"`) and
+similar — and each one still receives a correctly formed placeholder.
+
+musxdom synthesizes the same record for any comparator registered during construction that the
+finished document does not define. That is what keeps `FontInfo::getName` — and `calcIsSameTypeface`
+and `calcIsSMuFL`, which route through it — from throwing on a dangling reference. The reader's whole
+obligation is to register the comparators it leaves in the document, and to register **what a field
+finally holds rather than every value it passes through**: `FontOptions` replaces a recovered
+comparator whose definition is absent, and registering the discarded one would mint a placeholder
+that nothing refers to. musxdom also registers font ids off `SetFont` instructions in every
+`ShapeDef` once the document is built, which the reader does not need to duplicate.
+
+Two Finale `14.0.0.11` documents reach this through the accidental-symbol inserts: their flat and
+dblSharp inserts name comparator 100, the source's own table defines fourteen fonts and none of them
+is 100, and the placeholder now makes the reader agree with the companion exactly where it
+previously left the reference dangling.
+
+#### A shape naming a font the source never defines — third deliberate disagreement
+
+**Confirmed**, on five DCL documents, all Finale 2002 `7.0.1.2`. Take `mus-0bb3c333c0f80358`. Its
+`FN` families run 0–13 and 22 and stop there. Shapes 14 and 15 are custom tab clefs whose `SetFont`
+instruction names comparator **14**, which the file never defines — a dangling reference in the
+source document itself, not something conversion introduced.
+
+Finale 27 resolves it, but only by accident. Its converter prunes the source's duplicate font
+entries — 0 and 6 are both `Pmusic`, 3 and 10 both `Symbol`, 8 and 13 both `Petrucci`, 9 and 11 both
+`Sonata` — and injects its own defaults into the vacated numbers, which lands `Maestro Percussion`
+at comparator 14. The shape's dangling reference then silently resolves to it. The strings `Maestro`
+and `Engraver` appear nowhere in the source file's records, so those faces are Finale 27's, not the
+document's.
+
+That resolution is wrong on the merits. Both shapes draw plain ASCII at 12 point — shape 14 emits
+`T`, `1`, `2`, then `-`, space, `0`; shape 15 emits `T`, `2`, then `-`, space, `2` — so the font
+wanted is a text face, reported to be Helvetica or Arial with Times for these symbols, and never a
+percussion music font. Finale 27 renders tab-clef letterforms as percussion glyphs. The reader keeps
+the comparator as stored and lets it read `Missing Font (14)`, which is both truthful and safer to
+render, since a name that resolves to nothing falls back to a system face and still produces letters.
+
+**This is the one class of companion difference where matching Finale 27 would be the defect.** It is
+recorded so a later coverage run does not re-open it as a regression.
+
+#### Reading `companion-face-missing`
+
+That metric counts faces the companion has and the reader does not, and it must **not** be read as a
+recovery deficit. Across the reference corpus it is dominated by faces Finale 27 injects during
+conversion rather than anything the source named: of 2,956 occurrences over distinct documents,
+`Lucida Grande` (1,065), `Engraver Text T` (799), `Times New Roman` (449) and `Maestro` (327) are
+2,640 of them, or 89%. Not reproducing those is correct — the reader does not seed font definitions,
+because a pinned definition would collide with the source record sharing its comparator.
+
+The interesting residue is small: 165 occurrences of `Missing Font (100)` where the companion carries
+a placeholder and the reader does not. Those are comparators referenced only from option classes the
+reader has not imported yet, so nothing registers them and no placeholder is minted. The count should
+fall as those classes land, and it is a coverage measure rather than a font-table one.
+
 ### The 2007-2012 record encoding
 
 **Confirmed** for the font record against Finale 27's own conversion of the same document, and
@@ -1933,6 +2001,11 @@ rendered, and Finale 27's choice may be its converter's own table rather than a 
 Finale 3.0–3.5 is the same case for a different reason — the record simply is not there yet — and rests on only
 eight documents of the reference corpus, which is thin; the installs survey has not been run for this class and
 would firm up where between 3.5 and 3.7 the record appears.
+
+The third deliberate disagreement is in a different class and is recorded under
+[Font definitions](#a-shape-naming-a-font-the-source-never-defines--third-deliberate-disagreement): a shape whose
+`SetFont` names a comparator the source never defines, which Finale 27 resolves to the wrong face by accident of
+its own renumbering.
 
 ## Text and variable-length data
 

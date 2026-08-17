@@ -67,11 +67,28 @@ an imported document is always the source's own. The two pinned baselines give n
 font, so extending a short collection from the baseline introduces no font id at all, and the
 reader asserts that rather than assuming it.
 
-The blocker remains for the other seeded option classes containing font ids. Those objects are
-still copied from the baseline with numeric references that have not been reconciled.
+**No seeded option class in either pinned baseline actually carries a font comparator.**
+Measured 2026-08-17 by walking both baseline `<options>` elements to full depth: a `fontID`
+element occurs under `fontOptions` and nowhere else, in the macOS and the Windows baseline
+alike, and `fontOptions` and `clefOptions` are both filtered out of the seeding. The one other
+font-bearing path, `textOptions/insertSymbolInfo/symFont`, carries a size but no `fontID` at
+all, and the `TextOptions` importer reconciles those inserts through `importFontDefinitionInto`
+regardless. A class musxdom models with a font member that the baseline simply omits —
+`LyricOptions::altHyphenFont` is the case to watch — lands at its constructed default of
+comparator 0, which is the default-music-font sentinel musxdom guarantees a definition for.
+
+So the hazard this section describes has no remaining instance in the pinned artifacts, and the
+`blocker` status above wants revisiting. What is not retired is the general rule: the baselines
+are "new document without libraries", and regenerating them from a document with libraries could
+populate option classes that do carry comparators. The check above is cheap and should be rerun
+whenever a baseline is repinned.
 
 The failure mode has changed from loud to silent. Before font definitions existed, such a
-reference threw `std::invalid_argument`. It now returns a plausible, wrong font.
+reference threw `std::invalid_argument`. It now returns a plausible, wrong font — except where
+the comparator resolves to nothing at all, which since 2026-08-17 yields musxdom's
+`Missing Font (n)` placeholder rather than a throw, because the reader registers every font
+comparator it leaves in the document. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#unresolvable-comparators-and-the-missing-font-n-placeholder).
 
 Reconciling means one of:
 

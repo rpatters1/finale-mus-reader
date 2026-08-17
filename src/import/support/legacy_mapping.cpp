@@ -423,7 +423,8 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
 
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     if (!referenceDocument || referenceDocument == document) {
         throw std::logic_error(
@@ -431,7 +432,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
     PendingReferences pending;
     const ImportContext context{
-        index, profile, document, referenceDocument, report, pending};
+        index, profile, document, referenceDocument, report, pending, construction};
     for (const auto importer : registeredImporters()) {
         importer(context);
     }

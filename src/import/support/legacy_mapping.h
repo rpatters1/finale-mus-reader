@@ -16,6 +16,7 @@
 #include "finale_mus_reader/reader.h"
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
+#include "musx/factory/ConstructionContext.h"
 #include "records/legacy_record_index.h"
 
 namespace finale_mus_reader {
@@ -490,6 +491,18 @@ struct ImportContext
     ImportReport& report;
     /// @brief Reference objects a class needs copied, drained after every pool is filled.
     PendingReferences& pending;
+    /// @brief The construction session's font registry.
+    /// @details Every font comparator this import leaves in the document must be registered
+    /// here, because musxdom resolves the registered set once at @ref
+    /// musx::factory::DocumentFactory::ConstructionSession::finish and supplies a placeholder
+    /// definition for any comparator the document does not define. A comparator that is never
+    /// registered gets no placeholder, and `FontInfo::getName` and everything routed through
+    /// it -- `calcIsSameTypeface`, `calcIsSMuFL` -- throw on it instead.
+    ///
+    /// Register the value a field finally holds, not every value it passes through. Several
+    /// importers overwrite a recovered comparator during a later repair pass, and registering
+    /// the discarded one would mint a placeholder definition that nothing references.
+    musx::factory::ConstructionContext& construction;
 };
 
 /// @brief Recovers one musxdom class, from record identity to finished object.
@@ -505,7 +518,8 @@ using ClassImporter = void (*)(const ImportContext& context);
 /// this returns.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    musx::factory::ConstructionContext& construction);
 
 
 } // namespace finale_mus_reader

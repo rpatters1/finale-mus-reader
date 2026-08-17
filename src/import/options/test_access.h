@@ -32,10 +32,12 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
     PendingReferences& pending);
 
-/// @brief Checks recovered ClefOptions values that only make sense once the tables have run.
+/// @brief Checks recovered ClefOptions values that only make sense once the tables have run,
+/// and registers the clef-specific font comparators.
 /// @details Runs after the clef scalar tables, because the default clef index is a mapped
 /// scalar and the collection it indexes is built before them.
-void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report);
+void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction);
 
 /// @brief The Finale 2007 and later clef scalars, as class records addressed by byte offset.
 [[nodiscard]] const MappingTable& classClefOptionsTable();
@@ -62,10 +64,12 @@ void repairMissingRecoveredFontDefinitions(const musx::dom::DocumentPtr& documen
 void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report);
 
-/// @brief Checks the font references of recovered stem connections against the font pool.
+/// @brief Checks the font references of recovered stem connections against the font pool,
+/// and registers them.
 /// @details Runs after the font definitions are decoded and after FontOptions has repaired
 /// what it needed, because both may add to the pool a connection could be naming.
-void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report);
+void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction);
 
 } // namespace options
 } // namespace finale_mus_reader

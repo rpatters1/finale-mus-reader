@@ -682,7 +682,8 @@ void testClefTupleDecoding()
         }
         document->getOptions()->add(ClefOptions::XmlNodeName, options);
         ImportReport report;
-        finale_mus_reader::options::validateClefOptions(document, report);
+        musx::factory::ConstructionContext construction;
+        finale_mus_reader::options::validateClefOptions(document, report, construction);
         expectMapping(options->defaultClef == 99,
             "An out-of-range default clef index was silently corrected");
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
@@ -692,7 +693,7 @@ void testClefTupleDecoding()
             "An out-of-range default clef index was accepted without a warning");
         ImportReport clean;
         options->defaultClef = 17;
-        finale_mus_reader::options::validateClefOptions(document, clean);
+        finale_mus_reader::options::validateClefOptions(document, clean, construction);
         expectMapping(clean.diagnostics.empty(), "A valid default clef index warned");
     }
 
@@ -935,8 +936,9 @@ void testMmRestEarlyLayoutMarker()
         const auto reference = makeMmRestDocument();
         const auto index = LegacyRecordIndex::build(makeContainer(rows));
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importMultimeasureRestOptions(context);
         return document->getOptions()->get<MmRest>();
     };
@@ -1096,8 +1098,9 @@ void testStemPreFinale35Units()
         const auto reference = makeStemDocument();
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importStemOptions(context);
         return document->getOptions()->get<musx::dom::options::StemOptions>();
     };
@@ -1211,7 +1214,8 @@ void testStemFontReferenceValidation()
         makeContainer({{GLOBALS_CMPER, "40", {7, 192, 768, -768, 0, 0}},
             {GLOBALS_CMPER, "40", {0, 0, 0, 0, 0, 0}}}),
         profileFor(5, 0), document, report);
-    finale_mus_reader::options::validateStemOptions(document, report);
+    musx::factory::ConstructionContext construction;
+    finale_mus_reader::options::validateStemOptions(document, report, construction);
     expectMapping(options->stemConnections.size() == 1
             && options->stemConnections[0]->fontId == 7,
         "A stem connection did not keep the font comparator the source stated");
@@ -1220,6 +1224,79 @@ void testStemFontReferenceValidation()
                           return entry.message.find("does not define") != std::string::npos;
                       }),
         "A dangling stem-connection font reference was not reported");
+}
+
+// No real Finale save can stand in for a comparator that resolves to nothing: Finale always
+// writes some definition for every comparator it uses, even a placeholder of its own. The
+// state this reader must survive -- a hand-edited or otherwise malformed source naming a font
+// id its own table never defines -- has to be built synthetically instead. This constructs it
+// directly against musxdom's own construction session, twice: once exactly as an importer that
+// forgot to register the comparator would leave it, and once as the reader actually does.
+//
+// Both documents give a TextOptions symbol insert a font id no FontDefinition in the document
+// answers. The only difference is whether that id is registered with the session's own
+// ConstructionContext before the session finishes -- which is what
+// options::registerSymbolInsertFonts does in the real pipeline -- and that difference is the
+// whole story: unregistered, FontInfo::getName throws exactly as it did before musxdom offered
+// a placeholder; registered, the same call resolves to musxdom's "Missing Font (n)" spelling.
+void testDanglingFontComparatorRequiresRegistration()
+{
+    using TextOptions = musx::dom::options::TextOptions;
+    using Insert = musx::dom::options::AccidentalInsertSymbolType;
+    constexpr musx::dom::Cmper danglingFontId = 909;
+
+    const auto buildDocument = [](bool registerComparator) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        auto options = std::make_shared<TextOptions>(document);
+        options->textLineSpacingPercent = 100;
+        auto insert = std::make_shared<TextOptions::InsertSymbolInfo>(options);
+        auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
+        font->fontId = danglingFontId;
+        font->fontSize = 12;
+        insert->symFont = std::move(font);
+        options->symbolInserts[Insert::Sharp] = std::move(insert);
+        document->getOptions()->add(TextOptions::XmlNodeName, options);
+        if (registerComparator) {
+            session.getConstructionContext().registerFontId(danglingFontId);
+        }
+        return std::move(session).finish();
+    };
+
+    const auto getSymFont = [](const musx::dom::DocumentPtr& document) {
+        return document->getOptions()->get<TextOptions>()
+            ->symbolInserts.at(Insert::Sharp)->symFont;
+    };
+
+    const auto unregistered = buildDocument(false);
+    expectMapping(getSymFont(unregistered)->fontId == danglingFontId,
+        "An unregistered dangling font comparator did not survive construction");
+    bool threw = false;
+    try {
+        (void)getSymFont(unregistered)->getName();
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    expectMapping(threw,
+        "An unregistered dangling font comparator no longer throws out of FontInfo::getName; "
+        "the contrast this test relies on is gone, not just the registered half of it");
+
+    const auto registered = buildDocument(true);
+    expectMapping(getSymFont(registered)->fontId == danglingFontId,
+        "A registered dangling font comparator did not survive construction");
+    std::string name;
+    bool registeredThrew = false;
+    try {
+        name = getSymFont(registered)->getName();
+    } catch (const std::exception&) {
+        registeredThrew = true;
+    }
+    expectMapping(!registeredThrew,
+        "A registered dangling font comparator threw out of FontInfo::getName instead of "
+        "resolving to musxdom's placeholder");
+    expectMapping(name == "Missing Font (" + std::to_string(danglingFontId) + ")",
+        "A registered dangling font comparator did not resolve to the placeholder spelling "
+        "Finale's own conversions use");
 }
 
 void testGraphicAssignmentsAcrossEpochs()
@@ -1248,8 +1325,9 @@ void testGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::others::importPageGraphicAssignments(context);
         const auto assignment = document->getOthers()
             ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 4, musx::dom::Inci(0));
@@ -1369,8 +1447,9 @@ void testShapeGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::others::importShapeGraphicAssignments(context);
         const auto assignment = ShapeGraphicAssign::findForGraphic(
             document, musx::dom::SCORE_PARTID, 3);
@@ -1409,8 +1488,9 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::details::importMeasureGraphicAssignments(context);
         const auto assignment = document->getDetails()->get<Target>(
             musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
@@ -1451,6 +1531,10 @@ TEST_CASE("Stale Unicode stem record", "[mapping]") { testStemStaleUnicodeRecord
 TEST_CASE("Stem font reference validation", "[mapping]")
 {
     testStemFontReferenceValidation();
+}
+TEST_CASE("Dangling font comparator requires registration", "[mapping]")
+{
+    testDanglingFontComparatorRequiresRegistration();
 }
 TEST_CASE("Detail row shape", "[mapping]") { testDetailRowShape(); }
 TEST_CASE("Other rows remain searchable", "[mapping]") { testOtherRowsRemainSearchable(); }
@@ -1517,8 +1601,9 @@ void testTextOptionsScalars()
         const auto reference = makeTextOptionsDocument();
         const auto index = LegacyRecordIndex::build(makeContainer(rows));
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };
@@ -1621,8 +1706,9 @@ void testTextOptionsScalars()
         const auto reference = makeTextOptionsDocument();
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };
@@ -1669,8 +1755,9 @@ void testTextOptionsSymbolInserts()
         const auto reference = makeTextOptionsDocument();
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };

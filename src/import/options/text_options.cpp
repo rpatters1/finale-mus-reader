@@ -694,7 +694,8 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
             report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                 "The text options " + std::string(name) + " insert names font definition "
                     + std::to_string(fontId)
-                    + ", which this document does not define; it is kept as stored."});
+                    + ", which this document does not define; the comparator is kept as"
+                      " stored and reads as a missing font."});
         }
 
         target->symbolInserts[insertOrder[ordinal]] = std::move(insert);
@@ -789,6 +790,30 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
 
 } // namespace
 
+/// @brief Registers the font comparator every symbol insert finally holds.
+/// @details Runs after both paths that can set one -- the recovered block and the seeded
+/// fallback -- because they disagree about what the final value is: the recovered path keeps
+/// the source's own comparator, while the fallback replaces the baseline's with whatever
+/// `importFontDefinitionInto` returned. Registering inside either path would register a value
+/// the other might have overwritten.
+///
+/// The fallback's comparators are already defined in this document, so registering them
+/// changes nothing; they are registered anyway because which path ran is not this function's
+/// business, and a rule with an exception is the kind that stops holding later.
+void registerSymbolInsertFonts(const musx::dom::DocumentPtr& document,
+    musx::factory::ConstructionContext& construction)
+{
+    const auto pooled = document->getOptions()->get<TextTarget>();
+    if (!pooled) {
+        return;
+    }
+    for (const auto& [type, insert] : pooled->symbolInserts) {
+        if (insert && insert->symFont) {
+            construction.registerFontId(insert->symFont->fontId);
+        }
+    }
+}
+
 void importTextOptions(const ImportContext& context)
 {
     clearSeededLineSpacing(context.index, context.profile, context.document);
@@ -809,6 +834,7 @@ void importTextOptions(const ImportContext& context)
         reportSeededSymbolInserts(
             context.document, context.referenceDocument, context.report);
     }
+    registerSymbolInsertFonts(context.document, context.construction);
 }
 
 } // namespace options

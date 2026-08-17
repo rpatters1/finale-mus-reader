@@ -496,11 +496,21 @@ const MappingTable& classClefOptionsTable()
     return table;
 }
 
-void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report)
+void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto target = document->getOptions()->get<ClefOptionsTarget>();
     if (!target) {
         return;
+    }
+    // Only the source capture path gives a clef a font, and nothing rewrites the comparator
+    // afterwards, so what a definition holds now is what the finished document holds.
+    // Completion from the reference never adds one -- it throws if the baseline ever grows a
+    // clef font -- so there is no second origin to reconcile here.
+    for (const auto& def : target->clefDefs) {
+        if (def && def->useOwnFont && def->font) {
+            construction.registerFontId(def->font->fontId);
+        }
     }
     // The default clef is an index into the collection, and musxdom's accessor throws on an
     // out-of-range one. Warn and leave the recovered value rather than clamping it: clamping
@@ -625,7 +635,7 @@ void importClefOptions(const ImportContext& context)
     applyMappingTables(
         {&clefOptionsTable(), &earlyClefOptionsTable(), &classClefOptionsTable()},
         context.index, context.profile, context.document, context.report);
-    validateClefOptions(context.document, context.report);
+    validateClefOptions(context.document, context.report, context.construction);
 }
 
 } // namespace options
