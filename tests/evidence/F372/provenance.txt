@@ -68,3 +68,21 @@ Photo_tiff.tiff
     but the package contains no TIFF member.
 
 Finale 27 companions are in `-finale27/`.
+
+F372-lyricopts-changed.mus
+    sha256 671d394b5ba20c5d9c909cdcf21f828121f1ac005103fa260a79af24004c3404
+    From F372-baseline, all four lyric options this era exposes changed at once: hyphen spacing
+    to 157, word extension line thickness to 134, Push to 6 and Lift to 5. Finale 3.7.2 adds
+    the first two to the Coda banner's Push and Lift.
+    Four words move and the companion agrees with every one: selector 15 word 1 to 157,
+    selector 67 word 5 to 134, selector 29 word 5 to 5 and selector 30 word 5 to 6. The ETF
+    prints the same four rows. This is the only tracked document that varies the hyphen
+    separation anywhere, so it is what promotes selector 15 word 1 from consistent-everywhere
+    to confirmed, and it confirms lift and push a second time in a different epoch.
+    Two further changes are Finale's own and not part of the edit. Selector 13 word 1 moves
+    from 1024 to 4096, which belongs to no field this reader maps, and the lyric baseline
+    details spaced 40 apart become spaced 48 apart. Both are recorded rather than explained.
+    The companion also moves the `oneEntryEnd` connection's horizontal offset from 42 to 44,
+    tracking Push. This era stores no connection table, so that is Finale 27 synthesizing one;
+    the reader keeps the pinned baseline's 42 because a single specimen cannot distinguish the
+    formula from several others that fit it.

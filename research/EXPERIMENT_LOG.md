@@ -657,10 +657,52 @@
   giving five of nine styles a vertical offset of 5 and a sixth an offset of 1 — a second non-default specimen for a
   collection that otherwise rested on one Finale 2006 document. It also renumbered two font definitions. Neither was
   asked for, and both are recorded in the fixture's provenance rather than treated as noise.
-- **Next evidence:** a Finale 2012 save with the checkbox *cleared*. Every tracked F2012 fixture sits on the ignored
-  side, so the word-4-set read path is exercised only by a synthetic record and by corpus documents that cannot be
-  published.
+- **Follow-up: the checkbox-cleared save arrived and confirmed the corpus prediction exactly.**
+  `F2012-lyropts-noign-punct.mus` moves byte 8 of class `0x0047` from 0 to 1 and moves no other word of that record,
+  and its companion gains `<lyricUseEdgePunctuation/>`. This is the rarer kind of confirmation: the mapping was
+  derived from 1,189 companions and a negative control *before* any fixture could exercise it, and the controlled
+  save then landed on the predicted byte. It is also the only published document anywhere with the switch cleared,
+  so the word-set path now has a real fixture instead of a synthetic record.
+- **The pair separates two things that looked like one.** Ignoring is off in the new fixture and its list is stock,
+  so its record stays twelve bytes, while the earlier fixture keeps ignoring on and grows to twenty-four. Finale
+  writes the tail on the **list** differing from stock, not on the switch being touched.
+- **Next evidence:** two corpus documents ignore punctuation while carrying no `<lyricPunctuationToIgnore>` element,
+  which neither fixture explains. A Finale 2012 save clearing the list entirely, with ignoring left on, would say
+  whether an empty list is representable.
 - **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/reader_tests.cpp`, `tests/mapping_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
+  [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
+
+## 2026-08-17 — Lift and Push, and a six-group correlation that was a coincidence
+
+- **Question:** The Coda-banner epoch recovered nothing at all for `LyricOptions`. The repository owner reported
+  that its dialog exposes exactly two lyric settings, word extension "Lift" and "Push", and that Finale 3.7.2 adds
+  hyphen spacing and line thickness to them. Where are they?
+- **Method:** Two controlled one-variable saves, `F100-wext-push-6-lift-5.mus` and `F372-lyricopts-changed.mus`,
+  each with a Finale 27 companion and an ETF, diffed at record granularity against their baselines.
+- **Observation:** Lift is **selector `29` word 5** and Push is **selector `30` word 5**, and both exist in *every*
+  epoch including the Coda banner. The Finale 1.0.0 pair moves those two words and no other word in the file; its
+  companion reads 5 and 6 and its ETF prints the same two rows. The Finale 3.7.2 pair moves four words -- adding
+  selector `15` word 1 for hyphen spacing and selector `67` word 5 for line thickness -- and its companion agrees
+  with all four. Every previously tracked fixture agrees with its companion on both fields across all four epochs.
+- **Conclusion: confirmed on three independent representations**, and the Coda-banner epoch now recovers exactly
+  what its dialog exposes rather than nothing. The Finale 3.7.2 save is also the only tracked document anywhere
+  that varies the hyphen separation, which promotes selector `15` word 1 from consistent-everywhere to confirmed.
+- **A recorded correlation was a coincidence, and this is the lesson worth keeping.** Pre-Finale-2004 documents
+  whose companions show a vertical offset of 1 rather than 4 had looked as though the value tracked the
+  word-extension syllable positioning bit: six fixture groups agreed and no other record separated them. It was
+  never a rule. Those documents store 1 in selector 29. The correlation was convincing for exactly as long as the
+  real field was missing, and it was retired by a controlled save in the era with the fewest settings to confound
+  it -- not by a better test on the same data.
+- **It also replaced a derivation with a read.** The class-level offsets had been taken from selector `55`'s first
+  element, which does not exist before Finale 2004; they now come from 29 and 30 in every era, and where selector 55
+  is absent the starting connection takes those values, as Finale 27 does.
+- **One synthesis deliberately not reproduced:** the companion moves the `oneEntryEnd` element's horizontal offset
+  with Push, 42 to 44. A single specimen cannot distinguish that formula from others that fit, so the baseline's 42
+  stands and the difference is intended.
+- **Unexplained and recorded rather than smoothed over:** the Finale 3.7.2 save also moves selector `13` word 1 from
+  1024 to 4096, which belongs to no field this reader maps, and respaces the lyric baseline details from 40 to 48.
+- **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/reader_tests.cpp`,
   [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
   [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
 

@@ -37,6 +37,14 @@ constexpr std::uint32_t smartHyphenSlot = 5;
 
 constexpr std::uint16_t wordExtConnectSelector = 55;
 
+// The Lyric Options dialog's word-extension "Lift" and "Push", which musxdom spells as
+// wordExtVertOffset and wordExtHorzOffset. Each has a numeric global of its own and word 5 of
+// it, in every epoch including the Coda banner -- so unlike the rest of this class they need no
+// gate at all beyond the record being present.
+constexpr std::uint16_t wordExtLiftSelector = 29;
+constexpr std::uint16_t wordExtPushSelector = 30;
+constexpr std::uint32_t wordExtOffsetSlot = 5;
+
 constexpr std::uint16_t wordExtSelector = 57;
 constexpr std::uint32_t smartHyphenStartSlot = 0;
 constexpr std::uint32_t wordExtMinLengthSlot = 2;
@@ -533,18 +541,43 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
                 connect.blockOffset, connect.decodedOffset);
         }
 
-        // musxdom keeps the starting connection's two offsets twice: once as that connection's
-        // own, and once as the class-level word-extension offsets the Lyric Options dialog
-        // shows. The record states them once. The Finale 2006 fixture is what shows the two are
-        // the same value rather than merely equal by default: it stores 8 where every other
-        // tracked document stores 4, and its companion moves both spellings together.
-        const auto starting = connectStyleFor(target, LyricConnectType::DefaultStart);
-        target->wordExtHorzOffset = starting->xOffset;
-        target->wordExtVertOffset = starting->yOffset;
-        reportLyricField(report, "wordExtHorzOffset", ValueOrigin::LegacyMus,
-            target->wordExtHorzOffset, connect.blockOffset, connect.decodedOffset);
+    }
+
+    // "Lift" and "Push" have homes of their own on selectors 29 and 30, word 5 of each, and
+    // those homes exist in **every** epoch -- which is what makes them the only fields of this
+    // class a Coda-banner document can supply. `tests/evidence/F100/F100-wext-push-6-lift-5.*`
+    // is the controlled Finale 1.0.0 pair that names them: it moves selector 29 word 5 from 4
+    // to 5 and selector 30 word 5 from 4 to 6, moves no other word in the file, and its
+    // companion reads 5 and 6. Its ETF prints the same two rows.
+    //
+    // Every tracked fixture agrees across all four epochs, and the pair also explains something
+    // that had been recorded as an open correlation: pre-Finale-2004 documents whose companions
+    // show a vertical offset of 1 rather than 4 simply store 1 here. That looked like it
+    // tracked the word-extension positioning bit, and it never did.
+    const auto lift = readGlobalWords(index, profile, wordExtLiftSelector);
+    if (lift.present) {
+        target->wordExtVertOffset = wordAt(lift.words, wordExtOffsetSlot);
         reportLyricField(report, "wordExtVertOffset", ValueOrigin::LegacyMus,
-            target->wordExtVertOffset, connect.blockOffset, connect.decodedOffset);
+            target->wordExtVertOffset, lift.blockOffset, lift.decodedOffset);
+    }
+    const auto push = readGlobalWords(index, profile, wordExtPushSelector);
+    if (push.present) {
+        target->wordExtHorzOffset = wordAt(push.words, wordExtOffsetSlot);
+        reportLyricField(report, "wordExtHorzOffset", ValueOrigin::LegacyMus,
+            target->wordExtHorzOffset, push.blockOffset, push.decodedOffset);
+    }
+
+    // musxdom keeps the same two numbers twice: as the class-level pair above and again as the
+    // starting connection's own offsets. A source from Finale 2004 on states them twice as
+    // well, in selector 55's first element, and the two agree in every fixture that has both.
+    // Before selector 55 exists there is no connection table to read, so the starting element
+    // takes the dialog's values -- which is what Finale 27 does with these documents, and what
+    // the Finale 1.0.0 pair shows: its companion moves the defaultStart offsets to 6 and 5
+    // along with the class-level pair.
+    if (!storesWordExtConnectTable(index, profile) && (lift.present || push.present)) {
+        const auto starting = connectStyleFor(target, LyricConnectType::DefaultStart);
+        starting->xOffset = target->wordExtHorzOffset;
+        starting->yOffset = target->wordExtVertOffset;
     }
 
     // The word-extension line width predates its own record. A Coda-banner document has no

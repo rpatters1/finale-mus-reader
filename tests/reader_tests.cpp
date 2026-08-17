@@ -1454,19 +1454,19 @@ void testLyricOptionsRecovery()
     // and their companions show exactly what the reader asserts for both.
     const Expected fixtures[] = {
         {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner,
-            144, 224, false, 4, 1},
+            144, 224, false, 4, 4},
         {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner,
-            144, 224, false, 4, 1},
+            144, 224, false, 4, 4},
         {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy,
-            144, 118, false, 4, 1},
+            144, 118, false, 4, 4},
         {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy,
-            144, 118, false, 4, 1},
+            144, 118, false, 4, 4},
         {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy,
             144, 118, true, 4, 1},
         // The one tracked document that clears the "use this positioning" bit while carrying
         // the selector, which is what separates the bit from the record's mere presence.
         {"evidence/F2000/F2000-multilayer.mus", "Finale 2000 multilayer",
-            FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 1},
+            FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 4},
         {"evidence/F2002/F2002-baseline.mus", "Finale 2002", FormatEpoch::DclLegacy,
             144, 118, true, 4, 1},
         {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy,
@@ -1499,6 +1499,13 @@ void testLyricOptionsRecovery()
             wrong("word extension horizontal offset"));
         expect(lyrics->wordExtVertOffset == fixture.wordExtVertOffset,
             wrong("word extension vertical offset"));
+        // "Lift" and "Push" have homes of their own on selectors 29 and 30 in every epoch, so
+        // these two are the only fields of this class a Coda-banner document supplies.
+        expect(field(result, "options.lyricOptions.wordExtVertOffset").origin
+                    == ValueOrigin::LegacyMus
+                && field(result, "options.lyricOptions.wordExtHorzOffset").origin
+                    == ValueOrigin::LegacyMus,
+            wrong("word extension offset provenance"));
         // The four alignments never vary across the tracked fixtures, but the legacy list is
         // in neither musxdom's order nor its reverse, so an untranslated value would show up
         // here as `left` where the companion says `center`.
@@ -1561,6 +1568,70 @@ void testLyricOptionsRecovery()
                    }),
             wrong("alternate hyphen font, which the reader reported without importing"));
     }
+
+    // The controlled Finale 1.0.0 pair that names "Lift" and "Push". It moves selector 29
+    // word 5 from 4 to 5 and selector 30 word 5 from 4 to 6 and moves no other word in the
+    // file, so it is what separates these two from every other value the era stores. Before
+    // it, the Coda-banner epoch recovered nothing at all for this class.
+    const auto lift = read("evidence/F100/F100-wext-push-6-lift-5.mus");
+    const auto liftLyrics = lift.document->getOptions()->get<Lyrics>();
+    expect(liftLyrics->wordExtVertOffset == 5 && liftLyrics->wordExtHorzOffset == 6,
+        "The Coda-banner lift and push were not read from selectors 29 and 30");
+    // With no selector 55 in this era, the starting connection takes the dialog's own values,
+    // which is what the companion shows.
+    expect(liftLyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->xOffset == 6
+            && liftLyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
+        "The Coda-banner starting connection did not take the recovered lift and push");
+    // Its sibling holds 4 and 4, so the pair discriminates rather than merely agreeing with a
+    // default that happens to match.
+    const auto liftBase = read("evidence/F100/F100-baseline.mus");
+    expect(liftBase.document->getOptions()->get<Lyrics>()->wordExtVertOffset == 4
+            && liftBase.document->getOptions()->get<Lyrics>()->wordExtHorzOffset == 4,
+        "The Coda-banner baseline did not read its own lift and push");
+
+    // Finale 3.7.2 exposes two lyric settings the Coda banner does not -- hyphen spacing and
+    // word extension line thickness -- and this fixture moves all four of the era's options at
+    // once. It is the only tracked document that varies the hyphen separation anywhere, and it
+    // confirms lift and push a second time in a different epoch. Its ETF prints the same rows.
+    const auto f372opts = read("evidence/F372/F372-lyricopts-changed.mus");
+    const auto f372Lyrics = f372opts.document->getOptions()->get<Lyrics>();
+    expect(f372Lyrics->maxHyphenSeparation == 157 && f372Lyrics->wordExtLineWidth == 134
+            && f372Lyrics->wordExtVertOffset == 5 && f372Lyrics->wordExtHorzOffset == 6,
+        "The Finale 3.7.2 four-option save was not read from selectors 15, 29, 30 and 67");
+    for (const char* target : {"options.lyricOptions.maxHyphenSeparation",
+             "options.lyricOptions.wordExtLineWidth", "options.lyricOptions.wordExtVertOffset",
+             "options.lyricOptions.wordExtHorzOffset"}) {
+        expect(field(f372opts, target).origin == ValueOrigin::LegacyMus,
+            std::string("A Finale 3.7.2 lyric option was not reported as read: ") + target);
+    }
+    // The era stores no connection table, so the starting connection takes the dialog's own
+    // values, as its companion does. Its `oneEntryEnd` is the deliberate difference: the
+    // companion moves that element's horizontal offset with Push, 42 to 44, and this reader
+    // keeps the pinned baseline's 42 rather than reproducing a formula one specimen cannot
+    // distinguish from several others. See FORMAT_NOTES.
+    expect(f372Lyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->xOffset == 6
+            && f372Lyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
+        "The Finale 3.7.2 starting connection did not take the recovered lift and push");
+    expect(f372Lyrics->wordExtConnectStyles.at(ConnectType::OneEntryEnd)->xOffset == 42,
+        "The reader reproduced a synthesized one-entry offset instead of keeping the baseline");
+
+    // The controlled one-variable proof for selector 57 word 4. Every other tracked Finale
+    // 2012 fixture leaves "Ignore Syllable Edge Punctuation" on, so this is the only published
+    // document anywhere that exercises the word set rather than clear: it moves byte 8 of
+    // class 0x0047 from 0 to 1, nothing else in that record moves, and its companion gains
+    // <lyricUseEdgePunctuation/>.
+    const auto noIgnore = read("evidence/F2012/F2012-lyropts-noign-punct.mus");
+    const auto noIgnoreLyrics = noIgnore.document->getOptions()->get<Lyrics>();
+    expect(noIgnoreLyrics->lyricUseEdgePunctuation,
+        "A Finale 2012 document with the ignore switch cleared did not read as not-ignored");
+    expect(field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").origin
+                == ValueOrigin::LegacyMus
+            && field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").rawValue == 1,
+        "The cleared ignore switch was not reported as read from selector 57 word 4");
+    // Its list is the stock one, so the record carries no tail even though ignoring is off.
+    expect(field(noIgnore, "options.lyricOptions.lyricPunctuationToIgnore").origin
+            == ValueOrigin::Finale27Default,
+        "A document with no punctuation tail was reported as carrying one");
 
     // The ignore list is a variable-length tail on selector 57, written only when it is not
     // the stock set. The controlled fixture sets it to `#@%&`, four characters chosen to share
@@ -1648,7 +1719,7 @@ void testLyricOptionsRecovery()
     const auto f100Start = f100Connect.find(ConnectType::DefaultStart);
     expect(f100Start != f100Connect.end() && f100Start->second
             && f100Start->second->connectIndex == ConnectIndex::LyricRightBottom
-            && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 1,
+            && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 4,
         "The Coda-era selector 55 was read as the word extension connection table");
     expect(std::none_of(f100.report.fields.begin(), f100.report.fields.end(),
                [](const finale_mus_reader::FieldInfo& info) {

@@ -2023,6 +2023,8 @@ one boundary:
 | Selector | Zlib class | Arrives | Carries |
 |---|---|---|---|
 | `15` | `0x001d` | present in every era; word 1 usable from Finale 3.x | `maxHyphenSeparation` |
+| `29` | `0x002b` | **every era, including the Coda banner** | `wordExtVertOffset`, the dialog's "Lift" |
+| `30` | `0x002c` | **every era, including the Coda banner** | `wordExtHorzOffset`, the dialog's "Push" |
 | `35` | `0x0031` | present in every era; word 5 usable from Finale 2004 | `useSmartHyphens` |
 | `55` | `0x0045` | Finale 2004 | the nine word-extension connection styles |
 | `57` | `0x0047` | Finale 2004 | `smartHyphenStart`, `wordExtMinLength`, `wordExtOffsetToNotehead` |
@@ -2055,9 +2057,39 @@ difference: that enum has no dotted entry, which is why its `duration` sits one 
 it. The records and the companions agree with each other, so they govern.
 
 musxdom also keeps the **starting connection's two offsets twice**, once as that connection's own and once as the
-class-level `wordExtHorzOffset` and `wordExtVertOffset` the Lyric Options dialog shows. The record states them once.
-The same Finale 2006 fixture is what shows they are one value rather than two that happen to agree: it stores 8
-where every other tracked document stores 4, and its companion moves both spellings together.
+class-level `wordExtHorzOffset` and `wordExtVertOffset` the Lyric Options dialog shows. The Finale 2006 fixture
+shows they are one value rather than two that happen to agree: it stores 8 where every other tracked document
+stores 4, and its companion moves both spellings together.
+
+#### Lift and Push, the only lyric values the earliest era stores
+
+**Confirmed on three representations, in every epoch.** The dialog's word-extension "Lift" and "Push" have numeric
+globals of their own — selector `29` word 5 and selector `30` word 5 — and unlike everything else in this class
+those exist in **every** era including the Coda banner. `tests/evidence/F100/F100-wext-push-6-lift-5.*` names them:
+a Finale 1.0.0 save moving Push to 6 and Lift to 5 moves selector 29 word 5 from 4 to 5 and selector 30 word 5 from
+4 to 6, moves no other word in the file, and its companion reads 5 and 6. Its ETF prints the same two rows.
+`tests/evidence/F372/F372-lyricopts-changed.*` repeats it in the uncompressed epoch. Every tracked fixture agrees
+with its companion on both fields across all four epochs.
+
+Three things follow.
+
+**The Coda-banner epoch is no longer empty for this class.** It supplies exactly these two fields and nothing else,
+which is what its dialog exposes: Lift and Push are the whole of its lyric options. Finale 3.7.2 adds hyphen
+spacing and word extension line thickness to them, and the four-option fixture confirms all four at once — it is
+also the only tracked document anywhere that varies the hyphen separation, which promotes selector `15` word 1
+from consistent-everywhere to confirmed.
+
+**A recorded open correlation was wrong and is retired.** Pre-Finale-2004 documents whose companions show a
+vertical offset of 1 rather than 4 had looked as though the value tracked the word-extension positioning bit. It
+never did: those documents store 1 in selector 29. The correlation held across six fixture groups purely because
+nothing else in the sample separated them, which is a fair warning about how convincing a coincidence can look
+when the real field has not been found yet.
+
+**Where selector 55 does not exist, the starting connection takes the dialog's values.** That is what Finale 27
+does with such documents and what both new companions show. One further synthesis is deliberately *not*
+reproduced: the companion also moves the `oneEntryEnd` connection's horizontal offset with Push, 42 to 44 in the
+Finale 3.7.2 pair. A single specimen cannot distinguish that formula from several others that fit it, so the
+reader keeps the pinned baseline's 42 and the difference is intended.
 
 The **syllable position table** at selector `87` is four three-word positions across two fixed rows, again in
 musxdom's own order: others (`default`), word extension, first syllable, start of system. Its alignment and
@@ -2103,6 +2135,13 @@ The boundary is **Finale 2012 itself**, which is later than the class's other bo
 
 So the word exists for eight releases before it means anything, and reading it early would switch edge punctuation
 off for all 487 of those documents against every one of their companions. That is what the version gate prevents.
+
+`tests/evidence/F2012/F2012-lyropts-noign-punct.mus` closes it with a controlled one-variable save, and confirms the
+mapping predicted from the corpus before the fixture existed: clearing the checkbox moves byte 8 of class `0x0047`
+from 0 to 1, no other word of that record moves, and the companion gains `<lyricUseEdgePunctuation/>`. It is the only
+published document anywhere with the switch cleared, so it is the sole fixture exercising the word **set** rather
+than clear; every other tracked Finale 2012 fixture sits on the ignored side. It also shows the switch and the tail
+are independent — ignoring is off there and the list is stock, so the record stays twelve bytes.
 **It is a version gate rather than a marker because nothing structural distinguishes the two cases**: the record is
 twelve bytes in Finale 2007 and in Finale 2012 alike, so its shape says nothing and only the release does. It is
 bounded inside the zlib epoch and fails closed onto the pre-2012 behaviour, which is right for every release but one.
@@ -2147,6 +2186,9 @@ The reader takes the tail from word 6 to the first zero word and converts it wit
 in twelve-byte chunks, and the terminator rather than the chunking is what the decode depends on. Astral characters
 would arrive as UTF-16 surrogate pairs and are handled, though nothing exercises that: every character of the stock
 set and of the fixture is in the basic multilingual plane.
+
+**Finale writes the tail on the list, not on the switch.** `F2012-lyropts-noign-punct.mus` turns ignoring off and
+leaves the list stock, and its record stays twelve bytes; the tail appears only when the list itself differs.
 
 **A document with no tail keeps the stock list, and the reader does nothing about it.** The pinned baseline states no
 `<lyricPunctuationToIgnore>` either, and musxdom's `LyricOptions::integrityCheck` supplies exactly that set for an

@@ -424,19 +424,37 @@ The fixture repaid itself twice over. Finale rewrote the word-extension connecti
 giving five of nine styles a vertical offset of 5 and a sixth an offset of 1, so it is also a second non-default
 specimen for a collection that otherwise rested on one Finale 2006 document.
 
-**Still wanted, and cheap:** a Finale 2012 save with the checkbox *cleared*. Every F2012 fixture sits on the ignored
-side, so the read path for word 4 set is exercised only by a synthetic record in `tests/mapping_tests.cpp` and by
-corpus documents that cannot be published. Two corpus documents also ignore punctuation while carrying no element
-at all, which is unexplained; a save that clears the list entirely would say whether an empty list is representable.
+**Supplied and analyzed:** `F2012-lyropts-noign-punct.mus`, the checkbox cleared and nothing else. It confirms the
+mapping the corpus had predicted before the fixture existed — byte 8 of class `0x0047` moves 0 to 1, no other word
+of that record moves — and it is the only published document anywhere with the switch cleared, so it is the sole
+fixture exercising the word set rather than clear. It also shows the switch and the tail are independent: ignoring
+is off and the list is stock, and the record stays twelve bytes.
 
-### L3 — Proposed — the word-extension vertical offset in pre-2004 documents
+**One question this pair leaves open.** Two corpus documents ignore punctuation while carrying no
+`<lyricPunctuationToIgnore>` element at all, which neither fixture explains. A Finale 2012 save that clears the
+punctuation list *entirely*, with ignoring left on, would say whether an empty list is representable at all or
+whether those two documents mean something else.
 
-In documents older than selector `55`, Finale 27 synthesizes the starting connection's vertical offset as 1 when
-the word-extension syllable positioning bit is set and 4 when it is not. Six fixture groups agree and nothing
-else separates them, which is enough to notice and not enough to implement; the reader leaves those documents at
-the baseline's 1. A Finale 2000 or 2002 save that toggles "Syllables with Word Extensions" positioning alone,
-against an otherwise identical baseline, would show whether the two really move together or whether the
-correlation is an accident of the fixture set.
+### L3 — Analyzed — the pre-2004 vertical offset, and a correlation that was a coincidence
+
+**Closed, and the hypothesis it rested on was wrong.** The request supposed that Finale 27 synthesized the starting
+connection's vertical offset as 1 or 4 according to the word-extension syllable positioning bit, because six fixture
+groups agreed and nothing else separated them. There was no rule: those documents simply store the value in
+selector `29` word 5, which this study had not yet found.
+
+`tests/evidence/F100/F100-wext-push-6-lift-5.*` names it, along with its horizontal partner on selector `30`. Both
+exist in every era including the Coda banner, and they are the only lyric values that era stores — Lift and Push
+are the whole of its dialog. `tests/evidence/F372/F372-lyricopts-changed.*` confirms them again in the uncompressed
+epoch alongside hyphen spacing and line thickness, the two settings Finale 3.7.2 adds.
+
+Worth keeping as a caution: a correlation across six groups looked like a rule for as long as the real field was
+missing. The fix was not a better statistical test but a controlled save in the era that had the fewest options to
+confound it.
+
+**One residue.** Where the era stores no connection table, Finale 27 also moves the `oneEntryEnd` element's
+horizontal offset with Push — 42 to 44 in the Finale 3.7.2 pair. One specimen cannot distinguish that from several
+formulas that fit it, so the reader keeps the pinned baseline's 42 and the difference is intended. A second save
+moving Push to a different value would settle it, and is low priority.
 
 ## Status legend
 

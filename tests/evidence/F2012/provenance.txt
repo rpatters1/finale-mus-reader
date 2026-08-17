@@ -93,3 +93,19 @@ F2012-lyric-punct.mus
     nine styles and 1 on a sixth, which makes this a welcome second specimen for a mapping
     that otherwise rests on one Finale 2006 fixture. The font definition table also renumbered
     Lucida Grande and Symbol from comparators 11 and 13 to 15 and 16.
+
+F2012-lyropts-noign-punct.mus
+    sha256 4c44975bd5900b466d02eaa493934e1cc4409ea9850d0b5b803666c1862e132c
+    From F2012-baseline, "Ignore Syllable Edge Punctuation" cleared and nothing else asked
+    for. The controlled one-variable proof of selector 57 word 4: byte 8 of class 0x0047 moves
+    from 0 to 1, no other word of that record moves, and the companion gains
+    <lyricUseEdgePunctuation/>. Every other tracked Finale 2012 fixture leaves the setting on,
+    so this is the only published document anywhere that exercises the word set rather than
+    clear; before it, that path was covered only by a synthetic record and by corpus documents
+    that cannot be published.
+    It also shows the tail and the switch are independent. Ignoring is off here and the list is
+    the stock one, so the record stays twelve bytes: Finale writes a punctuation tail only when
+    the list itself differs from the stock set, not whenever the switch is touched.
+    As with F2012-lyric-punct, Finale normalized two things the edit did not ask for as the
+    dialog closed -- the word extension connection table gained the same vertical offsets, and
+    Lucida Grande and Symbol renumbered from comparators 11 and 13 to 15 and 16.
