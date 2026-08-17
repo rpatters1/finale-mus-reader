@@ -379,6 +379,65 @@ is big-endian, so "stored opposite to the container" and "always little-endian" 
 low priority: the reader gives the same answer under either explanation, and no such document is known to be
 available.
 
+### L1 — Proposed — the eight lyric fields nothing varies
+
+**The highest-value single request in the class, and the smallest.** Eight `LyricOptions` fields have no located
+storage: `useSmartWordExtensions`, `wordExtNeedUnderscore`, `lyricPunctuationToIgnore`, `lyricAutoNumType`, and the
+three `showAutoNumbersOn…` flags. Every one is invariant across all 69 tracked fixtures *and* absent from the
+framework's lyrics preference map, so neither source can locate them and no corpus survey of any size will either —
+this is the `82`/`83` situation from
+[T2](#t2--suppliedanalyzed--the-four-text-fields-no-corpus-document-varies) again.
+
+**Three fields were on this list and have been struck off without a fixture**, because the repository owner supplied
+the boundary instead: `hyphenChar`, `useAltHyphenFont` and `altHyphenFont` all postdate Finale 2012, the last
+release this reader opens, so no legacy file can state them and no save could ever have found them. It is worth
+noticing how much cheaper the answer was than the save it replaced: the corpus could only ever have shown that
+nothing varies, which is what an absent option and an unfound one look like alike.
+
+One Finale 2005 or 2006 save, from the same baseline as the existing `F2005-*` fixtures, changing **only** the
+Lyric Options dialog and moving as many of the remaining eight as the dialog exposes at once: switch off "Use Smart
+Word Extensions", switch on "Only Create on Lyrics With Underscores", and set automatic lyric numbers to "Keep with
+First Syllable" so `lyricAutoNumType` leaves `align`. Save the MUS and the ETF. Moving several at once is
+acceptable here rather than sloppy, because none of them is currently located at all: the first pass only needs to
+find which selectors move, and a second single-field save can separate any two that land in one word. **Check
+first which of the eight that era's dialog actually exposes** — any it does not is a candidate for the same
+after-2012 answer the three struck-off fields got, and asking is cheaper than saving.
+
+### L2 — Supplied/Analyzed — the edge punctuation bit and the punctuation set, both closed
+
+**Both fields are now mapped, and neither could have been closed by a corpus.**
+
+`lyricUseEdgePunctuation` is selector `57` word 4, class `0x0047` byte 8, live from Finale 2012. That one came from
+the reference corpus rather than a fixture: Finale 2012 is the only release whose documents vary, thirteen record
+bits partition that cohort exactly because the split is really born-in-2012 against upgraded-into-2012, and a
+negative control in Finale 2008 cuts those thirteen to one candidate.
+
+`lyricPunctuationToIgnore` needed the fixture, and the request predicted the wrong shape. It is **not** a cmper into
+a text pool but a **variable-length tail on the same selector 57 record**, written only when the list differs from
+the stock set — which is exactly why the corpus was silent: the element takes two values across all 1,189
+companions, absent or stock, and the stock set appears in no Finale 2012 file at all.
+`tests/evidence/F2012/F2012-lyric-punct.mus` sets it to `#@%&` and the record grows from twelve bytes to
+twenty-four, the six scalars unchanged and the four characters following as 16-bit code units and a zero. An absent
+tail means the stock list, which musxdom's `integrityCheck` already supplies.
+
+The fixture repaid itself twice over. Finale rewrote the word-extension connection table as the dialog closed,
+giving five of nine styles a vertical offset of 5 and a sixth an offset of 1, so it is also a second non-default
+specimen for a collection that otherwise rested on one Finale 2006 document.
+
+**Still wanted, and cheap:** a Finale 2012 save with the checkbox *cleared*. Every F2012 fixture sits on the ignored
+side, so the read path for word 4 set is exercised only by a synthetic record in `tests/mapping_tests.cpp` and by
+corpus documents that cannot be published. Two corpus documents also ignore punctuation while carrying no element
+at all, which is unexplained; a save that clears the list entirely would say whether an empty list is representable.
+
+### L3 — Proposed — the word-extension vertical offset in pre-2004 documents
+
+In documents older than selector `55`, Finale 27 synthesizes the starting connection's vertical offset as 1 when
+the word-extension syllable positioning bit is set and 4 when it is not. Six fixture groups agree and nothing
+else separates them, which is enough to notice and not enough to implement; the reader leaves those documents at
+the baseline's 1. A Finale 2000 or 2002 save that toggles "Syllables with Word Extensions" positioning alone,
+against an otherwise identical baseline, would show whether the two really move together or whether the
+correlation is an accident of the fixture set.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

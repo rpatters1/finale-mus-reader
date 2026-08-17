@@ -1423,6 +1423,260 @@ void testMultimeasureRestRecovery()
         "The Finale 97 automatic-update flag was read from the wrong word");
 }
 
+// LyricOptions is spread over six numeric globals that arrive at four different releases, so
+// each is gated by its own record rather than by one boundary. Every expected value below is
+// what that fixture's exact Finale 27 companion carries.
+void testLyricOptionsRecovery()
+{
+    using Lyrics = musx::dom::options::LyricOptions;
+    using SyllableType = Lyrics::SyllablePosStyleType;
+    using ConnectType = Lyrics::WordExtConnectStyleType;
+    using ConnectIndex = Lyrics::WordExtConnectIndex;
+    using AlignJustify = musx::dom::AlignJustify;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+
+    struct Expected
+    {
+        const char* path;
+        const char* era;
+        FormatEpoch epoch;
+        int maxHyphenSeparation;
+        int wordExtLineWidth;
+        bool optionalPositionsOn;
+        int wordExtHorzOffset;
+        int wordExtVertOffset;
+    };
+    // The line width is the one scalar the tracked fixtures vary, and it varies in all three
+    // epochs that store it. The Coda-banner pair state neither it nor the syllable positions,
+    // and their companions show exactly what the reader asserts for both.
+    const Expected fixtures[] = {
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner,
+            144, 224, false, 4, 1},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner,
+            144, 224, false, 4, 1},
+        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy,
+            144, 118, false, 4, 1},
+        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy,
+            144, 118, false, 4, 1},
+        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy,
+            144, 118, true, 4, 1},
+        // The one tracked document that clears the "use this positioning" bit while carrying
+        // the selector, which is what separates the bit from the record's mere presence.
+        {"evidence/F2000/F2000-multilayer.mus", "Finale 2000 multilayer",
+            FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 1},
+        {"evidence/F2002/F2002-baseline.mus", "Finale 2002", FormatEpoch::DclLegacy,
+            144, 118, true, 4, 1},
+        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy,
+            144, 224, true, 4, 1},
+        // Finale 2006 moves the starting connection's horizontal offset alone, which is what
+        // shows the class-level offsets are that connection's rather than a coincidence.
+        {"evidence/F2006/F2006-embedded-tif.mus", "Finale 2006", FormatEpoch::DclLegacy,
+            144, 224, true, 8, 1},
+        // The zlib era in both byte orders.
+        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy,
+            144, 224, true, 4, 1},
+        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy,
+            144, 115, true, 4, 1},
+    };
+    for (const auto& fixture : fixtures) {
+        const auto result = read(fixture.path);
+        expect(result.report.formatEpoch == fixture.epoch,
+            std::string("The fixture for ") + fixture.era + " is not the expected epoch");
+        const auto lyrics = result.document->getOptions()->get<Lyrics>();
+        expect(static_cast<bool>(lyrics),
+            std::string("No lyric options for ") + fixture.era);
+        const auto wrong = [&](const char* name) {
+            return std::string("The lyric ") + name + " was wrong for " + fixture.era;
+        };
+        expect(lyrics->maxHyphenSeparation == fixture.maxHyphenSeparation,
+            wrong("maximum hyphen separation"));
+        expect(lyrics->wordExtLineWidth == fixture.wordExtLineWidth,
+            wrong("word extension line width"));
+        expect(lyrics->wordExtHorzOffset == fixture.wordExtHorzOffset,
+            wrong("word extension horizontal offset"));
+        expect(lyrics->wordExtVertOffset == fixture.wordExtVertOffset,
+            wrong("word extension vertical offset"));
+        // The four alignments never vary across the tracked fixtures, but the legacy list is
+        // in neither musxdom's order nor its reverse, so an untranslated value would show up
+        // here as `left` where the companion says `center`.
+        const auto style = [&](SyllableType type) {
+            const auto found = lyrics->syllablePosStyles.find(type);
+            expect(found != lyrics->syllablePosStyles.end() && found->second,
+                wrong("syllable position style"));
+            return found->second;
+        };
+        expect(style(SyllableType::Default)->align == AlignJustify::Center
+                && style(SyllableType::Default)->justify == AlignJustify::Center,
+            wrong("default syllable position"));
+        expect(style(SyllableType::WordExt)->align == AlignJustify::Left
+                && style(SyllableType::WordExt)->justify == AlignJustify::Left,
+            wrong("word extension syllable position"));
+        expect(style(SyllableType::First)->align == AlignJustify::Center
+                && style(SyllableType::First)->justify == AlignJustify::Left,
+            wrong("first syllable position"));
+        expect(style(SyllableType::SystemStart)->align == AlignJustify::Center
+                && style(SyllableType::SystemStart)->justify == AlignJustify::Left,
+            wrong("system start syllable position"));
+        for (const auto type :
+                {SyllableType::WordExt, SyllableType::First, SyllableType::SystemStart}) {
+            expect(style(type)->on == fixture.optionalPositionsOn,
+                wrong("optional syllable positioning switch"));
+        }
+        // Not ignored in any era before Finale 2012, which the pinned baseline says the
+        // opposite of, so every earlier fixture asserts it. A Finale 2012 document reads
+        // selector 57 word 4 instead: all six tracked fixtures clear it, matching companions
+        // that omit the element.
+        const bool isFinale2012 = fixture.epoch == FormatEpoch::ZlibLegacy
+            && result.report.sourceVersion && result.report.sourceVersion->major >= 17;
+        expect(lyrics->lyricUseEdgePunctuation == !isFinale2012,
+            wrong("syllable edge punctuation setting"));
+        expect(field(result, "options.lyricOptions.lyricUseEdgePunctuation").origin
+                == (isFinale2012 ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior),
+            wrong("syllable edge punctuation provenance"));
+
+        // Both settings postdate Finale 2012, so no source of any era states either, but they
+        // are handled differently on purpose. The switch is known false and is asserted even
+        // though the baseline agrees; the character can only come from the baseline, because
+        // restating U+002D in code would duplicate the pinned resource. See
+        // testLyricPostFormatAssertions, which seeds the opposite of both.
+        expect(lyrics->hyphenChar == U'-', wrong("hyphen character"));
+        expect(!lyrics->useAltHyphenFont, wrong("alternate hyphen font switch"));
+        expect(field(result, "options.lyricOptions.hyphenChar").origin
+                == ValueOrigin::Finale27Default,
+            wrong("hyphen character provenance"));
+        expect(field(result, "options.lyricOptions.useAltHyphenFont").origin
+                == ValueOrigin::LegacyBehavior,
+            wrong("alternate hyphen font switch provenance"));
+        // The pinned <lyricOptions> carries no <altHyphenFont>, so the reader declines to
+        // invent one and reports nothing for it. musxdom synthesizes it in integrityCheck,
+        // which has run by the time a caller sees the document.
+        expect(static_cast<bool>(lyrics->altHyphenFont),
+            wrong("alternate hyphen font, which musxdom should have synthesized"));
+        expect(std::none_of(result.report.fields.begin(), result.report.fields.end(),
+                   [](const finale_mus_reader::FieldInfo& info) {
+                       return info.target.find("altHyphenFont.") != std::string::npos;
+                   }),
+            wrong("alternate hyphen font, which the reader reported without importing"));
+    }
+
+    // The ignore list is a variable-length tail on selector 57, written only when it is not
+    // the stock set. The controlled fixture sets it to `#@%&`, four characters chosen to share
+    // nothing with the stock list so that finding them proves where the tail begins.
+    const auto punct = read("evidence/F2012/F2012-lyric-punct.mus");
+    const auto punctLyrics = punct.document->getOptions()->get<Lyrics>();
+    expect(punctLyrics->lyricPunctuationToIgnore == "#@%&",
+        "The custom punctuation list was not read from the selector 57 tail");
+    expect(field(punct, "options.lyricOptions.lyricPunctuationToIgnore").origin
+                == ValueOrigin::LegacyMus
+            && field(punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 4,
+        "The custom punctuation list was not reported as read, with its code unit count");
+    // Its sibling keeps the stock list, which the record does not carry at all. musxdom's
+    // integrityCheck owns that default, so the reader must leave the field empty rather than
+    // state the set a second time.
+    const auto stock = read("evidence/F2012/F2012-baseline.mus");
+    expect(stock.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore
+            == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
+        "A document with no punctuation tail did not fall to musxdom's own default list");
+    expect(field(stock, "options.lyricOptions.lyricPunctuationToIgnore").origin
+            == ValueOrigin::Finale27Default,
+        "An absent punctuation tail was reported as read");
+    // Finale rewrote the word extension connection table when the Lyric Options dialog was
+    // dismissed, so this fixture is a second specimen for it: five of its nine styles carry a
+    // vertical offset of 5 where every other tracked document carries zero.
+    expect(punctLyrics->wordExtConnectStyles.at(ConnectType::DefaultEnd)->yOffset == 5
+            && punctLyrics->wordExtConnectStyles.at(ConnectType::SystemStart)->yOffset == 1,
+        "The rewritten connection table was not read from the punctuation fixture");
+
+    // The connection table itself, from the fixture whose offsets are all distinct. Its
+    // connection points cover all six legacy numbers, and two of the six sit in different
+    // places in musxdom's enum, so a straight cast would swap the system and dotted
+    // attachments.
+    const auto f2006 = read("evidence/F2006/F2006-embedded-tif.mus");
+    const auto connect = f2006.document->getOptions()->get<Lyrics>()->wordExtConnectStyles;
+    struct ExpectedConnection
+    {
+        ConnectType type;
+        ConnectIndex index;
+        int xOffset;
+        int yOffset;
+    };
+    const ExpectedConnection connections[] = {
+        {ConnectType::DefaultStart, ConnectIndex::LyricRightBottom, 8, 1},
+        {ConnectType::DefaultEnd, ConnectIndex::HeadRightLyrBaseline, 0, 5},
+        {ConnectType::SystemStart, ConnectIndex::SystemLeft, 12, 1},
+        {ConnectType::SystemEnd, ConnectIndex::SystemRight, -12, 5},
+        {ConnectType::DottedEnd, ConnectIndex::DotRightLyrBaseline, 0, 5},
+        {ConnectType::DurationEnd, ConnectIndex::DurationLyrBaseline, -8, 5},
+        {ConnectType::OneEntryEnd, ConnectIndex::LyricRightBottom, 46, 5},
+        {ConnectType::ZeroLengthEnd, ConnectIndex::LyricRightBottom, 0, 0},
+        {ConnectType::ZeroOffset, ConnectIndex::HeadRightLyrBaseline, 0, 0},
+    };
+    for (const auto& expected : connections) {
+        const auto found = connect.find(expected.type);
+        expect(found != connect.end() && found->second,
+            "A word extension connection style is missing from the Finale 2006 fixture");
+        expect(found->second->connectIndex == expected.index,
+            "A word extension connection point was translated wrongly");
+        expect(found->second->xOffset == expected.xOffset
+                && found->second->yOffset == expected.yOffset,
+            "A word extension connection offset was read from the wrong word");
+    }
+
+    // Provenance separates the eras where the values cannot. A Coda-banner document states
+    // neither the line width nor the syllable positions, so both must be reported as era
+    // behavior rather than claimed as read or left at a Finale 27 setting that says otherwise.
+    const auto f100 = read("evidence/F100/F100-baseline.mus");
+    expect(field(f100, "options.lyricOptions.wordExtLineWidth").origin
+            == ValueOrigin::LegacyBehavior,
+        "The Coda-era word extension line width was not reported as era behavior");
+    expect(field(f100, "options.lyricOptions.syllablePosStyles[wordExt].on").origin
+            == ValueOrigin::LegacyBehavior,
+        "A Coda-era syllable positioning switch was not reported as era behavior");
+    expect(field(f100, "options.lyricOptions.maxHyphenSeparation").origin
+            == ValueOrigin::Finale27Default,
+        "The Coda-era selector 15 word 1 was claimed as a hyphen separation");
+    // Selector 55 exists in this era and is a different option; reading it as the connection
+    // table would replace nine connection styles with another option's bytes. Those bytes are
+    // 16128 and 16448 in this fixture, so the failure would be loud: no connection point at
+    // all, and offsets of tens of thousands. Nothing is reported for the collection either,
+    // because the capture pass reports only what it reads.
+    const auto f100Connect =
+        f100.document->getOptions()->get<Lyrics>()->wordExtConnectStyles;
+    const auto f100Start = f100Connect.find(ConnectType::DefaultStart);
+    expect(f100Start != f100Connect.end() && f100Start->second
+            && f100Start->second->connectIndex == ConnectIndex::LyricRightBottom
+            && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 1,
+        "The Coda-era selector 55 was read as the word extension connection table");
+    expect(std::none_of(f100.report.fields.begin(), f100.report.fields.end(),
+               [](const finale_mus_reader::FieldInfo& info) {
+                   return info.target.find("wordExtConnectStyles") != std::string::npos;
+               }),
+        "A Coda-era document reported a word extension connection it never stored");
+
+    // Finale 2003 is the last release before the smart-lyric group, and the smart-hyphen word
+    // it does carry is zero. Reading it would switch smart hyphens off for every document of
+    // that era, against every companion.
+    const auto f2003 = read("evidence/F2003/F2003-baseline.mus");
+    const auto f2003Lyrics = f2003.document->getOptions()->get<Lyrics>();
+    expect(f2003Lyrics->useSmartHyphens,
+        "A Finale 2003 document read its smart-hyphen switch from a word its era did not use");
+    expect(field(f2003, "options.lyricOptions.useSmartHyphens").origin
+            == ValueOrigin::Finale27Default,
+        "A pre-Finale-2004 smart-hyphen switch was claimed as read");
+    const auto f2004 = read("evidence/F2004/F2004-baseline.mus");
+    expect(f2004.document->getOptions()->get<Lyrics>()->useSmartHyphens
+            && field(f2004, "options.lyricOptions.useSmartHyphens").origin
+                == ValueOrigin::LegacyMus,
+        "The Finale 2004 smart-hyphen switch was not read from selector 35");
+    expect(f2004.document->getOptions()->get<Lyrics>()->wordExtMinLength == 38
+            && field(f2004, "options.lyricOptions.wordExtMinLength").origin
+                == ValueOrigin::LegacyMus,
+        "The Finale 2004 word extension minimum length was not read from selector 57");
+}
+
 // Selector 24 is the default-font array from well before the DCL era, but the reader used to
 // gate that layout to DCL alone, so every Finale 3.0 through 2000 document reported all 45
 // font options as Finale 27 defaults while its source held 40 of them.
@@ -2128,6 +2382,7 @@ TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
 TEST_CASE("Stem connection capture", "[reader]") { testStemConnectionCapture(); }
 TEST_CASE("Stem scalar recovery", "[reader]") { testStemScalarRecovery(); }
 TEST_CASE("Multimeasure rest recovery", "[reader]") { testMultimeasureRestRecovery(); }
+TEST_CASE("Lyric options recovery", "[reader]") { testLyricOptionsRecovery(); }
 TEST_CASE("Uncompressed font options", "[reader]") { testUncompressedFontOptions(); }
 TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
 TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }

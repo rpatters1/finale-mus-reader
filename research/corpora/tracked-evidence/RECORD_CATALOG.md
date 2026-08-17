@@ -90,7 +90,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0043` | unknown | unknown/options | open | 2007, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0xd00) |
 | `0x0045` | unknown | unknown/options | open | 2007, 2012 | 60 | `mus-86fafceb1ef2ebe2` (0:0xd26) |
 | `0x0046` | unknown | unknown/options | open | 2007, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0xd70) |
-| `0x0047` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xda2) |
+| `0x0047` | unknown | unknown/options | open | 2007, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0xda2) |
 | `0x0048` | unknown | unknown/options | open | 2007, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0xdbc) |
 | `0x0049` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xdd6) |
 | `0x004a` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xdf0) |

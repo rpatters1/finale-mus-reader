@@ -75,3 +75,21 @@ F2012-dblsharp-insert-outside-BMP.mus
     first gives 156777, while the high-word-first order the two trackings use in the same
     element would give 0x64690002, which is not a codepoint. One element therefore holds two
     different 32-bit conventions.
+
+F2012-lyric-punct.mus
+    sha256 fb44a24bd7f81b86c6b84f6c6fe25e7505e9c730d08f953b3871b1cb580bf912
+    From F2012-baseline, the Lyric Options punctuation set changed to `#@%&` with "Ignore
+    Syllable Edge Punctuation" left on. Four characters sharing nothing with the stock set
+    `,.?!;:'"“”‘’`, so finding them proves where the field begins rather
+    than matching a default.
+    This is the only specimen anywhere that carries the list at all. Finale writes it as a
+    variable-length tail on selector 57, class 0x0047, and **only when the list is not the
+    stock one**: the record is twelve bytes in every one of the 1,189 companion-backed corpus
+    documents and in the other five Finale 2012 fixtures, and twenty-four here -- the six
+    scalars unchanged, then the four characters as 16-bit code units and a zero. An absent
+    tail therefore means the stock list, which musxdom's integrityCheck already supplies.
+    Two things changed that the edit did not ask for, both Finale normalizing as the dialog
+    closed. The word extension connection table gained vertical offsets of 5 on five of its
+    nine styles and 1 on a sixth, which makes this a welcome second specimen for a mapping
+    that otherwise rests on one Finale 2006 fixture. The font definition table also renumbered
+    Lucida Grande and Symbol from comparators 11 and 13 to 15 and 16.

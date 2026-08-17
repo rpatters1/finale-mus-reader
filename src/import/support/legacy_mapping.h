@@ -271,6 +271,14 @@ struct SourceProfile
     SourcePlatform platform = SourcePlatform::Unknown;
 };
 
+/// @brief One numeric global's whole payload, in whichever encoding the source uses.
+/// @details A capture pass reads a collection the field tables cannot express, and the two
+/// encodings state the same word stream: the fixed-row epochs spread it over incidences and
+/// the zlib epoch coalesces it into one class record. Dispatching on the epoch here keeps a
+/// capture pass describing its collection rather than restating that relationship.
+[[nodiscard]] GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
+    const SourceProfile& profile, std::uint16_t selector);
+
 /// @brief A decoded mapping value together with the physical row that supplied it.
 struct ResolvedValue
 {

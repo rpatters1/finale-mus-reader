@@ -526,6 +526,144 @@
   `tests/mapping_tests.cpp`, `tools/options_coverage_probe.cpp`, `scripts/options_coverage_report.py`,
   [`FORMAT_NOTES.md`](FORMAT_NOTES.md#multimeasure-rest-defaults).
 
+## 2026-08-17 — LyricOptions: six selectors, four arrival dates, and eleven fields nobody stores
+
+- **Question:** Where does each field of `LyricOptions` live, and how much of it does the distilled framework's
+  `LyricsPrefs` group actually cover?
+- **Method:** Dumped the six candidate selectors from the 69 tracked fixtures with `tools/record_dump` and compared
+  each against the fixture's exact Finale 27 companion, working outward from the zlib era as the most recognizable
+  representation. Read the framework's `_FCEDTLyricsPrefs` struct and `FCLyricsPrefs` accessors read-only for the
+  numberings the corpus could not supply. **No corpus survey was run**; every claim below rests on the fixtures.
+- **Observation — the layout.** Six numeric globals at `65534`, none of them a direct block in the framework's
+  sense, and each arriving at a different release: `15` (word 1, hyphen separation) and `67` (word 5, line width)
+  from Finale 3.x; `87` (four syllable positions over two incidences) from Finale 2000; `55` (nine word-extension
+  connection styles over five incidences) and `57` (three smart-lyric scalars) from Finale 2004; `35` word 5
+  (smart hyphens) usable only from Finale 2004 though the record exists in every era. The zlib era coalesces each
+  through the usual `numericGlobalClass` rule, and both byte orders are exercised by the Finale 2007 and 2012
+  fixtures.
+- **Observation — three orderings, none of which matches musxdom.** The syllable alignment list is
+  `1 = centre, 2 = left, 3 = right` (the framework's `LYRICS_ALIGN_` constants, corroborated by every fixture for
+  1 and 2 and by no fixture at all for 3). The connection point runs `0x10`–`0x15` on the *smart-shape entry
+  connection* scale and orders lyric/head/dot/duration/systemLeft/systemRight, where musxdom puts the two system
+  attachments third and fourth. Bit 15 of each position's flags word is musxdom's `on`.
+- **The two decisive fixtures were already in the tree.** `F2006-embedded-tif.mus` carries all six connection
+  numbers with five distinct vertical offsets and a horizontal offset of 8 where every other fixture has 4; its
+  companion names each point beside the same offsets, which fixes the element layout, the whole numbering, and the
+  fact that `wordExtHorzOffset`/`wordExtVertOffset` are the starting connection's own offsets rather than separate
+  fields. `F2000-multilayer.mus` is the one document that clears the 0x8000 bit for the three optional positions,
+  and the one whose companion omits their `<on/>`.
+- **Why presence rather than a version, and the one place presence is unsafe.** Neither collection has two layouts,
+  so nothing states a layout the way the multimeasure-rest word count does; a document either carries the record or
+  does not, and presence reaches the Coda-era Windows documents that state no version. The exception is selector
+  `55`, which the **Coda-banner era reuses for an unrelated option** — the Finale 1.0.0 and 2.6.3 fixtures store
+  16128 and 16448 in it, and a controlled 1.0.0 stem-options save moves its first two words. That epoch is excluded
+  outright, with the word count as a second guard. Selector `35` word 5 is the other qualified case: it is 0 in
+  every pre-2004 document and 1 after, while every companion of every era says smart hyphens are on, which is what
+  an option arriving switched on looks like from before it existed. Reading it early would have switched smart
+  hyphens off for the whole pre-2004 corpus.
+- **Conclusion: partial, and the negative half is the interesting half.** Twelve fields and both collections are
+  recovered; three more are asserted as `LegacyBehavior` (the optional syllable positions off before selector `87`,
+  the line width 224 before selector `67`, edge punctuation not ignored before Finale 2012). **Eleven fields are
+  read from no era**, and they are invariant across every companion *and* absent from the framework tree, so
+  neither source can separate them. The **Coda-banner epoch recovers nothing from its records for this class**,
+  which is intended: it stores none of the six selectors usably.
+- **Three of the eleven were then settled without a fixture, by the repository owner supplying a version
+  boundary.** `hyphenChar`, `useAltHyphenFont` and `altHyphenFont` all postdate **Finale 2012**, the last release
+  this reader opens, so no `.mus` file of any era has anywhere to put them. Nothing is read for them and nothing is
+  overwritten, so they keep the baseline's values and are reported as `Finale27Default`. This is the second time a
+  boundary the owner knew has closed a question the corpus could only ever have shown as "nothing varies" — which
+  is what an absent option and an unfound one look like alike. Eight remain genuinely open.
+- **Three owner corrections, and the rule they converge on.** `ValueOrigin::LegacyBehavior` marks a value the
+  reader *asserts* on the strength of era knowledge — whether or not the pinned baseline happens to agree, because
+  the baseline states one Finale 27 document's setting while the assertion states a fact about the formats.
+  `Finale27Default` marks a value the reader inherits because it has nothing better. What decides between them is
+  whether the reader writes the value, not whether the value differs from the baseline; `noHorizontalStretch` has
+  always been the worked example and agrees with the baseline.
+- **But a value the reader cannot state without duplicating the baseline stays inherited.** `useAltHyphenFont` is
+  asserted false, because a boolean that is false through the non-existence of its feature can be written in code
+  without restating anything. `hyphenChar` is not: writing U+002D beside a pinned resource that already says 45
+  would be a second copy of one fact, which is the case the repository's rule is aimed at. So the two post-2012
+  fields land on opposite sides — asserted `LegacyBehavior` and seeded `Finale27Default` — and the line between
+  them is "can this be said without repeating the resource", not "is this known".
+- Second, **`altHyphenFont` needed no work at all, and the first attempt at it was wrong.** It was built from the
+  reference document's object and its comparator remapped through `musx::dom::importFontDefinitionInto`, which
+  produced plausible results — each fixture resolving to its own music font, Petrucci in the Finale 1.0.0 and 3.7.2
+  documents, Pmusic in the Finale 2.6.3 one, Maestro from Finale 2005 on. But the pinned baseline carries no
+  `<altHyphenFont>` element either, so what was being copied was the reference's *own* `integrityCheck` placeholder:
+  a value no document ever stated, imported into a document that had not asked for it. The reader now declines, and
+  musxdom synthesizes the member after construction as it does for any document that omits it.
+- **The detection question that settled it is reusable.** A seeded sub-object member is null during the import
+  exactly when the baseline omitted its element, because musxdom populates such a member only from the element and
+  otherwise synthesizes it in `integrityCheck`, which runs at `finish()` — after every importer. So "did the
+  baseline state this?" is answerable from the pointer alone, with no access to the baseline's XML, which no
+  importer has anyway.
+- **Loose end deliberately not implemented:** in pre-2004 documents Finale 27 synthesizes the starting connection's
+  vertical offset as 1 when the word-extension positioning bit is set and 4 when it is not. Six fixture groups agree
+  and nothing else separates them; whether that is legacy behaviour or converter invention is **open**, so those
+  documents keep the baseline's 1.
+- **Next evidence:** [L1](EVIDENCE_REQUESTS.md) — one Finale 2005/2006 save moving as many of the eight still
+  unlocated Lyric Options fields at once as the dialog exposes, after checking which of them that era's dialog
+  offers at all: any it does not is a candidate for the same after-2012 answer the three struck-off fields got.
+  Then a corpus survey, which this class has not had.
+- **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/reader_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
+  [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
+
+## 2026-08-17 — Syllable edge punctuation, and the lineage confound that mimicked nine flags
+
+- **Question:** How far back does "Ignore Syllable Edge Punctuation" go, and where does a file store it? The owner
+  reported that Finale 2012 has the setting and Finale 2000 does not, leaving 2001-2011 unaccounted for.
+- **Method:** Extracted `<lyricUseEdgePunctuation/>` and `<lyricPunctuationToIgnore>` from all 1,189 adjacent-exact
+  companions of the reference corpus, tabulated by saving product, then searched the record stream of the cohort
+  that varies for any word or bit partitioning it exactly. Deliverables in
+  `private/generated/rpatters1-main/class_coverage/lyric_edge_punctuation/`.
+- **Observation — the boundary is Finale 2012 itself.** Every release from Coda-banner through **Finale 2010**
+  converts with punctuation not ignored, 941 documents with no exception, which extends the owner's Finale 2000
+  observation by ten releases. Only Finale 2012 varies: 50 not ignored against 198 ignored. Finale 2011 is absent
+  from this corpus; the installs survey holds 1,295 such documents and has not been run for this class.
+- **Observation — the search returned thirteen exact answers, and nine were wrong.** Any bit partitioning the 248
+  Finale 2012 documents is a candidate, and thirteen do, spread across fonts, stems, clefs and beams. The split is
+  not about punctuation but about **document lineage**: the 198 that ignore it are born-in-2012 documents carrying
+  that release's new defaults, and the 50 that do not are upgrades from older files. Already-mapped fields prove it,
+  because `wordExtLineWidth`, the syllable positioning bits and the starting connection's vertical offset all
+  partition the cohort identically and none of them is this setting.
+- **What broke the confound was a negative control in an earlier release.** A pre-existing field already varies
+  among Finale 2008 documents; a field arriving with Finale 2012 is identically zero throughout them. That cut
+  thirteen candidates to four, of which only one is a boolean and only one sits in a lyric record: **selector `57`
+  word 4**, class `0x0047` byte 8, the fourth field of the row already holding `smartHyphenStart`,
+  `wordExtMinLength` and `wordExtOffsetToNotehead`. The other three survivors are a coordinate and two values
+  reading as a percent and a mask.
+- **Conclusion: confirmed.** The reader recovers the word from Finale 2012 and asserts the era's behaviour before
+  it. Verified end to end through the public reader over the whole companion-backed corpus: **1,189 of 1,189 agree,
+  zero read failures**, including all 248 Finale 2012 documents. This also corrects a real defect rather than only
+  improving provenance -- the previous version gate left every Finale 2012 document at the baseline's *ignored*,
+  which was wrong for the 50 that do not ignore.
+- **Why it stays a version gate.** The record is twelve bytes in Finale 2007 and Finale 2012 alike, so its shape
+  states nothing and only the release distinguishes them. The gate is bounded inside the zlib epoch and fails closed
+  onto the pre-2012 behaviour, which is the right answer for every release but one.
+- **Incidental:** the same sweep confirms selector `57` arrives with Finale 2004 across 941 documents, a gate
+  previously resting on a handful of fixtures.
+- **Follow-up, same day: `lyricPunctuationToIgnore` closed by the requested fixture, which refuted the prediction
+  it was requested on.** The request predicted a cmper in selector 57 word 1 or 5, the two words zero in all 1,189
+  companion-backed documents. It is instead a **variable-length tail on the selector 57 record itself**: with the
+  list set to `#@%&` the record grows from twelve bytes to twenty-four, six scalars unchanged, then the characters
+  as 16-bit code units and a zero. Finale writes the tail **only when the list differs from the stock set**, which
+  is the whole reason the corpus was silent and the stock set appeared in no Finale 2012 file. An absent tail means
+  the stock list, and the reader does nothing about it because musxdom's `integrityCheck` already owns that default.
+  The decode reads word 6 to the first zero, so it is agnostic to how the record grows; the owner's guess that it
+  expands in twelve-byte chunks fits the specimen, and the terminator rather than the chunking is what the decode
+  depends on.
+- **The fixture paid for itself twice.** Finale rewrote the word-extension connection table as the dialog closed,
+  giving five of nine styles a vertical offset of 5 and a sixth an offset of 1 — a second non-default specimen for a
+  collection that otherwise rested on one Finale 2006 document. It also renumbered two font definitions. Neither was
+  asked for, and both are recorded in the fixture's provenance rather than treated as noise.
+- **Next evidence:** a Finale 2012 save with the checkbox *cleared*. Every tracked F2012 fixture sits on the ignored
+  side, so the word-4-set read path is exercised only by a synthetic record and by corpus documents that cannot be
+  published.
+- **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/reader_tests.cpp`, `tests/mapping_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
+  [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

@@ -505,6 +505,58 @@ Four lessons generalize to the 429 rows still unpromoted:
   identified by elimination; the corpus could not have closed any of them at any size. Volume does not substitute
   for variation.
 
+### LyricOptions: nineteen distilled rows, two collections the framework does not model
+
+**Located 2026-08-17 against the 69 tracked fixtures and their exact Finale 27 companions. No corpus survey has been
+run for this class**, so nothing below carries the corpus weight the `TextOptions` and `MultimeasureRestOptions`
+entries do.
+
+`_FCEDTLyricsPrefs` is the framework's most useful lyric artifact, and the nineteen `LyricsPrefs` rows in
+[`data/legacy_option_mappings.csv`](data/legacy_option_mappings.csv) are all of it. They give five of the class's
+locations — `15` word 1, `35` word 5, `57` word 0, `67` word 5, and the four syllable positions across two
+incidences of `87` — and two numberings the corpus alone could not have supplied: the `LYRICS_ALIGN_` constants
+(`1 = centre, 2 = left, 3 = right`) and the `0x8000` "use this positioning" bit. Every one is corroborated by the
+fixtures where a fixture varies at all.
+
+What it does not have is as informative. **The framework models thirteen of the class's twenty-three fields and
+nothing else**, and the two collections it misses are the two that matter most:
+
+- **Selector `55`, the nine word-extension connection styles, is absent from the framework entirely** — no
+  preference row, no direct-block entry, no accessor. It was located from the corpus, and one Finale 2006 fixture
+  fixed the whole element layout and the connection-point numbering in a single document.
+- **`hyphenChar`, `useSmartWordExtensions`, the alternate hyphen font, `wordExtNeedUnderscore`, edge punctuation,
+  automatic numbering and the three auto-number flags are named nowhere in the framework tree**, and are also
+  invariant across every companion in the fixture set — the worst case for locating a field, and the one a
+  controlled save is normally for. Three of them turned out not to need one: `hyphenChar`, `useAltHyphenFont` and
+  `altHyphenFont` **postdate Finale 2012**, so the framework had nothing to name and no save could have found them.
+  The framework's silence was the right answer rather than a gap, which is worth remembering before commissioning a
+  fixture for anything else it omits. They still land in three different places: the switch is asserted false, the
+  hyphen character is inherited from the baseline because restating it would duplicate the pinned resource, and the
+  font is not imported at all.
+
+Two lessons add to the `TextOptions` list:
+
+- **An enum numbering can come from a class the framework does not connect to the option.** The word-extension
+  connection point is numbered on the smart-shape entry-connection scale, which reaches lyric-right-bottom at
+  `0x10`. The framework has that enum under `FCSmartShapeEntryConnectStyle`, nowhere near its lyrics preferences,
+  and it independently confirmed the base and the tail of an order the corpus had already fixed. It is also
+  *incomplete* — it has no dotted-attachment entry — so it corroborates without governing.
+- **A field can be stored once and modelled twice.** musxdom keeps the starting connection's offsets both as that
+  connection's own and as the dialog-level `wordExtHorzOffset`/`wordExtVertOffset`. Only a fixture that moves the
+  value off its default shows the two are one thing; two fields agreeing at their defaults proves nothing.
+- **A null seeded member is a readable signal, and the right answer to it is usually to do nothing.**
+  `altHyphenFont` has no element in the pinned `<lyricOptions>`, so the seeded object is a null pointer until
+  musxdom's `integrityCheck` synthesizes one at the end of construction. That null is a reliable statement that the
+  baseline omitted the element, available without reading the baseline's XML — but the conclusion to draw from it
+  is that there is nothing to import, not that something must be built. A `FontInfo` the baseline *had* seeded
+  would carry the baseline's font numbering and would need `importFontDefinitionInto`; a member it never filled in
+  is absent rather than wrong, and filling it from the reference's own placeholder would put a value in the
+  document that no document stated.
+
+Full locations, per-era gates and the eleven open fields are in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#lyric-options) and
+[`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
+
 ## Confidence and validation plan
 
 | Claim | Status |
