@@ -113,3 +113,13 @@ F100-stemconn-disabled.etf
 Finale 27 companions are in `-finale27/`. They were generated without manual
 document edits in the same automated Finale 27.4 run described by
 `../finale27-provenance.txt`.
+
+F100-dateform-tab.mus
+    sha256 9991a6d271b21dc000c63628458f813379c928d3b149e7c868a6b18c000cb226
+    From F100-baseline, the date format set to Long and the tab stop to 7 spaces.
+    Selector 05 word 5 moves 0 -> 1 and selector 13 word 0 moves 4 -> 7; the companion
+    reads <dateFormat>long</dateFormat> and <tabSpaces>7</tabSpaces>. With its Finale 2.6.3
+    counterpart this is the evidence that the two oldest text options occupy the same words
+    in the earliest era as in the latest, so neither needs a version gate. The era's UI
+    exposes no other document-wide text setting, and no Coda-banner document carries the
+    accidental-insert block at all.

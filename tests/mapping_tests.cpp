@@ -21,6 +21,7 @@
 #include "import/support/legacy_mapping.h"
 #include "import/others.h"
 #include "import/options.h"
+#include "import/options/test_access.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -681,7 +682,8 @@ void testClefTupleDecoding()
         }
         document->getOptions()->add(ClefOptions::XmlNodeName, options);
         ImportReport report;
-        finale_mus_reader::options::validateClefOptions(document, report);
+        musx::factory::ConstructionContext construction;
+        finale_mus_reader::options::validateClefOptions(document, report, construction);
         expectMapping(options->defaultClef == 99,
             "An out-of-range default clef index was silently corrected");
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
@@ -691,7 +693,7 @@ void testClefTupleDecoding()
             "An out-of-range default clef index was accepted without a warning");
         ImportReport clean;
         options->defaultClef = 17;
-        finale_mus_reader::options::validateClefOptions(document, clean);
+        finale_mus_reader::options::validateClefOptions(document, clean, construction);
         expectMapping(clean.diagnostics.empty(), "A valid default clef index warned");
     }
 
@@ -891,6 +893,155 @@ void testOtherRowsRemainSearchable()
         "Word addressing ran past the last incidence");
 }
 
+/// @brief A document whose MultimeasureRestOptions carries the pinned baseline's values.
+/// @details The three the early era cannot state are what matter: the baseline starts the
+/// H-bar 30 Evpu in, ends it 30 Evpu out, and switches automatic updating on.
+///
+/// `noHorizontalStretch` is seeded **true**, which the pinned baseline is not. That option
+/// arrived with Finale 27, so no legacy document can state it and the reader must assert it
+/// false rather than take the baseline's word; seeding the baseline's own false would let an
+/// implementation that merely inherited pass this test.
+musx::dom::DocumentPtr makeMmRestDocument()
+{
+    using MmRest = musx::dom::options::MultimeasureRestOptions;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    auto options = std::make_shared<MmRest>(document);
+    options->measWidth = 360;
+    options->numAdjY = -32;
+    options->shapeDef = 3;
+    options->numStart = 2;
+    options->useSymsThreshold = 9;
+    options->symSpacing = 48;
+    options->startAdjust = 30;
+    options->endAdjust = -30;
+    options->autoUpdateMmRests = true;
+    options->noHorizontalStretch = true;
+    document->getOptions()->add(MmRest::XmlNodeName, options);
+    return std::move(session).finish();
+}
+
+// Finale 3.5 rewrote the multimeasure-rest record, and the reader decides that boundary from
+// the size of the selector-25 family rather than from the version. The boundary falls inside
+// the uncompressed epoch, so no epoch gate can express it, and no tracked fixture can exercise
+// the uncompressed half of the early layout -- the corpus has no publishable Finale 3.0 or 3.2
+// document -- so both shapes are built here, and each is read under versions that would
+// contradict the marker if the marker were not what decides.
+void testMmRestEarlyLayoutMarker()
+{
+    using MmRest = musx::dom::options::MultimeasureRestOptions;
+    const auto runImport = [](const std::vector<SyntheticRow>& rows,
+                               const SourceProfile& profile, ImportReport& report) {
+        const auto document = makeMmRestDocument();
+        const auto reference = makeMmRestDocument();
+        const auto index = LegacyRecordIndex::build(makeContainer(rows));
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            index, profile, document, reference, report, pending, construction};
+        finale_mus_reader::options::importMultimeasureRestOptions(context);
+        return document->getOptions()->get<MmRest>();
+    };
+
+    // The early record: one incidence, the adjustment and shape in slots 4 and 5. Read through
+    // the later table these same words would give a shape of 7 and a "start number at" of -20.
+    const std::vector<SyntheticRow> early{{GLOBALS_CMPER, "25", {320, 3, 24, 7, -20, 5}}};
+    // The later record: two incidences, everything in the framework's places.
+    const std::vector<SyntheticRow> later{
+        {GLOBALS_CMPER, "25", {216, 0, -20, 5, 3, 11}},
+        {GLOBALS_CMPER, "25", {60, -4, 12, -12, 0, 1}},
+    };
+
+    auto coda = profileFor(2, 6);
+    coda.epoch = FormatEpoch::CodaBanner;
+    coda.version.reset();
+    // Finale 3.0 and 3.2 by version, one version from well past the boundary, and a
+    // Coda-banner file that states no version at all.
+    for (const auto& profile : {profileFor(3, 0), profileFor(3, 2), profileFor(15, 0), coda}) {
+        ImportReport report;
+        const auto options = runImport(early, profile, report);
+        expectMapping(options->measWidth == 320 && options->numAdjY == -20
+                && options->shapeDef == 5,
+            "The early multimeasure-rest layout was not read from its own slots");
+        expectMapping(options->numStart == 2 && options->useSymsThreshold == 9
+                && options->symSpacing == 48,
+            "The early layout disturbed a field the baseline supplies");
+        // The three the baseline gets wrong for this era, plus the Finale 27 option no legacy
+        // era has at all.
+        expectMapping(options->startAdjust == 0 && options->endAdjust == 0
+                && !options->autoUpdateMmRests && !options->noHorizontalStretch,
+            "An early document inherited a value its era cannot have stated");
+        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin
+                == ValueOrigin::LegacyBehavior,
+            "An asserted early value was not reported as era behavior");
+        expectMapping(field(report, "options.multimeasureRestOptions.symSpacing").origin
+                == ValueOrigin::Finale27Default,
+            "An early field the baseline supplies was claimed as read");
+        // These documents recover shape 5 and define no shapes at all, which is the ordinary
+        // Finale case rather than a fault: hundreds of corpus documents name an H-bar shape
+        // their own file never carries. It must be noted, and noted at Info, so that a host
+        // filtering for real problems does not see several hundred false ones.
+        expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
+                          [](const finale_mus_reader::Diagnostic& entry) {
+                              return entry.level == musx::util::Logger::LogLevel::Info
+                                  && entry.message.find("H-bar") != std::string::npos;
+                          }),
+            "A multimeasure-rest H-bar naming an undefined shape was not noted at Info");
+    }
+
+    // The same reader on the two-incidence record, including under versions that predate the
+    // boundary and under the Coda-banner epoch. Whatever a file claims to be, the record it
+    // carries is what decides: the epoch mask says only that these are 16-byte rows.
+    for (const auto& profile :
+            {profileFor(3, 0), profileFor(3, 5), profileFor(15, 0), coda}) {
+        ImportReport report;
+        const auto options = runImport(later, profile, report);
+        expectMapping(options->measWidth == 216 && options->numAdjY == -20
+                && options->shapeDef == 5 && options->numStart == 3
+                && options->useSymsThreshold == 11,
+            "The later multimeasure-rest layout was not read from its own slots");
+        expectMapping(options->symSpacing == 60 && options->numAdjX == -4
+                && options->startAdjust == 12 && options->endAdjust == -12
+                && options->useSymbols,
+            "The later layout's second incidence was not read");
+        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin
+                == ValueOrigin::LegacyMus,
+            "A recovered H-bar adjustment was reported as era behavior");
+        // Asserted in every era, not only the early one, because no legacy format has it.
+        expectMapping(!options->noHorizontalStretch
+                && field(report, "options.multimeasureRestOptions.noHorizontalStretch").origin
+                    == ValueOrigin::LegacyBehavior,
+            "A later-layout document inherited the baseline's horizontal-stretch setting");
+        // Selector 83 is still absent, which is what a Finale 3.5 or 3.7 document looks like.
+        expectMapping(!options->autoUpdateMmRests
+                && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin
+                    == ValueOrigin::LegacyBehavior,
+            "A document without selector 83 kept the baseline's automatic-update setting");
+    }
+
+    // With the selector present, the flag is read rather than asserted, and from word 4.
+    ImportReport report;
+    auto withUpdate = later;
+    withUpdate.push_back({GLOBALS_CMPER, "83", {0, 0, 1, 0, 1, 0}});
+    const auto options = runImport(withUpdate, profileFor(5, 0), report);
+    expectMapping(options->autoUpdateMmRests
+            && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin
+                == ValueOrigin::LegacyMus,
+        "The automatic-update word was not read from selector 83");
+
+    // An absent selector 83 means off with no further qualification, including for a document
+    // whose epoch could not be classified. That is the document most in need of it: nothing was
+    // read from it, and the baseline would otherwise leave it claiming a Finale 27 setting.
+    ImportReport unclassified;
+    SourceProfile unknown;
+    unknown.epoch = FormatEpoch::Unknown;
+    const auto unknownOptions = runImport(later, unknown, unclassified);
+    expectMapping(!unknownOptions->autoUpdateMmRests
+            && field(unclassified, "options.multimeasureRestOptions.autoUpdateMmRests").origin
+                == ValueOrigin::LegacyBehavior,
+        "An unclassified document inherited the baseline's automatic-update setting");
+}
+
 /// @brief A document whose StemOptions already carries connections from somewhere else.
 /// @details Seeded deliberately, because the capture pass must drop them: stem connections
 /// belong to the document that stated them and name that document's fonts.
@@ -947,8 +1098,9 @@ void testStemPreFinale35Units()
         const auto reference = makeStemDocument();
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::options::importStemOptions(context);
         return document->getOptions()->get<musx::dom::options::StemOptions>();
     };
@@ -1062,7 +1214,8 @@ void testStemFontReferenceValidation()
         makeContainer({{GLOBALS_CMPER, "40", {7, 192, 768, -768, 0, 0}},
             {GLOBALS_CMPER, "40", {0, 0, 0, 0, 0, 0}}}),
         profileFor(5, 0), document, report);
-    finale_mus_reader::options::validateStemOptions(document, report);
+    musx::factory::ConstructionContext construction;
+    finale_mus_reader::options::validateStemOptions(document, report, construction);
     expectMapping(options->stemConnections.size() == 1
             && options->stemConnections[0]->fontId == 7,
         "A stem connection did not keep the font comparator the source stated");
@@ -1071,6 +1224,79 @@ void testStemFontReferenceValidation()
                           return entry.message.find("does not define") != std::string::npos;
                       }),
         "A dangling stem-connection font reference was not reported");
+}
+
+// No real Finale save can stand in for a comparator that resolves to nothing: Finale always
+// writes some definition for every comparator it uses, even a placeholder of its own. The
+// state this reader must survive -- a hand-edited or otherwise malformed source naming a font
+// id its own table never defines -- has to be built synthetically instead. This constructs it
+// directly against musxdom's own construction session, twice: once exactly as an importer that
+// forgot to register the comparator would leave it, and once as the reader actually does.
+//
+// Both documents give a TextOptions symbol insert a font id no FontDefinition in the document
+// answers. The only difference is whether that id is registered with the session's own
+// ConstructionContext before the session finishes -- which is what
+// options::registerSymbolInsertFonts does in the real pipeline -- and that difference is the
+// whole story: unregistered, FontInfo::getName throws exactly as it did before musxdom offered
+// a placeholder; registered, the same call resolves to musxdom's "Missing Font (n)" spelling.
+void testDanglingFontComparatorRequiresRegistration()
+{
+    using TextOptions = musx::dom::options::TextOptions;
+    using Insert = musx::dom::options::AccidentalInsertSymbolType;
+    constexpr musx::dom::Cmper danglingFontId = 909;
+
+    const auto buildDocument = [](bool registerComparator) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        auto options = std::make_shared<TextOptions>(document);
+        options->textLineSpacingPercent = 100;
+        auto insert = std::make_shared<TextOptions::InsertSymbolInfo>(options);
+        auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
+        font->fontId = danglingFontId;
+        font->fontSize = 12;
+        insert->symFont = std::move(font);
+        options->symbolInserts[Insert::Sharp] = std::move(insert);
+        document->getOptions()->add(TextOptions::XmlNodeName, options);
+        if (registerComparator) {
+            session.getConstructionContext().registerFontId(danglingFontId);
+        }
+        return std::move(session).finish();
+    };
+
+    const auto getSymFont = [](const musx::dom::DocumentPtr& document) {
+        return document->getOptions()->get<TextOptions>()
+            ->symbolInserts.at(Insert::Sharp)->symFont;
+    };
+
+    const auto unregistered = buildDocument(false);
+    expectMapping(getSymFont(unregistered)->fontId == danglingFontId,
+        "An unregistered dangling font comparator did not survive construction");
+    bool threw = false;
+    try {
+        (void)getSymFont(unregistered)->getName();
+    } catch (const std::invalid_argument&) {
+        threw = true;
+    }
+    expectMapping(threw,
+        "An unregistered dangling font comparator no longer throws out of FontInfo::getName; "
+        "the contrast this test relies on is gone, not just the registered half of it");
+
+    const auto registered = buildDocument(true);
+    expectMapping(getSymFont(registered)->fontId == danglingFontId,
+        "A registered dangling font comparator did not survive construction");
+    std::string name;
+    bool registeredThrew = false;
+    try {
+        name = getSymFont(registered)->getName();
+    } catch (const std::exception&) {
+        registeredThrew = true;
+    }
+    expectMapping(!registeredThrew,
+        "A registered dangling font comparator threw out of FontInfo::getName instead of "
+        "resolving to musxdom's placeholder");
+    expectMapping(name == "Missing Font (" + std::to_string(danglingFontId) + ")",
+        "A registered dangling font comparator did not resolve to the placeholder spelling "
+        "Finale's own conversions use");
 }
 
 void testGraphicAssignmentsAcrossEpochs()
@@ -1099,8 +1325,9 @@ void testGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::others::importPageGraphicAssignments(context);
         const auto assignment = document->getOthers()
             ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 4, musx::dom::Inci(0));
@@ -1220,8 +1447,9 @@ void testShapeGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::others::importShapeGraphicAssignments(context);
         const auto assignment = ShapeGraphicAssign::findForGraphic(
             document, musx::dom::SCORE_PARTID, 3);
@@ -1260,8 +1488,9 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
         SourceProfile profile;
         profile.epoch = epoch;
         profile.byteOrder = parsed.byteOrder;
+        musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending};
+            index, profile, document, reference, report, pending, construction};
         finale_mus_reader::details::importMeasureGraphicAssignments(context);
         const auto assignment = document->getDetails()->get<Target>(
             musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
@@ -1293,6 +1522,7 @@ namespace finale_mus_reader_tests {
 
 TEST_CASE("Clef tuple decoding", "[mapping]") { testClefTupleDecoding(); }
 TEST_CASE("Stem pre-Finale-3.5 units", "[mapping]") { testStemPreFinale35Units(); }
+TEST_CASE("Multimeasure rest layout marker", "[mapping]") { testMmRestEarlyLayoutMarker(); }
 TEST_CASE("Stem connections are source owned", "[mapping]")
 {
     testStemConnectionsAreSourceOwned();
@@ -1301,6 +1531,10 @@ TEST_CASE("Stale Unicode stem record", "[mapping]") { testStemStaleUnicodeRecord
 TEST_CASE("Stem font reference validation", "[mapping]")
 {
     testStemFontReferenceValidation();
+}
+TEST_CASE("Dangling font comparator requires registration", "[mapping]")
+{
+    testDanglingFontComparatorRequiresRegistration();
 }
 TEST_CASE("Detail row shape", "[mapping]") { testDetailRowShape(); }
 TEST_CASE("Other rows remain searchable", "[mapping]") { testOtherRowsRemainSearchable(); }
@@ -1318,9 +1552,355 @@ TEST_CASE("Missing recovered font definition fallback", "[mapping]")
 {
     testMissingRecoveredFontDefinitionFallback();
 }
+/// @brief A document whose TextOptions carries the pinned baseline's line spacing.
+/// @details The baseline seeds the percent spelling, which is what a source stating the
+/// absolute spelling has to displace. Seeding both would let an implementation that never
+/// clears the baseline pass.
+musx::dom::DocumentPtr makeTextOptionsDocument()
+{
+    using TextOptions = musx::dom::options::TextOptions;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    auto options = std::make_shared<TextOptions>(document);
+    options->textLineSpacingPercent = 100;
+    options->tabSpaces = 4;
+    options->textWordWrap = true;
+    options->textExpandSingleWord = true;
+    document->getOptions()->add(TextOptions::XmlNodeName, options);
+    // The pinned baseline always carries all five inserts, and a source with no block of its
+    // own is completed from them, so the stand-in must carry them too.
+    using Insert = musx::dom::options::AccidentalInsertSymbolType;
+    const std::array<std::tuple<Insert, int, int, char32_t>, 5> seeds{
+        {{Insert::Sharp, 35, 34, U'#'}, {Insert::Flat, 60, 19, U'b'},
+            {Insert::Natural, 50, 34, U'n'}, {Insert::DblSharp, 40, 34, U'Ü'},
+            {Insert::DblFlat, 60, 19, U'º'}}};
+    for (const auto& [type, tracking, shift, character] : seeds) {
+        auto insert = std::make_shared<TextOptions::InsertSymbolInfo>(options);
+        insert->trackingBefore = tracking;
+        insert->baselineShiftPerc = shift;
+        insert->symChar = character;
+        auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
+        font->fontSize = 100;
+        insert->symFont = std::move(font);
+        options->symbolInserts[type] = std::move(insert);
+    }
+    return std::move(session).finish();
+}
+
+// Selectors 5 and 13 are carried by every era; 81, 82 and 83 arrive with Finale 97. The reader
+// decides that from the records present rather than from the version, so a document that
+// predates them must recover the two old fields and leave the other eleven at the baseline.
+// The two enums are checked here because Finale orders its alignment lists first, opposite,
+// centre while musxdom puts centre second.
+void testTextOptionsScalars()
+{
+    using TextOptions = musx::dom::options::TextOptions;
+    const auto runImport = [](const std::vector<SyntheticRow>& rows,
+                               const SourceProfile& profile, ImportReport& report) {
+        const auto document = makeTextOptionsDocument();
+        const auto reference = makeTextOptionsDocument();
+        const auto index = LegacyRecordIndex::build(makeContainer(rows));
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            index, profile, document, reference, report, pending, construction};
+        finale_mus_reader::options::importTextOptions(context);
+        return document->getOptions()->get<TextOptions>();
+    };
+
+    // A Coda-banner document: the two old selectors and nothing else.
+    {
+        ImportReport report;
+        auto coda = profileFor(2, 6);
+        coda.epoch = FormatEpoch::CodaBanner;
+        coda.version.reset();
+        const auto options = runImport(
+            {{GLOBALS_CMPER, "05", {0, 0, 0, 0, 1, 2}}, {GLOBALS_CMPER, "13", {7, 0, 0, 0, 0, 0}}},
+            coda, report);
+        expectMapping(options->showTimeSeconds && options->dateFormat == musx::dom::DateFormat::Abbrev
+                && options->tabSpaces == 7,
+            "The Coda-banner era did not recover the date stamp and tab spacing");
+        expectMapping(options->textLineSpacingPercent.has_value()
+                && options->textLineSpacingPercent.value() == 100
+                && !options->textLineSpacingEvpu.has_value(),
+            "A document with no selector 82 lost the baseline line spacing");
+        expectMapping(options->textJustify == TextOptions::TextJustify::Left
+                && options->textVertAlign == TextOptions::VerticalAlignment::Top,
+            "A document with no selector 83 did not keep the baseline alignment");
+    }
+
+    // Finale 97 onward, with the full set. Selector 82 states a percent, so the percent member
+    // is engaged and the absolute one stays empty.
+    {
+        ImportReport report;
+        const auto options = runImport(
+            {
+                {GLOBALS_CMPER, "05", {0, 0, 0, 0, 1, 1}},
+                {GLOBALS_CMPER, "13", {7, 0, 0, 0, 0, 0}},
+                {GLOBALS_CMPER, "81", {-1, -6, 0, 2016, -1, -3168}},
+                {GLOBALS_CMPER, "82", {89, 1, 0, 11, 4, 1}},
+                {GLOBALS_CMPER, "83", {1, 1, 0, 1, 0, 0}},
+            },
+            profileFor(3, 8), report);
+        expectMapping(options->dateFormat == musx::dom::DateFormat::Long && options->tabSpaces == 7,
+            "The Finale 97 era did not recover the date stamp and tab spacing");
+        // Three 32-bit values in the framework's high-word-first order, two of them negative.
+        expectMapping(options->textTracking == -6 && options->textBaselineShift == 2016
+                && options->textSuperscript == -3168,
+            "The 32-bit text metrics were not assembled high word first");
+        expectMapping(options->textLineSpacingPercent.has_value()
+                && options->textLineSpacingPercent.value() == 89
+                && !options->textLineSpacingEvpu.has_value(),
+            "A stated percent line spacing did not engage the percent member alone");
+        expectMapping(!options->textWordWrap && options->textPageOffset == 11
+                && options->textExpandSingleWord,
+            "Selector 82 was not read from its own slots");
+        // Stored 4 is ForcedFull in both spellings; stored 1 is Right, which musxdom numbers 1
+        // as well. The exchange is proved by the vertical alignment below.
+        expectMapping(options->textJustify == TextOptions::TextJustify::ForcedFull
+                && options->textHorzAlign == TextOptions::HorizontalAlignment::Right
+                && options->textIsEdgeAligned,
+            "Selector 83 or the justification was not read from its own slots");
+        expectMapping(options->textVertAlign == TextOptions::VerticalAlignment::Bottom,
+            "A stored vertical alignment of 1 did not become Bottom");
+    }
+
+    // The same record with the two exchanged enum values, which is what separates Finale's
+    // order from musxdom's: a stored 2 is centre in both lists.
+    {
+        ImportReport report;
+        const auto options = runImport(
+            {
+                {GLOBALS_CMPER, "82", {100, 1, 1, 0, 2, 1}},
+                {GLOBALS_CMPER, "83", {0, 2, 0, 0, 0, 0}},
+            },
+            profileFor(3, 8), report);
+        expectMapping(options->textJustify == TextOptions::TextJustify::Center,
+            "A stored justification of 2 did not become Center");
+        expectMapping(options->textVertAlign == TextOptions::VerticalAlignment::Center,
+            "A stored vertical alignment of 2 did not become Center");
+    }
+
+    // Selector 82 word 1 clear: the same word 0 is an absolute distance, and the baseline's
+    // percent must not survive beside it. musxdom's own integrity check rejects both engaged.
+    {
+        ImportReport report;
+        const auto options = runImport(
+            {{GLOBALS_CMPER, "82", {72, 0, 1, 0, 0, 1}}}, profileFor(3, 8), report);
+        expectMapping(options->textLineSpacingEvpu.has_value()
+                && options->textLineSpacingEvpu.value() == 72
+                && !options->textLineSpacingPercent.has_value(),
+            "A stated absolute line spacing did not displace the baseline percent");
+        expectMapping(
+            field(report, "options.textOptions.textLineSpacingEvpu").origin
+                == ValueOrigin::LegacyMus,
+            "The absolute line spacing was not reported as recovered");
+    }
+
+    // The zlib epoch reaches the same words through the numericGlobalClass rule, addressed by
+    // byte offset. Both byte orders are exercised, because the 32-bit rule is one rule for
+    // both: two 16-bit words with the high word first, each word in the container's order.
+    const auto runClassImport = [](const finale_mus_reader::container::ParsedContainer& parsed,
+                                    const SourceProfile& profile, ImportReport& report) {
+        const auto document = makeTextOptionsDocument();
+        const auto reference = makeTextOptionsDocument();
+        const auto index = LegacyRecordIndex::build(parsed);
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            index, profile, document, reference, report, pending, construction};
+        finale_mus_reader::options::importTextOptions(context);
+        return document->getOptions()->get<TextOptions>();
+    };
+
+    for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+        auto profile = profileFor(16, 0);
+        profile.epoch = FormatEpoch::ZlibLegacy;
+        profile.byteOrder = byteOrder;
+
+        ImportReport layoutReport;
+        const auto layout = runClassImport(
+            makeClassContainer(finale_mus_reader::numericGlobalClass(82), {137, 0, 0, 77, 3, 0}, byteOrder),
+            profile, layoutReport);
+        expectMapping(layout->textLineSpacingEvpu.has_value()
+                && layout->textLineSpacingEvpu.value() == 137
+                && !layout->textLineSpacingPercent.has_value(),
+            "The zlib epoch did not route line spacing by word 1");
+        expectMapping(layout->textJustify == TextOptions::TextJustify::Full
+                && layout->textPageOffset == 77 && !layout->textExpandSingleWord
+                && !layout->textWordWrap,
+            "The zlib epoch did not read selector 82 from its own offsets");
+
+        ImportReport metricsReport;
+        const auto metrics = runClassImport(
+            makeClassContainer(finale_mus_reader::numericGlobalClass(81), {-1, -6, 0, 2016, -1, -3168}, byteOrder),
+            profile, metricsReport);
+        expectMapping(metrics->textTracking == -6 && metrics->textBaselineShift == 2016
+                && metrics->textSuperscript == -3168,
+            "The zlib epoch did not assemble the 32-bit metrics high word first");
+    }
+
+}
+
+// The five accidental inserts are a direct block with three physical layouts. Each is built
+// here from the bytes a real fixture of its era carries, so a layout that regressed would have
+// to produce the same five characters from a different stride to pass.
+void testTextOptionsSymbolInserts()
+{
+    using TextOptions = musx::dom::options::TextOptions;
+    using Insert = musx::dom::options::AccidentalInsertSymbolType;
+    const auto runImport = [](const finale_mus_reader::container::ParsedContainer& parsed,
+                               const SourceProfile& profile, ImportReport& report) {
+        const auto document = makeTextOptionsDocument();
+        const auto reference = makeTextOptionsDocument();
+        const auto index = LegacyRecordIndex::build(parsed);
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            index, profile, document, reference, report, pending, construction};
+        finale_mus_reader::options::importTextOptions(context);
+        return document->getOptions()->get<TextOptions>();
+    };
+    // Every era stores the same five characters, which is what makes a layout error visible.
+    const auto expectDefaults = [](const auto& options, const std::string& what) {
+        const std::array<std::pair<Insert, char32_t>, 5> chars{
+            {{Insert::Sharp, U'#'}, {Insert::Flat, U'b'}, {Insert::Natural, U'n'},
+                {Insert::DblSharp, U'Ü'}, {Insert::DblFlat, U'º'}}};
+        for (const auto& [type, expected] : chars) {
+            const auto found = options->symbolInserts.find(type);
+            expectMapping(found != options->symbolInserts.end() && found->second
+                    && found->second->symChar == expected,
+                what + " did not recover the stored insert characters");
+        }
+        expectMapping(options->symbolInserts.at(Insert::Sharp)->trackingBefore == 35
+                && options->symbolInserts.at(Insert::Flat)->trackingBefore == 50
+                && options->symbolInserts.at(Insert::Natural)->trackingBefore == 0
+                && options->symbolInserts.at(Insert::DblSharp)->trackingBefore == 40
+                && options->symbolInserts.at(Insert::DblFlat)->trackingBefore == 60,
+            what + " did not recover the stored tracking");
+        expectMapping(options->symbolInserts.at(Insert::Sharp)->baselineShiftPerc == 34
+                && options->symbolInserts.at(Insert::Flat)->baselineShiftPerc == 19,
+            what + " did not recover the stored baseline shift");
+        expectMapping(options->symbolInserts.at(Insert::Sharp)->symFont
+                && options->symbolInserts.at(Insert::Sharp)->symFont->fontSize == 100,
+            what + " did not recover the stored font size");
+    };
+
+    // Finale 3.7-2000: a 17-byte element with a one-byte character, read little-endian on a
+    // big-endian file. These are the words a Finale 97 fixture carries.
+    {
+        ImportReport report;
+        const std::vector<SyntheticRow> rows{
+            {GLOBALS_CMPER, "78", {35, 0, 0, 0, 34, 0}},
+            {GLOBALS_CMPER, "78", {100, 0, 12835, 0, 0, 0}},
+            {GLOBALS_CMPER, "78", {4864, 0, 25600, 0, 25088, 0}},
+            {GLOBALS_CMPER, "78", {0, 0, 0, 34, 0, 100}},
+            {GLOBALS_CMPER, "78", {0, 10350, 0, 0, 0, 8704}},
+            {GLOBALS_CMPER, "78", {0, 25600, 0, -9216, 60, 0}},
+            {GLOBALS_CMPER, "78", {0, 0, 19, 0, 100, 0}},
+            {GLOBALS_CMPER, "78", {186, 0, 0, 0, 0, 0}},
+        };
+        const auto options = runImport(makeContainer(rows), profileFor(3, 8), report);
+        expectDefaults(options, "The 17-byte insert layout");
+    }
+
+    // Finale 2001-2010: an 18-byte element, container order, the character in a whole word of
+    // which only the low byte counts. The double sharp and double flat are stored
+    // sign-extended here, as four Finale 2006 fixtures do.
+    {
+        ImportReport report;
+        const std::vector<SyntheticRow> rows{
+            {GLOBALS_CMPER, "78", {0, 35, 0, 0, 34, 0}},
+            {GLOBALS_CMPER, "78", {100, 0, 35, 0, 50, 0}},
+            {GLOBALS_CMPER, "78", {0, 19, 0, 100, 0, 98}},
+            {GLOBALS_CMPER, "78", {0, 0, 0, 0, 34, 0}},
+            {GLOBALS_CMPER, "78", {100, 0, 110, 0, 40, 0}},
+            {GLOBALS_CMPER, "78", {0, 34, 0, 100, 0, -36}},
+            {GLOBALS_CMPER, "78", {0, 60, 0, 0, 19, 0}},
+            {GLOBALS_CMPER, "78", {100, 0, -70, 0, 0, 0}},
+        };
+        auto profile = profileFor(12, 0);
+        profile.epoch = FormatEpoch::DclLegacy;
+        const auto options = runImport(makeContainer(rows, FormatEpoch::DclLegacy), profile, report);
+        expectDefaults(options, "The 18-byte insert layout");
+    }
+
+    // Finale 2012: a 20-byte element with the character widened to a long. Each element is ten
+    // words: the two trackings high word first, then the shift, font tuple and character.
+    {
+        std::vector<std::int16_t> words;
+        const auto element = [&words](std::int16_t tb, std::int16_t bsp, std::int16_t chr) {
+            for (const std::int16_t value : {std::int16_t(0), tb, std::int16_t(0),
+                     std::int16_t(0), bsp, std::int16_t(0), std::int16_t(100),
+                     std::int16_t(0), chr, std::int16_t(0)}) {
+                words.push_back(value);
+            }
+        };
+        element(35, 34, 35);
+        element(50, 19, 98);
+        element(0, 34, 110);
+        element(40, 34, 220);
+        element(60, 19, 186);
+        words.insert(words.end(), 4, 0);
+
+        ImportReport report;
+        auto profile = profileFor(16, 0);
+        profile.epoch = FormatEpoch::ZlibLegacy;
+        profile.byteOrder = ByteOrder::LittleEndian;
+        const auto options = runImport(
+            makeClassContainer(finale_mus_reader::numericGlobalClass(78), words,
+                ByteOrder::LittleEndian),
+            profile, report);
+        expectDefaults(options, "The 20-byte insert layout");
+
+        // A character above the basic multilingual plane is the only value that can tell the
+        // two candidate word orders apart, and it says the character is a plain little-endian
+        // long: U+26469 is stored low word first, where the high-word-first order the two
+        // trackings use would give 0x64690002 and no codepoint at all. Taken from
+        // tests/evidence/F2012/F2012-dblsharp-insert-outside-BMP.
+        auto astral = words;
+        const std::size_t dblSharpChar = 3 * 10 + 8;
+        astral[dblSharpChar] = static_cast<std::int16_t>(0x6469);
+        astral[dblSharpChar + 1] = 2;
+        ImportReport astralReport;
+        const auto withAstral = runImport(
+            makeClassContainer(finale_mus_reader::numericGlobalClass(78), astral,
+                ByteOrder::LittleEndian),
+            profile, astralReport);
+        expectMapping(withAstral->symbolInserts.at(Insert::DblSharp)->symChar == U'\U00026469',
+            "A symbol character above the basic multilingual plane was not read low word first");
+    }
+
+    // A source with no insert block at all -- every Coda-banner and Finale 3.0-3.5 document.
+    // All five come from the pinned baseline and must say so, and the font must be cloned into
+    // this document rather than shared with the reference.
+    {
+        ImportReport report;
+        auto coda = profileFor(2, 6);
+        coda.epoch = FormatEpoch::CodaBanner;
+        coda.version.reset();
+        const auto options = runImport(
+            makeContainer({{GLOBALS_CMPER, "13", {7, 0, 0, 0, 0, 0}}}, FormatEpoch::CodaBanner),
+            coda, report);
+        expectMapping(options->symbolInserts.size() == 5,
+            "A source with no insert block did not receive the baseline's five inserts");
+        expectMapping(options->symbolInserts.at(Insert::Sharp)->symFont != nullptr,
+            "A completed insert has no font");
+        expectMapping(
+            field(report, "options.textOptions.symbolInserts[sharp].symChar").origin
+                == ValueOrigin::Finale27Default,
+            "A completed insert was not reported as a synthesized default");
+    }
+}
+
 TEST_CASE("Version gating", "[mapping]") { testVersionGating(); }
 TEST_CASE("Minor version ordering", "[mapping]") { testMinorVersionOrdering(); }
 TEST_CASE("Table layering", "[mapping]") { testTableLayering(); }
+TEST_CASE("Text options scalars", "[mapping]") { testTextOptionsScalars(); }
+TEST_CASE("Text options symbol inserts", "[mapping]")
+{
+    testTextOptionsSymbolInserts();
+}
 TEST_CASE("Uncovered epoch still reports", "[mapping]")
 {
     testUncoveredEpochStillReports();

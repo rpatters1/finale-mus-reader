@@ -521,6 +521,74 @@ and later where the header is always present. The exact boundary is **open**: th
 Finale 3.1, and its only Finale 3.0 files are Windows-origin, so a platform explanation cannot be
 excluded.
 
+#### Unresolvable comparators and the `Missing Font (n)` placeholder
+
+**Confirmed.** Finale names a font it cannot resolve with a placeholder definition called
+`Missing Font (n)`, where `n` is the comparator itself. Across 2,756 Finale 27 companions the record
+is invariant in all 641 occurrences spanning 354 documents: bank `Mac`, `charsetVal` 0, `pitch` 0,
+`family` 0, and the name formed from the comparator in every single case. It does not vary with era,
+product, or comparator. The commonest comparators are 131, 512 and 100, at 193, 193 and 182
+occurrences.
+
+**It is not a conversion artifact.** Finale wrote the same placeholder into the legacy font table at
+save time as far back as Finale 2009, so most documents carrying one recover it as `legacy-mus` and
+agree with the companion with nothing done on our side. Finale 27 applies the rule unconditionally,
+including to comparators that are plainly garbage: one corpus document has a corrupt font table whose
+comparators decode as ASCII character pairs — 12596 (`"14"`), 25203 (`"bs"`), 26990 (`"in"`) and
+similar — and each one still receives a correctly formed placeholder.
+
+musxdom synthesizes the same record for any comparator registered during construction that the
+finished document does not define. That is what keeps `FontInfo::getName` — and `calcIsSameTypeface`
+and `calcIsSMuFL`, which route through it — from throwing on a dangling reference. The reader's whole
+obligation is to register the comparators it leaves in the document, and to register **what a field
+finally holds rather than every value it passes through**: `FontOptions` replaces a recovered
+comparator whose definition is absent, and registering the discarded one would mint a placeholder
+that nothing refers to. musxdom also registers font ids off `SetFont` instructions in every
+`ShapeDef` once the document is built, which the reader does not need to duplicate.
+
+Two Finale `14.0.0.11` documents reach this through the accidental-symbol inserts: their flat and
+dblSharp inserts name comparator 100, the source's own table defines fourteen fonts and none of them
+is 100, and the placeholder now makes the reader agree with the companion exactly where it
+previously left the reference dangling.
+
+#### A shape naming a font the source never defines — third deliberate disagreement
+
+**Confirmed**, on five DCL documents, all Finale 2002 `7.0.1.2`. Take `mus-0bb3c333c0f80358`. Its
+`FN` families run 0–13 and 22 and stop there. Shapes 14 and 15 are custom tab clefs whose `SetFont`
+instruction names comparator **14**, which the file never defines — a dangling reference in the
+source document itself, not something conversion introduced.
+
+Finale 27 resolves it, but only by accident. Its converter prunes the source's duplicate font
+entries — 0 and 6 are both `Pmusic`, 3 and 10 both `Symbol`, 8 and 13 both `Petrucci`, 9 and 11 both
+`Sonata` — and injects its own defaults into the vacated numbers, which lands `Maestro Percussion`
+at comparator 14. The shape's dangling reference then silently resolves to it. The strings `Maestro`
+and `Engraver` appear nowhere in the source file's records, so those faces are Finale 27's, not the
+document's.
+
+That resolution is wrong on the merits. Both shapes draw plain ASCII at 12 point — shape 14 emits
+`T`, `1`, `2`, then `-`, space, `0`; shape 15 emits `T`, `2`, then `-`, space, `2` — so the font
+wanted is a text face, reported to be Helvetica or Arial with Times for these symbols, and never a
+percussion music font. Finale 27 renders tab-clef letterforms as percussion glyphs. The reader keeps
+the comparator as stored and lets it read `Missing Font (14)`, which is both truthful and safer to
+render, since a name that resolves to nothing falls back to a system face and still produces letters.
+
+**This is the one class of companion difference where matching Finale 27 would be the defect.** It is
+recorded so a later coverage run does not re-open it as a regression.
+
+#### Reading `companion-face-missing`
+
+That metric counts faces the companion has and the reader does not, and it must **not** be read as a
+recovery deficit. Across the reference corpus it is dominated by faces Finale 27 injects during
+conversion rather than anything the source named: of 2,956 occurrences over distinct documents,
+`Lucida Grande` (1,065), `Engraver Text T` (799), `Times New Roman` (449) and `Maestro` (327) are
+2,640 of them, or 89%. Not reproducing those is correct — the reader does not seed font definitions,
+because a pinned definition would collide with the source record sharing its comparator.
+
+The interesting residue is small: 165 occurrences of `Missing Font (100)` where the companion carries
+a placeholder and the reader does not. Those are comparators referenced only from option classes the
+reader has not imported yet, so nothing registers them and no placeholder is minted. The count should
+fall as those classes land, and it is a coverage measure rather than a font-table one.
+
 ### The 2007-2012 record encoding
 
 **Confirmed** for the font record against Finale 27's own conversion of the same document, and
@@ -1014,6 +1082,30 @@ See [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md) for all observ
 | `0x03ef` | `acciAlter` | strong correlation with conversion differences |
 | `0x03f3` | `baselinesExprAboveStaff` | exact in 324/324 detail-framed files |
 | `0x0414` | `gfhold` | Pearson 0.999; exact in 291/324 |
+
+### Word order in 32-bit fields — open hypothesis, not tested
+
+Most 32-bit option fields are two 16-bit words with the **high word first**, each word in the
+container's byte order (the framework's `MACFOURBYTE`); a minority are plain little-endian longs
+(`WINFOURBYTE`). The text-options insert element holds one of each: its two trackings are high word
+first in both byte orders, while its Finale 2012 `symChar` is a plain little-endian long. See
+[Text options](#text-options).
+
+**Hypothesis.** The convention follows *when the field entered the format*, not what it means. The
+Enigma era — uncompressed and DCL, when big-endian Macintosh was a first-class target — fixed word
+order deliberately so one rule served both byte orders. By the zlib era big-endian was fading, and
+by Finale 2012 nobody was thinking about it, so fields added late are simply written in native
+little-endian. If this holds, word order is predictable from a field's introduction version and does
+not need to be determined per field.
+
+**How to test it, incidentally.** `data/legacy_option_mappings.csv` carries 36 four-byte rows, 31
+`MACFOURBYTE` and 5 `WINFOURBYTE`. Each future import that lands a 32-bit field adds a dated data
+point: record the field's earliest observed version alongside its observed convention and see
+whether the two `WINFOURBYTE` late arrivals stay late and the `MACFOURBYTE` set stays early. Do not
+mount a dedicated study for this. One caution for whoever picks it up: the current `WINFOURBYTE`
+rows are not uniformly late — `smpteStartTime` is Finale 2014, but the selector-77 page dimensions
+are not a late field — so the hypothesis is not confirmed by a glance at the inventory and may need
+a narrower statement than "late means little-endian".
 
 ## Entry pool
 
@@ -1642,6 +1734,278 @@ garbage from index 0. The reader recovers nothing from such a record rather than
 layout: that is what Finale itself sees, and asserting the pre-Unicode layout for a 2012 document would be a
 layout this era does not use. The document is otherwise an ordinary 2012 file — its clef table is the widened
 10-word tuple in all three populations — so the stale bytes are a leftover in one record, not a second format.
+
+### Multimeasure rest defaults
+
+**Confirmed for both physical layouts and for every field of the class.** The multimeasure-rest
+defaults are the ordinary field-map kind of numeric global rather than a direct block: selector `25`,
+comparator `65534`, and from Finale 2007 the class id `numericGlobalClass` derives, `25 + 0x0e = 0x0027`.
+The automatic-update flag is the one field kept elsewhere, on selector `83` (class `0x0061`). Counts below
+are distinct files of the reference corpus.
+
+**Finale 3.5 rewrote the record**, and that boundary sits *inside* the uncompressed epoch, which is what makes
+this a case for a structural marker rather than either kind of gate. The family's own size states which layout
+a file uses:
+
+| Era | Family | Files |
+|---|---|---:|
+| Finale 1.0.0–3.2 | selector `25`, **1 incidence**, 6 words | 264 (229 Coda-banner, 35 uncompressed), plus 19 Finale 1.0.0 fixtures |
+| Finale 3.5–2006 | selector `25`, **2 incidences**, 12 words | 2,069 (767 uncompressed, 1,302 DCL) |
+| Finale 2007–2012 | class `0x0027`, 24 bytes = the same 12 words coalesced | 1,389 |
+
+No file in any survey carries any other word count, and none crosses the line: every 1.0.0, 1.8.7, 2.0.1, 2.6,
+3.0 and 3.2 document is on the short side and every 3.5-and-later document on the long one. The files with no
+selector `25` at all are containers the reader cannot classify to an epoch either.
+
+All three surveys were run, and the two beyond the reference corpus are what make the boundary a measurement
+rather than an interpolation:
+
+| Survey | What it adds here |
+|---|---|
+| `rpatters1-main` | 3,725 documents, 1,130 later-layout and 59 early-layout companion comparisons |
+| `tracked-evidence` | the only companion-backed Finale 1.0.0 documents anywhere: 19 fixtures, all six-word |
+| `rpatters1-installs` | 12,116 documents, and the only 3.8, 98, 2011 and Coda-era-Windows material in any survey |
+
+The installs survey settles three releases the reference corpus does not contain at all. **Finale 3.8 (11
+documents) and Finale 98 (43) are both on the later side**, as are all 1,295 Finale 2011 documents; its 22
+Finale 1.0.0 documents are on the early side, agreeing with the fixtures. It also supplies the population that
+justifies reading the record instead of the header: **the 24 `PC 1.0+` Coda-era Windows documents state a
+platform where their Mac contemporaries state a version, so they have no version at all**, and the marker
+recovers all 24 where any version range would have skipped every one.
+
+The later layout, addressed as absolute word slots across the two incidences:
+
+| Word | Field | Word | Field |
+|---:|---|---:|---|
+| 0 | `measWidth` | 6 | `symSpacing` |
+| 1 | *unnamed, zero in all 3,458 files* | 7 | `numAdjX` |
+| 2 | `numAdjY` | 8 | `startAdjust` |
+| 3 | `shapeDef` | 9 | `endAdjust` |
+| 4 | `numStart` | 10 | *unnamed, zero in all 3,458 files* |
+| 5 | `useSymsThreshold` | 11 | flags; bit 0 is `useSymbols` |
+
+The early layout keeps only three of them, and two have moved: `measWidth` is still word 0, but `numAdjY` is
+word **4** and `shapeDef` word **5**. Reading an early document through the later table would report its number
+adjustment as a shape comparator. Words 1–3 hold something Finale 3.5 stopped writing — word 1 varies per
+document across 0, 1, 2, 4, 5, 14, 16, 21, 22 and 25, and words 2–3 move together as `(24, 0)` or `(14, 1)` in
+the Coda era and are `(0, 0)` in Finale 3.0 and 3.2. Finale 27's conversion carries nothing from them, so no
+companion can name them; they are **open**.
+
+Agreement with exact Finale 27 companions is complete: all 1,130 companion-backed later-layout documents match
+on all nine scalars and on `useSymbols`, and all 59 companion-backed early-layout documents match on all three,
+with no disagreement of any kind.
+
+Two boundaries do not coincide with the layout marker:
+
+- **Selector `83` arrives with Finale 97, internal 3.8.** No 1.0.0, `PC 1.0+`, 1.8.7, 2.0.1, 2.6, 3.0, 3.2, 3.5
+  or 3.7 document in any survey carries it, and every 3.8, 97, 98 and later one does — the installs corpus
+  confirms both spellings of that release and the Finale 98 that follows it, neither of which the reference
+  corpus contains. Word 4 is `autoUpdateMmRests`; word **2** of the same record is also set in most documents
+  and is *not* this flag — 468 companion-backed documents carry word 2 set with word 4 clear and none of their
+  conversions has `<autoUpdateMmRests/>`, while all 73 that carry word 4 do. All 22 companion-backed documents
+  that lack the selector entirely convert with the flag off. Across both large surveys the flag is only ever
+  *set* in a zlib-era document, which is consistent with a feature added long after its record.
+- **The H-bar adjustments and automatic updating are era behavior before their records exist.** The pinned
+  Finale 27 baseline starts the H-bar 30 Evpu in, ends it 30 Evpu out, and switches automatic updating on; an
+  early document states none of the three, and every early companion converts with all three at zero or false.
+  The reader asserts them as `LegacyBehavior` rather than inheriting the baseline, and an absent selector `83`
+  means automatic updating is off with no further qualification — including for a document whose epoch could not
+  be classified, which is the document most at risk of being left claiming a Finale 27 setting. The rest of what
+  the early era omits — `numStart` 2, `useSymsThreshold` 9, `symSpacing` 48, `numAdjX` 0 and `useSymbols` false —
+  is left to the baseline, which already carries exactly what those conversions produce.
+
+The `shapeDef` comparator is the source's own in every era and agrees with the companion in all 2,305 compared
+documents, but 319 zlib documents name a shape their own file does not define. Those files carry no shape records at
+all, while other zlib documents in the same corpus carry all three shape classes, so it is a property of those
+sources rather than a decoding gap and the reader notes it at `Info` rather than warning; see [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md#p22-dangling-shape-references-in-seeded-options).
+
+`noHorizontalStretch` has no legacy spelling to find. **"Stretch Horizontally" is a Finale 27 feature**, so no
+legacy format has anywhere to put it, and its value is known exactly — false — for every document this reader
+will ever open. The corpus is consistent with that and cannot have shown it on its own: bit 0 is the only bit of
+the flags word any document uses, the word is exactly 0 or 1 in all 3,458 later-layout documents, and no
+companion sets `<noHorizontalStretch/>`. The reader asserts it as `LegacyBehavior` in every era rather than
+leaving it to the pinned baseline, which also says false but says it as one Finale 27 document's setting rather
+than as a fact about the formats.
+
+### Text options
+
+The framework preference tables name three of this class's fields and nothing else, so the rest was located by
+searching for the Finale 27 defaults as a byte pattern and then diffing controlled one-variable saves. Counts
+below are the reference corpus's 1,189 adjacent-exact companion pairs unless stated otherwise. The mapping is in
+[`data/text_options_mapping.csv`](data/text_options_mapping.csv).
+
+**Implemented in full.** `src/import/options/text_options.cpp` recovers all fourteen scalar fields and all five
+accidental inserts across all four epochs. Verified against every tracked fixture with a companion: 2,064 insert
+fields agree, 266 are the intended pre-2001 disagreement described below, and 50 are the Coda-era case where the
+reader takes the pinned baseline and Finale 27 synthesizes the older defaults instead.
+
+The scalars live in five numeric globals at comparator `65534`, reached in the zlib epoch through the usual
+`numericGlobalClass` rule. Every one agrees with its companion on every document that carries the record:
+
+| Field | Location | Documents | Notes |
+|---|---|---:|---|
+| `showTimeSeconds` | `05` word 4 | 1,189 | |
+| `dateFormat` | `05` word 5 | 1,189 | musxdom's `DateFormat` values directly |
+| `tabSpaces` | `13` word 0 | 1,189 | |
+| `textTracking` | `81` words 0–1 | 1,108 | 32-bit |
+| `textBaselineShift` | `81` words 2–3 | 1,108 | 32-bit Evpu |
+| `textSuperscript` | `81` words 4–5 | 1,108 | 32-bit Evpu |
+| `textLineSpacingPercent` / `textLineSpacingEvpu` | `82` word 0, mode in word 1 | 1,108 | word 1 selects the member; see below |
+| `textWordWrap` | `82` word 2 | 1,108 | |
+| `textPageOffset` | `82` word 3 | 1,108 | |
+| `textJustify` | `82` word 4 | 1,108 | **not** musxdom's values; see below |
+| `textExpandSingleWord` | `82` word 5 | 1,108 | |
+| `textHorzAlign` | `83` word 0 | 1,108 | `AlignJustify` values directly |
+| `textVertAlign` | `83` word 1 | 1,108 | **not** musxdom's values; see below |
+| `textIsEdgeAligned` | `83` word 3 | 1,108 | by elimination within `83` |
+
+**Selectors `81`, `82` and `83` arrive with Finale 97**, matching the `83` boundary the multimeasure-rest
+defaults already establish: no document of Finale 2.6, 3.0, 3.2, 3.5 or 3.7 carries any of the three, and every
+Finale 97 and later one carries all three. `05` and `13` are present in every era including Coda-banner, so
+`dateFormat` and `tabSpaces` need no gate at all — a Finale 1.0.0 and a Finale 2.6 fixture each move both fields
+from the same words as every later era. That agrees with the report that the Coda-era UI exposes tab spacing and
+date format and no other document-wide text setting.
+
+**Three enums order their lists first, opposite, centre, and two of them therefore disagree with musxdom.**
+`AlignJustify` already uses Finale's order, `Left, Right, Center`, so `textHorzAlign` passes through untouched.
+`TextJustify` is `Left, Center, Right, Full, ForcedFull` in musxdom against `Left, Right, Center, Full,
+ForcedFull` in the file, and `VerticalAlignment` is `Top, Center, Bottom` against `Top, Bottom, Center`. Both need
+positions 1 and 2 exchanged; nothing else moves.
+
+Each was settled by a single specimen, because the corpus never varies any of them:
+
+- `textJustify` — one Finale 2003 document stores 2 and Finale 27 converts it to `center`.
+- `textHorzAlign` — one Finale 2001 document stores 2 in `83` word 0 against a converted `center`. That document
+  is also what identifies word 0, since the controlled fixtures set right and true together and both read as 1.
+- `textVertAlign` — `tests/evidence/F2005/F2005-textvert-center.*` moves `83` word 1 alone, 0 → 2, and its
+  companion gains `<textVertAlign>center</textVertAlign>`. Center at 2 with the earlier fixtures' `bottom` at 1
+  fixes the whole list, and leaves word 3 as `textIsEdgeAligned` by elimination.
+- `textExpandSingleWord` — `tests/evidence/F97/F97-expword-off.*` moves `82` word 5 alone, 1 → 0, and its
+  companion loses `<textExpandSingleWord/>`.
+
+- the line-spacing mode — `tests/evidence/F2005/F2005-linespace-to-evpu.*` moves `82` words 0 and 1 and nothing
+  else, `[100, 1, 1, 0, 0, 1]` → `[72, 0, 1, 0, 0, 1]`, with the ETF reading `^82(65534) 72 0 1 0 0 1`. Its
+  companion replaces `<textLineSpacingPercent>100</…>` with `<textLineSpacingEvpu>72</…>` and keeps
+  `<textExpandSingleWord/>`. **Word 1 set means percent and clear means Evpu**, with word 0 the value either way.
+
+That last fixture matters more than its size suggests, because **Finale 27 has no boolean for the mode**. It
+writes either `<textLineSpacingPercent>` or `<textLineSpacingEvpu>` and never both, so the mode is the element's
+identity rather than a value a companion could be compared against: across 1,730 corpus companions and all 68
+tracked-fixture companions, only two documents carry the Evpu spelling and none carries a flag beside either.
+Word 1 is therefore load-bearing but never itself recovered — it decides which of musxdom's two members `82`
+word 0 belongs in, and nothing holds it afterwards. Before this fixture the word was identified only by
+elimination against word 5, since the Finale 2012 scalars save had moved both at once; this one moves word 1
+with word 5 held still, which settles it directly.
+
+One consequence for the DOM: a document storing 0 in word 0 loses the distinction, because both members are then
+zero. That is harmless for the value and only means the mode cannot be round-tripped in that one case. musxdom
+now models the pair as `std::optional`, with `TextOptions::integrityCheck` reporting and repairing a document
+that supplies both spellings or neither.
+
+`83` word 2 remains unassigned. It is 0 in every pre-2007 document and 1 in every 2007-and-later one, and a
+controlled Finale 2012 text-options save cleared it, but it is not any of `TextOptions`'s fields. This is the
+same word the multimeasure-rest note records as set in 468 companion-backed documents without
+`autoUpdateMmRests`; those 468 are exactly the zlib-era documents whose word 4 is clear, so the two observations
+are one fact.
+
+Finale 27 writes `<textLineSpacingEvpu>` in place of `<textLineSpacingPercent>` when line spacing is absolute.
+musxdom had no such member and silently dropped the value; it now has one.
+
+#### Accidental symbol inserts
+
+**Confirmed for Finale 2001 onward; strong for Finale 3.7–2000.** `TextOptions::symbolInserts` is a direct
+five-element array at selector `78(65534)`, class `0x005c` in the zlib epoch, in musxdom's own
+`AccidentalInsertSymbolType` order: sharp, flat, natural, double sharp, double flat. The field order is the same
+in every era:
+
+| Offset | Width | Field |
+|---:|---|---|
+| 0 | 4 | `trackingBefore` |
+| 4 | 4 | `trackingAfter` |
+| 8 | 2, signed | `baselineShiftPerc` |
+| 10 | 2 | `symFont` font-definition comparator |
+| 12 | 2 | `symFont` size |
+| 14 | 2 | `symFont` effects bitmask |
+| 16 | varies | `symChar` |
+
+A 32-bit field is two 16-bit words, **high word first**, each word in the container's byte order — the framework's
+`MACFOURBYTE`. That is one rule for both byte orders: a Finale 2005 big-endian file stores 1000 as
+`00 00 03 e8` and a Finale 2012 little-endian file stores it as `00 00 e8 03`.
+
+What changes between eras is the element size, and the family's own size states which layout applies:
+
+| Era | Payload | Element | `symChar` | Documents |
+|---|---:|---|---|---:|
+| Coda-banner 1.x–2.6, Finale 3.0–3.5 | absent | — | — | 61 |
+| Finale 3.7–2000 | 96 bytes | **17 bytes** | 1 byte at offset 16 | 179 |
+| Finale 2001–2010 | 96 bytes | **18 bytes** | 2 bytes, low byte only | 701 |
+| Finale 2012 | 108 bytes | **20 bytes** | 4 bytes, low word first | 248 |
+
+The epoch separates the 17-byte layout from the 18-byte one, and inside the zlib epoch the payload length
+separates 18 from 20, so no version gate is needed. The Finale 2012 widening of `symChar` is the same Unicode
+boundary the stem-connection symbol crosses.
+
+Agreement with exact Finale 27 companions is complete from Finale 2001 on: 21,030 field comparisons across the
+701 documents of the 18-byte layout and 7,440 across the 248 of the 20-byte layout, with no disagreement.
+This is not a defaults-only result. 460 elements name a real font definition, sizes range over 100, 110, 112,
+120, 130 and 150, baseline shifts over −70, 10, 15, 16, 19, 30, 34 and 110, and 198 documents set effects bits;
+all of those agree. Effects are `FontInfo::setEnigmaStyles` unchanged — 990 comparisons on the documents that
+set any bit, including a value of 56 whose 0x08 and 0x10 bits neither Finale 27 nor musxdom models, and which
+both therefore drop identically. The controlled fixtures pin the individual fields that the corpus leaves at
+their defaults: tracking before 1000, tracking after 250 and a baseline shift of −25 in one save, and a
+Petrucci reference at 79% with bold, then italic plus underline, in two more.
+
+**The `symChar` slot is a byte, not a word, before Finale 2012.** Four Finale 2006 fixtures store the two
+characters above 127 sign-extended, `ff dc` for 220 and `ff ba` for 186, while a fifth fixture of the same
+version stores `00 dc`. Finale 27 keeps the low byte and so must the reader.
+
+**The Finale 2012 form is a plain little-endian long, and the two trackings in the same element are not.** That
+asymmetry is measured rather than assumed, and only one kind of specimen can measure it: a character above the
+basic multilingual plane, where the candidate orders finally disagree.
+`tests/evidence/F2012/F2012-dblsharp-insert-outside-BMP.*` supplies one. Its double-sharp insert stores
+`69 64 02 00` and its companion reads `<symChar>156777</symChar>`, U+26469 in CJK Extension B, with the font set
+to LiSong Pro at comparator 19. Low word first gives exactly that; the high-word-first order `trackingBefore`
+and `trackingAfter` use would give 0x64690002, which is not a codepoint at all. So one element holds two
+different 32-bit conventions, which is consistent with the trackings being old fields carried forward in Finale's
+two-word form while the character was widened later as a native long.
+
+**Finale 27 mis-converts the Finale 3.7–2000 layout, and this reader deliberately disagrees with it.** Finale 27
+uses the correct 17-byte stride but reads the multi-byte fields as though the element were the 18-byte one, so
+it reports the sharp insert's tracking as 2293760 — the bytes `00 23 00 00` read as a big-endian long — and its
+character as 50, which is the first byte of the *next* element. Read as a little-endian byte structure the same
+records yield 35, 50, 0, 40, 60 and characters 35, 98, 110, 220, 186: the values every other era stores, on all
+179 documents and all thirteen tracked fixtures of that era. No companion can confirm the era because every
+companion is wrong, so the layout stays **strong** rather than confirmed until a controlled Finale 97 or 2000
+save exists. The 32-bit width of the two tracking fields there is inferred from the offsets, which are identical
+to the later layout; only the character narrows.
+
+Why that era's structure is little-endian inside a big-endian container is **open**. Every observed file of the
+era is big-endian, so "opposite to the container" and "always little-endian" cannot be told apart; a Windows
+Finale 3.x–2000 document would separate them and none is available. The reader undoes the container word order
+on a big-endian file, which gives the same answer under either explanation.
+
+**Finale's own upgrade path bakes that corruption into later files.** Eight documents — six Finale 2012 and two
+Finale 2009 — store a record that already contains the misconverted values, evidently from an old file opened
+and re-saved in a later Finale. The reader reproduces Finale 27 exactly on all eight, which is independent
+confirmation of both the later layouts and the misconversion.
+
+The Coda-banner absence is intended and is not a gap: no document of that era carries selector `78`, the era's
+UI is reported to expose no such option, and Finale 27 synthesizes the pre-2001 defaults when converting one.
+Those documents keep the pinned Finale 27 baseline's five inserts, which the options pool has already seeded, and
+each `symFont` comparator is translated into the imported document's own numbering through musxdom's
+`importFontDefinitionInto`. **This is a second deliberate disagreement with the companion**, and a smaller one:
+Finale 27 gives a converted Coda document the pre-2001 defaults, so its flat and natural inserts read 50 and 0
+where the baseline reads 60 and 50. That is 50 field differences across the 25 Coda fixtures, all in those two
+fields. Taking the baseline is a decision rather than a finding -- no evidence says what the Coda era actually
+rendered, and Finale 27's choice may be its converter's own table rather than a fact about the era.
+Finale 3.0–3.5 is the same case for a different reason — the record simply is not there yet — and rests on only
+eight documents of the reference corpus, which is thin; the installs survey has not been run for this class and
+would firm up where between 3.5 and 3.7 the record appears.
+
+The third deliberate disagreement is in a different class and is recorded under
+[Font definitions](#a-shape-naming-a-font-the-source-never-defines--third-deliberate-disagreement): a shape whose
+`SetFont` names a comparator the source never defines, which Finale 27 resolves to the wrong face by accident of
+its own renumbering.
 
 ## Text and variable-length data
 

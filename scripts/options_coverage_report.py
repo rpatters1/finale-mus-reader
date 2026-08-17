@@ -32,10 +32,72 @@ EPOCH_ORDER = ["coda-banner", "uncompressed", "dcl", "zlib", "unknown"]
 CLASSES = [
     ("clef_options", "ClefOptions"),
     ("font_options", "FontOptions"),
+    ("mmrest_options", "MultimeasureRestOptions"),
+    ("text_options", "TextOptions"),
     ("font_definitions", "FontDefinition"),
 ]
 
+# MultimeasureRestOptions: probe key, companion element, musxdom member. The element names
+# are musxdom's own XML mapping and are not the member names -- measWidth is <meaSpace>,
+# numAdjY is <numdec>, useSymsThreshold is <threshold>, symSpacing is <spacing> and
+# useSymbols is <useCharRestStyle>. An absent element means the field is 0 or false.
+MMREST_NUMERIC = [
+    ("meas_width", "meaSpace", "measWidth"),
+    ("num_adj_y", "numdec", "numAdjY"),
+    ("shape_def", "shapeDef", "shapeDef"),
+    ("num_start", "numStart", "numStart"),
+    ("use_syms_threshold", "threshold", "useSymsThreshold"),
+    ("sym_spacing", "spacing", "symSpacing"),
+    ("num_adj_x", "numAdjX", "numAdjX"),
+    ("start_adjust", "startAdjust", "startAdjust"),
+    ("end_adjust", "endAdjust", "endAdjust"),
+]
+MMREST_BOOLEAN = [
+    ("use_symbols", "useCharRestStyle", "useSymbols"),
+    ("no_horizontal_stretch", "noHorizontalStretch", "noHorizontalStretch"),
+    ("auto_update_mm_rests", "autoUpdateMmRests", "autoUpdateMmRests"),
+]
+
 FONT_TYPE_NAMES = {}  # ordinal -> companion XML type name, filled from the baseline
+
+# TextOptions: probe key, companion element, musxdom member. The element names are musxdom's
+# own XML mapping, which for this class happens to equal the member names. An absent element
+# means the field is 0, false, or the enum's first value.
+TEXT_NUMERIC = [
+    ("tab_spaces", "tabSpaces", "tabSpaces"),
+    ("text_tracking", "textTracking", "textTracking"),
+    ("text_baseline_shift", "textBaselineShift", "textBaselineShift"),
+    ("text_superscript", "textSuperscript", "textSuperscript"),
+    ("text_page_offset", "textPageOffset", "textPageOffset"),
+]
+TEXT_BOOLEAN = [
+    ("show_time_seconds", "showTimeSeconds", "showTimeSeconds"),
+    ("text_word_wrap", "textWordWrap", "textWordWrap"),
+    ("text_expand_single_word", "textExpandSingleWord", "textExpandSingleWord"),
+    ("text_is_edge_aligned", "textIsEdgeAligned", "textIsEdgeAligned"),
+]
+# Enum-valued elements. The companion writes a name; the probe writes musxdom's ordinal, so the
+# name has to be resolved back through musxdom's own mapping. An absent element is the default,
+# which for all four is ordinal 0.
+TEXT_ENUMS = [
+    ("date_format", "dateFormat", "dateFormat",
+     {"short": 0, "long": 1, "abbrev": 2}),
+    ("text_justify", "textJustify", "textJustify",
+     {"left": 0, "center": 1, "right": 2, "full": 3, "forcedFull": 4}),
+    # HorizontalAlignment is AlignJustify: left, right, center -- not the TextJustify order.
+    ("text_horz_align", "textHorzAlign", "textHorzAlign",
+     {"left": 0, "right": 1, "center": 2}),
+    ("text_vert_align", "textVertAlign", "textVertAlign",
+     {"top": 0, "center": 1, "bottom": 2}),
+]
+# Symbol-insert fields: probe key, companion element, reported member.
+INSERT_NUMERIC = [
+    ("tracking_before", "trackingBefore", "trackingBefore"),
+    ("tracking_after", "trackingAfter", "trackingAfter"),
+    ("baseline_shift_perc", "baselineShiftPerc", "baselineShiftPerc"),
+    ("sym_char", "symChar", "symChar"),
+]
+INSERT_TYPES = ["sharp", "flat", "natural", "dblSharp", "dblFlat"]
 
 
 def load_observations(paths):
@@ -88,6 +150,45 @@ def font_option_coverage(obs):
     }
 
 
+# Fields the reader asserts for every document regardless of what it read. They carry no
+# information about coverage -- counting them would make every epoch pass the acceptance rule
+# by construction, including one where nothing was decoded at all -- so they are excluded from
+# the coverage counts. They are still compared against companions like any other field.
+UNCONDITIONAL_MMREST_FIELDS = {"origin_noHorizontalStretch"}
+
+
+def mmrest_coverage(obs):
+    mmrest = obs.get("mmrest_options")
+    if not mmrest:
+        return None
+    origins = [v for k, v in mmrest.items()
+               if k.startswith("origin_") and k not in UNCONDITIONAL_MMREST_FIELDS]
+    return {
+        "recovered": recovered_origins(origins),
+        "total": len(origins),
+        "dangling_shapes": 1 if mmrest.get("dangling_shape") else 0,
+        "any_recovered": recovered_origins(origins) > 0,
+    }
+
+
+def text_coverage(obs):
+    text = obs.get("text_options")
+    if not text:
+        return None
+    scalars = [v for k, v in text.items() if k.startswith("origin_")]
+    insert_origins = []
+    for ins in text.get("inserts", []):
+        insert_origins.extend(v for k, v in ins.items() if k.startswith("origin_"))
+    return {
+        "scalar_recovered": recovered_origins(scalars),
+        "scalar_total": len(scalars),
+        "insert_recovered": recovered_origins(insert_origins),
+        "insert_total": len(insert_origins),
+        "dangling_fonts": sum(1 for i in text.get("inserts", []) if i.get("dangling_font")),
+        "any_recovered": recovered_origins(scalars) + recovered_origins(insert_origins) > 0,
+    }
+
+
 def font_definition_coverage(obs):
     defs = obs.get("font_definitions")
     if defs is None:
@@ -101,8 +202,17 @@ def font_definition_coverage(obs):
 
 
 def normalize_font(name):
-    """Mirror musxdom's normalizeFontName. Comparison only; spellings are kept."""
-    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
+    """Mirror musxdom's normalizeFontName. Comparison only; spellings are kept.
+
+    musxdom strips whitespace and lowercases ASCII, and keeps everything else. Stripping
+    all punctuation instead is not the same rule and disagrees with the probe's own
+    normalized_font_name on any face whose name carries punctuation -- Finale 27 writes an
+    unresolvable comparator as "Missing Font (110)", which the two rules normalized to
+    "missingfont110" and "missingfont(110)", inventing 16 differences that were only the
+    two normalizers disagreeing with each other.
+    """
+    return "".join(c.lower() if c.isascii() else c
+                   for c in (name or "") if not (c.isascii() and c.isspace()))
 
 
 def read_companion(path):
@@ -153,9 +263,54 @@ def read_companion(path):
                 "shape_id": num("shapeID"),
                 "is_shape": "<isShape/>" in d,
             })
+    mmrest = {}
+    mo = re.search(r"<multimeasureRestOptions>(.*?)</multimeasureRestOptions>", xml, re.S)
+    if mo:
+        body = mo.group(1)
+        for _, tag, _ in MMREST_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (tag, tag), body)
+            mmrest[tag] = int(m.group(1)) if m else 0
+        for _, tag, _ in MMREST_BOOLEAN:
+            mmrest[tag] = bool(re.search(r"<%s/>|<%s>1</%s>" % (tag, tag, tag), body))
+    text = {}
+    inserts = {}
+    to = re.search(r"<textOptions>(.*?)</textOptions>", xml, re.S)
+    if to:
+        body = to.group(1)
+        # Strip the insert elements before reading the scalars: <symChar> and the tracking
+        # elements live inside them and would otherwise be picked up as document scalars.
+        outer = re.sub(r"<insertSymbolInfo\b.*?</insertSymbolInfo>", "", body, flags=re.S)
+        for _, tag, _ in TEXT_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (tag, tag), outer)
+            text[tag] = int(m.group(1)) if m else 0
+        for _, tag, _ in TEXT_BOOLEAN:
+            text[tag] = bool(re.search(r"<%s/>|<%s>1</%s>" % (tag, tag, tag), outer))
+        for _, tag, _, mapping in TEXT_ENUMS:
+            m = re.search(r"<%s>(\w+)</%s>" % (tag, tag), outer)
+            text[tag] = mapping.get(m.group(1), -1) if m else 0
+        # Line spacing: whichever spelling the companion carries. Absent means absent, which
+        # is a real difference from a reader that supplied one, so no default is invented.
+        for tag in ("textLineSpacingPercent", "textLineSpacingEvpu"):
+            m = re.search(r"<%s>(-?\d+)</%s>" % (tag, tag), outer)
+            text[tag] = int(m.group(1)) if m else None
+        for m in re.finditer(
+                r'<insertSymbolInfo type="(\w+)">(.*?)</insertSymbolInfo>', body, re.S):
+            d = m.group(2)
+            entry = {}
+            for _, tag, _ in INSERT_NUMERIC:
+                mm = re.search(r"<%s>(-?\d+)</%s>" % (tag, tag), d)
+                entry[tag] = int(mm.group(1)) if mm else 0
+            sf = re.search(r"<symFont>(.*?)</symFont>", d, re.S)
+            fid = re.search(r"<fontID>(\d+)</fontID>", sf.group(1)) if sf else None
+            size = re.search(r"<fontSize>(-?\d+)</fontSize>", sf.group(1)) if sf else None
+            entry["font_name"] = normalize_font(
+                names.get(fid.group(1) if fid else "0", ""))
+            entry["font_size"] = int(size.group(1)) if size else 0
+            inserts[m.group(1)] = entry
     return {"fonts": fonts,
             "font_names": {normalize_font(v) for v in names.values() if v},
-            "clefs": clefs, "clef_scalars": scalars}
+            "clefs": clefs, "clef_scalars": scalars, "mmrest": mmrest,
+            "text": text, "text_inserts": inserts}
 
 
 def compare_companion(obs, comp):
@@ -212,6 +367,54 @@ def compare_companion(obs, comp):
                  "cautionaryClefChanges")):
             outcome = "preserved" if clef[key] == comp["clef_scalars"][tag] else "differs"
             out[("ClefOptions." + tag, clef.get("origin_" + member, "absent"), outcome)] += 1
+
+    mmrest = obs.get("mmrest_options")
+    if mmrest and comp["mmrest"]:
+        for key, tag, member in MMREST_NUMERIC + MMREST_BOOLEAN:
+            outcome = "preserved" if mmrest[key] == comp["mmrest"][tag] else "differs"
+            out[("MultimeasureRestOptions." + tag,
+                 mmrest.get("origin_" + member, "absent"), outcome)] += 1
+
+    text = obs.get("text_options")
+    if text and comp["text"]:
+        for key, tag, member in TEXT_NUMERIC + TEXT_BOOLEAN:
+            outcome = "preserved" if text[key] == comp["text"][tag] else "differs"
+            out[("TextOptions." + tag, text.get("origin_" + member, "absent"), outcome)] += 1
+        for key, tag, member, _ in TEXT_ENUMS:
+            outcome = "preserved" if text[key] == comp["text"][tag] else "differs"
+            out[("TextOptions." + tag, text.get("origin_" + member, "absent"), outcome)] += 1
+        # Line spacing is one value in two spellings. Compare the pair, so a reader that put
+        # the right number under the wrong spelling is a difference rather than a match.
+        ours_spacing = (text["line_spacing_percent"], text["line_spacing_evpu"])
+        theirs_spacing = (comp["text"]["textLineSpacingPercent"],
+                          comp["text"]["textLineSpacingEvpu"])
+        spacing_origin = text.get("origin_textLineSpacingPercent", "absent")
+        if spacing_origin == "absent":
+            spacing_origin = text.get("origin_textLineSpacingEvpu", "absent")
+        out[("TextOptions.lineSpacing", spacing_origin,
+             "preserved" if ours_spacing == theirs_spacing else "differs")] += 1
+
+        ours_inserts = {i["type"]: i for i in text.get("inserts", [])}
+        for name in INSERT_TYPES:
+            ours = ours_inserts.get(name)
+            theirs = comp["text_inserts"].get(name)
+            if ours is None or not ours.get("present") or theirs is None:
+                out[("TextOptions.symbolInserts", "pool",
+                     "absent-in-companion" if theirs is None else "absent-in-reader")] += 1
+                continue
+            for key, tag, member in INSERT_NUMERIC:
+                outcome = "preserved" if ours[key] == theirs[tag] else "differs"
+                out[("TextOptions.symbolInserts." + tag,
+                     ours.get("origin_" + member, "absent"), outcome)] += 1
+            # The comparator is renumbered between pools, so only the resolved face compares.
+            same_face = (ours.get("normalized_font_name")
+                         or normalize_font(ours.get("font_name"))) == (theirs["font_name"] or "")
+            out[("TextOptions.symbolInserts.symFont.face",
+                 ours.get("origin_symFont.fontId", "absent"),
+                 "preserved" if same_face else "differs")] += 1
+            out[("TextOptions.symbolInserts.symFont.size",
+                 ours.get("origin_symFont.fontSize", "absent"),
+                 "preserved" if ours["font_size"] == theirs["font_size"] else "differs")] += 1
 
     ours_names = {normalize_font(d["name"]) for d in (obs.get("font_definitions") or [])
                   if d.get("name")}
@@ -281,6 +484,22 @@ def main():
             e["fo_recovered"] += f["recovered"]
             e["fo_total"] += f["count"]
             e["fo_dangling"] += f["dangling"]
+        m = mmrest_coverage(obs)
+        if m:
+            e["mm_docs"] += 1
+            e["mm_any"] += 1 if m["any_recovered"] else 0
+            e["mm_recovered"] += m["recovered"]
+            e["mm_total"] += m["total"]
+            e["mm_dangling_shapes"] += m["dangling_shapes"]
+        t = text_coverage(obs)
+        if t:
+            e["tx_docs"] += 1
+            e["tx_any"] += 1 if t["any_recovered"] else 0
+            e["tx_scalar_recovered"] += t["scalar_recovered"]
+            e["tx_scalar_total"] += t["scalar_total"]
+            e["tx_insert_recovered"] += t["insert_recovered"]
+            e["tx_insert_total"] += t["insert_total"]
+            e["tx_dangling_fonts"] += t["dangling_fonts"]
         d = font_definition_coverage(obs)
         if d:
             e["fd_docs"] += 1
@@ -303,7 +522,8 @@ def main():
     print("READER COVERAGE BY EPOCH  (recovered = legacy-mus or legacy-behavior)")
     print("=" * 78)
     header = (f"{'epoch':<14}{'docs':>7}{'occurs':>8}  "
-              f"{'ClefOptions':>22}  {'FontOptions':>20}  {'FontDefinition':>20}")
+              f"{'ClefOptions':>22}  {'FontOptions':>20}  {'MmRestOptions':>20}  "
+              f"{'TextOptions':>20}  {'FontDefinition':>20}")
     print(header)
     for epoch in EPOCH_ORDER + sorted(k for k in by_epoch if k not in EPOCH_ORDER):
         if epoch not in by_epoch:
@@ -315,9 +535,12 @@ def main():
         clef = (f"{e['clef_any']}/{e['clef_docs']} docs "
                 f"{e['clef_def_recovered'] + e['clef_scalar_recovered']}f")
         fo = f"{e['fo_any']}/{e['fo_docs']} docs {e['fo_recovered']}f"
+        mm = f"{e['mm_any']}/{e['mm_docs']} docs {e['mm_recovered']}f"
+        tx = (f"{e['tx_any']}/{e['tx_docs']} docs "
+              f"{e['tx_scalar_recovered'] + e['tx_insert_recovered']}f")
         fd = f"{e['fd_any']}/{e['fd_docs']} docs {e['fd_recovered']}f"
         print(f"{epoch:<14}{e['docs']:>7}{e.get('occurrences', 0):>8}  "
-              f"{clef:>22}  {fo:>20}  {fd:>20}")
+              f"{clef:>22}  {fo:>20}  {mm:>20}  {tx:>20}  {fd:>20}")
     print()
     print("  'x/y docs' = documents with at least one source-derived value / documents")
     print("  'Nf'       = total source-derived fields recovered across the epoch")
@@ -332,6 +555,8 @@ def main():
             continue
         e = by_epoch[epoch]
         for key, label in (("clef_any", "ClefOptions"), ("fo_any", "FontOptions"),
+                           ("mm_any", "MultimeasureRestOptions"),
+                           ("tx_any", "TextOptions"),
                            ("fd_any", "FontDefinition")):
             if e.get(key, 0) == 0:
                 print(f"  FAIL  {epoch:<14} {label}: no document recovered any value")
@@ -382,10 +607,10 @@ def main():
                 by_ep[obs["epoch"]][(k[0], k[2])] += v
         quality_ok = seen
         print(f"  compared {seen} document(s)\n")
-        print(f"  {'field':<34}{'origin':<18}{'outcome':<24}{'count':>8}")
+        print(f"  {'field':<46}{'origin':<18}{'outcome':<24}{'count':>8}")
         for (field, origin, outcome), n in sorted(
                 outcomes.items(), key=lambda kv: (-kv[1], kv[0])):
-            print(f"  {field:<34}{origin:<18}{outcome:<24}{n:>8}")
+            print(f"  {field:<46}{origin:<18}{outcome:<24}{n:>8}")
 
     print()
     print("RESULT:", "ACCEPTED" if ok else "NOT ACCEPTED")

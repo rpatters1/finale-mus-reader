@@ -16,6 +16,7 @@
 #include "finale_mus_reader/reader.h"
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
+#include "musx/factory/ConstructionContext.h"
 #include "records/legacy_record_index.h"
 
 namespace finale_mus_reader {
@@ -292,11 +293,30 @@ void assignFrom(T& target, std::int64_t value)
     target = static_cast<T>(value);
 }
 
+/// @brief Assigns to an optional member, engaging it.
+/// @details musxdom uses an optional where an absent element means something other than a
+/// zero value -- for a mutually exclusive pair of spellings, which one the document used.
+/// A table row that reaches such a member has by definition found the value in the source,
+/// so the member is engaged; leaving a member disengaged is the business of whatever decides
+/// the row does not apply.
+template <typename T>
+void assignFrom(std::optional<T>& target, std::int64_t value)
+{
+    target = static_cast<T>(value);
+}
+
 /// @brief Reads a member as a report value.
 template <typename T>
 [[nodiscard]] std::int64_t readAs(const T& source)
 {
     return static_cast<std::int64_t>(source);
+}
+
+/// @brief Reads an optional member as a report value, treating a disengaged one as zero.
+template <typename T>
+[[nodiscard]] std::int64_t readAs(const std::optional<T>& source)
+{
+    return source ? static_cast<std::int64_t>(*source) : 0;
 }
 
 /// @brief What a mapped field reads out of the record stream.
@@ -471,6 +491,18 @@ struct ImportContext
     ImportReport& report;
     /// @brief Reference objects a class needs copied, drained after every pool is filled.
     PendingReferences& pending;
+    /// @brief The construction session's font registry.
+    /// @details Every font comparator this import leaves in the document must be registered
+    /// here, because musxdom resolves the registered set once at @ref
+    /// musx::factory::DocumentFactory::ConstructionSession::finish and supplies a placeholder
+    /// definition for any comparator the document does not define. A comparator that is never
+    /// registered gets no placeholder, and `FontInfo::getName` and everything routed through
+    /// it -- `calcIsSameTypeface`, `calcIsSMuFL` -- throw on it instead.
+    ///
+    /// Register the value a field finally holds, not every value it passes through. Several
+    /// importers overwrite a recovered comparator during a later repair pass, and registering
+    /// the discarded one would mint a placeholder definition that nothing references.
+    musx::factory::ConstructionContext& construction;
 };
 
 /// @brief Recovers one musxdom class, from record identity to finished object.
@@ -480,18 +512,14 @@ struct ImportContext
 /// order. Nothing outside the class's own translation unit knows how many layouts it has.
 using ClassImporter = void (*)(const ImportContext& context);
 
-/// @brief Copies every requested reference object into the document and fills in its comparator.
-/// @details Runs after every pool is populated. Nothing may allocate an `others` comparator after
-/// this returns. A reference shape requested more than once is copied once, keyed by its
-/// comparator in the reference document rather than by anything about its content.
-void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument,
-    PendingReferences& pending, ImportReport& report);
-
 /// @brief Applies every registered mapping table to a seeded document.
+/// @details Runs the registered importers in order, then drains @ref PendingReferences in one
+/// final phase. That phase allocates `others` comparators, so nothing may allocate one after
+/// this returns.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report);
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    musx::factory::ConstructionContext& construction);
 
 
 } // namespace finale_mus_reader
@@ -581,6 +609,33 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
 
 /// @brief A bit range of a class-identified record, assigned through a conversion expression.
+/// @brief A transformed bit range of a class-identified record, in a record found under an
+/// explicit comparator.
+/// @details The counterpart of @ref MUS_CLASS_SELECTED_BITS for a value that needs converting
+/// on the way in. An @ref TargetKind::OptionsSingleton table takes its comparator from the
+/// field rather than from the target, so a singleton needs this form wherever
+/// @ref MUS_CLASS_BITS_AS would leave the comparator at zero and find no record.
+#define MUS_CLASS_SELECTED_BITS_AS(Class, classId, selectorValue, byteOffset, firstBit, \
+                                   bitCount, member, ...) \
+    ::finale_mus_reader::FieldMapping { \
+        #member, \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
+            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            static_cast<std::uint32_t>(byteOffset), \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            (::finale_mus_reader::BitRange{ \
+                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+        ::finale_mus_reader::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
+        [](const void* instance) -> std::int64_t { \
+            return ::finale_mus_reader::readAs( \
+                static_cast<const Class*>(instance)->member); }, \
+        nullptr \
+    }
+
 #define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \

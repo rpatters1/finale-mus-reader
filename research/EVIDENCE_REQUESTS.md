@@ -326,6 +326,59 @@ Closed by `tests/evidence/F100/F100-revstem-25.*`. Setting the reverse stem adju
 **300** — twelve times the stored number, matching the factor the two stem lengths establish.
 `StemOptions` now has no inferred location, unit or bit anywhere in its four epochs.
 
+### T1 — Supplied/Analyzed — the accidental symbol inserts and eleven text scalars
+
+Settled by nine fixtures: `tests/evidence/F2005/F2005-insert-sharp-font.*`,
+`F2005-insert-sharp-font-it-und.*`, `F2005-insert-flat-tracking.*`, `F2005-textopts-scalars.*`, the matching
+`F2012-baseline`, `F2012-insert-flat-tracking` and `F2012-textopts-scalars`, and the Coda-era
+`F100-dateform-tab.*` and `F263-dateform-tab.*`.
+
+The two font saves put 9, 79 and 0x01 — then 0x06 — into offsets 10, 12 and 14 of the sharp element of
+`78(65534)`, with the companion resolving 9 to the source's own `^FN(9) "Petrucci"` and the bits to bold, then
+italic plus underline. The tracking save puts 1000, 250 and −25 into offsets 0, 4 and 8 of the flat element,
+which fixes both 32-bit widths, the high-word-first order and the sign of the baseline shift. The scalars save
+moves five records at once and locates eleven fields in `81`, `82`, `83`, `05` and `13`. The two Coda saves move
+`05` word 5 to 1 and 2 and `13` word 0 to 7, showing that date format and tab spacing sit in the same words in
+the earliest era as in the latest.
+
+Full results are in [FORMAT_NOTES.md](FORMAT_NOTES.md#text-options).
+
+### T2 — Supplied/Analyzed — the four text fields no corpus document varies
+
+Both saves behaved exactly as predicted, each moving one word and nothing else.
+
+`tests/evidence/F2005/F2005-textvert-center.*` moves `83` word 1 from 0 to 2, with the ETF reading
+`^83(65534) 0 2 0 0 0 0` and the companion gaining `<textVertAlign>center</textVertAlign>`. Center at 2, against
+the earlier fixtures' `bottom` at 1, fixes the legacy vertical list as `Top, Bottom, Center` — the same
+first/opposite/centre order as the two enums already confirmed — and leaves word 3 as `textIsEdgeAligned`.
+
+`tests/evidence/F97/F97-expword-off.*` moves `82` word 5 from 1 to 0, with the ETF reading
+`^82(65534) 100 1 1 0 0 0` and the companion losing `<textExpandSingleWord/>`. That fixes word 5 and leaves word
+1 as the percent/Evpu line-spacing selector.
+
+`tests/evidence/F2005/F2005-linespace-to-evpu.*` closes the last residue. It moves `82` words 0 and 1 and nothing
+else, `[100, 1, 1, 0, 0, 1]` → `[72, 0, 1, 0, 0, 1]`, with the ETF reading `^82(65534) 72 0 1 0 0 1`; the
+companion replaces `<textLineSpacingPercent>100</…>` with `<textLineSpacingEvpu>72</…>` and keeps
+`<textExpandSingleWord/>`. Word 1 set means percent, clear means Evpu, and word 0 is the value either way.
+
+That save was needed because Finale 27 has no boolean of its own for the mode. It writes one spelling or the
+other and never both, so there is nothing on the companion side to compare a recovered flag against; before this
+fixture the word was identified only by elimination against word 5, which the Finale 2012 scalars save had moved
+at the same time. The reader needs word 1 solely to choose which musxdom member receives `82` word 0.
+
+### T3 — Proposed — the Finale 3.7–2000 insert layout
+
+No controlled save exists for the 17-byte layout, and no companion can stand in for one: Finale 27 mis-converts
+that era on all 179 documents that have the record. One save from Finale 97 or 2000, changing the flat insert's
+tracking before to 1000, tracking after to 250 and baseline shift to −25 — the same edit as the Finale 2005
+fixture — would confirm the two 32-bit widths there directly rather than by inference from the later layout.
+
+**A Windows-origin Finale 3.x–2000 document would answer a second question** that no Mac file can. The era's
+structure reads correctly only when the payload's 16-bit words are swapped, and every observed file of the era
+is big-endian, so "stored opposite to the container" and "always little-endian" cannot be distinguished. This is
+low priority: the reader gives the same answer under either explanation, and no such document is known to be
+available.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

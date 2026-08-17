@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-// Emit one private observation per legacy document for the three related option
-// classes that recovery currently covers: options::ClefOptions, options::FontOptions,
-// and the others::FontDefinition pool they both reference.
+// Emit one private observation per legacy document for the option classes that recovery
+// currently covers: options::ClefOptions, options::FontOptions,
+// options::MultimeasureRestOptions, options::TextOptions, and the others::FontDefinition
+// pool those reference.
 //
 // Input is a TSV of `corpus_id<TAB>source_path` rows. Output is JSON Lines and
 // deliberately contains no source path, so it may be aggregated into tracked findings.
@@ -236,6 +237,145 @@ void writeFontOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
     out << ']';
 }
 
+void writeMultimeasureRestOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    const auto options =
+        document->getOptions()->get<musx::dom::options::MultimeasureRestOptions>();
+    if (!options) {
+        out << ",\"mmrest_options\":null";
+        return;
+    }
+    // A shape comparator that names no shape leaves the H-bar undrawable, and comparator zero
+    // means no shape rather than a missing one.
+    const bool danglingShape = options->shapeDef != 0
+        && !document->getOthers()->get<musx::dom::others::ShapeDef>(
+            musx::dom::SCORE_PARTID, options->shapeDef);
+    out << ",\"mmrest_options\":{"
+        << "\"meas_width\":" << options->measWidth
+        << ",\"num_adj_y\":" << options->numAdjY
+        << ",\"shape_def\":" << options->shapeDef
+        << ",\"num_start\":" << options->numStart
+        << ",\"use_syms_threshold\":" << options->useSymsThreshold
+        << ",\"sym_spacing\":" << options->symSpacing
+        << ",\"num_adj_x\":" << options->numAdjX
+        << ",\"start_adjust\":" << options->startAdjust
+        << ",\"end_adjust\":" << options->endAdjust
+        << ",\"use_symbols\":" << (options->useSymbols ? "true" : "false")
+        << ",\"no_horizontal_stretch\":"
+        << (options->noHorizontalStretch ? "true" : "false")
+        << ",\"auto_update_mm_rests\":"
+        << (options->autoUpdateMmRests ? "true" : "false")
+        << ",\"dangling_shape\":" << (danglingShape ? "true" : "false");
+    for (const auto* member : {"measWidth", "numAdjY", "shapeDef", "numStart",
+             "useSymsThreshold", "symSpacing", "numAdjX", "startAdjust", "endAdjust",
+             "useSymbols", "noHorizontalStretch", "autoUpdateMmRests"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(
+                   originOf(fields, std::string("options.multimeasureRestOptions.") + member));
+    }
+    out << '}';
+}
+
+// TextOptions. The two line-spacing members are optional and mutually exclusive, so both are
+// emitted and a null means the document did not state that spelling. Each symbol insert emits
+// its font by comparator and by resolved name: comparators are renumbered between the legacy
+// pool and the companion, so only the name is comparable across the two.
+void writeTextOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    const auto options = document->getOptions()->get<musx::dom::options::TextOptions>();
+    if (!options) {
+        out << ",\"text_options\":null";
+        return;
+    }
+    out << ",\"text_options\":{";
+    if (options->textLineSpacingPercent) {
+        out << "\"line_spacing_percent\":" << *options->textLineSpacingPercent;
+    } else {
+        out << "\"line_spacing_percent\":null";
+    }
+    if (options->textLineSpacingEvpu) {
+        out << ",\"line_spacing_evpu\":" << *options->textLineSpacingEvpu;
+    } else {
+        out << ",\"line_spacing_evpu\":null";
+    }
+    out << ",\"show_time_seconds\":" << (options->showTimeSeconds ? "true" : "false")
+        << ",\"date_format\":" << static_cast<int>(options->dateFormat)
+        << ",\"tab_spaces\":" << options->tabSpaces
+        << ",\"text_tracking\":" << options->textTracking
+        << ",\"text_baseline_shift\":" << options->textBaselineShift
+        << ",\"text_superscript\":" << options->textSuperscript
+        << ",\"text_word_wrap\":" << (options->textWordWrap ? "true" : "false")
+        << ",\"text_page_offset\":" << options->textPageOffset
+        << ",\"text_justify\":" << static_cast<int>(options->textJustify)
+        << ",\"text_expand_single_word\":"
+        << (options->textExpandSingleWord ? "true" : "false")
+        << ",\"text_horz_align\":" << static_cast<int>(options->textHorzAlign)
+        << ",\"text_vert_align\":" << static_cast<int>(options->textVertAlign)
+        << ",\"text_is_edge_aligned\":" << (options->textIsEdgeAligned ? "true" : "false");
+
+    for (const auto* member : {"textLineSpacingPercent", "textLineSpacingEvpu",
+             "showTimeSeconds", "dateFormat", "tabSpaces", "textTracking",
+             "textBaselineShift", "textSuperscript", "textWordWrap", "textPageOffset",
+             "textJustify", "textExpandSingleWord", "textHorzAlign", "textVertAlign",
+             "textIsEdgeAligned"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(originOf(fields, std::string("options.textOptions.") + member));
+    }
+
+    using Insert = musx::dom::options::AccidentalInsertSymbolType;
+    static const std::pair<Insert, const char*> insertOrder[] = {
+        {Insert::Sharp, "sharp"}, {Insert::Flat, "flat"}, {Insert::Natural, "natural"},
+        {Insert::DblSharp, "dblSharp"}, {Insert::DblFlat, "dblFlat"}};
+    out << ",\"inserts\":[";
+    bool first = true;
+    for (const auto& [type, name] : insertOrder) {
+        const auto found = options->symbolInserts.find(type);
+        out << (first ? "" : ",") << "{\"type\":" << jsonString(name);
+        first = false;
+        if (found == options->symbolInserts.end() || !found->second) {
+            out << ",\"present\":false}";
+            continue;
+        }
+        const auto& insert = *found->second;
+        std::string fontName;
+        bool dangling = false;
+        if (insert.symFont) {
+            if (const auto definition = document->getOthers()
+                    ->get<musx::dom::others::FontDefinition>(
+                        musx::dom::SCORE_PARTID, insert.symFont->fontId)) {
+                fontName = definition->name;
+            } else {
+                dangling = insert.symFont->fontId != 0;
+            }
+        }
+        out << ",\"present\":true"
+            << ",\"tracking_before\":" << insert.trackingBefore
+            << ",\"tracking_after\":" << insert.trackingAfter
+            << ",\"baseline_shift_perc\":" << insert.baselineShiftPerc
+            << ",\"sym_char\":" << static_cast<std::uint32_t>(insert.symChar)
+            << ",\"has_font\":" << (insert.symFont ? "true" : "false")
+            << ",\"font_id\":" << (insert.symFont ? int(insert.symFont->fontId) : 0)
+            << ",\"font_size\":" << (insert.symFont ? insert.symFont->fontSize : 0)
+            << ",\"font_effects\":"
+            << (insert.symFont ? int(insert.symFont->getEnigmaStyles()) : 0)
+            << ",\"font_name\":" << jsonString(fontName)
+            << ",\"normalized_font_name\":"
+            << jsonString(musx::dom::normalizeFontName(fontName))
+            << ",\"dangling_font\":" << (dangling ? "true" : "false");
+        const auto prefix
+            = std::string("options.textOptions.symbolInserts[") + name + "].";
+        for (const auto* member : {"trackingBefore", "trackingAfter", "baselineShiftPerc",
+                 "symChar", "symFont.fontId", "symFont.fontSize", "symFont.effects"}) {
+            out << ",\"origin_" << member << "\":"
+                << jsonString(originOf(fields, prefix + member));
+        }
+        out << '}';
+    }
+    out << "]}";
+}
+
 void writeFontDefinitions(std::ostream& out, const musx::dom::DocumentPtr& document,
     const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
 {
@@ -303,6 +443,8 @@ int main(int argc, char** argv)
                 << ",\"warning_count\":" << report.diagnostics.size();
             writeClefOptions(out, result.document, fields);
             writeFontOptions(out, result.document, fields);
+            writeMultimeasureRestOptions(out, result.document, fields);
+            writeTextOptions(out, result.document, fields);
             writeFontDefinitions(out, result.document, fields);
             out << '}';
         } catch (const std::exception& error) {

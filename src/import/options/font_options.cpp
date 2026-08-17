@@ -3,6 +3,8 @@
 
 #include "import/options.h"
 
+#include "import/options/test_access.h"
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -402,7 +404,7 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
 
     for (const auto& [type, font] : target->fontOptions) {
         const auto missingId = font->fontId;
-        if (missingId == 0 || document->getOthers()->get<FontDefinition>(
+        if (document->getOthers()->get<FontDefinition>(
                 musx::dom::SCORE_PARTID, missingId)) {
             continue;
         }
@@ -560,6 +562,31 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     completeFromReference(document, referenceDocument, target, report);
 }
 
+/// @brief Registers the font comparator every FontOptions type finally holds.
+/// @details This must run after @ref repairMissingRecoveredFontDefinitions, not alongside the
+/// capture that first sets a comparator. A recovered tuple whose font id names nothing is
+/// replaced wholesale by the same-type reference tuple, so the comparator capture wrote is not
+/// the one the document keeps. Registering during capture would mint a placeholder definition
+/// for a discarded id -- a font named `Missing Font (n)` that nothing in the document refers
+/// to, which is worse than the throw it was meant to prevent because it looks like data.
+///
+/// The repair leaves no dangling comparator behind, so in practice this registers ids that are
+/// already defined and nothing is minted. It is here because that is a property of the repair
+/// pass rather than of this class, and the two are free to change independently.
+void registerFontOptionFonts(const musx::dom::DocumentPtr& document,
+    musx::factory::ConstructionContext& construction)
+{
+    const auto target = document->getOptions()->get<FontOptionsTarget>();
+    if (!target) {
+        return;
+    }
+    for (const auto& [type, font] : target->fontOptions) {
+        if (font) {
+            construction.registerFontId(font->fontId);
+        }
+    }
+}
+
 void importFontOptions(const ImportContext& context)
 {
     // No mapping table: every type is either a recovered physical tuple translated through a
@@ -567,6 +594,7 @@ void importFontOptions(const ImportContext& context)
     // neither is a fixed source location a table row could name.
     captureFontOptions(context.index, context.profile, context.document,
         context.referenceDocument, context.report);
+    registerFontOptionFonts(context.document, context.construction);
 }
 
 } // namespace options

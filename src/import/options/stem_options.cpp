@@ -3,6 +3,8 @@
 
 #include "import/options.h"
 
+#include "import/options/test_access.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -482,27 +484,34 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     }
 }
 
-void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report)
+void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto target = document->getOptions()->get<StemOptionsTarget>();
     if (!target) {
         return;
     }
-    // A connection names a font by comparator, and comparator zero means the document's
-    // default music font rather than a pooled object. A nonzero one that no recovered
-    // definition answers is preserved exactly as stored: it is what the source says, and
-    // replacing it with a default would invent a typeface the document never named.
+    // A connection names a font by comparator, and one that no recovered definition answers is
+    // preserved exactly as stored: it is what the source says, and replacing it with a default
+    // would invent a typeface the document never named. The test is whether the document
+    // defines the comparator, not whether the comparator is zero -- what zero means belongs to
+    // musxdom, which resolves it to the default music font and guarantees a definition for it.
+    //
+    // Registering is what keeps "preserved as stored" from meaning "unusable". The comparator
+    // stays exactly as the source wrote it, and musxdom mints a placeholder definition for it
+    // at the end of construction so that reading the font's name yields `Missing Font (n)`
+    // rather than throwing. Nothing later in this import rewrites a connection's font id, so
+    // the value registered here is the one the finished document holds.
     for (std::size_t index = 0; index < target->stemConnections.size(); ++index) {
         const auto& connection = target->stemConnections[index];
-        if (connection->fontId == 0) {
-            continue;
-        }
+        construction.registerFontId(connection->fontId);
         if (!document->getOthers()->get<musx::dom::others::FontDefinition>(
                 musx::dom::SCORE_PARTID, connection->fontId)) {
             report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
                 "Stem connection " + std::to_string(index) + " names font definition "
                 + std::to_string(connection->fontId)
-                + ", which this document does not define; it is kept as stored."});
+                + ", which this document does not define; the comparator is kept as stored"
+                  " and reads as a missing font."});
         }
     }
 }
@@ -519,7 +528,7 @@ void importStemOptions(const ImportContext& context)
                            &loneStemFlagTable(), &packedStemFlagTable(),
                            &classStemScalarsTable()},
         context.index, context.profile, context.document, context.report);
-    validateStemOptions(context.document, context.report);
+    validateStemOptions(context.document, context.report, context.construction);
 }
 
 } // namespace options

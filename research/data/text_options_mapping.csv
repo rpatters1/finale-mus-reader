@@ -1,0 +1,39 @@
+mapping_kind,format_epoch,version_scope,record_identity,cmper,element_stride,location,width_bytes,byte_order_rule,target_field,verification,confidence
+scalar,all,Coda-banner 1.x onward,05,65534,,word 4,2,container,showTimeSeconds,1189/1189 adjacent-exact companions,confirmed
+scalar,all,Coda-banner 1.x onward,05,65534,,word 5,2,container,dateFormat,1189/1189 adjacent-exact companions; DateFormat values used directly,confirmed
+scalar,all,Coda-banner 1.x onward,13,65534,,word 0,2,container,tabSpaces,1189/1189 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,81,65534,,words 0-1,4,high word first,textTracking,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,81,65534,,words 2-3,4,high word first,textBaselineShift,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,81,65534,,words 4-5,4,high word first,textSuperscript,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 0,2,container,textLineSpacingPercent,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 2,2,container,textWordWrap,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 3,2,container,textPageOffset,1108/1108 adjacent-exact companions,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 4,2,container,textJustify,1108/1108 adjacent-exact companions; legacy order Left Right Center Full ForcedFull so 1 and 2 must be exchanged,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,83,65534,,word 0,2,container,textHorzAlign,1108/1108 adjacent-exact companions; AlignJustify values used directly,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 5,2,container,textExpandSingleWord,controlled Finale 97 save moves this word alone and the companion loses the element,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,82,65534,,word 1,2,container,line-spacing percent/Evpu selector,controlled Finale 2005 save moves words 0 and 1 alone and the companion swaps textLineSpacingPercent for textLineSpacingEvpu; set means percent and clear means Evpu; selects which musxdom member word 0 populates and is not itself recovered,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,83,65534,,word 1,2,container,textVertAlign,controlled Finale 2005 save moves this word alone 0 to 2 against a converted center; legacy order Top Bottom Center so 1 and 2 must be exchanged,confirmed
+scalar,uncompressed/dcl/zlib,Finale 97 onward,83,65534,,word 3,2,container,textIsEdgeAligned,by elimination once words 0 1 and 2 of selector 83 are assigned,strong
+scalar,uncompressed/dcl/zlib,Finale 97 onward,83,65534,,word 2,2,container,unassigned,0 before Finale 2007 and 1 from Finale 2007 on; cleared by a controlled Finale 2012 text-options save; not a TextOptions field,open
+insert_element,coda-banner,Finale 1.x-2.6,,,,,,,symbolInserts,selector 78 absent from all 61 documents of Coda-banner and Finale 3.0-3.5; the pinned Finale 27 baseline's inserts are kept and their font comparators translated through importFontDefinitionInto,confirmed absent
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 0,4,little-endian struct; container word order undone,trackingBefore,179 documents self-consistent with every other era; all companions of the era are wrong,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 4,4,little-endian struct; container word order undone,trackingAfter,width inferred from identical offsets in the later layout,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 8,2,little-endian struct; container word order undone,baselineShiftPerc,179 documents,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 10,2,little-endian struct; container word order undone,symFont font comparator,179 documents; zero in all of them,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 12,2,little-endian struct; container word order undone,symFont size,179 documents,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 14,2,little-endian struct; container word order undone,symFont effects,179 documents; zero in all of them,strong
+insert_element,uncompressed,Finale 3.7-2000,78,65534,17 bytes,offset 16,1,byte,symChar,179 documents,strong
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 0,4,high word first,trackingBefore,21030 field comparisons over 701 companion-backed documents plus a controlled 1000,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 4,4,high word first,trackingAfter,controlled 250; zero in every corpus document,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 8,2,container; signed,baselineShiftPerc,701 documents over 8 distinct values plus a controlled -25,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 10,2,container,symFont font comparator,460 elements naming a real FontDefinition; controlled Petrucci at source cmper 9,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 12,2,container,symFont size,701 documents over 6 distinct values plus a controlled 79,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 14,2,container,symFont effects,990 comparisons over 198 documents; setEnigmaStyles unchanged; controlled 0x01 and 0x06,confirmed
+insert_element,dcl/zlib,Finale 2001-2010,78,65534,18 bytes,offset 16,2,container; low byte only,symChar,701 documents; four Finale 2006 fixtures store values above 127 sign-extended,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 0,4,high word first,trackingBefore,7440 field comparisons over 248 companion-backed documents plus a controlled 1000,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 4,4,high word first,trackingAfter,controlled 250,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 8,2,container; signed,baselineShiftPerc,248 documents plus a controlled -25,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 10,2,container,symFont font comparator,248 documents,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 12,2,container,symFont size,248 documents,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 14,2,container,symFont effects,248 documents,confirmed
+insert_element,zlib,Finale 2012,78,65534,20 bytes,offset 16,4,low word first (plain little-endian),symChar,248 documents plus a controlled character above the basic multilingual plane; U+26469 stored as 69 64 02 00 rules out the high-word-first order the trackings use,confirmed

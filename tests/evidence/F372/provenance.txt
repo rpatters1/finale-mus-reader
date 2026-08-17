@@ -1,6 +1,6 @@
 Finale 3.7.2, classic Mac OS.
-    Recovered Enigma version 3.7.0. Fill in the exact application build and host
-    environment from the machine that produced these files.
+    Recovered Enigma version 3.7.0. Mac OS 9.0.4 running in SheepShaver, which is
+    the host for every Finale before 2004. The exact application build is not recorded.
 
 F372-baseline.mus / .etf
     7,908 bytes. The unedited document. Its eight clefs already carry baseline

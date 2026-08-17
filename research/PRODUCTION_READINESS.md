@@ -67,11 +67,28 @@ an imported document is always the source's own. The two pinned baselines give n
 font, so extending a short collection from the baseline introduces no font id at all, and the
 reader asserts that rather than assuming it.
 
-The blocker remains for the other seeded option classes containing font ids. Those objects are
-still copied from the baseline with numeric references that have not been reconciled.
+**No seeded option class in either pinned baseline actually carries a font comparator.**
+Measured 2026-08-17 by walking both baseline `<options>` elements to full depth: a `fontID`
+element occurs under `fontOptions` and nowhere else, in the macOS and the Windows baseline
+alike, and `fontOptions` and `clefOptions` are both filtered out of the seeding. The one other
+font-bearing path, `textOptions/insertSymbolInfo/symFont`, carries a size but no `fontID` at
+all, and the `TextOptions` importer reconciles those inserts through `importFontDefinitionInto`
+regardless. A class musxdom models with a font member that the baseline simply omits —
+`LyricOptions::altHyphenFont` is the case to watch — lands at its constructed default of
+comparator 0, which is the default-music-font sentinel musxdom guarantees a definition for.
+
+So the hazard this section describes has no remaining instance in the pinned artifacts, and the
+`blocker` status above wants revisiting. What is not retired is the general rule: the baselines
+are "new document without libraries", and regenerating them from a document with libraries could
+populate option classes that do carry comparators. The check above is cheap and should be rerun
+whenever a baseline is repinned.
 
 The failure mode has changed from loud to silent. Before font definitions existed, such a
-reference threw `std::invalid_argument`. It now returns a plausible, wrong font.
+reference threw `std::invalid_argument`. It now returns a plausible, wrong font — except where
+the comparator resolves to nothing at all, which since 2026-08-17 yields musxdom's
+`Missing Font (n)` placeholder rather than a throw, because the reader registers every font
+comparator it leaves in the document. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#unresolvable-comparators-and-the-missing-font-n-placeholder).
 
 Reconciling means one of:
 
@@ -297,12 +314,25 @@ version-aware category decoding.
 
 ### P2.2 Dangling shape references in seeded options
 
-**Status:** gap, narrowed 2026-08-11. **Confidence:** confirmed.
+**Status:** gap, narrowed 2026-08-11 and again 2026-08-16. **Confidence:** confirmed.
 
 Two baseline clef definitions set `isShape` and point at shape records, and
 `MultimeasureRestOptions` points at one more. None are seeded. Unlike fonts,
 every `ShapeDef` lookup in musxdom is null-tolerant, so these degrade quietly
 rather than throwing: the shape clefs behave as though they have no shape.
+
+The multimeasure-rest H-bar no longer carries a *baseline* comparator: every era's record
+holds the shape id — word 3 of the later layout, word 5 of the early one — so the recovered
+value is the source's own and matches the companion in all 2,305 compared documents. It can
+still dangle, and measurably does. **319 zlib documents name an H-bar shape their own file
+does not define**, and no document of the other three epochs does. Those files carry no
+shape records at all — none of classes `0x00d5`, `0x00d6` or `0x00d7` — while other zlib
+documents in the same corpus carry all three, so this is a fact about those sources rather
+than a decoding gap; their Finale 27 conversions materialize a shape library the source
+never stored. The reader keeps the comparator exactly as read and notes it at `Info`, not
+`Warning`: naming a shape the file does not carry is ordinary Finale behavior, and flagging
+several hundred normal documents as suspect is how a diagnostic channel stops being read.
+Whether a reader should materialize an equivalent shape is **open**.
 
 `ClefOptions` is no longer seeded, so a shape clef now reaches an imported document by
 one of two routes. When the source stores its own clef table, which every Finale 2001
@@ -430,12 +460,9 @@ last-saver block.
 
 ### P2.5 musxdom dependency pin
 
-**Status:** done 2026-08-09. **Confidence:** confirmed.
+**Status:** done 2026-08-09, pin moved 2026-08-16. **Confidence:** confirmed.
 
-`CMakeLists.txt` pins musxdom at `3df7602` on `main`, which carries both
-interfaces the reader depends on: the factory construction session (musxdom
-#157) and `musx::factory::NodeFilter` (musxdom #158). Keep the pin on merged
-`main` revisions.
+Do not restate commit pin values notes here. They can become stale and waste time.
 
 ---
 

@@ -183,6 +183,12 @@ framework models clef overrides through clef definitions outside its preference 
 the other two legacy fields. The complete five-row audit, including these open results and the Finale 2012 stem-layout
 caveat, is in [`data/legacy_option_font_id_locations.csv`](data/legacy_option_font_id_locations.csv).
 
+The text inserted-symbol font is no longer open. It is word slot 5 of each element of the direct block at
+`78(65534)`, and it is a source-document `FontDefinition` comparator like the others; see
+[TextOptions](#textoptions-three-distilled-rows-and-a-class-the-framework-does-not-model) below. That location came
+from the corpus rather than from the framework, which confirms the audit's own caution: the framework not exposing a
+field says nothing about whether the file stores it.
+
 ### FontOptions implementation plan
 
 The implementation follows this staged data flow: filter the unsafe baseline object, recover every era-verified
@@ -425,6 +431,79 @@ discards the value as it discards that era's clef baselines. A controlled Finale
 the word through a dialog offering "Offset" beside the two stem lengths
 (`tests/evidence/F100/F100-stemopts-changed.mus`, 4 -> 5), which is consistent with the same option
 under an older label but does not establish it.
+
+### MMRestDefaultsPrefs: right for Finale 3.5 on, and a different record before it
+
+**Confirmed 2026-08-16** against every adjacent-exact Finale 27 companion in the reference corpus. The group's
+thirteen distilled rows name twelve locations on selector `25` and one on selector `83`, and all of them hold from
+Finale 3.5 onward: 1,130 companion-backed documents agree on all nine scalars and on the character-rest-style flag,
+with no disagreement in any era. The group covers every field of `MultimeasureRestOptions` except
+`noHorizontalStretch`, which is a Finale 27 option no legacy format stores.
+
+Before Finale 3.5 the record is a different shape. Selector `25` carries **one** incidence of six words rather than
+two, and two of the three fields it still holds have moved: `vertNumAdj` is word 4 and `shapeID` word 5, where the
+later layout puts them at words 2 and 3. All 264 Finale 1.8.7 through 3.2 documents of the reference corpus are on
+that side of the line and all 3,458 later ones on the other; no file carries any other word count. That corpus has no
+Finale 1.0.0 document at all, so the era's lower bound comes from the `tracked-evidence` survey, whose 19 Finale 1.0.0
+fixtures carry the six-word record and are the only companion-backed documents of that version anywhere. This is the third instance of the same
+lesson the clef scalars taught — a distilled row is an era-scoped claim — and the second boundary found at Finale
+3.5, after the stem family's units.
+
+The boundary cannot be expressed as an epoch gate, because it falls inside the uncompressed epoch, and a version
+range would have to guess a cut point between 3.2 and 3.5 that no corpus can narrow. The reader reads the family's
+own word count instead. See
+[FORMAT_NOTES.md](FORMAT_NOTES.md#multimeasure-rest-defaults) for both per-era tables.
+
+Two further findings about the group:
+
+- `mmautoupdate` is selector `83` **word 4**, as distilled, and word 2 of the same record is a different thing. 468
+  companion-backed documents carry word 2 set with word 4 clear and none of their conversions has
+  `<autoUpdateMmRests/>`; all 73 that carry word 4 do. The selector first appears in Finale 97.
+- The two words the framework leaves as `AAAA` and `BBBB` are zero in all 3,458 later-layout documents, so nothing
+  in the corpus can name them. They stay **open**.
+- `noHorizontalStretch` is not open and is not a gap in the distilled table. "Stretch Horizontally" is a Finale 27
+  feature, so no legacy format has a bit for it and the framework had none to name. Bit 0 is the only bit of the
+  flags word any document uses, and the reader asserts the option false in every era.
+
+### TextOptions: three distilled rows, and a class the framework does not model
+
+**Confirmed 2026-08-16** against all 1,189 adjacent-exact Finale 27 companions of the reference corpus. This is the
+first class where the framework survey was mostly a negative result and the corpus supplied the rest, so it is worth
+recording what each source was actually good for.
+
+The framework has no text-preferences class at all — 31 `__FCPrefsBase` subclasses and none for text — and the
+437-row union contains exactly three rows that reach `TextOptions`: `MiscDocPrefs.secondsInTimeStamp` at `05` word 4,
+`MiscDocPrefs.dateFormat` at `05` word 5, and `MiscDocPrefs.textTabChars` at `13` word 0. All three are now
+corpus-confirmed on every era including Coda-banner, with no per-era exception of the kind the clef scalars turned
+up. The framework also supplies the `DATEFORMAT_SHORT/LONG/MACLONG` values, and they match musxdom's `DateFormat`
+one-for-one. Nothing in the tables or anywhere in the framework tree mentions the accidental symbol inserts.
+
+The remaining eleven scalars and the whole insert array were located instead by searching the record stream for the
+Finale 27 default values as a byte pattern, then diffing controlled one-variable saves. That method cost about the
+same as reading the framework and produced more: five numeric globals for the scalars, and a direct five-element
+block at `78(65534)` for the inserts. Full locations, per-era layouts and verification counts are in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#text-options) and
+[`data/text_options_mapping.csv`](data/text_options_mapping.csv).
+
+Four lessons generalize to the 429 rows still unpromoted:
+
+- **A defaults fingerprint locates a record without any fixture.** The Finale 27 baseline states what the values
+  should be; searching for that tuple across the record stream found the insert block in one pass. This works
+  wherever a class has distinctive defaults, and it is cheaper than a controlled save.
+- **Finale orders its alignment enums first, opposite, centre.** `textJustify` stores `Left, Right, Center, Full,
+  ForcedFull` where musxdom has `Left, Center, Right, Full, ForcedFull`, and `textVertAlign` stores `Top, Bottom,
+  Center` where musxdom has `Top, Center, Bottom`; both need positions 1 and 2 exchanged. `textHorzAlign` needs
+  no change only because `AlignJustify` already uses Finale's order. Each was settled by exactly one specimen —
+  two corpus documents and one controlled save. Assume no enum matches, and check the rest of the enum-valued
+  rows the same way.
+- **A companion can be wrong in a way that is stable and era-specific.** Finale 27 mis-converts the Finale 3.7–2000
+  insert layout on all 179 documents that have one, so aggregate companion agreement would have scored that era at
+  zero and looked like a decoding failure. Eight later documents carry the same corruption frozen into the file,
+  which is what proves the direction of the error.
+- **The corpus is nearly useless for options nobody changes.** All 1,108 documents carrying selectors `82` and `83`
+  hold identical values in four of their words. Two one-word fixtures closed three of those four and left the last
+  identified by elimination; the corpus could not have closed any of them at any size. Volume does not substitute
+  for variation.
 
 ## Confidence and validation plan
 

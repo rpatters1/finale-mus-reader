@@ -1300,6 +1300,129 @@ void testStemScalarRecovery()
         "The Finale 1.0.0 connection switch save did not read like its baseline");
 }
 
+// MultimeasureRestOptions has two fixed-row layouts and a zlib one, and the boundary between
+// the fixed-row pair falls inside the uncompressed epoch: Finale 3.5 grew the record from one
+// six-word incidence to two, moving the number adjustment and the shape down two slots. Every
+// expected value below is what that fixture's exact Finale 27 companion carries.
+void testMultimeasureRestRecovery()
+{
+    using MmRest = musx::dom::options::MultimeasureRestOptions;
+    const auto read = [](const char* relative) {
+        return Reader::read<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+    struct Expected
+    {
+        const char* path;
+        const char* era;
+        FormatEpoch epoch;
+        int measWidth;
+        int numAdjY;
+        int shapeDef;
+        int startAdjust;
+        int endAdjust;
+        bool useSymbols;
+        bool autoUpdate;
+    };
+    // The early layout first: two Coda-banner documents whose slots 4 and 5 differ from each
+    // other, which is what shows the pair is read rather than guessed. Read through the later
+    // table, the Finale 2.6.3 fixture would report a shape of 0 and a number adjustment of 24.
+    const Expected fixtures[] = {
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner,
+            360, 12, 0, 0, 0, false, false},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner,
+            320, -28, 1, 0, 0, false, false},
+        // The later fixed-row layout, across both epochs that carry it. Finale 3.7.2 has the
+        // two-incidence record but no selector 83 at all, and Finale 97 is the one tracked
+        // fixture that sets the character-rest-style flag.
+        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy,
+            360, -12, 1, 0, 0, false, false},
+        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy,
+            216, -28, 1, 0, 0, true, false},
+        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy,
+            360, -12, 1, 0, 0, false, false},
+        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy,
+            360, -12, 1, 0, 0, false, false},
+        // The zlib era in both byte orders. Finale 2012 is the fixture that exercises the
+        // second row through the class encoding: it is the only one whose H-bar adjustments
+        // are not zero, and reading them from the wrong offsets would leave them so.
+        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy,
+            360, -12, 1, 0, 0, false, true},
+        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy,
+            360, -32, 1, 30, -30, false, true},
+    };
+    for (const auto& fixture : fixtures) {
+        const auto result = read(fixture.path);
+        expect(result.report.formatEpoch == fixture.epoch,
+            std::string("The fixture for ") + fixture.era + " is not the expected epoch");
+        const auto mmRest = result.document->getOptions()->get<MmRest>();
+        expect(static_cast<bool>(mmRest),
+            std::string("No multimeasure rest options for ") + fixture.era);
+        const auto wrong = [&](const char* name) {
+            return std::string("The multimeasure rest ") + name + " was wrong for "
+                + fixture.era;
+        };
+        expect(mmRest->measWidth == fixture.measWidth, wrong("measure width"));
+        expect(mmRest->numAdjY == fixture.numAdjY, wrong("vertical number adjustment"));
+        expect(mmRest->shapeDef == fixture.shapeDef, wrong("H-bar shape"));
+        expect(mmRest->startAdjust == fixture.startAdjust, wrong("start adjustment"));
+        expect(mmRest->endAdjust == fixture.endAdjust, wrong("end adjustment"));
+        expect(mmRest->useSymbols == fixture.useSymbols, wrong("symbol style flag"));
+        expect(mmRest->autoUpdateMmRests == fixture.autoUpdate, wrong("automatic update"));
+        // "Stretch Horizontally" arrived with Finale 27, so no legacy era can state it and
+        // every fixture must report it as known-false rather than as a synthesized default.
+        expect(!mmRest->noHorizontalStretch, wrong("horizontal stretch flag"));
+        expect(field(result, "options.multimeasureRestOptions.noHorizontalStretch").origin
+                == ValueOrigin::LegacyBehavior,
+            wrong("horizontal stretch provenance"));
+        // Three values no document in either corpus varies, and every companion agrees with
+        // the pinned baseline on all three. The early era does not store them at all, so this
+        // also checks that its shorter record leaves them alone rather than reading past it.
+        expect(mmRest->numStart == 2 && mmRest->useSymsThreshold == 9
+                && mmRest->symSpacing == 48 && mmRest->numAdjX == 0,
+            wrong("unvaried group"));
+    }
+
+    // Provenance separates the two fixed-row layouts where the values cannot. Finale 3.7.2
+    // reads its H-bar adjustments from the record and finds zeros; Finale 2.6.3 has no record
+    // to read them from, so they are asserted as era behavior rather than claimed as read or
+    // left at the baseline's 30 and -30.
+    const auto f263 = read("evidence/F263/F263-baseline.mus");
+    for (const char* target : {"options.multimeasureRestOptions.startAdjust",
+             "options.multimeasureRestOptions.endAdjust",
+             "options.multimeasureRestOptions.autoUpdateMmRests"}) {
+        expect(field(f263, target).origin == ValueOrigin::LegacyBehavior,
+            std::string("A Coda-era field the source cannot state was not reported as era "
+                        "behavior: ")
+                + target);
+    }
+    expect(field(f263, "options.multimeasureRestOptions.numAdjY").origin
+                == ValueOrigin::LegacyMus
+            && field(f263, "options.multimeasureRestOptions.numAdjY").rawValue == -28,
+        "The Coda-era number adjustment was not reported as read from slot 4");
+    expect(field(f263, "options.multimeasureRestOptions.symSpacing").origin
+            == ValueOrigin::Finale27Default,
+        "A Coda-era field the source does not store was claimed as read");
+
+    const auto f372 = read("evidence/F372/F372-baseline.mus");
+    expect(field(f372, "options.multimeasureRestOptions.startAdjust").origin
+            == ValueOrigin::LegacyMus,
+        "The Finale 3.7.2 start adjustment was not read from its second incidence");
+    // Selector 83 arrives with Finale 97, so a 3.7.2 document states nothing about automatic
+    // updating and must not inherit the baseline's switched-on value.
+    expect(field(f372, "options.multimeasureRestOptions.autoUpdateMmRests").origin
+            == ValueOrigin::LegacyBehavior,
+        "A Finale 3.7.2 document claimed an automatic-update setting its era has no record for");
+    const auto f97 = read("evidence/F97/Fin97-baseline.mus");
+    expect(field(f97, "options.multimeasureRestOptions.autoUpdateMmRests").origin
+            == ValueOrigin::LegacyMus,
+        "The Finale 97 automatic-update word was not read from selector 83");
+    // Word 2 of that record is also set in most later documents and is not this flag. Reading
+    // it instead would switch automatic updating on for the whole Finale 97 to 2006 corpus.
+    expect(!f97.document->getOptions()->get<MmRest>()->autoUpdateMmRests,
+        "The Finale 97 automatic-update flag was read from the wrong word");
+}
+
 // Selector 24 is the default-font array from well before the DCL era, but the reader used to
 // gate that layout to DCL alone, so every Finale 3.0 through 2000 document reported all 45
 // font options as Finale 27 defaults while its source held 40 of them.
@@ -2004,6 +2127,7 @@ TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
 TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
 TEST_CASE("Stem connection capture", "[reader]") { testStemConnectionCapture(); }
 TEST_CASE("Stem scalar recovery", "[reader]") { testStemScalarRecovery(); }
+TEST_CASE("Multimeasure rest recovery", "[reader]") { testMultimeasureRestRecovery(); }
 TEST_CASE("Uncompressed font options", "[reader]") { testUncompressedFontOptions(); }
 TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
 TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }

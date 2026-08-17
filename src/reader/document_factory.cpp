@@ -25,17 +25,24 @@ namespace {
 // The remaining seeded options reference font and shape records by cmper, and those records
 // are deliberately not seeded: a document has one id space per record type, so a
 // pinned definition would later collide with the source record sharing its cmper.
-// Those references therefore do not resolve, and font lookups throw until the
-// definitions are decoded from the MUS file. See research/PRODUCTION_READINESS.md.
+// Those references therefore resolve against the source's own table, which is the hazard
+// P0.2 of research/PRODUCTION_READINESS.md describes and which this does not address.
+//
+// The construction context is the session's, so a seeded comparator the source table has no
+// entry for is registered like any other and receives musxdom's placeholder definition. That
+// is the narrow part of P0.2 this does settle: such a reference used to throw out of
+// `FontInfo::getName`, and now reads as `Missing Font (n)`. A seeded comparator that the
+// source table does answer is still silently answered by the wrong face.
 void seedPinnedDefaults(
     const musx::dom::DocumentPtr& document,
-    const defaults::ParsedDefaultDocument& pinned, ImportReport& report)
+    const defaults::ParsedDefaultDocument& pinned, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     report.defaultsPlatform = pinned.platform;
     document->getOptions() = musx::factory::OptionsFactory::create(
-        pinned.options, document, pinned.optionsFilter);
+        construction, pinned.options, document, pinned.optionsFilter);
     document->getOthers() = musx::factory::OthersFactory::create(
-        pinned.others, document, pinned.optionLikeOthersFilter);
+        construction, pinned.others, document, pinned.optionLikeOthersFilter);
 }
 
 } // namespace
@@ -69,7 +76,7 @@ musx::dom::DocumentPtr createDocument(
     // read-only source for later completion passes.
     const auto pinned = defaults::parseDefault(
         parseXml, parseDocument, report.sourcePlatform);
-    seedPinnedDefaults(document, pinned, report);
+    seedPinnedDefaults(document, pinned, report, session.getConstructionContext());
     document->getHeader() = header::recover(data, size, report);
 
     SourceProfile profile;
@@ -79,10 +86,11 @@ musx::dom::DocumentPtr createDocument(
     profile.platform = report.sourcePlatform;
     applyLegacyMappings(
         records::LegacyRecordIndex::build(parsed), profile,
-        document, pinned.referenceDocument, report);
+        document, pinned.referenceDocument, report, session.getConstructionContext());
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every
-    // legacy overlay has been applied.
+    // legacy overlay has been applied. That includes resolving the registered font
+    // comparators, so every font id above must already have been registered.
     return std::move(session).finish();
 }
 
