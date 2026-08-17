@@ -702,6 +702,21 @@
   stands and the difference is intended.
 - **Unexplained and recorded rather than smoothed over:** the Finale 3.7.2 save also moves selector `13` word 1 from
   1024 to 4096, which belongs to no field this reader maps, and respaces the lyric baseline details from 40 to 48.
+- **Follow-up: the syllable positioning table closed too, and in two steps neither of which was a guess.** Finale
+  2000 is the first release with a dedicated Lyric Options dialog, and that table is exactly what it adds to the
+  four settings Finale 3.x already had. Two questions were open about it. The **order** of the last two positions
+  was untested, because `first` and `systemStart` carry identical values in almost every document; five
+  reference-corpus documents differ, and all five confirm the order in both directions, so no fixture was needed.
+  The **`right` member** could never have been settled by a corpus at all: across all 1,189 companion pairs not one
+  document uses it as an alignment or a justification, for any position.
+  `F2000-lyropts-align-just.mus` supplies it twice over -- align 3 on the first syllable, justify 3 on the system
+  start -- so a mapping that translated only one of the two fields would fail on it. Against its parent the only
+  options record that moves is selector 87's second incidence. **All three members of the legacy alignment list are
+  now verified against Finale's own conversion.**
+- **A reminder that a corpus and a fixture answer different questions.** The order was a corpus question, because
+  it needed documents that happened to disagree, and five existed among 1,189. The `right` value was a fixture
+  question, because no number of documents helps when nobody ever chose the setting. Asking which kind a question
+  is, before reaching for either tool, is the cheap step.
 - **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/reader_tests.cpp`,
   [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
   [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).

@@ -1569,6 +1569,33 @@ void testLyricOptionsRecovery()
             wrong("alternate hyphen font, which the reader reported without importing"));
     }
 
+    // Finale 2000 is the first release with a dedicated Lyric Options dialog, and the only
+    // one of the legacy enum's three alignments that no corpus document uses is `right`.
+    // This fixture supplies it twice over: it sets the first syllable's alignment to Right and
+    // the system-start syllable's justification to Right, so both fields are exercised
+    // independently and a mapping that translated only one of them would fail here. Against
+    // its parent F2000-multilayer the only options record that moves is selector 87's second
+    // incidence.
+    const auto align = read("evidence/F2000/F2000-lyropts-align-just.mus");
+    const auto alignLyrics = align.document->getOptions()->get<Lyrics>();
+    const auto alignStyle = [&](SyllableType type) {
+        const auto found = alignLyrics->syllablePosStyles.find(type);
+        expect(found != alignLyrics->syllablePosStyles.end() && found->second,
+            "A syllable position style is missing from the Finale 2000 alignment fixture");
+        return found->second;
+    };
+    expect(alignStyle(SyllableType::First)->align == AlignJustify::Right
+            && alignStyle(SyllableType::First)->justify == AlignJustify::Left,
+        "The legacy alignment value 3 was not translated to right");
+    expect(alignStyle(SyllableType::SystemStart)->justify == AlignJustify::Right
+            && alignStyle(SyllableType::SystemStart)->align == AlignJustify::Center,
+        "The legacy justification value 3 was not translated to right");
+    // Setting a position's alignment enables it, and the word extension position is left off,
+    // so the same record carries both states of the flag bit.
+    expect(alignStyle(SyllableType::First)->on && alignStyle(SyllableType::SystemStart)->on
+            && !alignStyle(SyllableType::WordExt)->on,
+        "The Finale 2000 alignment fixture did not read its positioning switches");
+
     // The controlled Finale 1.0.0 pair that names "Lift" and "Push". It moves selector 29
     // word 5 from 4 to 5 and selector 30 word 5 from 4 to 6 and moves no other word in the
     // file, so it is what separates these two from every other value the era stores. Before

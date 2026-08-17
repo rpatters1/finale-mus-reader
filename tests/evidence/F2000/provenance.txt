@@ -9,3 +9,23 @@ F2000-multilayer.mus
     which previously had no public evidence: every uncompressed-era result was
     verified only against an unpublished corpus or against synthetic files
     written by the tests themselves.
+
+F2000-lyropts-align-just.mus
+    sha256 e10296cf6fed3509c277de624806499d440eece2021ce0fb3ce8a8620e64e1e3
+    From F2000-multilayer, not F2000-baseline: the first syllable's alignment set to Right and
+    the system-start syllable's justification set to Right. Finale 2000 is the first release
+    with a dedicated Lyric Options dialog, whose addition to the four settings Finale 3.x
+    already had is exactly this syllable positioning table.
+    This is the only document in any survey that uses the legacy alignment value 3. Across all
+    1,189 companion-backed documents of the reference corpus, not one carries `right` as either
+    an alignment or a justification for any of the four positions, so before this fixture that
+    member of the enum rested on the framework's LYRICS_ALIGN_ constants alone. It supplies the
+    value twice over, once as an alignment and once as a justification, so a mapping that
+    translated only one of the two fields would fail on it.
+    Against its parent the only options record that moves is selector 87 incidence 1: word 6
+    goes 1 to 3 and word 10 goes 2 to 3, and both positions' flag words gain 0x8000 because
+    setting a position's alignment enables it. The companion reads first as right/left with
+    <on/> and systemStart as center/right with <on/>, while the word extension position stays
+    off -- so one record carries both states of the flag bit.
+    Its ETF is not a corroborating export: it contains no (65534) rows at all, against 294 in
+    F2000-baseline.etf, so it was written with options excluded.

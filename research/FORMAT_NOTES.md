@@ -2092,11 +2092,31 @@ Finale 3.7.2 pair. A single specimen cannot distinguish that formula from severa
 reader keeps the pinned baseline's 42 and the difference is intended.
 
 The **syllable position table** at selector `87` is four three-word positions across two fixed rows, again in
-musxdom's own order: others (`default`), word extension, first syllable, start of system. Its alignment and
-justification use a third numbering — `1 = centre, 2 = left, 3 = right`, from the framework's `LYRICS_ALIGN_`
-constants — which is neither musxdom's `Left, Right, Center` nor its reverse. Every fixture that carries the
-selector stores 1 where its companion says `center` and 2 where it says `left`, for all four positions. **No
-surveyed document stores 3**, so `right` rests on the framework alone.
+musxdom's own order: others (`default`), word extension, first syllable, start of system. Selector 87 arrives with
+**Finale 2000**, the first release with a dedicated Lyric Options dialog, and these four positions are the whole of
+what that dialog adds to the four settings Finale 3.x already had.
+
+That order is corpus-confirmed rather than inferred from the framework's field names, which matters because the
+last two positions carry identical values in almost every document and so discriminate nothing on their own. Five
+reference-corpus documents are the exception and all five agree: a Finale 2004 document stores `(1, 2)` in words
+6-8 against `(1, 1)` in words 9-11, with a companion whose `first` is centre/left and whose `systemStart` is
+centre/centre, and four documents from Finale 2000 and 2010 carry the pair the other way round. Both directions are
+observed, so the two cannot be swapped.
+
+Its alignment and justification use a third numbering — `1 = centre, 2 = left, 3 = right`, from the framework's
+`LYRICS_ALIGN_` constants — which is neither musxdom's `Left, Right, Center` nor its reverse. Every fixture that
+carries the selector stores 1 where its companion says `center` and 2 where it says `left`, for all four positions.
+**No surveyed document stores 3**: across all 1,189 companion pairs not one carries `right` as either an alignment
+or a justification, for any position, so the corpus could never have settled that member.
+`tests/evidence/F2000/F2000-lyropts-align-just.*` does, and supplies it twice over — the first syllable's alignment
+set to Right and the system-start syllable's justification set to Right, so a mapping that translated only one of
+the two fields would fail on it. Its companion reads `first` as right/left and `systemStart` as centre/right.
+Against its parent the only options record that moves is selector 87's second incidence, where word 6 goes 1 to 3
+and word 10 goes 2 to 3. **All three members of the legacy alignment list are now verified against Finale's own
+conversion**, and the framework's `LYRICS_ALIGN_` constants are corroborated rather than relied on.
+
+That fixture also carries both states of the flag bit in one record: setting a position's alignment enables it, so
+`first` and `systemStart` gain 0x8000 while the word extension position stays off.
 
 Bit 15 of each position's third word is musxdom's `on`. `tests/evidence/F2000/F2000-multilayer.mus` is the one
 tracked document that clears it for the three optional positions, and it is the one whose companion omits their
