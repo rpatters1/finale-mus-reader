@@ -9,8 +9,6 @@ section below; do not expand the TODO bullets into investigation notes.
 - `ChordOptions::fretStyleId`, `fretInstId` -> `details::FretboardStyle`,
   `details::FretInstrument`. Recover and resolve the two default fretboard
   references.
-- `LyricOptions::altHyphenFont` -> `others::FontDefinition`. Find its legacy
-  location, recover the font tuple, and resolve its definition.
 - `RepeatOptions::showOnStaffListNumber` -> `others::StaffListRepeatName`,
   `StaffListRepeatScore`, `StaffListRepeatParts`, and their override classes.
   Recover the linked repeat staff-list family.
@@ -33,3 +31,8 @@ section below; do not expand the TODO bullets into investigation notes.
   `78(65534)` in all three insert layouts; Coda-banner has no such record and
   keeps the baseline tuple. Definitions resolve through
   `importFontDefinitionInto`.
+- `LyricOptions::altHyphenFont` — closed with no legacy location, because none
+  exists: the alternate hyphen font postdates Finale 2012. The pinned baseline
+  states no `<altHyphenFont>` either, so nothing is imported and musxdom's
+  `integrityCheck` supplies the object. A null member during the import is the
+  signal that the baseline omitted the element.

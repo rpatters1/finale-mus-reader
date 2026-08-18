@@ -46,6 +46,7 @@ const std::vector<ClassImporter>& registeredImporters()
         // options
         &options::importClefOptions,
         &options::importFontOptions,
+        &options::importLyricOptions,
         &options::importMultimeasureRestOptions,
         &options::importMusicSpacingOptions,
         &options::importStemOptions,
@@ -333,6 +334,25 @@ GlobalSelectorWords readNumericGlobalWords(
             result.words.push_back(row.words[slot]);
         }
     }
+    return result;
+}
+
+GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
+    const SourceProfile& profile, std::uint16_t selector)
+{
+    if (profile.epoch != FormatEpoch::ZlibLegacy) {
+        return readNumericGlobalWords(index, selector);
+    }
+    GlobalSelectorWords result;
+    const auto* row = index.getClassOthers().get(
+        numericGlobalClass(selector), GLOBALS_CMPER, 0, 0);
+    if (!row) {
+        return result;
+    }
+    result.words = payloadWords(index.getClassOthers().payloadOf(*row), profile.byteOrder);
+    result.present = true;
+    result.blockOffset = row->blockOffset;
+    result.decodedOffset = row->decodedOffset;
     return result;
 }
 

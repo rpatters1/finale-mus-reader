@@ -411,38 +411,23 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
         && versions::storesUnicodeCodepoints(profile.version);
     const std::size_t elementWords = wide ? wideElementWords : narrowElementWords;
 
-    std::vector<std::int16_t> words;
-    bool present = false;
-    std::size_t blockOffset = 0;
-    std::size_t decodedOffset = 0;
-    if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        if (const auto* row = index.getClassOthers().get(
-                numericGlobalClass(stemConnectionSelector), GLOBALS_CMPER, 0, 0)) {
-            words = payloadWords(index.getClassOthers().payloadOf(*row), profile.byteOrder);
-            present = true;
-            blockOffset = row->blockOffset;
-            decodedOffset = row->decodedOffset;
-            if (wide && profile.byteOrder == ByteOrder::BigEndian) {
-                // The widened symbol's word order has no big-endian witness and almost
-                // certainly never will, for the reason recorded at @ref wideCodepoint.
-                // Rather than rely on that absence, say so when the case actually arrives:
-                // if the order is the other way the symbols are not slightly off but
-                // nonsense, and this costs nothing until such a file exists.
-                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "This document uses the Finale 2012 stem-connection layout in big-endian "
-                    "order, which no surveyed file does; the symbol's word order is "
-                    "unverified for it."});
-            }
-        }
-    } else {
-        const auto family = readNumericGlobalWords(index, stemConnectionSelector);
-        words = family.words;
-        present = family.present;
-        blockOffset = family.blockOffset;
-        decodedOffset = family.decodedOffset;
+    const auto family = readGlobalWords(index, profile, stemConnectionSelector);
+    const auto& words = family.words;
+    const auto blockOffset = family.blockOffset;
+    const auto decodedOffset = family.decodedOffset;
+    if (family.present && wide && profile.byteOrder == ByteOrder::BigEndian) {
+        // The widened symbol's word order has no big-endian witness and almost certainly
+        // never will, for the reason recorded at @ref wideCodepoint. Rather than rely on that
+        // absence, say so when the case actually arrives: if the order is the other way the
+        // symbols are not slightly off but nonsense, and this costs nothing until such a file
+        // exists.
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+            "This document uses the Finale 2012 stem-connection layout in big-endian "
+            "order, which no surveyed file does; the symbol's word order is "
+            "unverified for it."});
     }
 
-    if (!present) {
+    if (!family.present) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
             "This document stores no stem-connection table, so it has no stem connections."});
         return;

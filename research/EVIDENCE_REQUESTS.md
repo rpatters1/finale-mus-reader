@@ -379,6 +379,83 @@ is big-endian, so "stored opposite to the container" and "always little-endian" 
 low priority: the reader gives the same answer under either explanation, and no such document is known to be
 available.
 
+### L1 — Proposed — the eight lyric fields nothing varies
+
+**The highest-value single request in the class, and the smallest.** Eight `LyricOptions` fields have no located
+storage: `useSmartWordExtensions`, `wordExtNeedUnderscore`, `lyricPunctuationToIgnore`, `lyricAutoNumType`, and the
+three `showAutoNumbersOn…` flags. Every one is invariant across all 69 tracked fixtures *and* absent from the
+framework's lyrics preference map, so neither source can locate them and no corpus survey of any size will either —
+this is the `82`/`83` situation from
+[T2](#t2--suppliedanalyzed--the-four-text-fields-no-corpus-document-varies) again.
+
+**Three fields were on this list and have been struck off without a fixture**, because the repository owner supplied
+the boundary instead: `hyphenChar`, `useAltHyphenFont` and `altHyphenFont` all postdate Finale 2012, the last
+release this reader opens, so no legacy file can state them and no save could ever have found them. It is worth
+noticing how much cheaper the answer was than the save it replaced: the corpus could only ever have shown that
+nothing varies, which is what an absent option and an unfound one look like alike.
+
+One Finale 2005 or 2006 save, from the same baseline as the existing `F2005-*` fixtures, changing **only** the
+Lyric Options dialog and moving as many of the remaining eight as the dialog exposes at once: switch off "Use Smart
+Word Extensions", switch on "Only Create on Lyrics With Underscores", and set automatic lyric numbers to "Keep with
+First Syllable" so `lyricAutoNumType` leaves `align`. Save the MUS and the ETF. Moving several at once is
+acceptable here rather than sloppy, because none of them is currently located at all: the first pass only needs to
+find which selectors move, and a second single-field save can separate any two that land in one word. **Check
+first which of the eight that era's dialog actually exposes** — any it does not is a candidate for the same
+after-2012 answer the three struck-off fields got, and asking is cheaper than saving.
+
+### L2 — Supplied/Analyzed — the edge punctuation bit and the punctuation set, both closed
+
+**Both fields are now mapped, and neither could have been closed by a corpus.**
+
+`lyricUseEdgePunctuation` is selector `57` word 4, class `0x0047` byte 8, live from Finale 2012. That one came from
+the reference corpus rather than a fixture: Finale 2012 is the only release whose documents vary, thirteen record
+bits partition that cohort exactly because the split is really born-in-2012 against upgraded-into-2012, and a
+negative control in Finale 2008 cuts those thirteen to one candidate.
+
+`lyricPunctuationToIgnore` needed the fixture, and the request predicted the wrong shape. It is **not** a cmper into
+a text pool but a **variable-length tail on the same selector 57 record**, written only when the list differs from
+the stock set — which is exactly why the corpus was silent: the element takes two values across all 1,189
+companions, absent or stock, and the stock set appears in no Finale 2012 file at all.
+`tests/evidence/F2012/F2012-lyric-punct.mus` sets it to `#@%&` and the record grows from twelve bytes to
+twenty-four, the six scalars unchanged and the four characters following as 16-bit code units and a zero. An absent
+tail means the stock list, which musxdom's `integrityCheck` already supplies.
+
+The fixture repaid itself twice over. Finale rewrote the word-extension connection table as the dialog closed,
+giving five of nine styles a vertical offset of 5 and a sixth an offset of 1, so it is also a second non-default
+specimen for a collection that otherwise rested on one Finale 2006 document.
+
+**Supplied and analyzed:** `F2012-lyropts-noign-punct.mus`, the checkbox cleared and nothing else. It confirms the
+mapping the corpus had predicted before the fixture existed — byte 8 of class `0x0047` moves 0 to 1, no other word
+of that record moves — and it is the only published document anywhere with the switch cleared, so it is the sole
+fixture exercising the word set rather than clear. It also shows the switch and the tail are independent: ignoring
+is off and the list is stock, and the record stays twelve bytes.
+
+**One question this pair leaves open.** Two corpus documents ignore punctuation while carrying no
+`<lyricPunctuationToIgnore>` element at all, which neither fixture explains. A Finale 2012 save that clears the
+punctuation list *entirely*, with ignoring left on, would say whether an empty list is representable at all or
+whether those two documents mean something else.
+
+### L3 — Analyzed — the pre-2004 vertical offset, and a correlation that was a coincidence
+
+**Closed, and the hypothesis it rested on was wrong.** The request supposed that Finale 27 synthesized the starting
+connection's vertical offset as 1 or 4 according to the word-extension syllable positioning bit, because six fixture
+groups agreed and nothing else separated them. There was no rule: those documents simply store the value in
+selector `29` word 5, which this study had not yet found.
+
+`tests/evidence/F100/F100-wext-push-6-lift-5.*` names it, along with its horizontal partner on selector `30`. Both
+exist in every era including the Coda banner, and they are the only lyric values that era stores — Lift and Push
+are the whole of its dialog. `tests/evidence/F372/F372-lyricopts-changed.*` confirms them again in the uncompressed
+epoch alongside hyphen spacing and line thickness, the two settings Finale 3.7.2 adds.
+
+Worth keeping as a caution: a correlation across six groups looked like a rule for as long as the real field was
+missing. The fix was not a better statistical test but a controlled save in the era that had the fewest options to
+confound it.
+
+**One residue.** Where the era stores no connection table, Finale 27 also moves the `oneEntryEnd` element's
+horizontal offset with Push — 42 to 44 in the Finale 3.7.2 pair. One specimen cannot distinguish that from several
+formulas that fit it, so the reader keeps the pinned baseline's 42 and the difference is intended. A second save
+moving Push to a different value would settle it, and is low priority.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

@@ -123,3 +123,20 @@ F100-dateform-tab.mus
     in the earliest era as in the latest, so neither needs a version gate. The era's UI
     exposes no other document-wide text setting, and no Coda-banner document carries the
     accidental-insert block at all.
+
+F100-wext-push-6-lift-5.mus
+    sha256 3e1a8a8dcc2f99552ba717adbb4e0eeb0d82e31c47b05d5755e11ef3001ab535
+    From F100-baseline, the Lyric Options word extension "Push" set to 6 and "Lift" to 5.
+    Those two are the whole of what this era's dialog exposes for lyrics, and they are the only
+    lyric values a Coda-banner document stores: selector 29 word 5 moves 4 to 5 and selector 30
+    word 5 moves 4 to 6, no other word in the file moves, and the companion reads
+    <wordExtVertOffset>5</> and <wordExtHorzOffset>6</>. The accompanying ETF prints
+    ^29(65534) -4 0 66 -4 -4 5 and ^30(65534) -2 -2 66 -2 -5 6, so the mapping is confirmed on
+    three independent representations.
+    Before this fixture the Coda-banner epoch recovered nothing at all for LyricOptions, and
+    the class-level offsets were derived from selector 55, which does not exist before Finale
+    2004. It also retires an open correlation: pre-2004 documents whose companions show a
+    vertical offset of 1 rather than 4 simply store 1 in selector 29, which had looked like it
+    tracked the word-extension positioning bit and never did.
+    The companion also moves the starting connection's offsets to 6 and 5, which is Finale 27
+    filling a connection table this era does not store from the dialog's own values.

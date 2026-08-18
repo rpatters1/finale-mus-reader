@@ -1,2 +1,29 @@
 Version 2004c.r1
 Mac OS X 10.4.11 running in QEMU PowerPC emulator
+
+F2004-lyropts-nosmart-wext.mus
+    sha256 8dd9c16c98f4baac780cff135192143af1088db2083612919bf837e32dd04804
+    From F2004-baseline, "Use Smart Word Extensions" switched off. Selector 34 word 5 moves 1
+    to 0, the ETF prints ^34(65534) 0 0 0 0 0 0, and the companion loses
+    <useSmartWordExtensions/>.
+    The word exists in every era and means nothing before Finale 2004: it is 0 in every earlier
+    document while every earlier companion switches the option on, and the Finale 2.6.3 fixture
+    stores 12 there, which is no boolean at all. Reading it early would turn smart word
+    extensions off for every Finale 2003-and-earlier document, so it is gated on selector 57
+    exactly as the smart-hyphen switch on selector 35 is.
+
+F2004-lyropts-needuscore.mus
+    sha256 a825f2bbcdcd8b4433a7023b5e2a11470817bf3db93ba17fa83a69a6ad8b8aef
+    From F2004-baseline, "Only Create on Lyrics With Underscores" switched on. Selector 57
+    word 1 moves 0 to 1, the ETF prints ^57(65534) 1 1 38 1 0 0, and the companion gains
+    <wordExtNeedUnderscore/>.
+    The Finale 2004 dialog words this setting the opposite way round and unclearly, and Finale
+    had reworded it to match the modern boolean by Finale 2012. The companion settles the sense
+    rather than the wording: the stored 1 converts to the option being on, so the value needs no
+    inversion.
+    This also fills the last unexplained word of the selector 57 record, which had been noted as
+    always zero and was once a candidate for holding a punctuation-list reference. Only word 5
+    of that record remains unassigned.
+    Both Finale 2004 saves also rewrote the word extension connection table as the dialog
+    closed, giving its elements vertical offsets of 5, which is the same normalization the
+    Finale 2012 and 3.7.2 lyric saves show.

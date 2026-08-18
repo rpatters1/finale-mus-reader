@@ -75,3 +75,37 @@ F2012-dblsharp-insert-outside-BMP.mus
     first gives 156777, while the high-word-first order the two trackings use in the same
     element would give 0x64690002, which is not a codepoint. One element therefore holds two
     different 32-bit conventions.
+
+F2012-lyric-punct.mus
+    sha256 fb44a24bd7f81b86c6b84f6c6fe25e7505e9c730d08f953b3871b1cb580bf912
+    From F2012-baseline, the Lyric Options punctuation set changed to `#@%&` with "Ignore
+    Syllable Edge Punctuation" left on. Four characters sharing nothing with the stock set
+    `,.?!;:'"“”‘’`, so finding them proves where the field begins rather
+    than matching a default.
+    This is the only specimen anywhere that carries the list at all. Finale writes it as a
+    variable-length tail on selector 57, class 0x0047, and **only when the list is not the
+    stock one**: the record is twelve bytes in every one of the 1,189 companion-backed corpus
+    documents and in the other five Finale 2012 fixtures, and twenty-four here -- the six
+    scalars unchanged, then the four characters as 16-bit code units and a zero. An absent
+    tail therefore means the stock list, which musxdom's integrityCheck already supplies.
+    Two things changed that the edit did not ask for, both Finale normalizing as the dialog
+    closed. The word extension connection table gained vertical offsets of 5 on five of its
+    nine styles and 1 on a sixth, which makes this a welcome second specimen for a mapping
+    that otherwise rests on one Finale 2006 fixture. The font definition table also renumbered
+    Lucida Grande and Symbol from comparators 11 and 13 to 15 and 16.
+
+F2012-lyropts-noign-punct.mus
+    sha256 4c44975bd5900b466d02eaa493934e1cc4409ea9850d0b5b803666c1862e132c
+    From F2012-baseline, "Ignore Syllable Edge Punctuation" cleared and nothing else asked
+    for. The controlled one-variable proof of selector 57 word 4: byte 8 of class 0x0047 moves
+    from 0 to 1, no other word of that record moves, and the companion gains
+    <lyricUseEdgePunctuation/>. Every other tracked Finale 2012 fixture leaves the setting on,
+    so this is the only published document anywhere that exercises the word set rather than
+    clear; before it, that path was covered only by a synthetic record and by corpus documents
+    that cannot be published.
+    It also shows the tail and the switch are independent. Ignoring is off here and the list is
+    the stock one, so the record stays twelve bytes: Finale writes a punctuation tail only when
+    the list itself differs from the stock set, not whenever the switch is touched.
+    As with F2012-lyric-punct, Finale normalized two things the edit did not ask for as the
+    dialog closed -- the word extension connection table gained the same vertical offsets, and
+    Lucida Grande and Symbol renumbered from comparators 11 and 13 to 15 and 16.

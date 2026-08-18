@@ -3,7 +3,8 @@
 
 // Emit one private observation per legacy document for the option classes that recovery
 // currently covers: options::ClefOptions, options::FontOptions,
-// options::MultimeasureRestOptions, options::TextOptions, and the others::FontDefinition
+// options::LyricOptions, options::MultimeasureRestOptions, options::TextOptions, and the
+// others::FontDefinition
 // pool those reference.
 //
 // Input is a TSV of `corpus_id<TAB>source_path` rows. Output is JSON Lines and
@@ -277,6 +278,115 @@ void writeMultimeasureRestOptions(std::ostream& out, const musx::dom::DocumentPt
     out << '}';
 }
 
+// LyricOptions. Its two collections are fixed-length maps in musxdom rather than sequences, so
+// each element is emitted under its own type name and a comparison never depends on iteration
+// order. `alt_hyphen_font_name` is resolved rather than reported as a comparator, because the
+// legacy pool and the companion renumber font definitions independently.
+void writeLyricOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    using Lyrics = musx::dom::options::LyricOptions;
+    const auto options = document->getOptions()->get<Lyrics>();
+    if (!options) {
+        out << ",\"lyric_options\":null";
+        return;
+    }
+    const auto boolOf = [](bool value) { return value ? "true" : "false"; };
+    out << ",\"lyric_options\":{"
+        << "\"hyphen_char\":" << static_cast<std::uint32_t>(options->hyphenChar)
+        << ",\"max_hyphen_separation\":" << options->maxHyphenSeparation
+        << ",\"word_ext_vert_offset\":" << options->wordExtVertOffset
+        << ",\"word_ext_horz_offset\":" << options->wordExtHorzOffset
+        << ",\"word_ext_line_width\":" << options->wordExtLineWidth
+        << ",\"word_ext_min_length\":" << options->wordExtMinLength
+        << ",\"smart_hyphen_start\":" << static_cast<int>(options->smartHyphenStart)
+        << ",\"lyric_auto_num_type\":" << static_cast<int>(options->lyricAutoNumType)
+        << ",\"use_smart_word_extensions\":" << boolOf(options->useSmartWordExtensions)
+        << ",\"use_smart_hyphens\":" << boolOf(options->useSmartHyphens)
+        << ",\"use_alt_hyphen_font\":" << boolOf(options->useAltHyphenFont)
+        << ",\"word_ext_need_underscore\":" << boolOf(options->wordExtNeedUnderscore)
+        << ",\"word_ext_offset_to_notehead\":" << boolOf(options->wordExtOffsetToNotehead)
+        << ",\"lyric_use_edge_punctuation\":" << boolOf(options->lyricUseEdgePunctuation)
+        << ",\"show_auto_numbers_verses\":" << boolOf(options->showAutoNumbersOnVerses)
+        << ",\"show_auto_numbers_choruses\":" << boolOf(options->showAutoNumbersOnChoruses)
+        << ",\"show_auto_numbers_sections\":" << boolOf(options->showAutoNumbersOnSections)
+        << ",\"punctuation_to_ignore\":" << jsonString(options->lyricPunctuationToIgnore);
+
+    std::string altHyphenName;
+    if (options->altHyphenFont) {
+        try {
+            altHyphenName = options->altHyphenFont->getName();
+        } catch (const std::exception&) {
+            // An unregistered comparator throws here rather than resolving. That is exactly
+            // the failure this field is worth watching, so it is recorded rather than swallowed.
+            altHyphenName = "<unresolved>";
+        }
+    }
+    out << ",\"alt_hyphen_font_name\":" << jsonString(altHyphenName);
+
+    out << ",\"syllable_pos_styles\":{";
+    bool firstStyle = true;
+    for (const auto& [name, type] : {
+             std::pair{"default", Lyrics::SyllablePosStyleType::Default},
+             std::pair{"wordExt", Lyrics::SyllablePosStyleType::WordExt},
+             std::pair{"first", Lyrics::SyllablePosStyleType::First},
+             std::pair{"systemStart", Lyrics::SyllablePosStyleType::SystemStart}}) {
+        const auto found = options->syllablePosStyles.find(type);
+        if (!firstStyle) {
+            out << ',';
+        }
+        firstStyle = false;
+        out << jsonString(name) << ':';
+        if (found == options->syllablePosStyles.end() || !found->second) {
+            out << "null";
+            continue;
+        }
+        out << "{\"align\":" << static_cast<int>(found->second->align)
+            << ",\"justify\":" << static_cast<int>(found->second->justify)
+            << ",\"on\":" << boolOf(found->second->on) << '}';
+    }
+    out << '}';
+
+    out << ",\"word_ext_connect_styles\":{";
+    bool firstConnect = true;
+    for (const auto& [name, type] : {
+             std::pair{"defaultStart", Lyrics::WordExtConnectStyleType::DefaultStart},
+             std::pair{"defaultEnd", Lyrics::WordExtConnectStyleType::DefaultEnd},
+             std::pair{"systemStart", Lyrics::WordExtConnectStyleType::SystemStart},
+             std::pair{"systemEnd", Lyrics::WordExtConnectStyleType::SystemEnd},
+             std::pair{"dottedEnd", Lyrics::WordExtConnectStyleType::DottedEnd},
+             std::pair{"durationEnd", Lyrics::WordExtConnectStyleType::DurationEnd},
+             std::pair{"oneEntryEnd", Lyrics::WordExtConnectStyleType::OneEntryEnd},
+             std::pair{"zeroLengthEnd", Lyrics::WordExtConnectStyleType::ZeroLengthEnd},
+             std::pair{"zeroOffset", Lyrics::WordExtConnectStyleType::ZeroOffset}}) {
+        const auto found = options->wordExtConnectStyles.find(type);
+        if (!firstConnect) {
+            out << ',';
+        }
+        firstConnect = false;
+        out << jsonString(name) << ':';
+        if (found == options->wordExtConnectStyles.end() || !found->second) {
+            out << "null";
+            continue;
+        }
+        out << "{\"connect_index\":" << static_cast<int>(found->second->connectIndex)
+            << ",\"x\":" << found->second->xOffset
+            << ",\"y\":" << found->second->yOffset << '}';
+    }
+    out << '}';
+
+    for (const auto* member : {"maxHyphenSeparation", "wordExtVertOffset", "wordExtHorzOffset",
+             "wordExtLineWidth", "wordExtMinLength", "smartHyphenStart", "lyricAutoNumType",
+             "useSmartWordExtensions", "useSmartHyphens", "useAltHyphenFont",
+             "wordExtNeedUnderscore", "wordExtOffsetToNotehead", "lyricUseEdgePunctuation",
+             "showAutoNumbersOnVerses", "showAutoNumbersOnChoruses", "showAutoNumbersOnSections",
+             "hyphenChar", "lyricPunctuationToIgnore"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(originOf(fields, std::string("options.lyricOptions.") + member));
+    }
+    out << '}';
+}
+
 // TextOptions. The two line-spacing members are optional and mutually exclusive, so both are
 // emitted and a null means the document did not state that spelling. Each symbol insert emits
 // its font by comparator and by resolved name: comparators are renumbered between the legacy
@@ -445,6 +555,7 @@ int main(int argc, char** argv)
             writeFontOptions(out, result.document, fields);
             writeMultimeasureRestOptions(out, result.document, fields);
             writeTextOptions(out, result.document, fields);
+            writeLyricOptions(out, result.document, fields);
             writeFontDefinitions(out, result.document, fields);
             out << '}';
         } catch (const std::exception& error) {
