@@ -117,9 +117,9 @@ void populatePagePosition(PageTarget& target, std::uint16_t packed, bool right)
 
 PageTarget::PageAssignType pageAssignType(std::uint16_t raw)
 {
-    // The source is a one-hot page-selection mask. Every surveyed assignment is One;
-    // the other three values preserve the same bit spelling used by Finale's related
-    // page-assignment records.
+    // The source is a one-hot page-selection mask. **Believed for all but One,** which is the
+    // only value seen; the other three preserve the bit spelling Finale's related
+    // page-assignment records use.
     switch (raw) {
     case 1: return PageTarget::PageAssignType::One;
     case 2: return PageTarget::PageAssignType::Odd;

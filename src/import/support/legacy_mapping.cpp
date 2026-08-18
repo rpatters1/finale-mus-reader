@@ -163,8 +163,8 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         value = static_cast<std::int32_t>(combined);
     } else if (source.width == ValueWidth::Byte) {
         // The framework selects one-byte fields through a 16-bit slot and then narrows.
-        // Which half it keeps is still a binary-validation target, so no one-byte mapping
-        // is promoted until a fixture settles it.
+        // **Unverified: which half it keeps.** No one-byte mapping is promoted until a
+        // document settles it.
         value = static_cast<std::int8_t>(static_cast<std::uint16_t>(first->value) & 0xffU);
     } else {
         value = first->value;

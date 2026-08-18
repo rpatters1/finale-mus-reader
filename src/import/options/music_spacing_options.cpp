@@ -18,8 +18,8 @@ using MusicSpacingTarget = musx::dom::options::MusicSpacingOptions;
 //
 // The same logical options object also draws fields from selector 41, and the remaining
 // words of selector 94 carry the spacing flags and the reference duration/width pairs.
-// Those are distilled in research/data/legacy_option_mappings.csv but are not yet
-// verified against a fixture, so they are not promoted here.
+// Those are distilled in research/data/legacy_option_mappings.csv but are unverified, so they
+// are not promoted here.
 const FieldMapping spacingFields[] = {
     MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1, minWidth),
     MUS_WORD(MusicSpacingTarget, "94", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, maxWidth),

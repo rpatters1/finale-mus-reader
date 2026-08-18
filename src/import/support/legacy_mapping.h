@@ -146,11 +146,10 @@ struct GlobalSelectorWords
 
 /// @brief The codepoint a Unicode-era record stores across two consecutive words.
 /// @details The words are in the order the container has already normalized each one into,
-/// and the low half comes first. No big-endian Finale 2012 specimen exists in any surveyed
-/// corpus, so that half of the rule is untested and likely to stay that way: such a file
-/// needs the 2012 release on a PowerPC Mac, which its stated requirements allow only by
-/// implication and the operating systems mostly forbid. A caller that can reach the
-/// big-endian case should say so rather than rely on the absence.
+/// and the low half comes first. **Unverified for a big-endian container:** such a file needs
+/// the 2012 release on a PowerPC Mac, which its stated requirements allow only by implication
+/// and the operating systems mostly forbid, so one may never exist. A caller that can reach the
+/// big-endian case should say so rather than rely on that absence.
 [[nodiscard]] std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high);
 
 /// @brief One end of a version gate, ordered by major then minor.
@@ -388,7 +387,7 @@ struct MappingTable
     VersionRange versions{};
     /// @brief Optional extra test, for a boundary neither the epoch nor the version states.
     /// @details Some layouts change at a release that sits inside one epoch, at a version no
-    /// surveyed file occupies, or in a way the record stream states more directly than the
+    /// available file occupies, or in a way the record stream states more directly than the
     /// header does. Where the stream says which layout a file uses, a predicate reads that
     /// instead of dating the file, which is the same preference for self-description that
     /// decides the clef tuple width from its payload size. Prefer an epoch gate to this, and

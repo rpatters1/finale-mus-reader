@@ -160,10 +160,10 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 // records in block 0x001a carry class, cmper1, incidence, and a 32-bit payload length. Detail
 // records in block 0x001b retain the pre-zlib second comparator between cmper1 and incidence;
 // the endian-specific length geometry is handled below.
-// This is strongly supported by six assignments in two Finale 2008 documents: the field
-// equals the companion's measure comparator, and the remaining 20-word payload is identical
-// to the older mg tuple. Keep this structural interpretation revisable if contrary data
-// appears, but do not discard the field by treating it as an incidence.
+// **Believed: that second comparator is the measure.** It holds the measure the assignment
+// belongs to, and the 20-word payload after it is the older mg tuple unchanged. Revise the
+// interpretation if contrary data appears, but do not discard the field by treating it as an
+// incidence.
 std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
     bool details, std::vector<std::uint8_t>& payload)
 {

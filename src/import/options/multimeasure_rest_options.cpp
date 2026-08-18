@@ -47,12 +47,10 @@ constexpr std::uint32_t startAdjustSlot = 2;
 constexpr std::uint32_t endAdjustSlot = 3;
 constexpr std::uint32_t mmRestFlagsSlot = 5;
 
-// Bit 0 of the flags word is "use character rest style". All 917 companion-backed corpus
-// documents that carry the bit have <useCharRestStyle/> in their Finale 27 conversion, and
-// none of the 213 that do not, do.
+// Bit 0 of the flags word is "use character rest style".
 //
-// It is the only bit of this word that any legacy document uses, and the word is exactly 0 or
-// 1 in all 3,458 later-layout documents of the reference corpus. The class's other boolean,
+// It is the only bit of this word any legacy document uses; the word is exactly 0 or 1
+// throughout the later layout. The class's other boolean,
 // "noHorizontalStretch", has no bit here to find: the option arrived with Finale 27, so no
 // legacy format has a place to put it. It is asserted rather than mapped -- see
 // @ref captureMultimeasureRestOptions.
@@ -65,27 +63,15 @@ constexpr std::size_t earlyMmRestFamilyWords = records::otherWordCount;
 /// @brief Whether this source stores the six-word multimeasure-rest record.
 /// @details Finale 3.5 rewrote this option's record, and the boundary is what makes a marker
 /// necessary rather than merely preferable here: it falls **inside** the uncompressed epoch,
-/// so an epoch gate cannot express it, and the versions on either side of it are 3.2 and 3.5
-/// because no Finale 3.3 or 3.4 document exists in either surveyed corpus. A version range
-/// would therefore have to guess its own cut point, and would in addition fail closed on the
-/// Coda era's Windows documents, which state a platform where its Mac documents state a
-/// version and so have no version at all. The family's own size states the layout outright.
+/// so an epoch gate cannot express it, and no document of the two intervening versions 3.3 and
+/// 3.4 is available to place the cut. A version range would therefore have to guess its own cut
+/// point, and would in addition fail closed on the Coda era's Windows documents, which state a
+/// platform where its Mac documents state a version and so carry no version at all. The
+/// family's own size states the layout outright, and recovers those Windows documents that a
+/// version range would skip without a word.
 ///
-/// The marker splits the reference corpus cleanly. All 264 of its 1.8.7, 2.0.1, 2.6, 3.0 and
-/// 3.2 documents carry one incidence of six words, and all 3,458 of its 3.5-and-later
-/// documents carry twelve, counting the zlib era's coalesced payload. No file carries any
-/// other count and none crosses that line; the three that carry no selector 25 at all are
-/// containers this reader cannot classify to an epoch either. The tracked-evidence survey
-/// extends the early side below that corpus's earliest version: its 19 Finale 1.0.0 fixtures
-/// all carry the six-word record, and unlike the reference corpus's earliest documents each
-/// has an exact Finale 27 companion.
-///
-/// The installs survey adds the releases neither of the others contains, and every one falls
-/// where the marker says: 11 Finale 3.8 and 43 Finale 98 documents on the later side, 1,295
-/// Finale 2011 documents likewise, and 22 more Finale 1.0.0 documents on the early side. It
-/// also holds the 24 Coda-era Windows documents, which state a platform where their Mac
-/// contemporaries state a version and so carry no version at all. The marker recovers all 24;
-/// a version range would have skipped every one of them without a word.
+/// The early layout is one incidence of six words; the later is twelve, counting the zlib era's
+/// coalesced payload. Nothing carries any other count.
 ///
 /// The two layouts share only the measure width, in slot 0. The number adjustment and the
 /// shape moved from slots 4 and 5 down to 2 and 3 when the record grew, so reading an early
@@ -111,15 +97,13 @@ bool statesLaterMmRestLayout(
 }
 
 /// @brief Whether this source stores the automatic-update selector at all.
-/// @details Selector 83 arrives with Finale 97 and is carried by every later document of the
-/// reference corpus; none of its 1.8.7, 2.0.1, 2.6, 3.0, 3.2, 3.5 or 3.7 documents has it, and
-/// this is the one boundary of this class that does not coincide with the layout marker above.
-/// Reading the record's presence rather than dating the file keeps it out of a version range
-/// whose lower end would sit somewhere between 3.7 and 97, and makes the absent case explicit
-/// instead of silently defaulting: all 22 companion-backed documents that lack the selector
-/// convert without <autoUpdateMmRests/>. What the absence means is therefore asserted in
-/// @ref captureMultimeasureRestOptions rather than left to the pinned baseline, which would
-/// say the opposite.
+/// @details Selector 83 arrives with Finale 97, which is the one boundary of this class that
+/// does not coincide with the layout marker above. Reading the record's presence rather than
+/// dating the file keeps it out of a version range whose lower end would sit somewhere between
+/// 3.7 and 97, and makes the absent case explicit instead of silently defaulting. A document
+/// without the selector does not update automatically, which is asserted in
+/// @ref captureMultimeasureRestOptions rather than left to the pinned baseline, which says the
+/// opposite.
 bool storesMmRestAutoUpdate(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -132,15 +116,12 @@ bool storesMmRestAutoUpdate(
 }
 
 // Finale 3.5 through Finale 2006, in both fixed-row epochs. Every location is the distilled
-// framework's, and all 1,130 companion-backed later-layout documents of the reference corpus
-// agree with their exact Finale 27 conversions on all nine values and on the flag, with no
-// disagreement anywhere. The controlled Finale 97 fixture additionally separates the two rows:
-// its second incidence carries the symbol spacing and the flag while its first carries the
-// measure width, so a table that read them from one row would have to be wrong about one.
+// framework's. The record is two rows: the first carries the measure width, the second the
+// symbol spacing and the flag.
 //
 // Slot 1 of the first row and slot 4 of the second are the two words the framework leaves
-// unnamed. Both are zero in all 3,458 later-layout documents, so nothing here can say what
-// they are; they are **open** and deliberately unmapped.
+// unnamed. Both are zero everywhere in this layout, so nothing states what they are; they are
+// **open** and deliberately unmapped.
 const FieldMapping mmRestFields[] = {
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, measWidth),
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, numAdjY),
@@ -156,27 +137,18 @@ const FieldMapping mmRestFields[] = {
 };
 
 // Finale 1.0.0 through Finale 3.2, spanning the whole Coda-banner epoch and the first
-// uncompressed releases. Three fields, and the two that moved are what prove the layout: the
-// Finale 3.0 and 3.2 documents carry -8 in slot 4 and 1 in slot 5 where their companions show
-// a number adjustment of -8 and shape 1, and the controlled Finale 1.0.0 and 2.6.3 fixtures
-// carry (12, 0) and (-28, 1) in those slots where their companions show exactly those pairs.
-// The era's lower bound comes from the fixtures rather than from the reference corpus, whose
-// earliest document is 1.8.7; all 19 tracked Finale 1.0.0 fixtures carry the six-word record.
-// Slot 5
-// is a shape comparator in this era as in every later one, and this reader keeps the source's
-// own comparator because shape definitions are recovered from the source.
+// uncompressed releases. Three fields. The number adjustment and the shape sit at slots 4 and
+// 5 here where the later layout puts them at 2 and 3, which is what the layout marker exists to
+// distinguish. Slot 5 is a shape comparator in this era as in every later one, and the source's
+// own comparator is kept because shape definitions are recovered from the source.
 //
-// All 59 companion-backed early documents agree with their conversions on all three fields.
+// Slots 1 to 3 hold something this era stores and Finale 3.5 stopped writing: slot 1 varies per
+// document, and slots 2 and 3 move together. Finale's own conversion of these documents carries
+// nothing from them, so nothing names them. They are **open** and unmapped.
 //
-// Slots 1 to 3 hold something this era stores and Finale 3.5 stopped writing: slot 1 varies
-// per document across 0, 1, 2, 4, 5, 14, 16, 21, 22 and 25, and slots 2 and 3 move together
-// as (24, 0) or (14, 1) in the Coda era and are (0, 0) in Finale 3.0 and 3.2. Finale 27's own
-// conversion of these documents carries nothing from them, so no companion can name them, and
-// no controlled edit has isolated one. They are **open** and unmapped. The rest of the class
-// keeps the pinned baseline's values, which is what those same conversions produce for all 59:
-// "start number at" 2, threshold 9, symbol spacing 48, horizontal number adjustment 0 and both
-// booleans false. The two H-bar adjustments are the exception, because the baseline does not
-// agree there; they are asserted in @ref captureMultimeasureRestOptions.
+// The rest of the class keeps the pinned baseline's values, which match this era's behavior.
+// The two H-bar adjustments are the exception, because the baseline does not agree there; they
+// are asserted in @ref captureMultimeasureRestOptions.
 const FieldMapping earlyMmRestFields[] = {
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, measWidth),
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, numAdjY),
@@ -184,10 +156,8 @@ const FieldMapping earlyMmRestFields[] = {
 };
 
 // Selector 83 word 4, for the documents that carry the selector. Word 2 of the same record is
-// also set in most of them and is not this flag: 468 companion-backed documents carry word 2
-// set and word 4 clear and none of their conversions has <autoUpdateMmRests/>, while all 73
-// that carry word 4 do. Reading word 2 instead would switch automatic updating on for roughly
-// half the corpus.
+// set in most documents and is **not** this flag; reading it instead would switch automatic
+// updating on for roughly half of them.
 const FieldMapping mmRestAutoUpdateFields[] = {
     MUS_WORD(MmRestTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, mmRestUpdateSlot,
         autoUpdateMmRests),
@@ -195,9 +165,7 @@ const FieldMapping mmRestAutoUpdateFields[] = {
 
 // Finale 2007 and later: the same ten logical values, reached through the shared
 // numericGlobalClass rule and addressed by byte offset in the coalesced payload. Both byte
-// orders agree with their companions across the whole zlib cohort. The Finale 2012 fixture is
-// what exercises the second row through this encoding: it carries 30 and -30 in the two H-bar
-// adjustments where every other tracked fixture leaves them at zero.
+// orders occur in this era.
 const FieldMapping classMmRestFields[] = {
     MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
         classWordOffset(0), measWidth),
@@ -336,12 +304,10 @@ void captureMultimeasureRestOptions(const records::LegacyRecordIndex& index,
     // the pinned baseline, so leaving them to it would assert the opposite of what the source
     // means. Finale 27's "New Document Without Libraries" starts the H-bar 30 Evpu in and ends
     // it 30 Evpu out; a document written before Finale 3.5 has no such adjustment, because the
-    // whole second row that carries it does not exist. Finale 27's own conversions agree:
-    // every early-layout companion in the reference corpus, Coda-banner and Finale 3.0/3.2
-    // alike, writes neither <startAdjust> nor <endAdjust>.
+    // whole second row that carries it does not exist, so both adjustments are zero.
     //
     // The rest of the class is left to the baseline deliberately, because the baseline already
-    // carries what those conversions produce -- 2, 9 and 48 for the start number, threshold and
+    // carries what that era does -- 2, 9 and 48 for the start number, threshold and
     // symbol spacing, and zero for the horizontal number adjustment -- and repeating a value
     // the pinned resource already states would be a second copy of one fact.
     if (statesEarlyMmRestLayout(index, profile)) {
@@ -354,8 +320,8 @@ void captureMultimeasureRestOptions(const records::LegacyRecordIndex& index,
     // Likewise for automatic updating, which is a Finale 97 arrival. The baseline switches it
     // on, and a document from a version that had no such setting never updated its
     // multimeasure rests, so inheriting the baseline would claim a behavior the source cannot
-    // have had. Every early companion agrees: none carries <autoUpdateMmRests/>. **An absent
-    // selector 83 means off, with no further qualification** -- including for a document whose
+    // have had. **An absent selector 83 means off, with no further qualification** --
+    // including for a document whose
     // epoch could not be classified, which is exactly the document that must not be left
     // claiming a Finale 27 setting.
     if (!storesMmRestAutoUpdate(index, profile)) {
@@ -364,17 +330,17 @@ void captureMultimeasureRestOptions(const records::LegacyRecordIndex& index,
     }
 
     // "Stretch Horizontally" is a Finale 27 feature. No legacy document of any era can state
-    // it, so its value is known exactly for every file this reader will ever open, and it is
-    // false. This is the one field the reader asserts unconditionally.
+    // it, so its value is known exactly for every file that can arrive here, and it is false.
+    // This is the one field asserted unconditionally.
     //
-    // The pinned baseline also leaves it false, so the repository's usual rule -- leave a field
-    // to the baseline where the baseline already agrees, rather than keeping a second copy of
-    // one fact -- would say to omit this. It is asserted anyway, because the two statements are
-    // not the same statement. The baseline saying false is one Finale 27 document's setting,
-    // which a later pinned baseline could legitimately change; the feature postdating every
-    // legacy format is a fact about the formats, and it makes the value known rather than
+    // The pinned baseline also leaves it false, so the usual rule -- leave a field to the
+    // baseline where the baseline already agrees, rather than keeping a second copy of one fact
+    // -- would say to omit this. It is asserted anyway, because the two statements are not the
+    // same statement. The baseline saying false is one Finale 27 document's setting, which a
+    // later pinned baseline could legitimately change; the feature postdating every legacy
+    // format is a fact about the formats, and that makes the value known rather than
     // synthesized. Reporting it as a Finale 27 default would understate that, and would leave
-    // the field looking like an unanswered question in a coverage survey.
+    // the field looking like an unanswered question in a coverage report.
     target->noHorizontalStretch = false;
     reportEraBehavior(report, "noHorizontalStretch", 0);
 }
@@ -395,10 +361,10 @@ void validateMultimeasureRestOptions(
     // different document's drawing.
     //
     // Info rather than Warning, because this is ordinary Finale behavior and not a sign that
-    // anything went wrong. 319 zlib documents of the installs survey name an H-bar shape their
-    // own file never defines -- they carry no shape records at all -- and Finale supplies the
-    // drawing from its own resources. Raising it as a warning would report a normal document as
-    // suspect several hundred times over, which is how a diagnostic channel stops being read.
+    // anything went wrong. Documents commonly name an H-bar shape they never define, carrying
+    // no shape records at all, and Finale supplies the drawing from its own resources. Raising
+    // it as a warning would report a normal document as suspect, which is how a diagnostic
+    // channel stops being read.
     if (!document->getOthers()->get<musx::dom::others::ShapeDef>(
             musx::dom::SCORE_PARTID, target->shapeDef)) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,

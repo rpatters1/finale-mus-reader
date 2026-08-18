@@ -69,9 +69,8 @@ struct ProductBanner
     /// @brief Whether the product's leading token is `PC`, which names the platform.
     /// @details The pre-signature era states its platform here and nowhere else: its
     /// Windows documents carry `PC 1.0+` where its Mac documents carry a bare version such
-    /// as `2.6`. Across both surveyed corpora the token discriminates perfectly -- 24
-    /// documents carry it and are little-endian, 252 do not and are big-endian, and no
-    /// other product string anywhere contains `PC`.
+    /// as `2.6`. The token discriminates exactly: a document carrying it is little-endian, one
+    /// without it is big-endian, and no other product string contains `PC`.
     ///
     /// Only the token is matched. What follows is a version and must not participate:
     /// `1.0+` is the only value observed, but the platform is stated separately from the

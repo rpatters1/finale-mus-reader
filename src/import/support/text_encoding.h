@@ -21,7 +21,7 @@ namespace text {
 /// an iconv encoding name.
 ///
 /// musxdom has no equivalent and needs none. EnigmaXML is always UTF-8, so the document
-/// model never sees legacy bytes. Converting them is this reader's job.
+/// model never sees legacy bytes. Converting them is this library's job.
 ///
 /// **Design goal: the best result obtainable on the machine that is running.** Legacy text
 /// conversion is not required to be bit-identical across platforms, and pursuing that would
@@ -63,7 +63,7 @@ enum class CodePage : int
     ///
     /// Windows resolves every one of these natively and exactly. iconv has no Mac-specific
     /// name for the CJK four, so there they fall back to Shift-JIS, Big5, EUC-KR and
-    /// GB2312, which the corpus confirms decode Mac-stored CJK font names correctly. That
+    /// GB2312, which decode Mac-stored CJK font names correctly. That
     /// asymmetry is intended: Windows gets the more faithful answer rather than being held
     /// to what iconv can express.
     /// @{
@@ -90,7 +90,7 @@ enum class CodePage : int
 /// the document's platform — a Mac font can appear in a document saved on Windows.
 ///
 /// A concrete code page is always returned. Where `charsetVal` names no script — a symbol
-/// font, Windows `DEFAULT` or `OEM`, or a value no survey has produced — the bank's own
+/// font, Windows `DEFAULT` or `OEM`, or a value not yet seen — the bank's own
 /// default applies: Mac Roman for the Mac bank, Windows-1252 for the Windows bank. That is
 /// a starting position rather than a discovery, and it is meant to be revised the moment a
 /// file contradicts it.

@@ -37,13 +37,9 @@ constexpr std::uint32_t lineSpacingIsPercentSlot = 1;
 /// @brief Finale orders its alignment lists first, opposite, centre.
 /// @details musxdom's `TextJustify` and `VerticalAlignment` both put centre second instead,
 /// so the two spellings agree everywhere except at 1 and 2, which are exchanged. Only these
-/// two need it: `AlignJustify`, which `textHorzAlign` uses, already has Finale's order, and a
-/// Finale 2001 document storing 2 against a converted `center` proves it passes through.
-///
-/// A Finale 2003 document settles `textJustify`: it stores 2 and Finale 27 converts it to
-/// `center`, which would be 1 in musxdom's order. `tests/evidence/F2005/F2005-textvert-center`
-/// settles `textVertAlign` the same way by moving `83` word 1 alone from 0 to 2 against a
-/// converted `center`, and the earlier scalars fixtures read `bottom` from a stored 1.
+/// two need it: `AlignJustify`, which `textHorzAlign` uses, already carries Finale's order and
+/// passes through unchanged. `textJustify` and `textVertAlign` do not: each stores 2 where
+/// musxdom's order puts `center` at 1, and 1 where musxdom puts the opposite value at 2.
 [[nodiscard]] constexpr std::int64_t exchangeCenterAndOpposite(std::int64_t value)
 {
     if (value == 1) {
@@ -57,17 +53,15 @@ constexpr std::uint32_t lineSpacingIsPercentSlot = 1;
 
 /// @brief Whether this source stores selector 82 at all.
 /// @details Selectors 81, 82 and 83 arrive together with Finale 97, which is the same boundary
-/// the multimeasure-rest defaults find for selector 83. No document of Finale 2.6, 3.0, 3.2,
-/// 3.5 or 3.7 in the reference corpus carries any of the three and every Finale 97 and later
-/// one carries all three.
+/// the multimeasure-rest defaults find for selector 83.
 ///
 /// **The pre-97 epochs are covered and the exclusion is intended.** Reading presence rather
 /// than dating the file keeps the boundary out of a version range whose lower end would have
 /// to be guessed somewhere between 3.7 and 97, and it means a document from before the
 /// selectors existed recovers nothing from them and correctly reports the eleven fields as
 /// synthesized Finale 27 defaults. That is the fallback strategy working: the era had no such
-/// settings to store, and the Coda-era report that its UI exposes only tab spacing and date
-/// format agrees. Those two fields are on selectors 5 and 13, which every era carries, so they
+/// settings to store: that era's UI exposes only tab spacing and date format, and those two
+/// fields are on selectors 5 and 13, which every era carries, so they
 /// are recovered from the same words in a Finale 1.0.0 document as in a Finale 2012 one.
 ///
 /// Only the line-spacing pair consults this. The other tables need no gate of their own: an
@@ -86,11 +80,8 @@ bool storesTextLayoutOptions(
     return readNumericGlobalWords(index, layoutSelector).present;
 }
 
-// Selectors 5 and 13, which every epoch carries. Both locations are the distilled framework's
-// and both are corpus-confirmed on all 1,189 adjacent-exact companion pairs of the reference
-// corpus, Coda-banner included. The controlled Finale 1.0.0 and 2.6.3 fixtures move word 5 of
-// selector 5 to 1 and 2 and word 0 of selector 13 to 7, against companions reading `long`,
-// `abbrev` and 7, which is what shows the earliest era uses the same words as the latest.
+// Selectors 5 and 13, which every epoch carries, at the distilled framework's locations. The
+// words are the same in the earliest era as in the latest.
 //
 // `dateFormat` needs no translation: the framework's DATEFORMAT_SHORT, _LONG and _MACLONG are
 // 0, 1 and 2, and musxdom's DateFormat has the same three in the same order.
@@ -102,10 +93,8 @@ const FieldMapping textStampFields[] = {
 
 // Selector 81, three 32-bit values in the framework's MACFOURBYTE order: two 16-bit words with
 // the high word first, each word in the container's byte order. That is one rule for both byte
-// orders, and the controlled fixtures show it in each -- a big-endian Finale 2005 file stores
-// -6 as (-1, -6) and a little-endian Finale 2012 file stores 42 as (0, 42).
-//
-// All 1,108 companion-backed documents that carry the selector agree on all three.
+// orders: -6 is stored as the word pair (-1, -6) and 42 as (0, 42), whichever order the
+// container uses.
 const FieldMapping textMetricsFields[] = {
     MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0,
         LongWordOrder::HighFirst, textTracking),
@@ -118,12 +107,10 @@ const FieldMapping textMetricsFields[] = {
 // Selectors 82 and 83, less the two words that need more than a slot each: word 0 of 82, whose
 // destination depends on word 1, and word 1 of 82 itself.
 //
-// Word 2 of selector 83 is deliberately unmapped. It is 0 in every pre-2007 document and 1 in
-// every 2007-and-later one, and a controlled Finale 2012 text-options save clears it, so it is
-// something that dialog owns -- but it is not any field of this class, and the multimeasure-
-// rest note records the same word as set in 468 companion-backed documents whose conversions
-// have no <autoUpdateMmRests/>. Those 468 are exactly the zlib-era documents with word 4
-// clear, so the two observations are one fact. It stays **open**.
+// Word 2 of selector 83 is deliberately unmapped. It is 0 before Finale 2007 and 1 from that
+// release on, and the text-options dialog clears it, so that dialog owns it -- but it is no
+// field of this class. It is the same word the multimeasure-rest note records as set without
+// automatic updating being on. It stays **open**.
 const FieldMapping textLayoutFields[] = {
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, textWordWrap),
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, textPageOffset),
@@ -264,13 +251,9 @@ const MappingTable& classTextLayoutTable()
 /// means an absolute distance. That is why the value needs two tables rather than one row --
 /// the destination depends on a second word, not on the value read.
 ///
-/// `tests/evidence/F2005/F2005-linespace-to-evpu` establishes it directly. It moves words 0
-/// and 1 alone, 100 -> 72 and 1 -> 0, and its companion replaces
-/// <textLineSpacingPercent>100</> with <textLineSpacingEvpu>72</> while keeping
-/// <textExpandSingleWord/>. Finale 27 has no boolean of its own for the mode -- it writes one
-/// spelling or the other and never both -- so this word is read to route the value and is
-/// never itself reported as a recovered field. All 1,108 companion-backed documents that carry
-/// the selector have it set, against companions reporting the percent spelling.
+/// musxdom has no boolean of its own for the mode -- it carries one member or the other and
+/// never both -- so this word is read to route the value and is never itself reported as a
+/// recovered field. Percent is what documents overwhelmingly store.
 ///
 /// A source with no selector 82 answers false, which costs nothing: the tables that depend on
 /// this one are gated on the same record's presence.
@@ -486,35 +469,30 @@ void appendWords(std::vector<std::uint8_t>& bytes, const std::vector<std::int16_
 /// @details The layout follows from the epoch and, inside the zlib epoch, from the payload's
 /// own length, so no version gate is needed anywhere.
 ///
-/// **The Coda-banner epoch carries no such block and the omission is intended.** No document
-/// of Finale 1.x-2.6 in any survey has selector 78, the era's UI is reported to expose no
-/// accidental-insert settings, and Finale 27 synthesizes the pre-2001 defaults when converting
-/// one. Finale 3.0-3.5 is the same case for a different reason: the record has not appeared
-/// yet. Both keep the pinned baseline's five inserts, which is what the fallback strategy is
-/// for. That rests on 61 documents of the reference corpus, only eight of them Finale 3.0-3.2,
-/// so exactly where between 3.5 and 3.7 the block appears is thin and the installs survey
-/// would firm it up.
+/// **The Coda-banner epoch carries no such block and the omission is intended.** Selector 78
+/// does not exist there and the era's UI exposes no accidental-insert settings. Finale 3.0-3.5
+/// is the same case for a different reason: the record has not appeared yet. Both keep the
+/// pinned baseline's five inserts, which is what the fallback strategy is for. Exactly where
+/// between 3.5 and 3.7 the block first appears is not established.
 ///
 /// **Finale 3.7-2000 is a byte structure read little-endian**, whatever the container says.
 /// Its element is 17 bytes because the character is a single byte, and an odd stride cannot be
 /// addressed by 16-bit words at all: the fields land at alternating parities. Reassembling the
 /// row words little-endian recovers the structure on a big-endian file and is a no-op on a
-/// little-endian one, so one rule serves both. Every observed document of the era is
+/// little-endian one, so one rule serves both. Every document of the era seen so far is
 /// big-endian, so whether the rule is "opposite to the container" or "always little-endian"
-/// cannot be told apart; they agree on every file this reader can be given, and a Windows
-/// Finale 3.x-2000 document would be needed to separate them.
+/// cannot be told apart; a Windows Finale 3.x-2000 document would be needed to separate them.
 ///
-/// **Finale 27 mis-converts that era, and this reader deliberately disagrees with it.** Finale
-/// 27 uses the right 17-byte stride but reads the fields as though the element were the later
-/// 18-byte one, reporting the sharp insert's tracking as 2293760 -- the bytes 00 23 00 00 read
-/// as a big-endian long -- and its character as 50, which is the first byte of the next
-/// element. Read as this reader reads it, the same records give 35, 50, 0, 40, 60 and
-/// characters 35, 98, 110, 220, 186: what every other era stores, on all 179 companion-backed
-/// documents of the era and all thirteen tracked fixtures. A companion comparison will
-/// therefore show this era disagreeing on nearly every field, and that is the intended result.
-/// Eight later documents -- six Finale 2012 and two Finale 2009 -- store the mis-converted
-/// values permanently, evidently from an old file re-saved in a later Finale; this reader
-/// reproduces Finale 27 exactly on those, because there the bytes really do say that.
+/// **Finale 27 mis-converts this era, and the disagreement is deliberate.** Its upgrade uses
+/// the right 17-byte stride but reads the fields as though the element were the later 18-byte
+/// one, reporting the sharp insert's tracking as 2293760 -- the bytes 00 23 00 00 read as a
+/// big-endian long -- and its character as 50, which is the first byte of the next element.
+/// Read at the era's own stride the same records give the values every other era stores. A
+/// comparison against Finale 27's conversion will therefore show this era disagreeing on nearly
+/// every field, and that is the intended result.
+///
+/// A document that was converted by that upgrade and re-saved carries the mis-converted values
+/// permanently. Those are reproduced exactly, because there the bytes really do say that.
 InsertBlock readInsertBlock(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -528,9 +506,8 @@ InsertBlock readInsertBlock(
         const auto payload = index.getClassOthers().payloadOf(*row);
         result.present = true;
         result.bytes.assign(payload.begin(), payload.end());
-        // The payload's own length states the layout. Finale 2007-2010 write 96 bytes and
-        // Finale 2012 writes 108, and no document of the reference corpus carries any other
-        // length: 293 on the narrow side and 248 on the wide one.
+        // The payload's own length states the layout: Finale 2007-2010 write 96 bytes and
+        // Finale 2012 writes 108. No other length occurs.
         result.layout = result.bytes.size() >= insertCount * elementSize(InsertLayout::WideChar)
             ? InsertLayout::WideChar
             : InsertLayout::NarrowChar;
@@ -587,12 +564,11 @@ InsertBlock readInsertBlock(
 
 /// @brief Reads the symbol character, whose width is what separates the three layouts.
 /// @details Before Finale 2012 the character is a byte. The 18-byte layout gives it a whole
-/// word and some sources sign-extend it: four Finale 2006 fixtures store ff dc for 220 and
-/// ff ba for 186 while a fifth of the same version stores 00 dc, and only characters above 127
-/// are affected. Finale 27 keeps the low byte, so this does too. Finale 2012 widened the field
-/// to a long for Unicode and must not be masked; it reads as a plain little-endian long, and
-/// no observed value exceeds 0xFFFF, so whether it is that or a low-word-first pair cannot be
-/// distinguished by anything in evidence.
+/// word, and some documents of that era sign-extend it -- `ff dc` for 220 where others of the
+/// same version store `00 dc` -- so only characters above 127 are affected. The low byte is
+/// what counts. Finale 2012 widened the field to a long for Unicode and it must not be masked;
+/// it reads as a plain little-endian long. **No value above 0xFFFF has been seen, so whether
+/// that is a long or a low-word-first pair is undetermined.**
 [[nodiscard]] char32_t readInsertChar(const InsertBlock& block, std::size_t elementBase,
     ByteOrder order)
 {
@@ -634,7 +610,7 @@ void reportInsertField(ImportReport& report, const char* insertName, const char*
 /// options class, so it needs no remapping. A nonzero comparator the source does not define is
 /// kept exactly as stored and noted at Info, the same policy the multimeasure-rest H-bar shape
 /// uses: substituting the baseline's font would name a different document's typeface, and
-/// hundreds of ordinary corpus documents name resources their own file never carries. The note
+/// ordinary documents commonly name resources their own file never carries. The note
 /// asks the document whether it defines the comparator rather than testing the comparator
 /// against zero: what zero means is musxdom's business, and a document that defines it has
 /// nothing to report.
@@ -718,8 +694,8 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
 
 /// @brief Reports the baseline's own inserts where the source carries no block of its own.
 /// @details The options pool is seeded from the pinned baseline, so a document with no
-/// selector 78 already holds five inserts before this reader touches them -- the Coda-banner
-/// era and Finale 3.0-3.5, which store none. Nothing needs copying; what needs doing is
+/// selector 78 already holds five inserts before this pass runs -- the Coda-banner era and
+/// Finale 3.0-3.5, which store none. Nothing needs copying; what needs doing is
 /// saying so, and repairing the one thing seeding cannot get right.
 ///
 /// **A seeded font comparator belongs to the baseline's numbering, not to this document's.**

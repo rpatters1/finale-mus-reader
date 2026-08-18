@@ -25,13 +25,12 @@ void importFontOptions(const ImportContext& context);
 /// @brief Recovers options::LyricOptions: its two collections and its scalars.
 /// @details Its capture pass and its tables are file-local: no test drives either alone,
 /// because both collections and the era assertions around them are exercised through this
-/// entry point by the reader's own fixtures.
+/// entry point.
 void importLyricOptions(const ImportContext& context);
 
 /// @brief Recovers options::MultimeasureRestOptions across all four epochs.
-/// @details Its two stages are file-local: no test drives either one alone, because the
-/// class has no collection to build and the reader's own fixtures exercise both through
-/// this entry point.
+/// @details Its two stages are file-local: no test drives either one alone, because the class
+/// has no collection to build and both are exercised through this entry point.
 void importMultimeasureRestOptions(const ImportContext& context);
 
 /// @brief Recovers options::MusicSpacingOptions.

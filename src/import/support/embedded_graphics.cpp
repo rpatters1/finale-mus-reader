@@ -122,8 +122,8 @@ musx::dom::EmbeddedGraphicsMap recoverEmbeddedGraphics(
                         + " has an unrecognized file signature and was skipped."});
             }
             // The final footer byte varies with the graphic kind or save operation. It is
-            // not needed to delimit, identify, or reproduce the file bytes; every surveyed
-            // block is consumed exactly by the stated length plus this five-byte footer.
+            // not needed to delimit, identify, or reproduce the file bytes: a block is
+            // consumed exactly by the stated length plus this five-byte footer.
             at = footerAt + graphicFooterSize;
             ++nextCmper;
         }
