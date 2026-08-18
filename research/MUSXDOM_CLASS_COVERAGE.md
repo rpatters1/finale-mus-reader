@@ -199,13 +199,26 @@ as the registry is. Regenerate when musxdom adds a registered type.
 
     [ ] Entry
 
-## texts  (0 done, 0 partial, 8 to do, 8 total)
+## texts  (0 done, 7 partial, 1 to do, 8 total)
 
-    [ ] BlockText
-    [ ] BookmarkText
-    [ ] ExpressionText
-    [ ] FileInfoText
-    [ ] LyricsChorus
-    [ ] LyricsSection
-    [ ] LyricsVerse
-    [ ] SmartShapeText
+Every one of these is partial for the same reason: the Coda-banner epoch recovers no text
+at all. The rest of the note says what else is missing from each.
+
+    [~] BlockText                               text_pool.cpp
+    [ ] BookmarkText                                                            not located
+    [~] ExpressionText                          text_pool.cpp,
+                                                expression_text.cpp
+    [~] FileInfoText                            text_pool.cpp,
+                                                file_info_text.cpp
+    [~] LyricsChorus                            text_pool.cpp                   keyword inferred
+    [~] LyricsSection                           text_pool.cpp                   keyword inferred
+    [~] LyricsVerse                             text_pool.cpp
+    [~] SmartShapeText                          text_pool.cpp
+
+The Coda-banner exclusion: that era's block and lyric text is in the `HT` record family,
+whose framing is unresolved, and its expression text uses a different `DT` layout from the
+one the uncompressed epoch uses. See [FORMAT_NOTES.md](FORMAT_NOTES.md#the-text-pool).
+
+The Enigma commands inside these strings are no longer a gap in any epoch the reader covers.
+Every command `musx/util/EnigmaString.h` documents has a located binary code, and no fixture
+in the tracked corpus reports one this reader cannot read.

@@ -3,6 +3,8 @@
 
 #include "import/support/text_encoding.h"
 
+#include <string_view>
+
 #if defined(_WIN32)
 #include <windows.h>
 #elif defined(__APPLE__)
@@ -436,6 +438,47 @@ std::string toUtf8(const std::string& source, CodePage codePage)
         return *converted;
     }
     return source;
+}
+
+std::string normalizeLineBreaks(std::string source)
+{
+    std::string result;
+    result.reserve(source.size());
+    for (std::size_t at = 0; at < source.size(); ++at) {
+        if (source[at] != '\r') {
+            result.push_back(source[at]);
+            continue;
+        }
+        result.push_back('\n');
+        if (at + 1 < source.size() && source[at + 1] == '\n') {
+            ++at;
+        }
+    }
+    return result;
+}
+
+CodePage platformCodePage(SourcePlatform platform)
+{
+    using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
+    return codePageForCharset(
+        platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
+}
+
+std::string symbolBytesToUtf8(std::string_view source)
+{
+    std::string out;
+    out.reserve(source.size());
+    for (const char raw : source) {
+        const auto byte = static_cast<unsigned char>(raw);
+        if (byte < 0x80) {
+            out.push_back(static_cast<char>(byte));
+        } else {
+            // Every value from 0x80 to 0xff is two UTF-8 bytes, so no third case exists.
+            out.push_back(static_cast<char>(0xc0U | (byte >> 6U)));
+            out.push_back(static_cast<char>(0x80U | (byte & 0x3fU)));
+        }
+    }
+    return out;
 }
 
 } // namespace text

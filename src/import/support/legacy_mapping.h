@@ -492,6 +492,12 @@ struct ImportContext
 {
     const records::LegacyRecordIndex& index;
     const SourceProfile& profile;
+    /// @brief The source file's own bytes, for content that lives outside the record pools.
+    /// @details The 0x200 header is document content as well as classification data: it
+    /// carries the File Info strings, which are a `texts` pool class and belong to no record.
+    /// An importer that reads them needs the file rather than the index, which is the only
+    /// reason this is here.
+    std::span<const std::uint8_t> source;
     const musx::dom::DocumentPtr& document;
     /// @brief The separately owned pinned baseline, read-only. An object owned by it must
     /// never be inserted into @ref document; copy what is needed instead.
@@ -525,7 +531,7 @@ using ClassImporter = void (*)(const ImportContext& context);
 /// final phase. That phase allocates `others` comparators, so nothing may allocate one after
 /// this returns.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document,
+    std::span<const std::uint8_t> source, const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
     musx::factory::ConstructionContext& construction);
 

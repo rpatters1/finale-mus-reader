@@ -153,6 +153,18 @@ public:
     /// share a searchable pool with others even though their record framing is related.
     [[nodiscard]] const LegacyRowPool& getClassDetails() const { return m_classDetails; }
 
+    /// @brief The document's text pool as one uninterrupted byte stream.
+    /// @details The text pool is the one pre-2007 pool that is not made of records. It holds
+    /// `^keyword(n) ... ^end` chunks of Enigma text end to end, which is the same shape ETF
+    /// prints in its own text section, so a reader walks it as a string rather than indexing
+    /// it by comparator. The four epochs put it in four different block types and change
+    /// nothing else about it, which is why one accessor serves all of them.
+    ///
+    /// Empty for a Coda-banner document. That era keeps its text after the last record pool
+    /// rather than in a block, and the container does not report the region, so the epoch is
+    /// deliberately uncovered here rather than silently mis-sliced.
+    [[nodiscard]] std::span<const std::uint8_t> getTexts() const { return m_texts; }
+
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
     /// stream is what lets a four-byte value straddle an incidence boundary, which the
@@ -163,7 +175,7 @@ public:
     [[nodiscard]] bool empty() const
     {
         return m_others.empty() && m_details.empty()
-            && m_classOthers.empty() && m_classDetails.empty();
+            && m_classOthers.empty() && m_classDetails.empty() && m_texts.empty();
     }
 
 private:
@@ -171,6 +183,7 @@ private:
     LegacyRowPool m_details;
     LegacyRowPool m_classOthers;
     LegacyRowPool m_classDetails;
+    std::vector<std::uint8_t> m_texts;
 };
 
 } // namespace records

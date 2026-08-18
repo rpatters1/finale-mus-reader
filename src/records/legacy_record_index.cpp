@@ -70,6 +70,46 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
     return std::nullopt;
 }
 
+// The text pool follows the record pools in every epoch and keeps the same contents, so only
+// its block number changes. It is the fourth typed block where the pre-2007 eras number their
+// pools from one, and 0x0017 in the zlib era, which numbers its blocks differently and puts
+// entries and texts outside the class-record range entirely.
+//
+// A Coda-banner document reports nothing here on purpose. Its text region sits after the last
+// record pool as length-prefixed chunks rather than inside a block, and the container's pool
+// walk stops before reaching it, so there is no block to name. Returning nothing is what keeps
+// that era honestly uncovered instead of reading someone else's bytes as text.
+std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
+{
+    switch (epoch) {
+    case FormatEpoch::UncompressedLegacy:
+        return 0x0004;
+    case FormatEpoch::DclLegacy:
+        return 0x0012;
+    case FormatEpoch::ZlibLegacy:
+        return 0x0017;
+    case FormatEpoch::CodaBanner:
+    case FormatEpoch::Unknown:
+        break;
+    }
+    return std::nullopt;
+}
+
+std::vector<std::uint8_t> collectTexts(const container::ParsedContainer& parsed)
+{
+    std::vector<std::uint8_t> result;
+    const auto type = textBlockTypeFor(parsed.formatEpoch);
+    if (!type) {
+        return result;
+    }
+    for (const auto& block : parsed.blocks) {
+        if (block.info.type == *type) {
+            result.insert(result.end(), block.data.begin(), block.data.end());
+        }
+    }
+    return result;
+}
+
 // An other is cmper, tag, six words. A detail carries a second cmper, which pushes the tag
 // two bytes along and leaves five words.
 std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
@@ -291,6 +331,7 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
         result.m_classDetails = LegacyRowPool::build(
             std::move(detailRows), std::move(detailsPayload));
     }
+    result.m_texts = collectTexts(parsed);
     return result;
 }
 

@@ -1,0 +1,668 @@
+// Copyright (c) 2026 Robert G. Patterson
+// SPDX-License-Identifier: MIT
+
+#include "import/support/enigma_text.h"
+
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <string_view>
+
+#include "musx/musx.h"
+
+namespace finale_mus_reader {
+namespace text {
+namespace {
+
+using musx::dom::Cmper;
+using FontDefinitionSource = musx::dom::others::FontDefinition;
+
+// The effect names the fixed-row eras spell out, and the modern style bit each one sets.
+//
+// The order is the classic Mac QuickDraw style bit sequence -- plain, bold, italic, underline,
+// outline, shadow, condense, extend -- which is the order Finale's own effect table uses.
+// `bold` at 0x01, `italic` at 0x02 and `absolute` at 0x40 are established. The rest occupy
+// their QuickDraw positions.
+//
+// **Unverified: `strikeout` and `hidden`.** They are musxdom's names for the 0x20 and 0x80
+// bits, and QuickDraw calls 0x20 condense, so either spelling may be wrong. A wrong name here
+// costs one ignored effect and a diagnostic naming the spelling the file actually used, which
+// is what would correct it.
+//
+// musxdom supplies every bit value, so this table states only which name reaches which bit.
+// The two exceptions are `outline` and `shadow`, which the modern format dropped and which
+// therefore have no musxdom constant; they are listed with the position they occupy so that a
+// file carrying one is neither reported unknown nor folded into a neighbouring style.
+constexpr std::uint16_t enigmaStyleOutline = 0x08;
+constexpr std::uint16_t enigmaStyleShadow = 0x10;
+
+struct EffectName
+{
+    std::string_view name;
+    std::uint16_t bit;
+};
+
+constexpr EffectName effectNames[] = {
+    {"bold", musx::dom::FontInfo::EnigmaStyleBold},
+    {"italic", musx::dom::FontInfo::EnigmaStyleItalic},
+    {"underline", musx::dom::FontInfo::EnigmaStyleUnderline},
+    {"outline", enigmaStyleOutline},
+    {"shadow", enigmaStyleShadow},
+    {"strikeout", musx::dom::FontInfo::EnigmaStyleStrikeout},
+    {"absolute", musx::dom::FontInfo::EnigmaStyleAbsolute},
+    {"hidden", musx::dom::FontInfo::EnigmaStyleHidden},
+};
+
+// The binary command codes, and the modern command each one spells. Finale writes commands in
+// this form from Finale 2006 on; earlier eras spell them out, and both forms are read.
+//
+// The codes fall into two groups. 0x81 to 0x88 are style commands, in no order visible here.
+// From 0x8a up they are inserts, alphabetically, with `fdate` at 0x8d the one member out of
+// place -- which it would not be if its internal name began with `date`. `perftime`, `cprsym`,
+// `value`, `control` and `pass` follow `totpages`, and 0xa0 up holds the commands later
+// releases added: appending is what a release does when it adds a command, since renumbering
+// would change the meaning of every document already saved. Neither group grows in place, so
+// a name absent from an earlier release never appears inside the alphabetical run.
+//
+// Six codes have no command: 0x80, 0x82, 0x83, 0x89, 0x93, 0x97. They are unexplained holes
+// rather than reserved slots. **Unverified: 0x82 and 0x83 may be `^fontid` and `^fontNum`, or
+// the two the other way round.** Nothing supports that beyond the shape of the list, which has
+// misled twice; it is recorded so that a document carrying either code is recognized as
+// bearing on it. None of the six is entered speculatively: an unlisted code is reported by
+// number and its text dropped, which is a visible defect, where a guessed entry would write a
+// wrong value into the document silently.
+struct CommandCode
+{
+    std::uint8_t code;
+    std::string_view command;
+    /// @brief How many digit bytes the argument occupies. Zero means the command takes none.
+    std::uint8_t digits;
+    /// @brief Whether the argument is the comparator of the font that following text is
+    /// written in, rather than a value of the command's own.
+    bool selectsFont;
+};
+
+constexpr std::uint8_t flagArgument = 1;
+constexpr std::uint8_t shortArgument = 4;
+constexpr std::uint8_t longArgument = 8;
+
+constexpr bool plainArgument = false;
+constexpr bool selectsFont = true;
+
+constexpr CommandCode commandCodes[] = {
+    {0x81, "baseline", longArgument, plainArgument},
+    {0x84, "nfx", shortArgument, plainArgument},
+    // This column holds the command a font code becomes once its comparator is named.
+    // `^fontid` appears nowhere in it: that spelling is the fallback for a comparator the
+    // document does not define, not a command any code carries.
+    {0x85, "font", shortArgument, selectsFont},
+    {0x86, "size", shortArgument, plainArgument},
+    {0x87, "superscript", longArgument, plainArgument},
+    {0x88, "tracking", longArgument, plainArgument},
+    {0x8a, "composer", 0, plainArgument},
+    {0x8b, "copyright", 0, plainArgument},
+    {0x8c, "date", shortArgument, plainArgument},
+    {0x8d, "fdate", shortArgument, plainArgument},
+    {0x8e, "dbflat", 0, plainArgument},
+    {0x8f, "dbsharp", 0, plainArgument},
+    {0x90, "description", 0, plainArgument},
+    {0x91, "filename", 0, plainArgument},
+    {0x92, "flat", 0, plainArgument},
+    {0x94, "natural", 0, plainArgument},
+    {0x95, "page", longArgument, plainArgument},
+    {0x96, "sharp", 0, plainArgument},
+    // **Believed.** The argument is the seconds flag, matching musxdom's own `^time`. This
+    // command is carried forward even though Finale's own conversion discards it: what a
+    // converter drops says what that conversion does, not what the document contains.
+    {0x98, "time", flagArgument, plainArgument},
+    {0x99, "title", 0, plainArgument},
+    {0x9a, "totpages", 0, plainArgument},
+    {0x9b, "perftime", shortArgument, plainArgument},
+    {0x9c, "cprsym", 0, plainArgument},
+    {0x9d, "value", 0, plainArgument},
+    {0x9e, "control", 0, plainArgument},
+    {0x9f, "pass", 0, plainArgument},
+    // Appended by later releases. `^partname` needs linked parts, and the three File Info
+    // inserts need the fuller File Info, so no document earlier than those features carries
+    // them. The three are in the order of the File Info fields they read.
+    {0xa0, "partname", 0, plainArgument},
+    {0xa1, "lyricist", 0, plainArgument},
+    {0xa2, "arranger", 0, plainArgument},
+    {0xa3, "subtitle", 0, plainArgument},
+    // The font-category commands, appended alongside the inserts rather than grouped with the
+    // other style commands, in the order Finale's marking-category dialog lists them. Each
+    // needs marking categories to exist. The argument is a font comparator, as it is for 0x85;
+    // each keeps its own spelling because the category it names is the one thing `^fontid`
+    // cannot carry.
+    {0xa4, "fontTxt", shortArgument, selectsFont},
+    {0xa5, "fontMus", shortArgument, selectsFont},
+    {0xa6, "fontNum", shortArgument, selectsFont},
+    // Automatic rehearsal marks, and so later than everything above. It takes no argument: the
+    // byte following the code is ordinary literal text, which is not a digit byte and could
+    // not be an argument.
+    {0xa7, "rehearsal", 0, plainArgument},
+};
+
+// Several commands are resolved by a parsing context rather than by the general Enigma parser.
+// `value`, `control` and `pass` come from the context a `TextExpressionDef` supplies, all three
+// being playback properties of the expression the text is attached to; `rehearsal` comes from
+// the context a `MeasureExprAssign` supplies, since the mark it produces depends on where in
+// the score the expression is assigned. `filename` is resolved by neither, and is for the
+// client to resolve: only the client knows the name it saved the document under, or is about to
+// save it under. All of them are written out regardless -- each is what the document says, and
+// a command that cannot be resolved here is left for whoever can, where dropping it would
+// delete content.
+
+// A binary command's argument is a run of hexadecimal digits, one byte per digit, each digit
+// stored one greater than its value. So `\x01\x01\x01\x02` is 0x0001 and `\x01\x01\x02\x09`
+// is 0x0018. The digit range runs the full 0 to 15, making a nibble of 0xf the byte 0x10. No
+// argument byte is ever 0x00, which is presumably the point of the offset: a zero byte would
+// end a C string.
+//
+// The run is one value in base sixteen, not a sequence of shorter ones: an eight-digit
+// `01 01 01 01 01 02 02 04` is 0x113, or 275.
+//
+// **An argument is a signed two's-complement value at whatever width it occupies:** 16 bits for
+// four digits, 32 for eight. `10 10 10 10 10 10 10 04` is 0xfffffff3, or -13; read unsigned it
+// would be 4294967283, so this is not a cosmetic distinction -- a negative baseline is ordinary
+// in real documents.
+//
+// Four-digit arguments carry things with no negative meaning -- a font comparator, a point
+// size, a style mask, a format ordinal -- and are read signed anyway, because the encoding is
+// signed and the floor belongs to the dialog. Finale's page offset and tracking dialogs both
+// run 0 to 32767 while writing an eight-digit argument, which has 32 bits to spend; a ceiling
+// at the signed 16-bit maximum in a 32-bit slot means the value behind the dialog is a signed
+// short widened on the way out. Baseline and superscript write that same width and are
+// routinely negative.
+//
+// The one case where signed and unsigned would differ is a font comparator above 32767, which
+// needs a document with 32768 font definitions. Such a comparator would be conspicuous the
+// moment it appeared, so nothing is done about it in advance.
+//
+// **The width comes from the table, not from a scan.** Widths are one, four or eight digits,
+// and which one a command uses is a property of the command and not of the value: `^nfx(0)`
+// still spends four digits on a zero. Reading exactly that many bytes is what keeps a literal
+// byte in the digit range from being consumed -- text set in a symbol font is glyph numbers, so
+// a character 0x10 directly after a four-digit argument is perfectly possible, and scanning for
+// the end of the run would take it as a fifth digit and lose both the glyph and the value.
+//
+// Where the bytes do not match the width, the command is reported unread rather than guessed
+// at. That is a tripwire as much as a safeguard: it is what would announce a command whose
+// argument is not the width recorded here.
+
+/// @brief The byte a digit of zero is stored as. Digit 15 is `lastDigitByte`.
+constexpr std::uint8_t firstDigitByte = 0x01;
+constexpr std::uint8_t lastDigitByte = 0x10;
+
+bool isDigitByte(std::uint8_t value)
+{
+    return value >= firstDigitByte && value <= lastDigitByte;
+}
+
+bool isCommandNameByte(std::uint8_t value)
+{
+    return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z');
+}
+
+void rememberUnreadCode(std::vector<std::uint8_t>& list, std::uint8_t value)
+{
+    if (std::find(list.begin(), list.end(), value) == list.end()) {
+        list.push_back(value);
+    }
+}
+
+void rememberUnreadEffect(std::vector<std::string>& list, const std::string& value)
+{
+    if (std::find(list.begin(), list.end(), value) == list.end()) {
+        list.push_back(value);
+    }
+}
+
+// Converts one record. Held as a class because the conversion is a state machine over three
+// pieces of state -- the font in force, an unflushed run of literal bytes, and an unflushed
+// run of effect bits -- and every step needs all three.
+class RecordConverter
+{
+public:
+    RecordConverter(std::span<const std::uint8_t> body, const EnigmaTextSource& source)
+        : m_body(body), m_source(source)
+    {
+    }
+
+    ConvertedEnigmaText run()
+    {
+        while (m_at < m_body.size()) {
+            if (readEffect()) {
+                continue;
+            }
+            flushEffects();
+            if (m_body[m_at] == '^') {
+                readCommand();
+            } else {
+                m_literal.push_back(static_cast<char>(m_body[m_at++]));
+            }
+        }
+        // Only one of these can have anything pending: an effect run flushes the literal
+        // before it starts, and any literal byte flushes the effects before it accumulates.
+        flushEffects();
+        flushLiteral();
+        m_result.text = normalizeLineBreaks(std::move(m_result.text));
+        return std::move(m_result);
+    }
+
+private:
+    /// @brief The bytes of the command name starting at @ref m_at, or empty if there is none.
+    std::string_view commandNameAt(std::size_t start) const
+    {
+        std::size_t end = start;
+        while (end < m_body.size() && isCommandNameByte(m_body[end])) {
+            ++end;
+        }
+        return std::string_view(reinterpret_cast<const char*>(m_body.data() + start), end - start);
+    }
+
+    /// @brief Reads a parenthesized argument list, or nothing when the command has none.
+    /// @details Enigma does not nest parentheses inside an argument list, so the first
+    /// closing parenthesis ends it. A command whose arguments are unterminated is treated as
+    /// having none, which leaves its bytes to be read as ordinary text rather than swallowing
+    /// the rest of the record.
+    std::optional<std::string_view> argumentsAt(std::size_t start, std::size_t& end) const
+    {
+        end = start;
+        if (start >= m_body.size() || m_body[start] != '(') {
+            return std::nullopt;
+        }
+        for (std::size_t at = start + 1; at < m_body.size(); ++at) {
+            if (m_body[at] == ')') {
+                end = at + 1;
+                return std::string_view(
+                    reinterpret_cast<const char*>(m_body.data() + start + 1), at - start - 1);
+            }
+        }
+        return std::nullopt;
+    }
+
+    /// @brief Consumes one `^efx(name)` and folds it into the pending effect bits.
+    bool readEffect()
+    {
+        if (m_at + 1 >= m_body.size() || m_body[m_at] != '^') {
+            return false;
+        }
+        constexpr std::string_view effectCommand = "efx";
+        if (commandNameAt(m_at + 1) != effectCommand) {
+            return false;
+        }
+        std::size_t end = 0;
+        const auto arguments = argumentsAt(m_at + 1 + effectCommand.size(), end);
+        if (!arguments) {
+            return false;
+        }
+        flushLiteral();
+        m_at = end;
+        if (!m_effects) {
+            m_effects = 0;
+        }
+        // `plain` clears the accumulated bits rather than setting one. Every observed run
+        // opens with it, which is what makes the run a complete statement of the style
+        // rather than a change to whatever came before.
+        if (*arguments == "plain") {
+            m_effects = 0;
+            return true;
+        }
+        const auto found = std::find_if(std::begin(effectNames), std::end(effectNames),
+            [&](const EffectName& entry) { return entry.name == *arguments; });
+        if (found == std::end(effectNames)) {
+            rememberUnreadEffect(m_result.unknownEffectNames, std::string(*arguments));
+            return true;
+        }
+        *m_effects |= found->bit;
+        return true;
+    }
+
+    void readCommand()
+    {
+        // An escaped caret is content, not a command, and stays escaped: musxdom's parser
+        // reads `^^` back as one caret.
+        if (m_at + 1 < m_body.size() && m_body[m_at + 1] == '^') {
+            m_literal.append("^^");
+            m_at += 2;
+            return;
+        }
+        const auto name = commandNameAt(m_at + 1);
+        if (!name.empty()) {
+            std::size_t end = 0;
+            const auto arguments = argumentsAt(m_at + 1 + name.size(), end);
+            flushLiteral();
+            m_at = arguments ? end : m_at + 1 + name.size();
+            emitTextCommand(name, arguments.value_or(std::string_view{}), arguments.has_value());
+            return;
+        }
+        if (readBinaryCommand()) {
+            return;
+        }
+        // A lone caret that starts nothing recognizable is left as content. musxdom does the
+        // same with an unparseable caret, so the two agree about what the document says.
+        m_literal.push_back('^');
+        ++m_at;
+    }
+
+    /// @brief Reads the command code that follows the caret, in whichever spelling applies.
+    /// @details A pre-Unicode record stores the code as one byte. From Finale 2012 the record
+    /// is UTF-8, so the same value arrives as its two-byte encoding.
+    ///
+    /// Which spelling to expect is decided by the record, not by the bytes, and deliberately.
+    /// A structural test would be ambiguous in exactly the case that matters: in a pre-Unicode
+    /// record a command code of 0xc2 followed by literal text beginning with a glyph number in
+    /// 0x80-0xbf reads as a valid two-byte sequence and would swallow the character. The
+    /// record already knows its own encoding, so it is asked.
+    std::optional<std::uint8_t> commandCodeAt(std::size_t start, std::size_t& end) const
+    {
+        if (start >= m_body.size()) {
+            return std::nullopt;
+        }
+        const auto first = m_body[start];
+        if (m_source.utf8) {
+            // Only U+0080 to U+00FF can be a command code, so only these two lead bytes can
+            // introduce one.
+            if ((first != 0xc2 && first != 0xc3) || start + 1 >= m_body.size()
+                || (m_body[start + 1] & 0xc0U) != 0x80U) {
+                return std::nullopt;
+            }
+            end = start + 2;
+            return static_cast<std::uint8_t>(
+                ((first & 0x1fU) << 6U) | (m_body[start + 1] & 0x3fU));
+        }
+        if (first < 0x80) {
+            return std::nullopt;
+        }
+        end = start + 1;
+        return first;
+    }
+
+    /// @brief Reads exactly @p digits argument bytes, or nothing when they are not all digits.
+    std::optional<std::int64_t> argumentAt(std::size_t start, std::uint8_t digits) const
+    {
+        if (start + digits > m_body.size()) {
+            return std::nullopt;
+        }
+        std::uint32_t value = 0;
+        for (std::uint8_t i = 0; i < digits; ++i) {
+            const auto byte = m_body[start + i];
+            if (!isDigitByte(byte)) {
+                return std::nullopt;
+            }
+            value = value * 16U + (byte - firstDigitByte);
+        }
+        // Signed at whatever width the argument occupies, which is four bits per digit.
+        const auto bits = static_cast<unsigned>(digits) * 4U;
+        const auto signBit = std::uint32_t{1} << (bits - 1U);
+        const auto magnitude = static_cast<std::int64_t>(value & (signBit - 1U));
+        return (value & signBit) ? magnitude - static_cast<std::int64_t>(signBit) : magnitude;
+    }
+
+    /// @brief Skips the argument of a command whose width is not known.
+    /// @details Only reached for a code with no entry in the table, whose text is dropped
+    /// anyway, so this is choosing between two ways of being wrong. Consuming every digit byte
+    /// is the better one: leaving them would put control characters into the document's text,
+    /// and observed widths of one, four and eight digits rule out any grouping rule that would
+    /// protect a literal byte here.
+    std::size_t skipUnknownArgument(std::size_t start) const
+    {
+        std::size_t at = start;
+        while (at < m_body.size() && at - start < longArgument && isDigitByte(m_body[at])) {
+            ++at;
+        }
+        return at;
+    }
+
+    bool readBinaryCommand()
+    {
+        std::size_t afterCode = 0;
+        const auto code = commandCodeAt(m_at + 1, afterCode);
+        if (!code) {
+            return false;
+        }
+        const auto found = std::find_if(std::begin(commandCodes), std::end(commandCodes),
+            [&](const CommandCode& entry) { return entry.code == *code; });
+        const auto argument = found != std::end(commandCodes)
+            ? argumentAt(afterCode, found->digits) : std::nullopt;
+        if (found == std::end(commandCodes) || (found->digits > 0 && !argument)) {
+            // Either no spelling is known for this code, or its argument is not the width
+            // recorded for it. Either way the command cannot be stated, and
+            // inventing one would put a wrong value into the document.
+            rememberUnreadCode(m_result.unreadCommandCodes, *code);
+            m_at = skipUnknownArgument(afterCode);
+            return true;
+        }
+        m_at = afterCode + found->digits;
+
+        flushLiteral();
+        if (found->selectsFont) {
+            emitResolvedFont(found->command, static_cast<Cmper>(argument.value_or(0)));
+            return true;
+        }
+        m_result.text.push_back('^');
+        m_result.text.append(found->command);
+        m_result.text.push_back('(');
+        if (found->digits > 0) {
+            m_result.text.append(std::to_string(*argument));
+        }
+        m_result.text.push_back(')');
+        return true;
+    }
+
+    /// @brief Passes a spelled-out command through, resolving a font reference on the way.
+    void emitTextCommand(
+        std::string_view name, std::string_view arguments, bool hasArguments)
+    {
+        if (name == "font" || name == "Font" || name == "fontid" || name == "fontMus"
+            || name == "fontTxt" || name == "fontNum") {
+            emitFontCommand(name, arguments);
+            return;
+        }
+        m_result.text.push_back('^');
+        m_result.text.append(name);
+        if (hasArguments) {
+            m_result.text.push_back('(');
+            m_result.text.append(convertCommandText(arguments));
+            m_result.text.push_back(')');
+        }
+    }
+
+    void emitFontCommand(std::string_view name, std::string_view arguments)
+    {
+        // The fixed-row eras name the font alone; the compressed eras add its character set
+        // as a second argument, packed exactly as the `FN` record's own header word. That
+        // second value is not carried forward when the command is rewritten: the referenced
+        // `FontDefinition` states the same thing, and musxdom reads the character set only
+        // from there.
+        const auto comma = arguments.find(',');
+        const auto spelled = arguments.substr(0, comma);
+        // Whatever the source spells, the command names one font definition. `^fontid` states
+        // its comparator outright, `Font` followed by digits is the same thing under Finale's
+        // own convention for a font it knows only by id, and anything else is a name musxdom
+        // matches back to a definition.
+        const auto resolved
+            = name == "fontid" ? readDecimal(spelled) : resolveFont(spelled);
+        if (!resolved) {
+            // Nothing in the document answers to this name, so the name is all there is to
+            // keep. There is no comparator to fall back to either. musxdom resolves it the
+            // same way at parse time and will report the same absence rather than being handed
+            // an id that means something else.
+            m_font.reset();
+            m_result.text.push_back('^');
+            m_result.text.append(name);
+            m_result.text.push_back('(');
+            m_result.text.append(convertCommandText(spelled));
+            m_result.text.push_back(')');
+            return;
+        }
+        // `^font`, `^Font` and `^fontid` all say the same thing, so they converge on one
+        // spelling; the three categorized commands say something more and keep theirs.
+        const auto isCategorized
+            = name == "fontMus" || name == "fontTxt" || name == "fontNum";
+        emitResolvedFont(isCategorized ? name : std::string_view("font"), *resolved);
+    }
+
+    /// @brief Writes a font command whose comparator is known, naming the font where it can.
+    /// @details A name is what musxdom's parser prefers, and it survives a document whose font
+    /// definitions are renumbered where a bare comparator does not. `^fontid` is the fallback
+    /// rather than the normal form: it is the one spelling that needs no definition to exist,
+    /// so it is what an unresolved comparator becomes. That fallback also drops the marking
+    /// category a categorized command names, which is the one thing `^fontid` cannot carry;
+    /// losing it is the lesser harm against inventing a name for a definition the document does
+    /// not have.
+    ///
+    /// Font definitions must therefore be imported before any text.
+    void emitResolvedFont(std::string_view command, Cmper font)
+    {
+        m_font = font;
+        const auto named = fontNameFor(font);
+        if (!named) {
+            m_result.text.append("^fontid(" + std::to_string(font) + ")");
+            return;
+        }
+        m_result.text.push_back('^');
+        m_result.text.append(command);
+        m_result.text.push_back('(');
+        m_result.text.append(*named);
+        m_result.text.push_back(')');
+    }
+
+    /// @brief The name the document gives a comparator, or nothing when it names none.
+    std::optional<std::string> fontNameFor(Cmper font) const
+    {
+        const auto definition = m_source.document->getOthers()
+            ->get<FontDefinitionSource>(musx::dom::SCORE_PARTID, font);
+        if (!definition || definition->name.empty()) {
+            return std::nullopt;
+        }
+        return definition->name;
+    }
+
+    /// @brief The comparator a run of decimal digits states, or nothing when it is not one.
+    /// @details A comparator is sixteen bits, so anything longer than five digits is not one
+    /// however it is spelled. Rejecting it here rather than converting is what keeps a
+    /// malformed record from throwing out of the middle of an import.
+    static std::optional<Cmper> readDecimal(std::string_view digits)
+    {
+        constexpr std::size_t maximumComparatorDigits = 5;
+        if (digits.empty() || digits.size() > maximumComparatorDigits
+            || !std::all_of(digits.begin(), digits.end(),
+                [](char value) { return value >= '0' && value <= '9'; })) {
+            return std::nullopt;
+        }
+        const auto value = std::stoul(std::string(digits));
+        if (value > (std::numeric_limits<Cmper>::max)()) {
+            return std::nullopt;
+        }
+        return static_cast<Cmper>(value);
+    }
+
+    /// @brief The id a `FontN` spelling states, or nothing when the text is a real name.
+    /// @details Finale writes a font it knows only by id as `Font` followed by that id.
+    /// musxdom reads the same spelling, so this is not an invention of either side.
+    static std::optional<Cmper> fontIdFromSpelling(std::string_view spelled)
+    {
+        constexpr std::string_view idPrefix = "Font";
+        if (spelled.size() <= idPrefix.size() || spelled.substr(0, idPrefix.size()) != idPrefix) {
+            return std::nullopt;
+        }
+        return readDecimal(spelled.substr(idPrefix.size()));
+    }
+
+    std::optional<Cmper> resolveFont(std::string_view spelled) const
+    {
+        if (const auto byId = fontIdFromSpelling(spelled)) {
+            return byId;
+        }
+        // musxdom owns the rule that matches a name to a definition, so it is asked rather
+        // than reimplemented. It reports absence by throwing, which is the only reason this
+        // is written as a caught exception rather than a test.
+        musx::dom::FontInfo info(m_source.document);
+        try {
+            info.setFontIdByName(convertCommandText(spelled));
+        } catch (const std::invalid_argument&) {
+            return std::nullopt;
+        }
+        return info.fontId;
+    }
+
+    /// @brief Converts text that belongs to a command, such as a font name.
+    std::string convertCommandText(std::string_view raw) const
+    {
+        if (m_source.utf8) {
+            return std::string(raw);
+        }
+        return toUtf8(std::string(raw), m_source.commandCodePage);
+    }
+
+    /// @brief The encoding of literal text under the font in force, or nothing when its bytes
+    /// are glyph numbers rather than characters.
+    std::optional<CodePage> literalCodePage() const
+    {
+        if (!m_font) {
+            return m_source.commandCodePage;
+        }
+        // Font id zero is the document's default music font. Nothing else in Finale occupies
+        // that comparator, and text set in it is glyph numbers whatever character set the
+        // record claims. The fixed-row eras record an ordinary text charset for their own music
+        // font, because the charset fields did not carry a symbol marker until the compressed
+        // eras; the id is the only statement those files make, so it is the one to read.
+        if (*m_font == 0) {
+            return std::nullopt;
+        }
+        const auto definition = m_source.document->getOthers()
+            ->get<FontDefinitionSource>(musx::dom::SCORE_PARTID, *m_font);
+        if (!definition) {
+            return m_source.commandCodePage;
+        }
+        if (definition->calcIsSymbolFont()) {
+            return std::nullopt;
+        }
+        return codePageForCharset(definition->charsetBank, definition->charsetVal);
+    }
+
+    void flushLiteral()
+    {
+        if (m_literal.empty()) {
+            return;
+        }
+        if (m_source.utf8) {
+            m_result.text.append(m_literal);
+        } else if (const auto codePage = literalCodePage()) {
+            m_result.text.append(toUtf8(m_literal, *codePage));
+        } else {
+            m_result.text.append(symbolBytesToUtf8(m_literal));
+        }
+        m_literal.clear();
+    }
+
+    void flushEffects()
+    {
+        if (!m_effects) {
+            return;
+        }
+        m_result.text.append("^nfx(" + std::to_string(*m_effects) + ")");
+        m_effects.reset();
+    }
+
+    std::span<const std::uint8_t> m_body;
+    const EnigmaTextSource& m_source;
+    ConvertedEnigmaText m_result;
+    std::string m_literal;
+    std::optional<Cmper> m_font;
+    std::optional<std::uint16_t> m_effects;
+    std::size_t m_at{};
+};
+
+} // namespace
+
+ConvertedEnigmaText toModernEnigmaText(
+    std::span<const std::uint8_t> body, const EnigmaTextSource& source)
+{
+    return RecordConverter(body, source).run();
+}
+
+} // namespace text
+} // namespace finale_mus_reader

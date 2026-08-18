@@ -1,0 +1,50 @@
+Finale 2008 (internal version 13.x), zlib era, big-endian.
+
+Origin: a controlled test document created by Robert G. Patterson in Finale 2008
+running under Mac OS X 10.4 hosted by QEMU, and released by its author under this
+repository's MIT license. The same save attempted under Mac OS X 10.7 in UTM
+crashed, which is why the specimen is a PowerPC one.
+
+The `BE` in the name is the point of it. Finale 2007 and 2008 straddle the Intel
+transition and this repository's notes record byte order as varying across it, but
+until now every tracked zlib-era fixture later than Finale 2007 was little-endian.
+This is the first big-endian Finale 2008 specimen in any survey.
+
+F2008-BE-text-inserts.mus
+    sha256 ed8096788fa377bfd504c2f7c04e59661c8d07eed15a16b7e635ea780066252a
+F2008-BE-text-inserts.musx
+    sha256 cb343c5f19907bbcc2d328f155d570e2f4c8a9f1e84fdc809f2449390a524b17
+    The continuation of `tests/evidence/F2006/F2006-text-inserts.mus` into a
+    release that has the inserts Finale 2006 lacked: one text block per insert,
+    plus all seven File Info fields filled in. It answers three things that
+    fixture could not.
+
+    It fixes five more binary command codes. `^partname` arrives with Finale
+    2007's linked parts and `^lyricist`, `^arranger` and `^subtitle` with Finale
+    2008's fuller File Info, and all four are **appended** at 0xa0 to 0xa3 rather
+    than slotted into the alphabetical run where their names would sort, which is
+    how a release adds an insert without renumbering the ones already written
+    into saved documents. That refutes a prediction made from the Finale 2006
+    table and is the reason those predictions were never put into the reader.
+
+    Its two `^time` blocks give the fifth code and a third argument width. They
+    differ in one byte and are labelled "Time" and "Time with seconds", which is
+    exactly musxdom's `^time` argument, and the byte is a **single** digit where
+    every previously observed argument was four or eight. Finale 27 drops this
+    insert on conversion, so the companion cannot corroborate the name; the
+    controlled pair is the evidence, and the reader keeps the insert the
+    conversion discards -- what Finale 27 drops on conversion says what that
+    conversion does, not what the document contains.
+
+    It also shows File Info leaving the header. All seven fields are `^fileInfo`
+    records in the text pool, numbered by musxdom's own `FileInfoText::TextType`
+    and confirmed field for field by the companion, while the header offsets that
+    carry them in Finale 97 are empty. Where between Finale 2006 and Finale 2008
+    the move happened is open, and the reader does not need to know: it fills from
+    the header only what the pool did not supply.
+
+    Two companion differences are intended. Its first block is the bare text
+    `FULL SCORE` with no style commands at all, and Finale 27 writes
+    `^fontid(1)^size(12)^nfx(0)FULL SCORE`; the reader keeps what the file says
+    rather than synthesizing a font the document did not state. And Finale 27
+    emits no `^time` at all, where the reader preserves it.

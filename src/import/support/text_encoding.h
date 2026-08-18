@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
+#include "finale_mus_reader/reader.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -108,6 +110,40 @@ CodePage codePageForCharset(
 /// bytes is recoverable by a later, better-informed pass; a thrown exception in the middle
 /// of importing a document is not, and an empty string silently destroys evidence.
 std::string toUtf8(const std::string& source, CodePage codePage);
+
+/// @brief Restates legacy line breaks in the convention EnigmaXML uses.
+/// @details Legacy MUS separates the lines of a text block with a carriage return, which is
+/// the classic Mac convention Finale was built on and which it kept on both platforms.
+/// EnigmaXML uses a line feed, and carries no `&#xD;`. A carriage return left in place would
+/// not survive an XML round trip either, since XML parsers normalize a literal one to a line
+/// feed regardless.
+///
+/// A `\r\n` pair becomes one `\n`, so a file written by a Windows Finale is not turned into
+/// double-spaced text.
+std::string normalizeLineBreaks(std::string source);
+
+/// @brief The code page for legacy text that no font names an encoding for.
+/// @details Some text belongs to the document rather than to a font: the File Info strings in
+/// the header, and the name inside a font command. Nothing records a character set for those,
+/// so the document's own platform decides. Resolved through @ref codePageForCharset with no
+/// character set value, so the platform default is stated in exactly one place: Mac Roman for
+/// the Mac bank, Windows-1252 for the Windows bank.
+///
+/// An unclassified platform is treated as Mac, matching what the font importer does with a
+/// pre-Finale-3.2 document that records no bank of its own.
+CodePage platformCodePage(SourcePlatform platform);
+
+/// @brief Widens every byte to the code point of the same value and encodes that as UTF-8.
+/// @details The conversion for text set in a symbol font, where a byte is a glyph number
+/// rather than a character. Decoding such a byte through a code page would name a letter the
+/// document never contained and, worse, would pick a different glyph: Mac Roman reads `0xb0`
+/// as an infinity sign, so a metronome mark set in a music font would come out as one.
+/// Preserving the number is what keeps the glyph, and it is what Finale's own conversion does
+/// with a font whose character set it cannot name.
+///
+/// Cannot fail and needs no converter, which is why it is spelled out here rather than added
+/// to @ref CodePage as Latin-1: every input byte has exactly one answer.
+std::string symbolBytesToUtf8(std::string_view source);
 
 } // namespace text
 } // namespace finale_mus_reader

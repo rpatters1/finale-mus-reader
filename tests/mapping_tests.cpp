@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <span>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <iterator>
@@ -55,6 +56,10 @@ using finale_mus_reader::TargetKind;
 using finale_mus_reader::VersionRange;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
+
+// These tests drive one importer at a time against a synthesized record set, so none of them
+// has a source file for the importer to read the header out of.
+constexpr std::span<const std::uint8_t> noSource{};
 
 void expectMapping(bool condition, const std::string& message)
 {
@@ -938,7 +943,7 @@ void testMmRestEarlyLayoutMarker()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importMultimeasureRestOptions(context);
         return document->getOptions()->get<MmRest>();
     };
@@ -1088,7 +1093,7 @@ void testLyricEdgePunctuationVersionGate()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
-            profile, document, reference, report, pending, construction};
+            profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importLyricOptions(context);
         return std::make_pair(document->getOptions()->get<Lyrics>(),
             field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin);
@@ -1119,7 +1124,7 @@ void testLyricEdgePunctuationVersionGate()
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed), unknown,
-        document, reference, report, pending, construction};
+        noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importLyricOptions(context);
     expectMapping(document->getOptions()->get<Lyrics>()->lyricUseEdgePunctuation
             && field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin
@@ -1153,7 +1158,7 @@ void testLyricPunctuationTailEncodingGate()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
-            profile, document, reference, report, pending, construction};
+            profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importLyricOptions(context);
         return std::make_pair(document->getOptions()->get<Lyrics>(), report);
     };
@@ -1198,7 +1203,7 @@ void testLyricPostFormatAssertions()
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{
-        index, profileFor(9), document, reference, report, pending, construction};
+        index, profileFor(9), noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importLyricOptions(context);
 
     const auto lyrics = document->getOptions()->get<Lyrics>();
@@ -1295,7 +1300,7 @@ void testStemPreFinale35Units()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importStemOptions(context);
         return document->getOptions()->get<musx::dom::options::StemOptions>();
     };
@@ -1522,7 +1527,7 @@ void testGraphicAssignmentsAcrossEpochs()
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::others::importPageGraphicAssignments(context);
         const auto assignment = document->getOthers()
             ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 4, musx::dom::Inci(0));
@@ -1644,7 +1649,7 @@ void testShapeGraphicAssignmentsAcrossEpochs()
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::others::importShapeGraphicAssignments(context);
         const auto assignment = ShapeGraphicAssign::findForGraphic(
             document, musx::dom::SCORE_PARTID, 3);
@@ -1685,7 +1690,7 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::details::importMeasureGraphicAssignments(context);
         const auto assignment = document->getDetails()->get<Target>(
             musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
@@ -1798,7 +1803,7 @@ void testTextOptionsScalars()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };
@@ -1903,7 +1908,7 @@ void testTextOptionsScalars()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };
@@ -1952,7 +1957,7 @@ void testTextOptionsSymbolInserts()
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
-            index, profile, document, reference, report, pending, construction};
+            index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importTextOptions(context);
         return document->getOptions()->get<TextOptions>();
     };

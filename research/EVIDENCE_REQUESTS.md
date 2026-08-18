@@ -456,6 +456,92 @@ horizontal offset with Push — 42 to 44 in the Finale 3.7.2 pair. One specimen 
 formulas that fit it, so the reader keeps the pinned baseline's 42 and the difference is intended. A second save
 moving Push to a different value would settle it, and is low priority.
 
+### X1 — Proposed — the two lyric keywords nothing has produced
+
+The text pool names each chunk by keyword, and `verse` is confirmed by `F2007-lyric-hyphens.mus`. `chorus` and
+`section` are inferred from it and from musxdom's own naming; no fixture contains either. Any document with a
+chorus or a section lyric, in any epoch from Finale 97 on, would replace the inference with an observation. One
+document can carry both.
+
+The cost of being wrong is small but silent in the wrong direction: an unrecognized keyword is reported by name,
+so the *right* spelling would announce itself the first time such a document is read. That makes this a cheap
+request rather than an urgent one.
+
+### X2 — Proposed — a bookmark, whose keyword is unknown
+
+`texts::BookmarkText` has no located source at all. Pre-Finale-2012 the PDK reportedly carried bookmark text as a
+trailing variable-length NUL-terminated string on the bookmark record, which would put it outside the text pool
+entirely; where that record turns up in raw Enigma is unknown, and the pool may also name it with a keyword this
+reader would report. **One document with two named bookmarks, in a Finale 2012 save and again in an earlier one,
+would settle both the location and whether the class converted to Unicode at the same time as everything else.**
+Bookmark text is scarce enough that a corpus survey is unlikely to find one.
+
+### X3 — Proposed — where expression text moved into the text pool
+
+Finale 2000 keeps expression display text inside the `DT` record; Finale 2006 keeps it in the text pool and uses
+`DT` for the expression's description instead. No tracked fixture between them defines an expression at all, so
+the reader gates the `DT` reading to the uncompressed epoch and recovers no expression text from a Finale
+2001–2005 document that still uses the old layout.
+
+**One document per release from Finale 2001 to Finale 2005 with a single text expression defined would close it**,
+and a Finale 2002 save alone would narrow it usefully. A save that also fills in the expression's description
+would show whether the two strings ever coexist, which is what would decide between a version gate and a
+structural marker.
+
+### X4 — Partly analyzed — File Info after Finale 97
+
+The four header offsets that carry title, composer, copyright, and description are confirmed only on the Finale 97
+pair. Every other tracked fixture leaves all four empty, which is consistent with the offsets still holding and
+equally consistent with their having moved. The reader applies them to every banner-bearing epoch, so a later file
+that keeps something else there would produce nonsense rather than nothing.
+
+**A document with all four File Info fields filled in, saved by Finale 2006 and by Finale 2012**, would confirm or
+refute the offsets in both compressed epochs at once.
+
+**Half of this closed on 2026-08-18, from the other direction.** `F2006-text-inserts.mus` shows that Finale 2006's
+Text Tool offers a `^description` insert and no `^lyricist`, `^arranger` or `^subtitle`, so File Info still has
+exactly four fields at that release. The three musxdom also names are therefore not a gap in the mapping for any
+era this reader covers, and the request for "the first evidence for lyricist, arranger and subtitle" was asking
+for something that does not exist yet in that era. What is still wanted is a later release that has them, which is
+the same fixture X5 asks for.
+
+### X5 — Supplied/Analyzed — the binary command codes, and what is left of them (complete)
+
+**Closed for 25 codes on 2026-08-18 by `F2006-text-inserts.mus`.** From Finale 2006 the MUS stores Enigma commands
+in a binary form — a caret, a one-byte code, and a hexadecimal-digit argument — that no public source describes and
+that no plug-in could ever see, because both the ETF export and the PDK hand back the spelled-out form.
+
+Finale 2006 is the only release that can decode it: the first to write the codes and the last to export ETF, so one
+document exists in both representations. The fixture holds one text block per insert its Text Tool offers, each
+containing that insert alone, so the block number keys the two files to each other. Its Finale 27 companion agrees
+with the ETF on all 21 records, so each pairing has two independent witnesses. The table is in
+[FORMAT_NOTES.md](FORMAT_NOTES.md#enigma-commands-in-the-compressed-epochs).
+
+A second pass over the same document added the three style commands, and with them the two facts about the
+argument encoding that nothing else could have supplied: `^superscript(15)` is the only place a nibble of `0xf`
+is stored anywhere, and `^baseline(-13)` is the only negative argument. Both had been extrapolated, and the
+signedness had been extrapolated wrongly.
+
+**Closed for five more codes on 2026-08-18 by `F2008-BE-text-inserts.mus`**, which placed `^partname` at `0xa0`
+and `^lyricist`, `^arranger` and `^subtitle` at `0xa1` to `0xa3` — appended, not slotted into the alphabetical run
+where this request predicted them — and `^time` at `0x98`, the one prediction that held.
+
+**Closed for the last four on 2026-08-18 by `F2011-text-inserts.mus`.** Finale 2009 introduced marking categories
+and Finale 2010 automatic rehearsal marks, so Finale 2011 is the earliest available release able to write
+`^fontTxt`, `^fontMus`, `^fontNum` and `^rehearsal` in one document; they are at `0xa4` to `0xa7`. **Every command
+`musx/util/EnigmaString.h` documents now has a code**, and no fixture in the tracked corpus reports an unread code.
+
+**Still open, and no longer predictable:** `0x80`, `0x82`, `0x83`, `0x89`, `0x93`, `0x97`, and anything from `0xa8`
+up. Both predictions this request made from the ordering of the table were refuted by the first fixture able to
+test them, and the second refutation is the more general one: appending is what every release after the original
+set does, for style commands as much as for inserts, so neither group has grown in place since. A slot inside
+either group is an unexplained hole, not a reserved one. Filling any of the six needs a document that uses the
+command, not an argument about where it would sort — and there is no longer a named command left to look for.
+
+**Worth having anyway:** the same one-insert-per-block document from **Finale 2012**, which crosses the Unicode
+boundary. The reader accepts the two-byte code spelling structurally rather than by version, but that has been
+exercised on three codes, not thirty.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.
