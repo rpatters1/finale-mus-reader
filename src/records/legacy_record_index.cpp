@@ -98,6 +98,12 @@ std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
 std::vector<std::uint8_t> collectTexts(const container::ParsedContainer& parsed)
 {
     std::vector<std::uint8_t> result;
+    // The Coda-banner epoch keeps its text outside the pool chain rather than in a block, so
+    // the container hands it over separately. Everything downstream sees one text stream
+    // whichever way the era stores it.
+    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
+        return parsed.textRegion;
+    }
     const auto type = textBlockTypeFor(parsed.formatEpoch);
     if (!type) {
         return result;

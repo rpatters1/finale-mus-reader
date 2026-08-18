@@ -5,6 +5,14 @@ as the registry is. Regenerate when musxdom adds a registered type.
 
     [x] done    [~] partial    [ ] not started
 
+**This file carries no commentary.** It is a checklist: one line per class, the file that
+recovers it, and the briefest possible status in the right-hand column. Anything that needs a
+sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
+in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
+
+**16 done, 7 partial, 167 to do, 190 total.** Verified class for class against the registry on
+2026-08-18: every registered type appears here and nothing here is unregistered.
+
 ## options  (6 done, 1 partial, 21 to do, 28 total)
 
     [ ] AccidentalOptions
@@ -199,26 +207,14 @@ as the registry is. Regenerate when musxdom adds a registered type.
 
     [ ] Entry
 
-## texts  (0 done, 7 partial, 1 to do, 8 total)
+## texts  (6 done, 2 partial, 0 to do, 8 total)
 
-Every one of these is partial for the same reason: the Coda-banner epoch recovers no text
-at all. The rest of the note says what else is missing from each.
-
-    [~] BlockText                               text_pool.cpp
-    [ ] BookmarkText                                                            not located
-    [~] ExpressionText                          text_pool.cpp,
-                                                expression_text.cpp
-    [~] FileInfoText                            text_pool.cpp,
+    [x] BlockText                               text_pool.cpp, coda_texts.cpp
+    [~] BookmarkText                            text_pool.cpp                   pooled eras only
+    [~] ExpressionText                          text_pool.cpp                   pooled eras only
+    [x] FileInfoText                            text_pool.cpp,
                                                 file_info_text.cpp
-    [~] LyricsChorus                            text_pool.cpp                   keyword inferred
-    [~] LyricsSection                           text_pool.cpp                   keyword inferred
-    [~] LyricsVerse                             text_pool.cpp
-    [~] SmartShapeText                          text_pool.cpp
-
-The Coda-banner exclusion: that era's block and lyric text is in the `HT` record family,
-whose framing is unresolved, and its expression text uses a different `DT` layout from the
-one the uncompressed epoch uses. See [FORMAT_NOTES.md](FORMAT_NOTES.md#the-text-pool).
-
-The Enigma commands inside these strings are no longer a gap in any epoch the reader covers.
-Every command `musx/util/EnigmaString.h` documents has a located binary code, and no fixture
-in the tracked corpus reports one this reader cannot read.
+    [x] LyricsChorus                            text_pool.cpp, coda_texts.cpp
+    [x] LyricsSection                           text_pool.cpp, coda_texts.cpp
+    [x] LyricsVerse                             text_pool.cpp, coda_texts.cpp
+    [x] SmartShapeText                          text_pool.cpp

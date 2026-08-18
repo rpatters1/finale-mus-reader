@@ -352,7 +352,16 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
     while (offset + 8 <= size) {
         const auto pages = read32(data + offset, byteOrder);
         const auto pageSize = read32(data + offset + 4, byteOrder);
-        if (pageSize != defaultBodyOffset || pages == 0) {
+        // The page size is what identifies a prologue, and it is the only thing that does. A
+        // pool of zero pages is an ordinary empty pool, not the end of the chain: the earliest
+        // documents store nothing in their details pool and still carry an entries pool behind
+        // it. Ending the walk on an empty pool would hide every pool that follows.
+        //
+        // The chain needs no terminator of its own. What follows the last pool is the text
+        // region, whose first four bytes are a chunk length rather than 0x200, so the page-size
+        // test ends the walk there. The offset advances by the prologue even when the pool is
+        // empty, so a run of empty pools cannot spin.
+        if (pageSize != defaultBodyOffset) {
             break;
         }
         const auto body = offset + 8;
@@ -374,6 +383,7 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
     }
 
     parsed.trailingByteCount = size - offset;
+    parsed.textRegion.assign(data + offset, data + size);
     return parsed;
 }
 

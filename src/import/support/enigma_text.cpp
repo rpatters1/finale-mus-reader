@@ -235,6 +235,9 @@ public:
             if (readEffect()) {
                 continue;
             }
+            if (bridgesEffectRun()) {
+                continue;
+            }
             flushEffects();
             if (m_body[m_at] == '^') {
                 readCommand();
@@ -280,6 +283,30 @@ private:
             }
         }
         return std::nullopt;
+    }
+
+    /// @brief Consumes the spaces between two `^efx` commands, keeping the run together.
+    /// @details A run states one style, and the fixed-row eras write it either as adjacent
+    /// commands or spaced apart. Both are one statement, so a space between two of them must
+    /// not close the run and produce an `^nfx` for each half. The spaces are literal text and
+    /// are held until the run ends, then written immediately before the single `^nfx`.
+    bool bridgesEffectRun()
+    {
+        constexpr std::string_view effectCommand = "efx";
+        if (!m_effects || m_body[m_at] != ' ') {
+            return false;
+        }
+        std::size_t at = m_at;
+        while (at < m_body.size() && m_body[at] == ' ') {
+            ++at;
+        }
+        if (at >= m_body.size() || m_body[at] != '^'
+            || commandNameAt(at + 1) != effectCommand) {
+            return false;
+        }
+        m_effectGap.append(at - m_at, ' ');
+        m_at = at;
+        return true;
     }
 
     /// @brief Consumes one `^efx(name)` and folds it into the pending effect bits.
@@ -643,6 +670,8 @@ private:
         if (!m_effects) {
             return;
         }
+        m_result.text.append(m_effectGap);
+        m_effectGap.clear();
         m_result.text.append("^nfx(" + std::to_string(*m_effects) + ")");
         m_effects.reset();
     }
@@ -653,6 +682,8 @@ private:
     std::string m_literal;
     std::optional<Cmper> m_font;
     std::optional<std::uint16_t> m_effects;
+    /// @brief Spaces consumed between two `^efx` commands of one run.
+    std::string m_effectGap;
     std::size_t m_at{};
 };
 

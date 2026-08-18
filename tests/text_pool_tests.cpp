@@ -231,26 +231,30 @@ void testFileInfoText()
         "Empty header slots should not create File Info objects");
 }
 
-// Expression text in this era is not in the text pool at all: it is a plain string inside the
-// expression definition, with its font, size and style packed into the record header.
-void testEmbeddedExpressionText()
+// Expression text is recovered only where the source keeps it in the text pool. The fixed-row
+// eras keep it inside the text expression definition instead, in the `DT` family, and
+// synthesizing an Enigma string from that is deferred until `TextExpressionDef` itself is
+// imported: the definition is what gives the text its meaning, and a text pool full of
+// expression strings with no definitions behind them claims more coverage than it has.
+//
+// This asserts the absence so that reinstating the synthesis is a deliberate act rather than a
+// side effect.
+void testEarlyExpressionTextDeferred()
 {
     using musx::dom::texts::ExpressionText;
-    const auto result = readTextFixture("evidence/F97/F97-fileinfo-short.mus");
-    expectText(countOf<ExpressionText>(result) == 16,
-        "Finale 97's default expression library should yield sixteen expression texts");
+    for (const char* fixture : {"evidence/F97/F97-fileinfo-short.mus",
+             "evidence/F2000/F2000-multilayer.mus", "evidence/F263/F263-baseline.mus"}) {
+        const auto result = readTextFixture(fixture);
+        expectText(countOf<ExpressionText>(result) == 0,
+            std::string(fixture) + " synthesized expression text from a record rather than "
+            + "reading it from the text pool");
+    }
 
-    // Font 0 is the default music font, so its bytes are glyph numbers and must survive as
-    // themselves rather than being read as Mac Roman.
-    expectText(textOf<ExpressionText>(result, 3) == "^font(Pmusic)^size(28)^nfx(0)Ä",
-        "A symbol-font expression character was decoded as text");
-    expectText(textOf<ExpressionText>(result, 5) == "^font(Pmusic)^size(28)^nfx(0)ffff",
-        "A multi-character expression was not read across its incidences");
-    // Font 16 is Patmm, an ordinary Mac-charset font in this file, so 0xb0 is Mac Roman's
-    // infinity sign. This is the case that proves the two rules are actually different.
-    expectText(textOf<ExpressionText>(result, 15)
-            == "^font(Patmm)^size(12)^nfx(64)Tempo (∞=120)",
-        "A text-font expression was not decoded through its own code page");
+    // The epochs that do pool it are unaffected, which is what says the deferral is about the
+    // source layout rather than about the class.
+    const auto pooled = readTextFixture("evidence/F2006/F2006-embedded-tiff.mus");
+    expectText(countOf<ExpressionText>(pooled) == 41,
+        "Pooled expression text was lost along with the synthesized kind");
 }
 
 // The compressed epochs write their commands in the binary form, so this is where the code
@@ -446,21 +450,155 @@ void testFinale2011CategoryFonts()
         "The Finale 2011 fixture still contains a command this reader cannot read");
 }
 
-// The Coda-banner epoch is uncovered on purpose. This asserts the absence so that widening a
-// gate without evidence breaks a test rather than quietly producing objects.
-void testCodaBannerEpochStaysUncovered()
+// The earliest text pool divides itself into `^text` and `^lyrics` sections and terminates a
+// record with the start of the next, where Finale 97 drops the markers and closes each record
+// with `^end`. The stream says which framing it uses, so no version gate is involved.
+void testEarlyTextPoolFraming()
 {
     using namespace musx::dom::texts;
-    for (const char* fixture :
-        {"evidence/F100/F100-baseline.mus", "evidence/F263/F263-baseline.mus"}) {
-        const auto result = readTextFixture(fixture);
-        expectText(result.report.formatEpoch == FormatEpoch::CodaBanner,
-            std::string(fixture) + " was not classified as a Coda-banner file");
-        expectText(countOf<BlockText>(result) == 0 && countOf<ExpressionText>(result) == 0
-                && countOf<FileInfoText>(result) == 0,
-            std::string(fixture)
-                + " produced texts, but this epoch's text framing is not yet decoded");
+    const auto result = readTextFixture("evidence/F372/F372-fileinfo-text.mus");
+    expectText(result.report.formatEpoch == FormatEpoch::UncompressedLegacy,
+        "The Finale 3.7.2 fixture was not classified as uncompressed");
+
+    // The `^text` section, whose last record ends at the marker opening the next section
+    // rather than at another record.
+    expectText(textOf<BlockText>(result, 1) == "^font(Times)^size(12)^nfx(0)^composer() Composer"
+            && textOf<BlockText>(result, 2) == "^font(Times)^size(12)^nfx(0)^page(511) Page",
+        "An unterminated block text was not recovered: " + textOf<BlockText>(result, 2));
+    expectText(countOf<BlockText>(result) == 2,
+        "A section marker was read as a record of its own");
+
+    // The `^lyrics` section. Its comparators are the document's own: neither sequential nor
+    // unique across kinds, and its last record ends at the end of the stream.
+    expectText(textOf<LyricsVerse>(result, 2) == "^font(Times)^size(12)^nfx(0)ly-ric verse two"
+            && textOf<LyricsChorus>(result, 3)
+                == "^font(Times)^size(12)^nfx(0)Cho-rus ly-ric 3"
+            && textOf<LyricsSection>(result, 4)
+                == "^font(Times)^size(12)^nfx(0)Sec-tion ly-ric 4",
+        "A record of the lyrics section was not recovered");
+    expectText(countOf<LyricsSection>(result) == 3,
+        "The three sections of the fixture were not all recovered");
+
+    // Section 2 states its style twice over. Both runs are kept: they are what the document
+    // says and musxdom applies them in order to the same effect. Finale 27 writes only one.
+    expectText(textOf<LyricsSection>(result, 2)
+            == "^font(Times)^size(12)^nfx(0)^font(Times)^size(12)^nfx(0)Sec-tion ly-ric 4",
+        "A repeated style run was not preserved: " + textOf<LyricsSection>(result, 2));
+
+    // File Info is in the header at this release, which is the earliest whose dialog offers it.
+    const char* expected[] = {"File Info Title", "File Info Composer", "File Info Copyright",
+        "File Info Description"};
+    for (musx::dom::Cmper type = 1; type <= 4; ++type) {
+        expectText(textOf<FileInfoText>(result, type) == expected[type - 1],
+            "File Info type " + std::to_string(type) + " read as \""
+                + textOf<FileInfoText>(result, type) + "\"");
     }
+
+    // A document of the same release with both sections empty is the bare bytes
+    // `^text^lyrics`. It must produce nothing, and must not report the markers as a stream
+    // that stopped making sense.
+    const auto empty = readTextFixture("evidence/F372/F372-baseline.mus");
+    expectText(countOf<BlockText>(empty) == 0 && countOf<LyricsVerse>(empty) == 0,
+        "An empty early text pool produced records");
+    expectText(!hasDiagnosticContaining(empty.report, "stopped making sense"),
+        "The section markers of an empty pool were reported as a malformed stream");
+}
+
+// Bookmark text is recovered only where the source keeps it in the text pool. Before that it is
+// in the `BK` others family, and reading it is deferred on the same footing as expression text:
+// the bookmark class itself is not imported, and text with no bookmark behind it claims more
+// coverage than it has.
+void testBookmarkText()
+{
+    using musx::dom::texts::BookmarkText;
+
+    // Finale 2012 pools it, `^end`-terminated like every other record of that era, and the
+    // text is UTF-8: the guillemets and the u-umlaut are two bytes each in the source.
+    const auto pooled = readTextFixture("evidence/F2012/F2012-bookmarks.mus");
+    expectText(textOf<BookmarkText>(pooled, 2) == "Page \u00fcber"
+            && textOf<BookmarkText>(pooled, 3) == "Scroll \u00ab\u00bb Bookmark",
+        "A pooled bookmark was not recovered: " + textOf<BookmarkText>(pooled, 2));
+    expectText(countOf<BookmarkText>(pooled) == 2,
+        "The two bookmarks of the fixture were not both recovered");
+
+    // The same two bookmarks in the release they were authored in, where the text pool holds
+    // none of them. Asserting the absence keeps reinstating the `BK` reading a deliberate act.
+    const auto earlier = readTextFixture("evidence/F372/F372-bookmarks.mus");
+    expectText(countOf<BookmarkText>(earlier) == 0,
+        "Bookmark text was synthesized from a record rather than read from the text pool");
+}
+
+// The Coda-banner epoch keeps block text in the `HT` and `HS` others families and lyric text in
+// the region behind the last record pool, so neither reaches the text-pool walk.
+void testCodaBannerBlockTexts()
+{
+    using namespace musx::dom::texts;
+
+    // `HS` word 2 packs the font comparator above the point size, so the two are read from one
+    // word and a fixture whose size is 12 must not also report font 12.
+    const auto shorter = readTextFixture("evidence/F100/F100-short-text.mus");
+    expectText(shorter.report.formatEpoch == FormatEpoch::CodaBanner,
+        "The Coda block-text fixture was not classified as a Coda-banner file");
+    expectText(textOf<BlockText>(shorter, 1) == "^font(Monaco)^size(12)^nfx(0)short",
+        "A Coda block text was not recovered: " + textOf<BlockText>(shorter, 1));
+
+    // The same document with one string lengthened. The record is a fixed four incidences
+    // either way, so the previous save's bytes remain after the terminator and must not be
+    // read as text.
+    const auto longer = readTextFixture("evidence/F100/F100-long-text-w-insert.mus");
+    expectText(textOf<BlockText>(longer, 1)
+            == "^font(Monaco)^size(12)^nfx(0)longer with ^page(2) page insert",
+        "A lengthened Coda block text was not recovered: " + textOf<BlockText>(longer, 1));
+
+    // One insert character stands for whichever insert the block carries, and the style record
+    // says which. Finale 27 discards `^time` when it converts, so its companion names only the
+    // first of these two; the command is carried forward regardless.
+    const auto inserts = readTextFixture("evidence/F100/F100-text-other-inserts.mus");
+    expectText(textOf<BlockText>(inserts, 1)
+                == "^font(Charcoal)^size(12)^nfx(0)Text with date: ^date(0)"
+            && textOf<BlockText>(inserts, 2)
+                == "^font(Charcoal)^size(12)^nfx(0)Text with time: ^time(0)",
+        "A Coda insert was not read from its style record");
+
+    // A second release, and the case that shows the style is not in the text record: these two
+    // blocks differ in size and style while sharing every byte of their `HT` trailer.
+    const auto later = readTextFixture("evidence/F263/F263-baseline.mus");
+    expectText(textOf<BlockText>(later, 3) == "^font(Times)^size(36)^nfx(1)TITLE"
+            && textOf<BlockText>(later, 8)
+                == "^font(Times)^size(14)^nfx(1)R. G. PATTERSON (1993)"
+            && textOf<BlockText>(later, 9)
+                == "^font(Times)^size(12)^nfx(0)\u00a9 1993 Robert G. Patterson",
+        "A Finale 2.6.3 block text was not recovered");
+    expectText(countOf<BlockText>(later) == 9,
+        "The Finale 2.6.3 fixture should carry exactly nine block texts");
+}
+
+// Lyric text is the one class this era keeps in its text region, spelled out rather than in
+// binary command codes. Each record runs to the next keyword, there being no terminator.
+void testCodaBannerLyricTexts()
+{
+    using namespace musx::dom::texts;
+    const auto result = readTextFixture("evidence/F100/F100-lyric-text.mus");
+
+    // The style commands are the document's own. Finale 27 additionally synthesizes a
+    // `^size(12)^nfx(0)` prefix for each of these, which the source does not state.
+    expectText(textOf<LyricsVerse>(result, 1) == "^font(New York) ly-ric verse ",
+        "A Coda lyric verse was not recovered: " + textOf<LyricsVerse>(result, 1));
+
+    // An `^efx` run separated by spaces is still one run and still one `^nfx`. The spaces are
+    // literal text and belong before the command, which is where Finale 27 puts them too.
+    expectText(textOf<LyricsChorus>(result, 1) == "^font(Geneva)  ^nfx(1) chor-us text ",
+        "A spaced effect run was not folded into one command: "
+            + textOf<LyricsChorus>(result, 1));
+    expectText(
+        textOf<LyricsSection>(result, 1) == "^font(Palatino) ^size(13)  ^nfx(2) sec-tion text",
+        "A Coda lyric section was not recovered: " + textOf<LyricsSection>(result, 1));
+
+    // A document with no lyrics must produce none rather than an empty record per keyword.
+    const auto silent = readTextFixture("evidence/F100/F100-baseline.mus");
+    expectText(countOf<LyricsVerse>(silent) == 0 && countOf<LyricsChorus>(silent) == 0
+            && countOf<LyricsSection>(silent) == 0,
+        "A Coda document with an empty lyric region produced lyric objects");
 }
 
 void testSyntheticStreamBoundaries()
@@ -497,10 +635,10 @@ void testSyntheticStreamBoundaries()
 
     // A keyword this reader does not import is named rather than silently skipped, which is
     // how an unobserved spelling would be found.
-    const auto unknownKeyword = importStream("^block(1)x^end^bookmark(2)y^end");
+    const auto unknownKeyword = importStream("^block(1)x^end^cornet(2)y^end");
     expectText(unknownKeyword.document->getTexts()->getArray<BlockText>().size() == 1,
         "A recognized record before an unrecognized one was lost");
-    expectText(hasDiagnosticContaining(unknownKeyword.report, "bookmark"),
+    expectText(hasDiagnosticContaining(unknownKeyword.report, "cornet"),
         "An unrecognized text keyword was not reported by name");
 
     // A binary command with no known spelling is dropped from the text and reported, because
@@ -550,7 +688,10 @@ void testSyntheticStreamBoundaries()
 
 TEST_CASE("Uncompressed text pool", "[texts]") { testUncompressedTextPool(); }
 TEST_CASE("File info text", "[texts]") { testFileInfoText(); }
-TEST_CASE("Embedded expression text", "[texts]") { testEmbeddedExpressionText(); }
+TEST_CASE("Early expression text deferred", "[texts]")
+{
+    testEarlyExpressionTextDeferred();
+}
 TEST_CASE("Compressed text pools", "[texts]") { testCompressedTextPool(); }
 TEST_CASE("Finale 2008 inserts and pooled file info", "[texts]")
 {
@@ -560,8 +701,8 @@ TEST_CASE("Finale 2011 category fonts and rehearsal", "[texts]")
 {
     testFinale2011CategoryFonts();
 }
-TEST_CASE("Coda banner texts stay uncovered", "[texts]")
-{
-    testCodaBannerEpochStaysUncovered();
-}
+TEST_CASE("Early text pool framing", "[texts]") { testEarlyTextPoolFraming(); }
+TEST_CASE("Bookmark text", "[texts]") { testBookmarkText(); }
+TEST_CASE("Coda banner block texts", "[texts]") { testCodaBannerBlockTexts(); }
+TEST_CASE("Coda banner lyric texts", "[texts]") { testCodaBannerLyricTexts(); }
 TEST_CASE("Text pool stream boundaries", "[texts]") { testSyntheticStreamBoundaries(); }

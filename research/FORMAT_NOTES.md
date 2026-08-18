@@ -2433,12 +2433,30 @@ not recognize, by name, which is how a missing spelling is meant to be found.
 
 ### Section markers before Finale 97
 
-Finale 3.7.2 and earlier open the pool with the ETF section markers themselves: `F372` files
-carry the bare bytes `^text^lyrics` and nothing else, and the Coda-banner files carry
-`^text ` and `^lyric ` (Finale 1.0.0) or `^text()` and `^lyrics()` (Finale 2.6.3) as two
-length-prefixed chunks. Finale 97 and later drop the markers: each chunk names its own kind,
-so a section header has nothing left to say. No file with markers *and* content has been
-examined, so where the content would sit relative to a marker is **open**.
+**There are three framings, and each stream states its own.**
+
+Finale 3.7.2 and earlier open the pool with the ETF section markers themselves. A Finale 3.7.2
+document carries one stream beginning `^text`, then its `^block(n)` records, then `^lyrics` and
+whatever lyric records follow; an empty document is the bare bytes `^text^lyrics`, two markers
+with nothing between them. **A record in this framing has no terminator** — it runs to the start
+of the next record, to the marker that opens the next section, or to the end of the stream.
+
+`F372-fileinfo-text.mus` is what shows it. Its ETF export carries the same records in the same
+order and the same spelling, differing only in the carriage returns ETF puts between sections,
+so a MUS of this era stores very nearly what ETF prints.
+
+Finale 97 and later drop the markers and close each record with `^end`. Each record names its
+own kind, so a section header has nothing left to say.
+
+The Coda-banner epoch is different again: two length-prefixed chunks behind the last record
+pool, opening `^text ` and `^lyric ` (Finale 1.0.0) or `^text()` and `^lyrics()` (Finale 2.6.3).
+Its lyric records live there, in the unterminated form; its block text does not — see
+[The Coda-banner epoch](#the-coda-banner-epoch).
+
+The reader tells the first two apart by reading the opening bytes rather than by dating the
+file: a stream that opens with a section marker is unterminated, and one that opens with a
+record is not. The boundary sits inside the uncompressed epoch, so an epoch gate cannot express
+it, and the marker is something every stream carries.
 
 ### Enigma commands in the compressed epochs
 
@@ -2590,6 +2608,17 @@ redundant with the font definition, and the reader does not carry it forward.
 A font referenced by id is spelled `Font` followed by the id, with a character set of `0`:
 `^font(Font0,0)`. musxdom reads that spelling natively.
 
+**A companion's font table is not stable evidence.** Finale 27 matches fonts against the ones
+installed on the machine doing the upgrade, and the path taken — a scripted upgrade or a manual
+one — can change the result too. Re-exporting the same source document has been observed to
+renumber its whole `fontName` table, drop a face and shift every `FontOptions` comparator with
+it. So a companion is a good witness to *which face* a text is set in and a poor one to *which
+comparator*, and two companions of the same document generated at different times may disagree
+about the comparator without either being wrong.
+
+The source's own font table has no such elasticity: it is what the document stores. That is the
+reason the rule below reads in the direction it does.
+
 **The reader names the font wherever the document defines one.** Every font command resolves to
 a comparator first — `^fontid` and every binary code state one outright, `Font` followed by
 digits is the same thing under Finale's convention for a font it knows only by id, and a name is
@@ -2637,11 +2666,23 @@ the text expression definition, in the `DT` family, one expression per comparato
 | incidence 0, word 1 | `nfx` style bits |
 | incidence 1 onward | the display text, twelve bytes per row, ending at the first NUL |
 
-The reader restates that as an ordinary Enigma string, which is what musxdom expects. By the
-DCL epoch the string embedded in `DT` is the expression's *description* instead, and the
-display text has moved into the text pool; reading `DT` as display text there would fill the
-texts pool with category descriptions. Where in Finale 2001–2006 the move happened is
-**open**: no fixture in that range defines an expression at all.
+**Recovering it is deferred until `TextExpressionDef` is imported.** The layout above is
+established, and the reader once synthesized an Enigma string from it, but a text pool full of
+expression strings with no definitions behind them claims more coverage than it has: the
+definition is what gives the text its meaning. The synthesis is removed rather than switched
+off, and a test asserts that these eras produce no `ExpressionText`, so reinstating it is a
+deliberate act.
+
+**The move happens inside the DCL epoch, not at it.** Finale 2002 still keeps display text in
+`DT` under exactly the layout above — `F2002-fileinfo-text.mus` holds `ffff`, `pppp` and
+`Tempo (=#)` there, matching its companion's expressions — and its text pool carries no
+`^expression` record at all. By Finale 2006 the display text has moved to the pool and the string
+embedded in `DT` is the expression's *description* instead, `Below Staff (Vel. 127)` and the
+like. Reading `DT` as display text in that later range would fill the texts pool with category
+descriptions.
+
+The move is therefore bounded between Finale 2003 and Finale 2006 and is otherwise **open**. No
+document of that range defines an expression.
 
 The Coda-banner `DT` layout differs again — its size is a whole word rather than a packed
 byte, and its text incidence carries further fields after the string — and is **open**.
@@ -2662,8 +2703,58 @@ numbered by musxdom's own `FileInfoText::TextType` and confirmed field for field
 companion, while the header offsets that carry them in Finale 97 are empty. Where between the
 two releases the move happened is **open**, and does not need answering: the reader fills from
 the header only what the pool did not supply, so each document states for itself which way it
-stores them. No fixture between Finale 97 and Finale 2008 has non-empty File Info at all, so
-whether the header offsets still hold in the DCL epoch is likewise **open**.
+stores them.
+
+**The header offsets do still hold across the DCL epoch.** `F2002-fileinfo-text.mus` carries all
+four fields there and its companion recovers all four, so the move to the pool happens somewhere
+after Finale 2002 rather than at the epoch boundary.
+
+**The lower end is bounded above by Finale 3.7.2 and is otherwise open.**
+`F372-fileinfo-text.mus` carries all four fields at the header offsets and its companion recovers
+all four, so File Info exists by that release, which is also the earliest that writes the modern
+inserts reading them. Finale 3.7.2 is the earliest release *available here* whose dialog offers
+the fields; whether an earlier release offers them is untested, because no earlier release is
+available to test. It is a ceiling on the arrival, not the arrival.
+
+Whether an earlier release stores the fields cannot be settled by any corpus at any size, since
+an unfilled dialog leaves the same empty offsets as a dialog that does not exist. It would need
+a release whose dialog offers the fields, and no earlier one is known to.
+
+### Bookmarks
+
+**From Finale 2012 a bookmark's text is an ordinary text-pool record**, keyword `bookmark`, with
+the `^end` terminator of that era and no style commands of its own — `^bookmark(2)Page über^end`.
+musxdom documents any Enigma insert appearing in one as meaningless, but the bytes still need
+decoding, so the record goes through the same converter as every other.
+
+**Its text is UTF-8, and `F2012-bookmarks.mus` shows it directly rather than by inference:**
+`c3 bc` is U+00FC for the `ü` of `Page über`, and `c2 ab c2 bb` is the guillemet pair of
+`Scroll «» Bookmark`. The same pair is 8-bit in the pre-Unicode eras — `c7 c8` in Mac Roman —
+which is what makes it a measurement.
+
+**Before that the text is in the `BK` others family**, one family per bookmark at comparators
+from `0x8000` up, and the layout is the Coda-banner `HT` shape: the string occupies the first
+four incidences as 48 bytes ending at the first NUL, and two numeric incidences follow it. The
+text is 8-bit — `9f` for `ü` under Mac Roman — and the text pool of such a document holds no
+bookmarks at all.
+
+**Reading `BK` is deferred until the bookmark class itself is imported**, on the same footing as
+expression text before `TextExpressionDef`: text with no bookmark behind it claims more coverage
+than it has. A test asserts that these eras produce no `BookmarkText`, so reinstating it is a
+deliberate act rather than a side effect. Deciding to support bookmarks is what would make the
+rest of the `BK` family worth decoding.
+
+**Unverified: that the move into the text pool belongs to the Unicode project.** It fits — the
+pooled form is UTF-8 and the era is the one that converted stored text — but the boundary has not
+been tested inside Finale 2012. It is possible that the first release of that version still wrote
+`BK` and that a point release changed it, in which case a version gate on the major alone would
+be wrong. Nothing turns on this while the reader takes whichever form the document presents:
+`^bookmark` records are read where they exist and `BK` is read nowhere.
+
+The earliest specimen available is Finale 3.7.2, which bounds the arrival of bookmarks from above
+and says nothing about it otherwise: no earlier release is available to test. The comparators are
+not stable across an upgrade — the same two bookmarks are 1 and 2 in the Finale 3.7.2 companion
+and 2 and 3 in the Finale 2012 one.
 
 ### The Coda-banner epoch
 
@@ -2674,10 +2765,53 @@ ten block texts that way, and Finale 27 recovers all ten. Its own binary command
 shorter argument form than the later epochs (`^\x82\x40\x81`), so the digit rule above does
 not apply to it. None of this is decoded.
 
-One consequence worth recording separately: the container's Coda-banner pool walk stops at the
-first pool with zero pages, so a Finale 1.0.0 document — whose details pool is empty — never
-reaches its entries pool or the text region beyond it. That is a defect in the walk rather
-than a property of the files.
+The pool walk that reaches all this is now correct, which it was not. It stopped at the first
+pool with zero pages, so a Finale 1.0.0 document — whose details pool is empty — reported one
+block instead of three and never reached its entries pool or the text region beyond it. **An
+empty pool is an ordinary pool**, and the page size is the only thing that identifies a
+prologue. The chain needs no terminator of its own: what follows the last pool is the text
+region, whose first four bytes are a chunk length rather than `0x200`.
+
+Two things stand between the fixed walk and actual recovery, and neither is a container
+problem. The `HT` framing is one. The other is that **no available Coda-banner document with
+text is a Finale 1.0.0 one**: all 21 tracked 1.0.0 fixtures carry no text at all, and their
+companions show only the `Score` part name, which lives in `PartDefinition` and is not yet imported. The five Finale 2.6.3 fixtures
+do carry text, but all five are the same document, so the era has one text specimen rather than
+five. The 1.0.0 spelling of the region markers differs from 2.6.3's — `^text \0` and `^lyric \0`
+against `^text()` and `^lyrics()` — which is reason enough not to assume one layout covers both.
+
+## Open questions the regression comparison surfaced
+
+Two differences against companions are unexplained and are recorded here rather than suppressed
+in the comparison, because a regression that hides what it cannot explain is worth less than one
+that counts it.
+
+**Stem connection fonts are confirmed on every connection in every survey**, comparator and
+resolved face alike: 53,125 preserved, none differing. The field's provenance is worth recording
+because it was the weakest in the element. It is not in the distilled framework mapping, which
+has no row for this table at all, and the notes above confirm the element's other properties —
+the Evpu/Efix adjustments, the symbol's zero high byte, the terminator rule — without ever
+confirming word 0. It rests on musxdom's own `StemConnection` field order matched positionally
+to the six stored words. That correspondence is now corroborated across three corpora.
+
+Getting there took three wrong readings, all of the instrument rather than the format, and they
+are recorded because each is a trap a later comparison can fall into again:
+
+  * musxdom maps `StemConnection::fontId` to the node `<font>`, not `<fontID>`. Reading the
+    latter found nothing, defaulted to comparator zero and so resolved every companion
+    connection to the default music font. The disagreement then looked like a systematic
+    percussion-versus-base pattern affecting exactly twenty connections per document, which is
+    a far more convincing shape than random noise.
+  * Repairing it by string replacement changed the *first* `<fontID>` in the comparison script,
+    which belongs to `FontOptions`, leaving the stem one untouched. That silently moved
+    `FontOptions` face disagreements from 1,984 to 91,710 while appearing to fix stem fonts.
+  * An intermediate reading concluded the companion's font table had been renumbered. It had
+    not: the companion resolves comparator 5 to `Maestro Percussion` exactly as the source does.
+
+**Layer rest offsets.** `LayerAttributes.restOffset` differs from the companion on 82 counts
+across the tracked corpus, every one of them where the reader recovered nothing and the pinned
+baseline supplied the value. That is a statement about the baseline rather than about a decoder,
+but it means the field is unrecovered far more often than the class's coverage suggests.
 
 ## Sharing and linked parts
 

@@ -140,3 +140,75 @@ F100-wext-push-6-lift-5.mus
     tracked the word-extension positioning bit and never did.
     The companion also moves the starting connection's offsets to 6 and 5, which is Finale 27
     filling a connection table this era does not store from the dialog's own values.
+
+Text recovery: four documents that opened the era's own text framing
+
+    This era stores text two ways and neither is the text pool of the later ones.
+    Block text is in the `HT` and `HS` others families, one pair of records per
+    block: `HT` holds the characters in four consecutive incidences and `HS` holds
+    the style, keyed so that `HS` incidence n describes the nth `HT` record of the
+    same comparator. Lyric text is in the region behind the last record pool, as
+    two length-prefixed chunks whose second carries spelled-out `^verse(n)`,
+    `^chorus(n)` and `^section(n)` records.
+
+    Before these four, no Coda-banner document in any survey contained text of any
+    kind. Twenty-six were tracked and every one was silent, so the era looked like
+    a framing problem when it was in fact an evidence problem.
+
+F100-short-text.mus
+    sha256 fa1639ec37c9f0b715eb87bfc77fe2906a22628e683fa5e12205fc1db73dceb7
+F100-short-text.mus.etf
+    sha256 cc0e7f3867fe0196f73d37cf378a1464ba0c589544757cc4b98cd4842ce46c9e
+F100-short-text.musx
+    sha256 135b07f4c34d81a11ec2dd86fa45f323607ed459f2fbbcb1dc3e85727b71327b
+F100-long-text-w-insert.mus
+    sha256 2545d6cdacf1615255773068fd6d800d85344db82e253e44898029e08989e616
+F100-long-text-w-insert.mus.etf
+    sha256 fe1dc3ffe0377d83939b4622c70e17643d3ad18c9bf854d3fef802f0710215aa
+F100-long-text-w-insert.musx
+    sha256 f76ac24fa3099847cbaa49d01504fbda24db76504d5d4e144ad40afb0921903a
+    One controlled pair, and the reason the framing could be read at all. Both hold
+    one block text; the second lengthens it from `short` to
+    `longer with <page insert> page insert`. Only two records move between them,
+    `HT` and `HS`, which is what says the block is those two and nothing else.
+
+    The `HT` record is a fixed four incidences either way, so the shorter save
+    leaves the previous one's bytes after the terminator. Reading to the first NUL
+    rather than to the end of the record is what that shows to be necessary.
+
+    `HS` word 4 moves from 0 to 2, which is exactly the `^page(2)` the companion
+    writes, and that is what identifies the word as the insert's argument.
+
+F100-text-other-inserts.mus
+    sha256 331e8a3d353b8edd48b57b31e5367204c07276b016a6fb94c2864627b0351cb7
+F100-text-other-inserts.etf
+    sha256 3d66105e82fc7850552eb029e5e0e3362d79d0f1ae6b559a81d525275860da9d
+F100-text-other-inserts.musx
+    sha256 f4ed5c6520264fd8fc968330658630d2638fb6bc363eaf8d48f841adba24aa4b
+    The insert character means more than one thing, and this is what shows it. Two
+    blocks carry the same `#` where one converts to `^date(0)` and the other to a
+    time insert, so the character is a placeholder and the style record says which
+    insert it stands for. `HS` word 5 differs between the two blocks and in the
+    page-insert fixtures above, giving the three values the era's three inserts
+    need; word 4 is the argument in every case.
+
+    Finale 27 discards the time insert when it converts, so its companion names
+    only the first of the two. The command is carried forward regardless, on the
+    same footing as the Finale 2008 `^time` blocks.
+
+F100-lyric-text.mus
+    sha256 b2dd2ecb8713d44ad2a0584a05091039d70e49ff47ba248d70f4255c7fdd978c
+F100-lyric-text.mus.etf
+    sha256 04148528d473783a88cc7a3154a736b7f34766289b310287fb949e6d53df2d29
+F100-lyric-text.musx
+    sha256 26c0b72bec4578d645fa2a2afe71cb55ae2d927eafdfb51b9d214505beb23fb4
+    The only document of the era anywhere with lyrics, and the one that shows the
+    text region is used after all. Its `^lyric` chunk carries a verse, a chorus and
+    a section, each in a different font and two of them with an effect run, where
+    the `^text` chunk beside it is empty even in the block-text fixtures above.
+
+    Its effect runs are written spaced apart -- `^efx(plain) ^efx(bold)` -- which a
+    reader that closed a run at the first non-command byte would split into one
+    `^nfx` per half. Both are one statement of one style, and the spaces are
+    literal text belonging before the single command. This is the only document
+    that states the case.

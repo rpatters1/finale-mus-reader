@@ -18,13 +18,14 @@ namespace texts {
 /// and a keyword decides the class.
 void importTextPool(const ImportContext& context);
 
-/// @brief Recovers texts::ExpressionText from the era that embeds it in its own record.
-/// @details Separate from @ref importTextPool because the source is a record family rather
-/// than the text stream, and because the two never apply to the same document.
-void importExpressionTexts(const ImportContext& context);
-
 /// @brief Recovers texts::FileInfoText from the fixed header strings.
 void importFileInfoTexts(const ImportContext& context);
+
+/// @brief Recovers the Coda-banner epoch's block and lyric text.
+/// @details That era stores neither in the text pool the later ones use: block text is in the
+/// `HT` and `HS` others families and lyric text is in the region behind the last record pool.
+/// Does nothing for any other epoch.
+void importCodaTexts(const ImportContext& context);
 
 } // namespace texts
 } // namespace finale_mus_reader

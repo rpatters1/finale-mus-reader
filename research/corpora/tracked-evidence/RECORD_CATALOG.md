@@ -96,7 +96,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x004a` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xdf0) |
 | `0x004b` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe0a) |
 | `0x004c` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe24) |
-| `0x004d` | unknown | unknown/options | open | 2007 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe3e) |
+| `0x004d` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe3e) |
 | `0x004e` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe58) |
 | `0x004f` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe72) |
 | `0x0050` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0xe8c) |
@@ -132,6 +132,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0070` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x14f8) |
 | `0x0071` | unknown | unknown/options | open | 2008, 2011, 2012 | 84 | `mus-ed8096788fa377bf` (0:0x158a) |
 | `0x007a` | unknown | unknown/options | open | 2012 | 84, 108, 144 | `mus-f95d2ea21b99022e` (0:0x1838) |
+| `0x007b` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1852) |
 | `0x0086` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
 | `0x0089` | unknown | unknown/options | open | 2012 | 396, 408, 420, 432 | `mus-80f8c631de435726` (0:0x1852) |
 | `0x008a` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x225a) |
@@ -141,11 +142,14 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0092` | frameSpec | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1732) |
 | `0x0095` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x179a) |
 | `0x0097` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 156 | `mus-86fafceb1ef2ebe2` (0:0x17f0) |
+| `0x009e` | unknown | unknown/options | open | 2012 | 36 | `mus-f99c887dff9cdaa1` (0:0x1c30) |
 | `0x009f` | shapeList | others | weak | 2007, 2008, 2011, 2012 | 24, 48 | `mus-86fafceb1ef2ebe2` (0:0x189a) |
 | `0x00a3` | layerAtts | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x18fe) |
 | `0x00a4` | unknown | unknown/options | open | 2012 | 360 | `mus-f95d2ea21b99022e` (0:0x2220) |
-| `0x00a7` | metaClef | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1966) |
+| `0x00a6` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1d54) |
+| `0x00a7` | metaClef | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1966) |
 | `0x00a8` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x2c3e) |
+| `0x00a9` | unknown | unknown/options | open | 2012 | 12 | `mus-f99c887dff9cdaa1` (0:0x204a) |
 | `0x00b0` | measSpec | others | moderate | 2007, 2008, 2011, 2012 | 26 | `mus-86fafceb1ef2ebe2` (0:0x1b3a) |
 | `0x00b1` | unknown | unknown/options | open | 2012 | 24 | `mus-80f8c631de435726` (0:0x2e10) |
 | `0x00b7` | textBlock | others | moderate | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x1b8a) |
@@ -158,16 +162,17 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00c0` | unknown | unknown/options | open | 2011 | 12 | `mus-d89543077eefeae6` (0:0x1e24) |
 | `0x00c2` | unknown | unknown/options | open | 2008 | 144 | `mus-ed8096788fa377bf` (0:0x1db4) |
 | `0x00d5` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 168, 180, 264 | `mus-86fafceb1ef2ebe2` (0:0x1c48) |
-| `0x00d6` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1ee2) |
+| `0x00d6` | shapeDef | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1ee2) |
 | `0x00d7` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 48, 60, 84 | `mus-86fafceb1ef2ebe2` (0:0x1f30) |
 | `0x00d8` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x3444) |
 | `0x00d9` | unknown | unknown/options | open | 2007 | 96 | `mus-86fafceb1ef2ebe2` (0:0x2026) |
 | `0x00da` | unknown | unknown/options | open | 2007 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x2102) |
-| `0x00db` | unknown | unknown/options | open | 2012 | 24 | `mus-f95d2ea21b99022e` (0:0x2d5a) |
+| `0x00db` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x262a) |
 | `0x00de` | ssLineStyle | others | weak | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x2142) |
 | `0x00df` | staffSystemSpec | others | moderate | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x2244) |
 | `0x00e6` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x2276) |
 | `0x00e7` | staffSpec | others | weak | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |
+| `0x00e8` | unknown | unknown/options | open | 2012 | 300 | `mus-f99c887dff9cdaa1` (0:0x289e) |
 | `0x00eb` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x37be) |
 | `0x00f1` | unknown | unknown/options | open | 2011 | 48 | `mus-d89543077eefeae6` (0:0x24a0) |
 | `0x0112` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2360) |
@@ -190,4 +195,4 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0402` | unknown | unknown/options | open | 2012 | 20 | `mus-f95d2ea21b99022e` (1:0x1aa) |
 | `0x0414` | gfhold | details | moderate | 2011, 2012 | 20 | `mus-eb742704c65232a2` (1:0x1aa) |
 | `0x041d` | unknown | unknown/options | open | 2012 | 40 | `mus-80f8c631de435726` (1:0x336) |
-| `0x0455` | activeLyric | details | weak | 2011 | 10 | `mus-eb742704c65232a2` (1:0x1ce) |
+| `0x0455` | activeLyric | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x1ce) |

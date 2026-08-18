@@ -435,7 +435,16 @@ std::string toUtf8(const std::string& source, CodePage codePage)
     if (auto converted = convert(codePage, source)) {
         return *converted;
     }
-    return source;
+    // The bytes are not what the charset field claimed: an unassigned byte, or a font whose
+    // record names a code page its content does not follow. Every byte is preserved as the
+    // code point of the same value, which is what the symbol path does and is reversible, so a
+    // later and better-informed pass can still recover the original.
+    //
+    // Returning the source unchanged would preserve the bytes too, and used to, but a string
+    // holding a byte above 0x7f is then not valid UTF-8. That is not a representation musxdom
+    // can carry: it would put a malformed string into the document and an unparseable one into
+    // any EnigmaXML written from it.
+    return symbolBytesToUtf8(source);
 }
 
 std::string normalizeLineBreaks(std::string source)

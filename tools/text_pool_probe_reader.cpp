@@ -57,6 +57,7 @@ int main(int argc, char** argv)
     dump<LyricsSection>(result.document, "section");
     dump<SmartShapeText>(result.document, "smartShapeText");
     dump<ExpressionText>(result.document, "expression");
+    dump<BookmarkText>(result.document, "bookmark");
     for (const auto& diagnostic : result.report.diagnostics) {
         if (diagnostic.level != musx::util::Logger::LogLevel::Verbose) {
             std::printf("  ! %s\n", diagnostic.message.c_str());

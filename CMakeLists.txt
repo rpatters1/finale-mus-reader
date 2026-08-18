@@ -174,8 +174,8 @@ add_library(finale_mus_reader STATIC
     src/import/support/enigma_text.cpp
     src/import/support/legacy_mapping.cpp
     src/import/support/text_encoding.cpp
-    src/import/texts/expression_text.cpp
     src/import/texts/file_info_text.cpp
+    src/import/texts/coda_texts.cpp
     src/import/texts/text_pool.cpp
     src/reader/document_factory.cpp
     src/reader/reader.cpp

@@ -542,6 +542,71 @@ command, not an argument about where it would sort — and there is no longer a 
 boundary. The reader accepts the two-byte code spelling structurally rather than by version, but that has been
 exercised on three codes, not thirty.
 
+### X6 — Proposed — text in a Coda-banner document
+
+The container's pool walk is fixed: an empty pool no longer ends the chain, so a Finale 1.0.0
+document now reports all three of its pools and the text region behind them. What is still
+undecoded is the `HT` others family, where that era keeps its block text as a stream alternating
+NUL-terminated strings with binary layout data across incidences.
+
+**The evidence available is thinner than the fixture count suggests.** Twenty-six Coda-banner
+documents are tracked. All 21 Finale 1.0.0 ones contain no text whatsoever — their companions
+carry only the `Score` part name, which lives in `PartDefinition` and is not yet imported — and the five Finale 2.6.3 ones are five
+saves of a single document, so the era has exactly **one** text specimen. Its Finale 27
+companion recovers eleven block texts and seventeen expressions, which is a target to decode
+against but not a way to separate text bytes from the layout bytes woven through them.
+
+**The request, in priority order:**
+
+1. **A controlled Coda-banner pair differing in one block's text.** One document saved twice,
+   the second with a single block's string changed to a different length — six characters to
+   twelve, say, so any length or offset field moves visibly. This is the single highest-value
+   item: the interleaving is the whole unknown, and a one-variable edit is what isolates it.
+   Either release will do, though 2.6.3 is the one already known to store text.
+2. **A Finale 1.0.0 document with block text**, one short distinct string per block so each is
+   identifiable by content. The 1.0.0 layout is entirely unexercised, and it cannot be assumed
+   to match 2.6.3's: the two releases spell the text-region markers differently, `^text \0` and
+   `^lyric \0` against `^text()` and `^lyrics()`.
+3. **A Coda-banner document with lyrics.** No tracked document of the era has a verse, chorus or
+   section, so nothing shows whether lyric text lives in `HT` alongside block text, in the
+   `^lyric` region that is empty everywhere, or somewhere else again. The three fixtures named
+   for lyrics are lyric *option* edits and carry no syllables.
+
+A fourth would settle the argument encoding rather than the framing: this era writes binary
+commands with a shorter argument form than the later epochs, so the digit rule the compressed
+eras follow does not apply. Any of the above exercises it incidentally.
+
+### X7 — Partly answered — where File Info begins
+
+`texts::FileInfoText` is recovered from header offsets in Finale 97 and from the text pool in
+Finale 2008. Neither end of the range is established. The lower end may be around Finale 3.7
+rather than earlier, which would mean the header offsets this reader reads are meaningless for
+the releases before it.
+
+**No corpus can answer this at any size.** A File Info dialog nobody filled in leaves exactly
+the same empty offsets as a File Info dialog that does not exist, and only three tracked
+documents anywhere have the fields filled: two purpose-built Finale 97 fixtures and the Finale
+2008 one. Every other document in every era is silent.
+
+**The lower end is bounded, not answered.** `F372-fileinfo-text.mus` carries all four fields at
+the header offsets with a companion that recovers all four, so File Info exists by Finale 3.7.2,
+and that release is also the earliest that writes the modern inserts reading those fields. It is
+the earliest release *available here* whose dialog offers them, which makes it a ceiling on the
+arrival rather than the arrival itself. Testing an earlier release needs an earlier release.
+
+**The upper end is answered by `F2002-fileinfo-text.mus`:** the header offsets still hold in the
+DCL epoch, all four fields recovered and confirmed by its companion, so the move to the text pool
+happens somewhere after Finale 2002. Narrowing it further would need a Finale 2005, 2006 or 2007
+document with the fields filled, and the reader needs no answer to work — it fills from the
+header only what the pool did not supply.
+
+**A correction to how this request was framed.** It claimed no corpus could speak to the DCL
+placement because no *fixture* had File Info filled in. That confused the tracked fixtures with
+the surveyed corpora, which do contain documents of that range carrying at least some of the
+fields. The reasoning holds only for the lower bound, where an unfilled dialog and an absent
+dialog leave identical bytes; it never held for the placement question, which any filled document
+of the era settles.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.

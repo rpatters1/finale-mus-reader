@@ -959,6 +959,102 @@
 - **Artifacts:** `src/import/support/enigma_text.cpp`, `tests/text_pool_tests.cpp`,
   `tests/evidence/F2011/F2011-text-inserts.mus`, [`FORMAT_NOTES.md`](FORMAT_NOTES.md#the-text-pool).
 
+## 2026-08-18 — The Coda-banner pool walk, and how little text that era actually gives us
+
+- **Defect:** the container's Coda-banner walk ended on the first pool with zero pages. A Finale 1.0.0 document
+  reported **one** block where it has three, because its details pool is empty; its entries pool and the text
+  region behind it were unreachable.
+- **Fix:** an empty pool is an ordinary pool. The page size is the only thing that identifies a prologue, and the
+  chain needs no terminator of its own — what follows the last pool is the text region, whose first four bytes
+  are a chunk length rather than 0x200, so the page-size test ends the walk there anyway. The offset advances by
+  the prologue even for an empty pool, so a run of them cannot spin.
+- **Result:** `F100-baseline.mus` goes from 1 block to 3. No diagnostic changed on any fixture, all 84 still
+  parse, and no existing test asserted the old count. A new synthetic case builds pools of {1, 0, 1} and {0, 0,
+  0} and fails without the fix.
+- **The finding that matters more than the fix.** The era's text region is two length-prefixed chunks, and they
+  are empty in all 26 tracked documents — but that is not why recovery is blocked. Block text lives in the `HT`
+  others family, and `F263-baseline.mus` holds it plainly: `TITLE`, `Licensed by ASCAP`, `One Lincoln Plaza`,
+  `New York, NY  10023`, `All rights reserved.` and a composer and copyright line, in NUL-terminated runs
+  alternating with binary layout rows. Finale 27 recovers all eleven blocks and seventeen expressions from it.
+- **The corpus is thinner here than its count suggests, and this is the reason to ask for fixtures rather than
+  keep looking.** All 21 Finale 1.0.0 documents contain no text at all — their companions carry only Finale 27's
+  `Score` part name, which is PartDefinition's and is not yet imported — and the five Finale 2.6.3 documents are five saves of one document. The era has
+  **one** text specimen. A companion names what the answer should be but cannot separate the text bytes from the
+  layout bytes woven through them; only a controlled one-variable edit does that.
+- **Observation — the two releases spell the region markers differently.** Finale 1.0.0 writes `^text \0` and
+  `^lyric \0`; Finale 2.6.3 writes `^text()` and `^lyrics()`. Singular against plural, and a space-plus-NUL
+  against parentheses. That is reason enough not to assume one `HT` layout covers both.
+- **Observation — File Info's lower boundary is unanswerable from any corpus.** An unfilled dialog leaves the
+  same empty header offsets as a dialog that does not exist, and only three tracked documents anywhere have the
+  fields filled. The arrival may be around Finale 3.7 rather than earlier, which would make the header offsets
+  meaningless for every release before it.
+- **Next evidence:** X6 and X7 in [`EVIDENCE_REQUESTS.md`](EVIDENCE_REQUESTS.md).
+- **Artifacts:** `src/container/mus_container.cpp`, `tests/reader_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#the-coda-banner-epoch).
+
+## 2026-08-18 — Four fixtures open the Coda-banner text, and a third pool framing appears
+
+- **Question:** the previous entry ended with the pool walk fixed and the `HT` framing undecoded, and with the
+  observation that the era had exactly one text specimen. Four Finale 1.0.0 documents were authored to answer it.
+- **Result — block text is `HT` plus `HS`, one pair per block.** `HT` holds the characters in four consecutive
+  incidences, 48 bytes, ending at the first NUL; `HS` holds the style, keyed so that incidence n describes the nth
+  `HT` record of the same comparator. `HS` word 2 packs the font comparator above the point size, word 3 is the
+  `nfx` mask, word 4 is an insert argument and word 5 selects the insert.
+- **What proved style is not in `HT`:** two blocks of the Finale 2.6.3 document differ in size and style — 14/1
+  against 12/0 — while sharing a byte-identical `HT` trailer. Whatever that trailer holds, it is not this.
+- **The controlled pair did the work a companion cannot.** `F100-short-text` and `F100-long-text-w-insert` differ
+  in one block's string, and exactly two records move between them. That is what says a block is those two records
+  and nothing else, and what showed the record is a fixed four incidences either way, so a shortened string leaves
+  the previous save's bytes behind the terminator.
+- **One insert character, three inserts.** `#` converts to `^page`, `^date` or `^time` depending on `HS` word 5,
+  with word 4 as the argument in each case. `F100-text-other-inserts` is what separates them. **Believed** rather
+  than established: three observations cannot distinguish a two-bit field from two independent flags, so an
+  unlisted value keeps the character and reports it.
+- **Lyric text is elsewhere again** — in the text region behind the pools, spelled out, where the `^text` chunk
+  beside it is empty even in documents that plainly have block text. `F100-lyric-text` is the only document of the
+  era anywhere with lyrics, and it forced one converter fix: an `^efx` run written spaced apart is still one run
+  and still one `^nfx`, with the spaces belonging before the command.
+- **A third pool framing, from `F372-fileinfo-text`.** Finale 3.7.2 keeps one pool stream divided by the ETF
+  section markers themselves, `^text` and `^lyrics`, and **a record has no terminator**: it runs to the next
+  record, to the next marker, or to the end of the stream. Finale 97 drops the markers and closes records with
+  `^end`. The reader tells them apart by reading the opening bytes, because the boundary falls inside the
+  uncompressed epoch and no epoch gate can express it.
+- **Observation — File Info is bounded, not dated.** That release carries all four fields at the header offsets
+  and is the earliest available whose dialog offers them. That is a ceiling on the arrival and not the arrival:
+  no earlier release is available to test, and no corpus can settle it at any size, because an unfilled dialog
+  leaves the same empty offsets as a dialog that does not exist.
+- **A caution the fixture earned.** An intermediate save of that document lost both block texts, from the MUS and
+  the ETF alike, leaving five lyric records where seven text items had been entered. The file was structurally
+  valid and nothing announced the loss. Finale of this vintage under emulation can corrupt a document silently.
+- **Artifacts:** `src/import/texts/coda_texts.cpp`, `src/import/texts/text_pool.cpp`,
+  `src/import/support/enigma_text.cpp`, `tests/text_pool_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#the-coda-banner-epoch).
+
+## 2026-08-18 — Bookmarks, and two deferrals stated as deferrals
+
+- **Question:** `BookmarkText` was the one text class with no located source. Does Finale 2012 pool it, and is the
+  pooled text Unicode?
+- **Result — yes to both.** From Finale 2012 a bookmark is an ordinary text-pool record, keyword `bookmark`,
+  `^end`-terminated and carrying no style commands. Its text is UTF-8, shown rather than inferred: `c3 bc` is the
+  u-umlaut of `Page über` and `c2 ab c2 bb` the guillemet pair of `Scroll «» Bookmark`. The same characters are
+  one byte each in every earlier era, which is what makes it a measurement — the guillemets settled the lyric
+  punctuation code page the same way, as `c7 c8` in Mac Roman.
+- **Before that it is the `BK` others family**, comparators from 0x8000 up, in the same shape the Coda era uses
+  for block text: 48 bytes of string across four incidences, then two numeric incidences. The text pool of such a
+  document holds no bookmark at all.
+- **Two deferrals, both asserted rather than assumed.** `BK` is not read until the bookmark class is imported, and
+  the `DT` expression text of the fixed-row eras is not read until `TextExpressionDef` is. In both cases the text
+  without the class behind it would claim more coverage than it has. The synthesis that existed for `DT` was
+  removed rather than switched off, and tests assert that both eras produce nothing, so reinstating either is a
+  deliberate act.
+- **Unverified: that the move into the pool belongs to the Unicode project.** It fits, but the boundary has not
+  been tested inside Finale 2012, and a point release may have changed it. Nothing turns on it while the reader
+  takes whichever form the document presents — a missing answer is possible, a wrong one is not.
+- **Observation — comparators are not stable across an upgrade.** The same two bookmarks are 1 and 2 before and
+  2 and 3 after.
+- **Artifacts:** `src/import/texts/text_pool.cpp`, `tests/text_pool_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#bookmarks).
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

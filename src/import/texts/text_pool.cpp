@@ -82,6 +82,11 @@ constexpr TextKeyword textKeywords[] = {
     textKeyword<musx::dom::texts::LyricsChorus>("chorus"),
     textKeyword<musx::dom::texts::LyricsSection>("section"),
     textKeyword<musx::dom::texts::SmartShapeText>("smartshape"),
+    // A bookmark's text carries no style commands of its own, and musxdom documents any Enigma
+    // insert appearing in one as meaningless. It is read through the same converter regardless:
+    // the record still needs its bytes decoded through a code page, and a caret still has to
+    // survive as an escaped one.
+    textKeyword<musx::dom::texts::BookmarkText>("bookmark"),
     textKeyword<musx::dom::texts::ExpressionText>("expression"),
     // File Info starts out in the header and becomes ordinary pool records in a later era.
     // Where in between the move happens does not matter here: the header pass fills in only
@@ -110,7 +115,50 @@ struct RawRecord
 };
 
 /// @brief Reads the chunk beginning at @p at, or nothing when the bytes are not one.
-std::optional<RawRecord> readRecord(std::span<const std::uint8_t> stream, std::size_t at)
+/// @brief The length of a section marker at @p at, or zero when there is none.
+/// @details The earliest streams divide themselves into sections with a bare `^text` and
+/// `^lyrics`, a keyword carrying no comparator. Finale 97 drops them, each record naming its
+/// own kind. They say nothing a record does not, so they are skipped rather than read; what
+/// they are needed for is telling the two framings apart.
+std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at)
+{
+    if (at >= stream.size() || stream[at] != '^') {
+        return 0;
+    }
+    std::size_t cursor = at + 1;
+    while (cursor < stream.size() && isLetter(stream[cursor])) {
+        ++cursor;
+    }
+    if (cursor == at + 1 || (cursor < stream.size() && stream[cursor] == '(')) {
+        return 0;
+    }
+    return cursor - at;
+}
+
+/// @brief Whether a record of a kind this reader knows begins at @p at.
+/// @details Used to find the end of a record in the framing that has no terminator. Only a
+/// known keyword ends a record: the body is full of commands that also open with a caret, and
+/// an unknown keyword is more likely to be one of those than a record.
+bool startsKnownRecord(std::span<const std::uint8_t> stream, std::size_t at)
+{
+    if (at >= stream.size() || stream[at] != '^') {
+        return false;
+    }
+    std::size_t cursor = at + 1;
+    while (cursor < stream.size() && isLetter(stream[cursor])) {
+        ++cursor;
+    }
+    if (cursor >= stream.size() || stream[cursor] != '(') {
+        return false;
+    }
+    const std::string_view keyword(
+        reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
+    return std::any_of(std::begin(textKeywords), std::end(textKeywords),
+        [&](const TextKeyword& entry) { return entry.keyword == keyword; });
+}
+
+std::optional<RawRecord> readRecord(
+    std::span<const std::uint8_t> stream, std::size_t at, bool terminated)
 {
     if (at >= stream.size() || stream[at] != '^') {
         return std::nullopt;
@@ -150,6 +198,18 @@ std::optional<RawRecord> readRecord(std::span<const std::uint8_t> stream, std::s
     // caret cannot begin `^end` either without the first having consumed it.
     const std::string_view remaining(
         reinterpret_cast<const char*>(stream.data() + cursor), stream.size() - cursor);
+    if (!terminated) {
+        // No terminator in this framing: a record runs to the next one, to the marker that
+        // opens the next section, or to the end of the stream.
+        std::size_t end = cursor;
+        while (end < stream.size() && !startsKnownRecord(stream, end)
+            && sectionMarkerAt(stream, end) == 0) {
+            ++end;
+        }
+        record.body = stream.subspan(cursor, end - cursor);
+        record.next = end;
+        return record;
+    }
     const auto terminator = remaining.find(recordTerminator);
     if (terminator == std::string_view::npos) {
         return std::nullopt;
@@ -197,6 +257,12 @@ void rememberTextPoolName(std::vector<std::string>& list, std::string_view value
 
 void importTextPool(const ImportContext& context)
 {
+    // The Coda-banner epoch's text stream is length-prefixed chunks rather than
+    // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
+    // `importCodaTexts` reads both; walking them here would only report a malformed pool.
+    if (context.profile.epoch == FormatEpoch::CodaBanner) {
+        return;
+    }
     const auto stream = context.index.getTexts();
     if (stream.empty()) {
         return;
@@ -209,12 +275,22 @@ void importTextPool(const ImportContext& context)
         versions::storesUnicodeCodepoints(context.profile.version),
         text::platformCodePage(context.profile.platform)};
 
+    // The stream states which of the two framings it uses. The earliest one opens with a
+    // `^text` section marker and terminates a record with the start of the next; Finale 97
+    // drops the markers and closes each record with `^end`. Reading the opening bytes is what
+    // keeps this off a version range, and off the epoch, which spans both.
+    const bool terminated = sectionMarkerAt(stream, 0) == 0;
+
     std::vector<std::uint8_t> unknownCodes;
     std::vector<std::string> unknownEffects;
     std::vector<std::string> unknownKeywords;
     std::size_t at = 0;
     while (at < stream.size()) {
-        const auto record = readRecord(stream, at);
+        if (const auto marker = sectionMarkerAt(stream, at)) {
+            at += marker;
+            continue;
+        }
+        const auto record = readRecord(stream, at, terminated);
         if (!record) {
             // Stopping is deliberate. The chunks are packed end to end with nothing between
             // them, so bytes that are not a chunk mean the stream is not a text pool, and

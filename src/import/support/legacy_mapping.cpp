@@ -47,8 +47,8 @@ const std::vector<ClassImporter>& registeredImporters()
         // texts, after others so that a font command in a text block resolves against the
         // font definitions the source itself supplies rather than against nothing.
         &texts::importTextPool,
-        &texts::importExpressionTexts,
         &texts::importFileInfoTexts,
+        &texts::importCodaTexts,
         // options
         &options::importClefOptions,
         &options::importFontOptions,
