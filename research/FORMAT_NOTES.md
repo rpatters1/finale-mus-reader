@@ -2025,9 +2025,11 @@ one boundary:
 | `15` | `0x001d` | present in every era; word 1 usable from Finale 3.x | `maxHyphenSeparation` |
 | `29` | `0x002b` | **every era, including the Coda banner** | `wordExtVertOffset`, the dialog's "Lift" |
 | `30` | `0x002c` | **every era, including the Coda banner** | `wordExtHorzOffset`, the dialog's "Push" |
+| `34` | `0x0030` | present in every era; word 5 usable from Finale 2004 | `useSmartWordExtensions` |
 | `35` | `0x0031` | present in every era; word 5 usable from Finale 2004 | `useSmartHyphens` |
 | `55` | `0x0045` | Finale 2004 | the nine word-extension connection styles |
-| `57` | `0x0047` | Finale 2004 | `smartHyphenStart`, `wordExtMinLength`, `wordExtOffsetToNotehead` |
+| `57` | `0x0047` | Finale 2004 | `smartHyphenStart`, `wordExtNeedUnderscore`, `wordExtMinLength`, `wordExtOffsetToNotehead` |
+| `58` | `0x0048` | Finale 2011, and the record grows to say so | the three `showAutoNumbersOn…` flags and `lyricAutoNumType` |
 | `67` | `0x0051` | Finale 3.x | `wordExtLineWidth` |
 | `87` | `0x0065` | Finale 2000 | the four syllable position styles |
 
@@ -2144,17 +2146,40 @@ the fourth field of the six-word row that already holds `smartHyphenStart`, `wor
 `wordExtOffsetToNotehead`. The reader recovers it from Finale 2012 and asserts the era's behaviour before that; both
 branches agree with their companions on all 1,189 documents, with no read failure.
 
-The boundary is **Finale 2012 itself**, which is later than the class's other boundaries and was not obvious:
+The boundary is **Finale 2011**, and getting there took a correction worth recording, because the reference corpus
+alone gave the wrong answer:
 
-| Release | Selector 57 word 4 | Companions: not ignored | ignored |
-|---|---|---:|---:|
-| Coda-banner through Finale 2003 | record absent | 454 | 0 |
-| Finale 2004 through Finale 2010 | 0 in every document | 487 | 0 |
-| **Finale 2012** | **0** | 0 | **198** |
-| **Finale 2012** | **1** | **50** | 0 |
+| Release | Selector 57 word 4 | Companions: not ignored | ignored | Survey |
+|---|---|---:|---:|---|
+| Coda-banner through Finale 2003 | record absent | 454 | 0 | reference |
+| Finale 2004 through Finale 2010 | 0 in every document | 487 | 0 | reference |
+| **Finale 2010** | **0** in all 22 | 22 | 0 | installs |
+| **Finale 2011** | **1** in all 597 | 597 | 0 | installs |
+| Finale 2012 | 0 | 0 | 198 | reference |
+| Finale 2012 | 1 | 50 | 0 | reference |
 
-So the word exists for eight releases before it means anything, and reading it early would switch edge punctuation
-off for all 487 of those documents against every one of their companions. That is what the version gate prevents.
+So the word exists for seven releases before it means anything, and reading it early would switch edge punctuation
+off for all 941 of those documents against every one of their companions. That is what the version gate prevents.
+
+**The reference corpus contains no Finale 2011 document at all**, so a boundary read off it is an interpolation
+across that gap — and this reader had the gate at Finale 2012 until MakeMusic's own manuals contradicted it. The
+Finale 2010 Document Options-Lyrics dialog has neither "Ignore Syllable Edge Punctuation" nor a "Punctuation to
+Ignore" field; the Finale 2011 dialog has both; and the Finale 2012 manual's "Finale 2011 Interface Changes" page
+states the feature arrived in 2011 outright. The installs survey then confirms it at exactly that line, all 22 of
+its companion-backed Finale 2010 documents carrying 0 and all 597 Finale 2011 ones carrying 1.
+
+The lesson is not that the corpus was wrong but that it was *silent*, and silence read as a boundary. The gap had
+even been written down at the time — "Finale 2011 is absent from this corpus" — and the gate was still coded to the
+nearest release that was present.
+
+A generalization to avoid here, because the corpus invites it and a fixture contradicts it: all 597 companion-backed
+Finale 2011 documents carry 1, and it is tempting to read that as the release's default. It is not.
+`tests/evidence/F2011/F2011-baseline.mus`, created new in Finale 2011, carries **0** — a document made in that
+release ignores edge punctuation by default. The 597 are Finale's own sample and template files, authored earlier
+and converted into the release, and conversion switches ignoring off to preserve the older look. That is the same
+behaviour the Finale 2012 cohort shows, where the 50 documents carrying 1 are the upgraded ones and the 198 born in
+2012 carry 0. **A corpus of one vendor's shipped content is not a sample of what a release writes for a new
+document.**
 
 `tests/evidence/F2012/F2012-lyropts-noign-punct.mus` closes it with a controlled one-variable save, and confirms the
 mapping predicted from the corpus before the fixture existed: clearing the checkbox moves byte 8 of class `0x0047`
@@ -2207,6 +2232,20 @@ in twelve-byte chunks, and the terminator rather than the chunking is what the d
 would arrive as UTF-16 surrogate pairs and are handled, though nothing exercises that: every character of the stock
 set and of the fixture is in the basic multilingual plane.
 
+**The tail has two layouts, and the Unicode release is the boundary.** Finale 2012 stores one 16-bit code unit per
+character; **Finale 2011 stores packed 8-bit bytes in the saving platform's code page**. Neither can be read as the
+other: both controlled containers are little-endian, so decoding the Finale 2011 byte string through the word path
+would transpose every pair of characters.
+
+`tests/evidence/F2011/F2011-lyric-punct.*` settles the older layout and its encoding together, and it exists because
+a Finale 2011 installation was obtained for the question — no survey had an authored document of that release, and
+0 of the 597 shipped ones carries a tail at all. Its list is `#@%&«»` and its tail is `23 40 25 26 c7 c8`, six bytes
+in string order rather than three words. **The last two bytes are what make the code page a measurement rather than
+an assumption**: `0xc7 0xc8` is the guillemet pair in Mac Roman and `ÇÈ` in Windows-1252, and the companion reads the
+guillemets. The reader takes the bank from the document's own platform, as it does for a font definition carrying no
+charset of its own — the only source available, since this text belongs to no font record — and this is the one
+specimen anywhere that tests that choice for this field.
+
 **Finale writes the tail on the list, not on the switch.** `F2012-lyropts-noign-punct.mus` turns ignoring off and
 leaves the list stock, and its record stays twelve bytes; the tail appears only when the list itself differs.
 
@@ -2219,6 +2258,36 @@ The fixture also carries an unasked-for change worth keeping: Finale rewrote the
 the dialog closed, giving five of its nine styles a vertical offset of 5 and a sixth an offset of 1. That makes it a
 second non-default specimen for a collection that otherwise rests on one Finale 2006 document.
 
+#### Automatic lyric numbering, and a record that states its own layout
+
+**Confirmed.** Automatic lyric numbering arrives with **Finale 2011** — the Finale 2010 lyric dialog has no such
+option and the Finale 2011 one does — and its four fields occupy words 6 to 9 of **selector `58`**: the three
+`showAutoNumbersOn…` switches and then `lyricAutoNumType`. musxdom's `AutoNumberingAlign` is in the legacy order,
+`None` then `Align`, so the type passes through untranslated.
+
+**This one needs no version gate, because the record states its own layout.** Selector 58 is six words in every era
+before Finale 2011 and twelve from it on. Every fixed-row fixture carries six; the Finale 2007 class record carries
+twelve bytes; the Finale 2011 and 2012 ones carry twenty-four. The installs survey confirms the marker exactly at
+the boundary: **all 22 companion-backed Finale 2010 documents carry twelve bytes and all 597 Finale 2011 ones carry
+twenty-four.** That contrast with the edge-punctuation setting a few paragraphs up is worth keeping — that field
+had to take a version range because its record does not change shape, and the range was wrong for a year of
+releases until the manuals corrected it. This field's record changes shape, so nothing has to be inferred about
+which release a file came from.
+
+Three booleans and an enum cannot be separated by saves that each move one thing, because four fields need four
+distinct signatures. The three tracked Finale 2011 saves carry a binary code instead — the type moves only in the
+first, Verses in the first and second, Choruses in the first and third, Sections in all three — so every field has
+a unique pattern and none can be mistaken for another.
+
+A document with the short record shows no automatic numbers at all, and the three switches are asserted false on the
+same footing as the smart-lyric group. `lyricAutoNumType` is left to the baseline, because the numbering type of a
+document that displays no numbers means nothing and the baseline already carries what every companion of every era
+shows.
+
+All three saves also add one class-detail record, `0x0455` at cmper 1/1, identical in each. It is not part of this
+class — the switches are entirely in selector 58 — and appears to be per-lyric state that numbering being in use
+creates. It is noted for whichever class reaches it, not read here.
+
 #### Two boundaries that are gates rather than markers, and why
 
 Neither collection has a size that states which layout a file is in, because neither has two layouts: a document
@@ -2229,11 +2298,41 @@ fixtures store values such as 16128 and 16448 in it, and one controlled Finale 1
 first two words. Reading that as the connection table would fabricate nine styles out of another option's bytes, so
 the epoch is excluded outright and the word count guards it a second time.
 
-Selector `35` word 5 is the other qualified case. The word exists in every era and is zero in every document before
+Selectors `34` and `35` word 5 are the other qualified cases, and they behave identically. The word exists in every era and is zero in every document before
 Finale 2004 and set in every one after, while every companion of every era switches smart hyphens on. That is what
 an option arriving with a default of *on* looks like from before it existed, so reading the word on an older
-document would turn smart hyphens off for the whole pre-2004 corpus. The reader gates it on selector `57`, which
-arrives with the same release, and leaves the earlier era to the baseline — which already says on.
+document would turn smart hyphens off for the whole pre-2004 corpus. The reader gates both on selector `57`, which arrives with the same release. The Finale 2.6.3 fixture removes any
+doubt about selector `34`: it stores **12** in that word, which is no boolean at all.
+
+Two controlled Finale 2004 saves name the switches. `F2004-lyropts-nosmart-wext.*` moves selector 34 word 5 from 1
+to 0 and its companion loses `<useSmartWordExtensions/>`; `F2004-lyropts-needuscore.*` moves selector 57 **word 1**
+from 0 to 1 and its companion gains `<wordExtNeedUnderscore/>`. Both are confirmed on record, ETF and companion
+together. The Finale 2004 dialog words the underscore setting the opposite way round and unclearly, and Finale had
+reworded it to match the modern boolean by Finale 2012; the companion settles the sense rather than the wording, and
+the stored value needs no inversion. That also fills the last unexplained word of the selector 57 record — word 1
+had been noted as zero everywhere and was once a candidate for a punctuation-list reference — leaving only **word
+5** of that record unassigned.
+
+#### Why all three smart-lyric switches are forced off before Finale 2004
+
+**Smart hyphens, smart word extensions and the underscore requirement arrive together with Finale 2004**, so all
+three are false for an earlier document rather than merely unstated, and the reader asserts them rather than
+inheriting the baseline. The words that carry them are zero in every earlier document whether the option is off or
+has not been invented yet, so reading them would be reading nothing.
+
+**The reason is about what this reader can produce, and it is worth stating plainly because it is the class's only
+deliberate disagreement with Finale 27.** Smart hyphens and smart word extensions are not standalone settings:
+each is implemented as smart shapes — hyphen smart shapes for the one, word-extension smart shapes for the other.
+Finale 27 manufactures those during its upgrade, which is exactly why every pre-2004 companion comes back with
+`<useSmartHyphens/>` and
+`<useSmartWordExtensions/>`, and why the pinned baseline switches both on. **This reader does not manufacture
+them.** Leaving the switches on would describe a document it has not built — an option claiming a rendering that
+nothing in the imported pools can draw. The honest value is false, and a future coverage survey will report a
+systematic companion mismatch on every pre-2004 document as a result. That is intended.
+
+The underscore requirement is the quiet member of the group, since baseline and companions already leave it false;
+it is asserted on the same footing as `MultimeasureRestOptions::noHorizontalStretch`, because the era's behaviour
+is known rather than inherited.
 
 #### What the Coda-banner epoch recovers, and what remains open
 

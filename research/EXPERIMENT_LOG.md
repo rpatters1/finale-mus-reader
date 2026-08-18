@@ -721,6 +721,64 @@
   [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
   [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
 
+## 2026-08-17 — The edge-punctuation boundary was Finale 2011, and the corpus never said 2012
+
+- **Question:** The reader gated syllable edge punctuation at Finale 2012. The repository owner found release notes
+  saying the new lyrics features arrived in **Finale 2011**, which would make the gate wrong and, worse, would put
+  the punctuation list in a pre-Unicode release.
+- **Method:** Corroborated online against MakeMusic's own manuals before looking at any data, at the owner's
+  direction, then ran the Finale 2011 cohort of the installs survey — the population the reference corpus lacks.
+- **Observation — the manuals bracket it from both sides.** The Finale 2010 Document Options-Lyrics dialog has
+  neither "Ignore Syllable Edge Punctuation" nor a "Punctuation to Ignore" field; the Finale 2011 dialog has both,
+  plus "Automatic Lyrics Numbers"; and the Finale 2012 manual's "Finale 2011 Interface Changes" page says the
+  punctuation feature arrived in 2011 outright. The same page records that "Create Automatically When Notes Follow
+  Without Lyrics" was renamed "Only Create on Lyrics with Underscores", which is the rewording the owner had
+  described. The Finale 2011 What's New page independently confirms **Smart Hyphens and Word Extensions arrived in
+  Finale 2004**, which is the boundary this reader already had from fixtures.
+- **Observation — the installs survey confirms it at exactly that line.** All 22 companion-backed Finale 2010
+  documents carry 0 in selector 57 word 4; all 597 companion-backed Finale 2011 documents carry 1. The gate moved
+  to major 16.
+- **How the wrong boundary got in, which is the part worth keeping.** The reference corpus contains **no Finale
+  2011 document at all**. It has Finale 2010 and Finale 2012 and nothing between, so "the boundary is Finale 2012"
+  was an interpolation across a gap presented as a measurement. The gap had even been written down at the time --
+  the notes said "Finale 2011 is absent from this corpus" -- and the gate was still coded to the nearest release
+  that happened to be present. A corpus that is silent about a release does not say the release is on either side
+  of a line, and silence is easy to read as evidence when every document that *is* present agrees.
+- **The punctuation list could not follow the switch, until the owner installed Finale 2011 and made the specimen.**
+  0 of the 597 shipped Finale 2011 documents carries a tail, so the release's encoding was unknowable from any
+  survey. `F2011-lyric-punct.mus` settles it: **the tail is packed 8-bit bytes in the platform code page**, where
+  Finale 2012 writes one 16-bit code unit per character. Both containers are little-endian, so the two layouts are
+  not variants of one rule -- reading the 2011 byte string through the word path transposes every pair of
+  characters.
+- **The two non-ASCII bytes are what turn the code page from an assumption into a measurement.** The list is
+  `#@%&«»`; the tail is `23 40 25 26 c7 c8`; `0xc7 0xc8` is the guillemet pair in Mac Roman and `ÇÈ` in
+  Windows-1252, and the companion reads the guillemets. The reader takes the bank from the document's own platform,
+  as it does for a font definition carrying no charset, and this is the only specimen anywhere that tests that
+  choice for this field. A fixture with an ASCII-only list would have confirmed the packing and left the encoding
+  exactly as open as before.
+- **A second corpus generalization corrected by the same fixture.** All 597 shipped Finale 2011 documents carry the
+  switch set, and reading that as the release's default would have been wrong: `F2011-baseline.mus`, created new in
+  Finale 2011, carries it clear. The 597 are Finale's own sample content, authored earlier and converted into the
+  release, and conversion switches ignoring off to preserve the older look -- the same behaviour the Finale 2012
+  cohort's 50 upgraded documents show. A corpus of one vendor's shipped content is not a sample of what a release
+  writes for a new document.
+- **Automatic lyric numbering, located the same day by three coded saves.** Neither survey could reach it --
+  `lyricAutoNumType` is `align` in all 597 Finale 2011 documents and the three `showAutoNumbersOn...` flags are set
+  in no document of any era, anywhere -- so it was always going to be a fixture question. Three booleans and an enum
+  cannot be separated by saves that each move one thing, because four fields need four distinct signatures, so the
+  three saves carried a binary code instead: the type moves only in the first, Verses in the first and second,
+  Choruses in the first and third, Sections in all three. All four fields fell out unambiguously in **words 6 to 9
+  of selector 58**.
+- **And that record states its own layout, so it needs no version gate.** Selector 58 is six words in every era
+  before Finale 2011 and twelve from it on; the installs survey splits at exactly that line, twelve bytes in all 22
+  companion-backed Finale 2010 documents and twenty-four in all 597 Finale 2011 ones. The contrast with edge
+  punctuation in the same class is the useful part: that field had to take a version range because its record does
+  not change shape, and the range was wrong for a year of releases until the manuals corrected it. A record that
+  changes shape asks nothing about which release wrote it.
+- **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/mapping_tests.cpp`,
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#lyric-options),
+  [`data/lyric_options_mapping.csv`](data/lyric_options_mapping.csv).
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

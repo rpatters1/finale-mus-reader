@@ -1094,14 +1094,20 @@ void testLyricEdgePunctuationVersionGate()
             field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin);
     };
 
-    const auto [twelve, twelveOrigin] = runAt(17);
-    expectMapping(twelve->lyricUseEdgePunctuation && twelveOrigin == ValueOrigin::LegacyMus,
-        "A Finale 2012 document did not read edge punctuation from selector 57 word 4");
+    // Finale 2011 is the first release that stores it, and Finale 2012 keeps doing so.
+    for (const std::uint8_t major : {std::uint8_t{16}, std::uint8_t{17}}) {
+        const auto [live, origin] = runAt(major);
+        expectMapping(live->lyricUseEdgePunctuation && origin == ValueOrigin::LegacyMus,
+            "A Finale 2011-or-later document did not read edge punctuation from selector 57"
+            " word 4");
+    }
     // Finale 2010 by version, on a record carrying the very same word. The era has no such
     // setting, so the word means nothing and the answer must come from era behavior instead.
-    const auto [ten, tenOrigin] = runAt(16);
+    // All 22 companion-backed Finale 2010 documents of the installs corpus carry 0 here while
+    // all 597 Finale 2011 ones carry 1, which is where the boundary comes from.
+    const auto [ten, tenOrigin] = runAt(15);
     expectMapping(ten->lyricUseEdgePunctuation && tenOrigin == ValueOrigin::LegacyBehavior,
-        "A pre-Finale-2012 document read a word its era does not use");
+        "A pre-Finale-2011 document read a word its era does not use");
     // And a zlib document whose version could not be recovered falls to the same era behavior,
     // which is the right answer for every release but one.
     const auto document = makeLyricDocument();
@@ -1119,6 +1125,58 @@ void testLyricEdgePunctuationVersionGate()
             && field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin
                 == ValueOrigin::LegacyBehavior,
         "A zlib document with no recoverable version did not fall back to era behavior");
+}
+
+// The punctuation tail is readable only where its encoding is verified. Finale 2011 stores the
+// switch but predates Unicode, and no document of that release carries a tail for anyone to
+// check against, so a tail found there is reported and left rather than guessed at.
+void testLyricPunctuationTailEncodingGate()
+{
+    using Lyrics = musx::dom::options::LyricOptions;
+    // Selector 57 with a four-character tail, the shape the Finale 2012 fixture carries.
+    // Word 6 onward differs by era, so each version is given the layout its release writes:
+    // 16-bit code units for Finale 2012, packed bytes for Finale 2011. Little-endian in both,
+    // which is what makes the transposition hazard real rather than theoretical.
+    const std::vector<std::int16_t> unicodeTail{1, 0, 38, 1, 1, 0, 0x23, 0x40, 0x25, 0x26, 0, 0};
+    const std::vector<std::int16_t> byteTail{
+        1, 0, 38, 1, 1, 0, static_cast<std::int16_t>(0x4023),
+        static_cast<std::int16_t>(0x2625), 0, 0, 0, 0};
+    const auto runAt = [&](std::uint8_t major) {
+        const auto parsed = makeClassContainer(0x0047,
+            major >= 17 ? unicodeTail : byteTail, ByteOrder::LittleEndian);
+        const auto document = makeLyricDocument();
+        const auto reference = makeLyricDocument();
+        auto profile = profileFor(major);
+        profile.epoch = FormatEpoch::ZlibLegacy;
+        profile.byteOrder = ByteOrder::LittleEndian;
+        ImportReport report;
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
+            profile, document, reference, report, pending, construction};
+        finale_mus_reader::options::importLyricOptions(context);
+        return std::make_pair(document->getOptions()->get<Lyrics>(), report);
+    };
+
+    const auto [twelve, twelveReport] = runAt(17);
+    expectMapping(twelve->lyricPunctuationToIgnore == "#@%&",
+        "A Finale 2012 tail was not decoded as UTF-16");
+    expectMapping(field(twelveReport, "options.lyricOptions.lyricPunctuationToIgnore").origin
+            == ValueOrigin::LegacyMus,
+        "A decoded Finale 2012 tail was not reported as read");
+
+    // Finale 2011 reads the switch from the same record but stores the tail as packed 8-bit
+    // bytes. Read through the word path these same bytes would come back transposed, which is
+    // what this half of the test pins: the words above hold 0x2340, 0x2526 and so on, so a
+    // reader that treated them as code units would produce the pairs in the wrong order.
+    const auto [eleven, elevenReport] = runAt(16);
+    expectMapping(eleven->lyricUseEdgePunctuation,
+        "A Finale 2011 document did not read the edge punctuation switch");
+    expectMapping(eleven->lyricPunctuationToIgnore == "#@%&",
+        "A Finale 2011 tail was not decoded as packed bytes");
+    expectMapping(field(elevenReport, "options.lyricOptions.lyricPunctuationToIgnore").origin
+            == ValueOrigin::LegacyMus,
+        "A decoded Finale 2011 tail was not reported as read");
 }
 
 // Two lyric settings postdate Finale 2012, the last release this reader opens, so no legacy
@@ -2030,6 +2088,10 @@ void testTextOptionsSymbolInserts()
     }
 }
 
+TEST_CASE("Lyric punctuation tail encoding gate", "[mapping]")
+{
+    testLyricPunctuationTailEncodingGate();
+}
 TEST_CASE("Lyric edge punctuation version gate", "[mapping]")
 {
     testLyricEdgePunctuationVersionGate();

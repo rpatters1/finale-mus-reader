@@ -1569,6 +1569,47 @@ void testLyricOptionsRecovery()
             wrong("alternate hyphen font, which the reader reported without importing"));
     }
 
+    // Two Finale 2004 one-variable saves for the two switches that live on selector 57's
+    // neighbours. Both words exist in every era and mean nothing before Finale 2004, so each
+    // pair is what separates "this document turned the option off" from "this document's era
+    // had no such option".
+    const auto noSmartWext = read("evidence/F2004/F2004-lyropts-nosmart-wext.mus");
+    const auto needUnderscore = read("evidence/F2004/F2004-lyropts-needuscore.mus");
+    const auto f2004Base = read("evidence/F2004/F2004-baseline.mus");
+    expect(f2004Base.document->getOptions()->get<Lyrics>()->useSmartWordExtensions
+            && !noSmartWext.document->getOptions()->get<Lyrics>()->useSmartWordExtensions,
+        "Smart word extensions were not read from selector 34 word 5");
+    expect(!f2004Base.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore
+            && needUnderscore.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore,
+        "The underscore requirement was not read from selector 57 word 1");
+    for (const auto& [result, target] :
+            {std::pair{std::cref(noSmartWext), "options.lyricOptions.useSmartWordExtensions"},
+                std::pair{std::cref(needUnderscore),
+                    "options.lyricOptions.wordExtNeedUnderscore"}}) {
+        expect(field(result.get(), target).origin == ValueOrigin::LegacyMus,
+            std::string("A Finale 2004 lyric switch was not reported as read: ") + target);
+    }
+    // Neither option exists before Finale 2004, so both are known false for an earlier
+    // document rather than merely unstated, and neither word may be read: Finale 2.6.3 stores
+    // 12 in selector 34 word 5, which is no boolean at all.
+    //
+    // Smart word extensions are this class's one deliberate disagreement with Finale 27. Every
+    // pre-2004 companion carries <useSmartWordExtensions/> and the pinned baseline switches it
+    // on, and the reader asserts false anyway, because an upgrade turning a modern feature on
+    // for an old document is not the same as the old document having had it.
+    const auto f263 = read("evidence/F263/F263-baseline.mus");
+    expect(!f263.document->getOptions()->get<Lyrics>()->useSmartWordExtensions
+            && !f263.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore
+            && !f263.document->getOptions()->get<Lyrics>()->useSmartHyphens,
+        "A Coda-banner document claimed a Finale 2004 lyric feature");
+    for (const char* target : {"options.lyricOptions.useSmartWordExtensions",
+             "options.lyricOptions.wordExtNeedUnderscore",
+             "options.lyricOptions.useSmartHyphens"}) {
+        expect(field(f263, target).origin == ValueOrigin::LegacyBehavior,
+            std::string("A pre-Finale-2004 lyric switch was not reported as era behavior: ")
+                + target);
+    }
+
     // Finale 2000 is the first release with a dedicated Lyric Options dialog, and the only
     // one of the legacy enum's three alignments that no corpus document uses is `right`.
     // This fixture supplies it twice over: it sets the first syllable's alignment to Right and
@@ -1659,6 +1700,89 @@ void testLyricOptionsRecovery()
     expect(field(noIgnore, "options.lyricOptions.lyricPunctuationToIgnore").origin
             == ValueOrigin::Finale27Default,
         "A document with no punctuation tail was reported as carrying one");
+
+    // Automatic lyric numbering arrives with Finale 2011 in a record that grew to hold it:
+    // selector 58 is six words before it and twelve after, which is what selects the layout
+    // rather than a version. Three saves carry a binary code across the four fields, so each
+    // has a unique signature and none can be confused with another.
+    using AutoNum = Lyrics::AutoNumberingAlign;
+    struct AutoNumCase
+    {
+        const char* path;
+        bool verses;
+        bool choruses;
+        bool sections;
+        AutoNum type;
+    };
+    const AutoNumCase autoNumCases[] = {
+        {"evidence/F2011/F2011-baseline.mus", false, false, false, AutoNum::Align},
+        {"evidence/F2011/F2011-lyropts-autonum-type.mus", true, true, true, AutoNum::None},
+        {"evidence/F2011/F2011-autonum-vs.mus", true, false, true, AutoNum::Align},
+        {"evidence/F2011/F2011-autonum-cs.mus", false, true, true, AutoNum::Align},
+    };
+    for (const auto& c : autoNumCases) {
+        const auto result = read(c.path);
+        const auto ly = result.document->getOptions()->get<Lyrics>();
+        const auto wrongAt = [&](const char* what) {
+            return std::string("The lyric ") + what + " was wrong for " + c.path;
+        };
+        expect(ly->showAutoNumbersOnVerses == c.verses, wrongAt("verse auto-number switch"));
+        expect(ly->showAutoNumbersOnChoruses == c.choruses,
+            wrongAt("chorus auto-number switch"));
+        expect(ly->showAutoNumbersOnSections == c.sections,
+            wrongAt("section auto-number switch"));
+        expect(ly->lyricAutoNumType == c.type, wrongAt("auto-number type"));
+        for (const char* target : {"options.lyricOptions.showAutoNumbersOnVerses",
+                 "options.lyricOptions.showAutoNumbersOnChoruses",
+                 "options.lyricOptions.showAutoNumbersOnSections",
+                 "options.lyricOptions.lyricAutoNumType"}) {
+            expect(field(result, target).origin == ValueOrigin::LegacyMus,
+                wrongAt("auto-number provenance"));
+        }
+    }
+    // A Finale 2007 document carries the short record, so the same reader must assert the
+    // three switches off rather than read words that are not there. All 22 companion-backed
+    // Finale 2010 documents of the installs survey carry twelve bytes here and all 597
+    // Finale 2011 ones carry twenty-four, which is where the marker comes from.
+    const auto f2007auto = read("evidence/F2007/F2007-lyric-hyphens.mus");
+    const auto f2007Lyrics = f2007auto.document->getOptions()->get<Lyrics>();
+    expect(!f2007Lyrics->showAutoNumbersOnVerses && !f2007Lyrics->showAutoNumbersOnChoruses
+            && !f2007Lyrics->showAutoNumbersOnSections,
+        "A Finale 2007 document claimed automatic lyric numbers");
+    expect(field(f2007auto, "options.lyricOptions.showAutoNumbersOnVerses").origin
+            == ValueOrigin::LegacyBehavior,
+        "A pre-Finale-2011 auto-number switch was not reported as era behavior");
+    expect(f2007Lyrics->lyricAutoNumType == AutoNum::Align
+            && field(f2007auto, "options.lyricOptions.lyricAutoNumType").origin
+                == ValueOrigin::Finale27Default,
+        "A pre-Finale-2011 document did not leave the numbering type to the baseline");
+
+    // Finale 2011 stores the same tail in a different layout, and the pair of fixtures is what
+    // shows they are two layouts rather than one: packed 8-bit bytes in the saving platform's
+    // code page, against Finale 2012's one 16-bit code unit per character. Both containers are
+    // little-endian, so reading the 2011 byte string through the word path would transpose
+    // every pair of characters. The two non-ASCII bytes are what make the code page a
+    // measurement: 0xc7 0xc8 is the guillemet pair in Mac Roman and `ÇÈ` in Windows-1252.
+    const auto f2011punct = read("evidence/F2011/F2011-lyric-punct.mus");
+    const auto f2011Lyrics = f2011punct.document->getOptions()->get<Lyrics>();
+    expect(f2011Lyrics->lyricPunctuationToIgnore == "#@%&\u00ab\u00bb",
+        "The Finale 2011 punctuation tail was not decoded as packed Mac Roman bytes");
+    expect(field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").origin
+                == ValueOrigin::LegacyMus
+            && field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 6,
+        "The Finale 2011 tail was not reported as read, with its byte count");
+    // Its baseline sibling carries no tail and keeps musxdom's own default list, and both
+    // read the switch from the same record: Finale 2011 is where that word becomes live.
+    const auto f2011base = read("evidence/F2011/F2011-baseline.mus");
+    expect(f2011base.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore
+            == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
+        "A Finale 2011 document with no tail did not keep musxdom's default list");
+    for (const auto& r : {std::cref(f2011base), std::cref(f2011punct)}) {
+        expect(!r.get().document->getOptions()->get<Lyrics>()->lyricUseEdgePunctuation
+                && field(r.get(), "options.lyricOptions.lyricUseEdgePunctuation").origin
+                    == ValueOrigin::LegacyMus,
+            "A Finale 2011 document did not read the edge punctuation switch from its record");
+    }
 
     // The ignore list is a variable-length tail on selector 57, written only when it is not
     // the stock set. The controlled fixture sets it to `#@%&`, four characters chosen to share
@@ -1754,16 +1878,25 @@ void testLyricOptionsRecovery()
                }),
         "A Coda-era document reported a word extension connection it never stored");
 
-    // Finale 2003 is the last release before the smart-lyric group, and the smart-hyphen word
-    // it does carry is zero. Reading it would switch smart hyphens off for every document of
-    // that era, against every companion.
+    // Finale 2003 is the last release before the smart-lyric group. All three of its switches
+    // are asserted false rather than read: the words that carry them are zero in that era
+    // whether the option is off or has not been invented yet, so reading them would be reading
+    // nothing, and inheriting the baseline would claim a rendering this reader cannot build.
+    // Smart hyphens and smart word extensions are implemented as hyphen and word-extension
+    // smart shapes, which Finale 27 manufactures on upgrade and this reader does not.
     const auto f2003 = read("evidence/F2003/F2003-baseline.mus");
     const auto f2003Lyrics = f2003.document->getOptions()->get<Lyrics>();
-    expect(f2003Lyrics->useSmartHyphens,
-        "A Finale 2003 document read its smart-hyphen switch from a word its era did not use");
-    expect(field(f2003, "options.lyricOptions.useSmartHyphens").origin
-            == ValueOrigin::Finale27Default,
-        "A pre-Finale-2004 smart-hyphen switch was claimed as read");
+    expect(!f2003Lyrics->useSmartHyphens && !f2003Lyrics->useSmartWordExtensions
+            && !f2003Lyrics->wordExtNeedUnderscore,
+        "A Finale 2003 document claimed a smart-lyric feature its era did not have");
+    for (const char* target : {"options.lyricOptions.useSmartHyphens",
+             "options.lyricOptions.useSmartWordExtensions",
+             "options.lyricOptions.wordExtNeedUnderscore"}) {
+        expect(field(f2003, target).origin == ValueOrigin::LegacyBehavior,
+            std::string("A pre-Finale-2004 smart-lyric switch was not reported as era "
+                        "behavior: ")
+                + target);
+    }
     const auto f2004 = read("evidence/F2004/F2004-baseline.mus");
     expect(f2004.document->getOptions()->get<Lyrics>()->useSmartHyphens
             && field(f2004, "options.lyricOptions.useSmartHyphens").origin

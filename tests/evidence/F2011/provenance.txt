@@ -1,0 +1,74 @@
+Finale 2011 (internal version 16.0), zlib era, little-endian, Mac origin.
+
+Origin: created by the repository owner on a Finale 2011 installation obtained for
+this question. Finale 2011 is the release neither private corpus contains as an
+authored document, and the release this class's boundaries turned out to depend on.
+
+F2011-baseline.mus
+    sha256 00c69d4747833fb9d49162e5cad808f3775d8b85c1b714c656821d998b6eabd5
+    A stock Finale 2011 document. Its selector 57 record is twelve bytes with word 4
+    clear, and its companion carries no <lyricUseEdgePunctuation/> -- so a document
+    created new in Finale 2011 ignores syllable edge punctuation by default.
+    That is worth stating because it corrects a generalization drawn from the installs
+    survey, where all 597 companion-backed Finale 2011 documents carry word 4 set. Those
+    are Finale's own sample and template files, authored before the release and converted
+    into it; conversion preserves the older look by switching ignoring off, exactly as the
+    Finale 2012 cohort's 50 upgraded documents do. A corpus of one vendor's shipped content
+    is not a sample of what the release writes for a new document.
+
+F2011-lyric-punct.mus
+    sha256 0b5b555fdfc92cd2807fad6e62d4143b054a828ace61d1f23f8d82732165f672
+    From F2011-baseline, the punctuation set changed to `#@%&«»` where the last two are
+    the guillemets U+00AB and U+00BB. The direct counterpart of
+    tests/evidence/F2012/F2012-lyric-punct.mus, and the pair is what shows the tail has two
+    layouts rather than one.
+    Its record grows from twelve bytes to twenty-four, the six scalars unchanged, and the
+    tail is `23 40 25 26 c7 c8` -- six bytes in string order, not three 16-bit code units.
+    Finale 2012 writes the same list as one code unit per character. Both containers are
+    little-endian, so reading this byte string through the word path would transpose every
+    pair of characters.
+    The two non-ASCII bytes are what make the code page a measurement rather than an
+    assumption. 0xc7 0xc8 is the guillemet pair in Mac Roman and `ÇÈ` in Windows-1252, and
+    the companion reads the guillemets, so this Mac-origin document is Mac Roman. The reader
+    takes the bank from the document's platform, as it does for a font definition that
+    carries no charset of its own; this is the only specimen anywhere that tests that choice
+    for this field.
+
+Automatic lyric numbering: three saves carrying a binary code
+
+    Finale 2011 adds automatic lyric numbering, and its four fields live in words 6 to 9 of
+    selector 58 -- a record that was six words in every earlier era and is twelve from this
+    release on. The record therefore states its own layout and needs no version gate. The
+    installs survey confirms the marker at exactly the boundary: all 22 companion-backed
+    Finale 2010 documents carry twelve bytes and all 597 Finale 2011 ones carry twenty-four.
+    Three booleans and an enum cannot be told apart by saves that each change one thing and
+    nothing else, because four fields need four distinct signatures. These three saves give
+    each field a unique pattern of which files it moves in, so none can be mistaken for
+    another: the type moves only in the first, Verses in the first and second, Choruses in the
+    first and third, Sections in all three.
+
+F2011-lyropts-autonum-type.mus
+    sha256 c6996ee6764ba83d047146658caf60575916e33fbb5a7861ff0eb46d2d2d51a8
+    From F2011-baseline, automatic numbering set to "Keep with First Syllable in Lyric" and
+    all three of Verses, Choruses and Sections switched on. Words 6-9 become 1, 1, 1, 0, and
+    the companion shows all three switches with <lyricAutoNumType> absent, which is musxdom's
+    `None`. This is the only fixture that moves word 9, so it alone names the type, and it also
+    proves the type passes through untranslated: musxdom's AutoNumberingAlign is in the legacy
+    order, None then Align.
+
+F2011-autonum-vs.mus
+    sha256 dc2a2b87590cce02018ddf83c8f8ad4ca2fd67a94ad713318c86f5f71c32e842
+    From F2011-baseline, Verses and Sections switched on and Choruses left off. Words 6-9
+    become 1, 0, 1, 1.
+
+F2011-autonum-cs.mus
+    sha256 eb742704c65232a2ceb32bc2e04d04f9f5fa849a1461174ee6a69211844eed89
+    From F2011-baseline, Choruses and Sections switched on and Verses left off. Words 6-9
+    become 0, 1, 1, 1. Taken with the previous save this separates all three switches: word 6
+    is the one that moves with Verses alone, word 7 with Choruses alone, and word 8 with both.
+
+    All three saves also add one class-detail record, 0x0455 at cmper 1/1, identical in each.
+    It is not part of LyricOptions -- the switches are entirely in selector 58 -- and appears
+    to be the per-lyric state that numbering being in use creates. It is recorded here because
+    a later class may want it, not because anything here reads it.
+
