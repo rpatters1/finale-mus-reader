@@ -108,7 +108,8 @@ musx::dom::DocumentPtr makeTextDocument()
     auto session = musx::factory::DocumentFactory::begin();
     auto document = session.getDocument();
     auto font = std::make_shared<musx::dom::others::FontDefinition>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 4);
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        musx::dom::Cmper(4));
     font->name = "Times";
     font->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
     font->charsetVal = 0;
@@ -643,8 +644,10 @@ void testSyntheticStreamBoundaries()
 
     // A binary command with no known spelling is dropped from the text and reported, because
     // guessing a name would produce a command that resolves to the wrong thing.
-    const auto unknownCode = importStream(
-        std::string("^block(1)^\xff\x01\x01\x01\x02here^end", 27));
+    // No length: the stream holds no NUL, so the literal measures itself. A hand-counted
+    // length here was wrong by four and read past the end of the array, which every compiler
+    // but the one it was written on refused.
+    const auto unknownCode = importStream("^block(1)^\xff\x01\x01\x01\x02here^end");
     expectText(textOf<BlockText>(unknownCode, 1) == "here",
         "An unknown binary command did not leave the surrounding text intact");
     expectText(hasDiagnosticContaining(unknownCode.report, "0xff"),
