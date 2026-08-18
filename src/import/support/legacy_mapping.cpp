@@ -14,6 +14,7 @@
 #include "import/entries.h"
 #include "import/options.h"
 #include "import/others.h"
+#include "import/texts.h"
 
 namespace finale_mus_reader {
 
@@ -43,6 +44,11 @@ const std::vector<ClassImporter>& registeredImporters()
         &others::importShapeDefinitions,
         // details
         &details::importMeasureGraphicAssignments,
+        // texts, after others so that a font command in a text block resolves against the
+        // font definitions the source itself supplies rather than against nothing.
+        &texts::importTextPool,
+        &texts::importFileInfoTexts,
+        &texts::importCodaTexts,
         // options
         &options::importClefOptions,
         &options::importFontOptions,
@@ -157,8 +163,8 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         value = static_cast<std::int32_t>(combined);
     } else if (source.width == ValueWidth::Byte) {
         // The framework selects one-byte fields through a 16-bit slot and then narrows.
-        // Which half it keeps is still a binary-validation target, so no one-byte mapping
-        // is promoted until a fixture settles it.
+        // **Unverified: which half it keeps.** No one-byte mapping is promoted until a
+        // document settles it.
         value = static_cast<std::int8_t>(static_cast<std::uint16_t>(first->value) & 0xffU);
     } else {
         value = first->value;
@@ -442,7 +448,7 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
 } // namespace
 
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document,
+    std::span<const std::uint8_t> source, const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
     musx::factory::ConstructionContext& construction)
 {
@@ -452,7 +458,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
     PendingReferences pending;
     const ImportContext context{
-        index, profile, document, referenceDocument, report, pending, construction};
+        index, profile, source, document, referenceDocument, report, pending, construction};
     for (const auto importer : registeredImporters()) {
         importer(context);
     }

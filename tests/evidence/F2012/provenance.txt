@@ -109,3 +109,26 @@ F2012-lyropts-noign-punct.mus
     As with F2012-lyric-punct, Finale normalized two things the edit did not ask for as the
     dialog closed -- the word extension connection table gained the same vertical offsets, and
     Lucida Grande and Symbol renumbered from comparators 11 and 13 to 15 and 16.
+
+F2012-bookmarks.mus
+    sha256 f99c887dff9cdaa1b7f1c778160463f86e5018ea5a7629a45294af31fdda6f42
+F2012-bookmarks.musx
+    sha256 cf225d5222cdaffe3081732fab0ac59a9d7f4cc1de7d6de2b8ac71cbf7db7888
+    `tests/evidence/F372/F372-bookmarks.mus` upgraded in Finale 2012 and saved, so
+    the two documents are the same two bookmarks on either side of the boundary.
+
+    It settles two things about the modern form. **Bookmark text is an ordinary
+    text-pool record** from this release, keyword `bookmark`, `^end`-terminated like
+    every other record of the era and carrying no style commands of its own. And
+    **the text is UTF-8**, shown rather than inferred: `c3 bc` is the u-umlaut of
+    `Page über` and `c2 ab c2 bb` is the guillemet pair of `Scroll «» Bookmark`,
+    where the same characters are one byte each in every earlier era.
+
+    The comparators are not stable across the upgrade. The same two bookmarks are 1
+    and 2 in the Finale 3.7.2 companion and 2 and 3 here.
+
+    A caution about the specimen. The upgrade prepended mojibake to the bookmark
+    text, which was removed by hand before this save; the file is therefore an
+    edited artifact rather than a raw conversion. Whether the corruption came from
+    the character encoding or from Enigma tags the upgrade did or did not expect is
+    not established, and this document does not answer it.

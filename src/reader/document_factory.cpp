@@ -4,6 +4,7 @@
 #include "reader/document_factory.h"
 
 #include <memory>
+#include <span>
 #include <utility>
 
 #include "defaults/default_document.h"
@@ -86,6 +87,7 @@ musx::dom::DocumentPtr createDocument(
     profile.platform = report.sourcePlatform;
     applyLegacyMappings(
         records::LegacyRecordIndex::build(parsed), profile,
+        std::span<const std::uint8_t>(data, size),
         document, pinned.referenceDocument, report, session.getConstructionContext());
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every

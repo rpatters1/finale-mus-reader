@@ -128,19 +128,14 @@ constexpr std::size_t earlySlotCount = 32;
 /// been Evpu, and the scalar lengths became Evpu where they had been staff positions. One
 /// marker therefore decides all of them, and it is the collection's own size.
 ///
-/// A version range would work on every file surveyed, so this is a preference rather than a
-/// necessity, and it is the same preference that decides the clef tuple width from its payload
-/// size. Three things recommend it. **The boundary version is unobserved**: no Finale 3.3 or
-/// 3.4 document exists in either corpus, so a range has to guess a cut point between 3.2 and
-/// 3.5 while the slot count is something each file states outright. **One fact decides three
-/// questions**, so the collection size, the connection unit and the scalar unit cannot drift
-/// out of step with each other. And **the Coda era states no version at all in its Windows
-/// documents**, so a version range would have to be split across two tables by epoch to reach
-/// them, where one marker spans both.
-///
-/// The marker splits all 741 fixed-row files of the reference corpus into 69 with 32 slots and
-/// 672 with 128, and every one whose exact Finale 27 companion could be compared agrees with
-/// the unit it predicts: 59 early files and 808 later ones.
+/// A version range would also work, so this is a preference rather than a necessity, and it is
+/// the same preference that decides the clef tuple width from its payload size. Three things
+/// recommend it. **The boundary version is unobserved**: no Finale 3.3 or 3.4 document is
+/// available to place the cut, while the slot count is something each file states outright.
+/// **One fact decides three questions**, so the collection size, the connection unit and the
+/// scalar unit cannot drift out of step. And **the Coda era states no version at all in its
+/// Windows documents**, so a version range would have to be split across two tables by epoch to
+/// reach them, where one marker spans both.
 ///
 /// A source with no connection family at all reads as modern, which is the common case and
 /// the one that leaves values alone rather than scaling them.
@@ -166,20 +161,16 @@ constexpr std::uint16_t beamFlagsSelector = 41;
 constexpr std::uint32_t beamFlagsSlot = 1;
 
 /// @brief Whether this source keeps the reverse-stemming flag alone in its word.
-/// @details The flag's own boundary is not the Finale 3.5 unit boundary. Selector 41 word 1
-/// is exactly zero in every corpus file of Finale 97 and earlier, and carries packed beam
-/// options -- 408, 178, 26 and the like -- from Finale 2000 on. So the word acquires its
-/// other tenants at Finale 2000, and the file says which state it is in: any bit above bit 0
-/// means the packed layout, whose flag the framework places at bit 2.
+/// @details The flag's own boundary is not the Finale 3.5 unit boundary. Selector 41 word 1 is
+/// exactly zero through Finale 97 and carries packed beam options from Finale 2000 on, so the
+/// word acquires other tenants at that release. The file states which layout it is in: any bit
+/// above bit 0 means the packed one, whose flag sits at bit 2.
 ///
-/// A content test rather than a version range, because the Finale 2000 boundary is itself only
-/// an inference from this same observation: what the corpus shows directly is which files carry
-/// a packed word, not which release began writing one. Reading the word is therefore one step
-/// closer to the evidence than dating the file and consulting a boundary derived from it. It
-/// costs nothing when the word is zero, where both spellings answer false, and it can only
-/// mislead on a packed-era file whose beam options are exactly bit 0 alone -- a value no
-/// surveyed file carries. The compressed epochs are all Finale 2001 or later and are settled
-/// by their epoch without consulting the word at all.
+/// A content test rather than a version range, because what a file shows directly is whether
+/// its word is packed, not which release began packing it. The test costs nothing when the word
+/// is zero, where both spellings answer false, and it can only mislead on a packed-era file
+/// whose beam options are exactly bit 0 alone -- a value not seen. The compressed epochs are
+/// all Finale 2001 or later and are settled by their epoch without consulting the word.
 bool statesLoneStemFlag(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -206,13 +197,7 @@ bool statesPackedBeamFlags(
 // constant rather than through a 12 written here.
 constexpr int evpuPerStaffPosition = musx::dom::EVPU_PER_STAFF_POSITION;
 
-// Finale 3.5 and later, and the DCL epoch entire. Every location is the framework's, and all
-// eight agree with the exact Finale 27 companion of every file that carries a non-default
-// value: 233 for the stem thickness, 243 for the offset, 208 for the connection switch, 199
-// for the reverse adjustment and 68 for the shortened length. The half-stem length is
-// confirmed separately, by a controlled Finale 3.7.2 save that moves selector 03 word 2 from
-// 18 to 19, and the normal stem length by a controlled Finale 2002 save that moves selector 20
-// word 4 from 84 to 96. Both companions follow. Every row in this table is measured.
+// Finale 3.5 and later, and the DCL epoch entire. Every location is the framework's.
 const FieldMapping stemScalarFields[] = {
     MUS_WORD(StemOptionsTarget, "03", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, halfStemLength),
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, stemLength),
@@ -231,25 +216,15 @@ const FieldMapping packedStemFlagFields[] = {
         /*bit*/ 2, noReverseStems),
 };
 
-// Before Finale 3.5, in both the Coda-banner and uncompressed epochs. The three lengths sit
-// in the same slots and are stated in staff positions: every one of the 59 early files with
-// an exact companion stores 7, 5 and 18 where the companion carries 84, 60 and 216, which is
-// the same factor for three different numbers.
+// Before Finale 3.5, in both the Coda-banner and uncompressed epochs. The three lengths sit in
+// the same slots but are stated in staff positions rather than Evpu, so each is scaled by
+// @ref evpuPerStaffPosition on the way out.
 //
-// The half-stem length is absent rather than scaled. Selector 03 carries no row at all in the
-// Finale 3.0 and 3.2 files, and in the Coda era its word 2 is zero while the companion shows
-// 18, so reading it would assign a zero the source does not state.
+// The half-stem length is absent rather than scaled. Selector 03 carries no row at all in
+// Finale 3.0 and 3.2, and in the Coda era its word 2 is zero, so reading it would assign a zero
+// the source does not state.
 //
-// **Confirmed** for all three by controlled Finale 1.0.0 saves. Lengthening the normal and
-// shortened stems by one staff position each moves word 4 from 7 to 8 and word 5 from 5 to 6,
-// and the companion moves from 84 and 60 to 96 and 72. Setting the reverse adjustment to 25
-// moves selector 21 word 2 from 18, and the companion carries 300. Three different numbers,
-// one factor, each measured rather than inferred.
-//
-// The connection switch is confirmed in the same era by its own controlled pair: enabling stem
-// connections in Finale 1.0.0 moves selector 31 word 5 from 0 to 1 and moves **nothing else in
-// the file**, and the companion gains <useStemConnections/>. The era's own ETF export shows the
-// same word, so the two sides are independent.
+// The connection switch keeps its later location and needs no scaling.
 const FieldMapping earlyStemScalarFields[] = {
     MUS_BITS_AS(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4,
         /*firstBit*/ 0, /*bitCount*/ 0, stemLength,
@@ -264,28 +239,23 @@ const FieldMapping earlyStemScalarFields[] = {
         useStemConnections),
 };
 
-// Selector 41 word 1 holds the reverse-stemming flag in every era, but not in the same bit,
-// and this is the only stem row any evidence has shown to move. Two controlled saves put it in
-// **bit 0** before the packed era: Finale 1.0.0 and Finale 3.7.2 each move the word from 0 to 1
-// when "Display Reverse Stemming" is switched off, and each companion gains <noReverseStems/>.
-// The framework names bit 2 for the era it describes, and the corpus agrees that the early
-// spelling cannot still hold there: 25 companion-backed Finale 2003 and 2007 documents carry
-// bit 0 set while their companions leave reverse stemming on, so in those versions bit 0 is
-// another beam option. A controlled Finale 2002 save settles the packed spelling directly:
-// switching the option off moves the word from 26 to 30, a gain of exactly 4. Bit 2 is set in
-// no other corpus file, which is what a rarely-changed option looks like.
+// Selector 41 word 1 holds the reverse-stemming flag in every era, but not in the same bit --
+// the only stem field known to move. Before the packed era it is **bit 0**, the word holding
+// nothing else. From the packed era it is bit 2, bit 0 there being another beam option
+// entirely; reading bit 0 in that era would report reverse stemming as off for documents that
+// leave it on. See @ref statesLoneStemFlag for which spelling a document is in.
 //
-// Its sense is the same on both sides: set means reverse stemming is not displayed.
+// The sense is the same on both sides: set means reverse stemming is not displayed.
 const FieldMapping loneStemFlagFields[] = {
     MUS_BIT(StemOptionsTarget, "41", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1,
         /*bit*/ 0, noReverseStems),
 };
 
-// The stem thickness and offset hold their later locations from Finale 3.0, but not before
-// it: in the Coda era selector 64 word 5 and selector 65's long both read 5000 where the
-// companion shows 128, on both platforms, and Finale 1.0.0 carries neither selector at all.
-// The epoch alone excludes that era, so this needs no version test -- which is what makes it
-// safe for Coda-banner Windows documents, none of which state a version.
+// The stem thickness and offset hold their later locations from Finale 3.0, but not before it:
+// in the Coda era both slots hold 5000 against an effective 128, on both platforms, and the
+// earliest release carries neither selector at all. The epoch alone excludes that era, so this
+// needs no version test -- which is what makes it safe for Coda-banner Windows documents, none
+// of which state a version.
 //
 const FieldMapping earlyStemSizeFields[] = {
     MUS_WORD(StemOptionsTarget, "64", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, stemWidth),
@@ -294,8 +264,7 @@ const FieldMapping earlyStemSizeFields[] = {
 };
 
 // Finale 2007 and later: the same eight logical options, reached through the shared
-// numericGlobalClass rule and addressed by byte offset. All eight agree with every zlib-era
-// companion compared, in both byte orders.
+// numericGlobalClass rule and addressed by byte offset. Both byte orders occur in this era.
 const FieldMapping classStemScalarFields[] = {
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(3), GLOBALS_CMPER, classWordOffset(2), halfStemLength),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(20), GLOBALS_CMPER, classWordOffset(4), stemLength),
@@ -416,15 +385,14 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     const auto blockOffset = family.blockOffset;
     const auto decodedOffset = family.decodedOffset;
     if (family.present && wide && profile.byteOrder == ByteOrder::BigEndian) {
-        // The widened symbol's word order has no big-endian witness and almost certainly
-        // never will, for the reason recorded at @ref wideCodepoint. Rather than rely on that
-        // absence, say so when the case actually arrives: if the order is the other way the
-        // symbols are not slightly off but nonsense, and this costs nothing until such a file
-        // exists.
+        // **Unverified: the widened symbol's word order in big-endian containers.** No such
+        // document is known; see @ref wideCodepoint. Rather than rely on that absence, the case
+        // announces itself when it arrives -- if the order is the other way the symbols are not
+        // slightly off but nonsense.
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
             "This document uses the Finale 2012 stem-connection layout in big-endian "
-            "order, which no surveyed file does; the symbol's word order is "
-            "unverified for it."});
+            "order, an untested combination; the symbol's word order is unverified "
+            "for it."});
     }
 
     if (!family.present) {
@@ -434,16 +402,14 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     }
 
     // The table is a run of connections terminated by the first element with no symbol, and
-    // whatever follows that element is not part of it. Every surveyed fixed-row document
-    // agrees: no file in any era carries a symbol after a symbol-less element. In the zlib
-    // era the bytes after the terminator are frequently a stale copy of the pre-Unicode
-    // default table left in the record, which decodes through the widened element as the
-    // out-of-range symbols Finale itself ignores.
+    // whatever follows that element is not part of it. In the zlib era the bytes after the
+    // terminator are frequently a stale copy of the pre-Unicode default table left in the
+    // record, which decodes through the widened element as the out-of-range symbols Finale
+    // itself ignores.
     //
-    // Finale 27 does not stop there -- its conversions carry those trailing elements into
-    // EnigmaXML verbatim -- so a companion comparison will find fewer connections here than
-    // in the upgrade. That difference is intended: this reader records what the source
-    // states, and an element the source has terminated states nothing.
+    // Finale's own upgrade does not stop at the terminator and carries those trailing elements
+    // through, so it produces more connections than this does. The difference is intended: an
+    // element the source has terminated states nothing.
     for (std::size_t first = 0; first + elementWords <= words.size(); first += elementWords) {
         const auto stored = decodeElement(words, first, elementWords);
         if (stored.symbol == 0) {

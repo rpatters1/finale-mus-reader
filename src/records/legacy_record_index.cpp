@@ -70,6 +70,52 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
     return std::nullopt;
 }
 
+// The text pool follows the record pools in every epoch and keeps the same contents, so only
+// its block number changes. It is the fourth typed block where the pre-2007 eras number their
+// pools from one, and 0x0017 in the zlib era, which numbers its blocks differently and puts
+// entries and texts outside the class-record range entirely.
+//
+// A Coda-banner document reports nothing here on purpose. Its text region sits after the last
+// record pool as length-prefixed chunks rather than inside a block, and the container's pool
+// walk stops before reaching it, so there is no block to name. Returning nothing is what keeps
+// that era honestly uncovered instead of reading someone else's bytes as text.
+std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
+{
+    switch (epoch) {
+    case FormatEpoch::UncompressedLegacy:
+        return 0x0004;
+    case FormatEpoch::DclLegacy:
+        return 0x0012;
+    case FormatEpoch::ZlibLegacy:
+        return 0x0017;
+    case FormatEpoch::CodaBanner:
+    case FormatEpoch::Unknown:
+        break;
+    }
+    return std::nullopt;
+}
+
+std::vector<std::uint8_t> collectTexts(const container::ParsedContainer& parsed)
+{
+    std::vector<std::uint8_t> result;
+    // The Coda-banner epoch keeps its text outside the pool chain rather than in a block, so
+    // the container hands it over separately. Everything downstream sees one text stream
+    // whichever way the era stores it.
+    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
+        return parsed.textRegion;
+    }
+    const auto type = textBlockTypeFor(parsed.formatEpoch);
+    if (!type) {
+        return result;
+    }
+    for (const auto& block : parsed.blocks) {
+        if (block.info.type == *type) {
+            result.insert(result.end(), block.data.begin(), block.data.end());
+        }
+    }
+    return result;
+}
+
 // An other is cmper, tag, six words. A detail carries a second cmper, which pushes the tag
 // two bytes along and leaves five words.
 std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
@@ -120,10 +166,10 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 // records in block 0x001a carry class, cmper1, incidence, and a 32-bit payload length. Detail
 // records in block 0x001b retain the pre-zlib second comparator between cmper1 and incidence;
 // the endian-specific length geometry is handled below.
-// This is strongly supported by six assignments in two Finale 2008 documents: the field
-// equals the companion's measure comparator, and the remaining 20-word payload is identical
-// to the older mg tuple. Keep this structural interpretation revisable if contrary data
-// appears, but do not discard the field by treating it as an incidence.
+// **Believed: that second comparator is the measure.** It holds the measure the assignment
+// belongs to, and the 20-word payload after it is the older mg tuple unchanged. Revise the
+// interpretation if contrary data appears, but do not discard the field by treating it as an
+// incidence.
 std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
     bool details, std::vector<std::uint8_t>& payload)
 {
@@ -291,6 +337,7 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
         result.m_classDetails = LegacyRowPool::build(
             std::move(detailRows), std::move(detailsPayload));
     }
+    result.m_texts = collectTexts(parsed);
     return result;
 }
 

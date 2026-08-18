@@ -26,8 +26,8 @@ using LyricConnectStyle = LyricTarget::WordExtConnectStyle;
 using LyricConnectType = LyricTarget::WordExtConnectStyleType;
 
 // The lyric options are spread over six numeric globals rather than gathered into one record.
-// Four of the six are named by the distilled framework study; selectors 55 and 57 are not in
-// it at all and were located from the corpus. Each is an ordinary numeric global, so through
+// Four of the six are named by the distilled framework study; selectors 55 and 57 appear in it
+// nowhere. Each is an ordinary numeric global, so through
 // Finale 2006 its identity is the two decimal characters of the selector and from Finale 2007
 // it is the class id the shared numericGlobalClass rule derives.
 constexpr std::uint16_t hyphenSeparationSelector = 15;
@@ -76,36 +76,29 @@ constexpr std::uint32_t autoNumberTypeSlot = 9;
 constexpr std::size_t autoNumberFamilyWords = 6;
 
 /// @brief The word-extension line width of an era that has no record for it.
-/// @details Every Coda-banner fixture converts to this, and the earliest documents that do
-/// carry selector 67 store 118 rather than the pinned baseline's 115, so the baseline's value
-/// is one Finale 27 document's setting rather than anything the older eras meant.
+/// @details The eras with no record for this width behave as though it were 224. The pinned
+/// Finale 27 baseline carries 115, which is one modern document's setting rather than anything
+/// the older eras meant, so it is not the value to fall back to.
 constexpr musx::dom::Efix unstatedWordExtLineWidth = 224;
 
 /// @brief The first Enigma major version that stores the syllable edge punctuation setting.
-/// @details **Finale 2011, not Finale 2012.** MakeMusic's own manuals bracket it: the Finale
-/// 2010 Document Options-Lyrics dialog has neither "Ignore Syllable Edge Punctuation" nor a
+/// @details **Finale 2011, not Finale 2012.** MakeMusic's manuals bracket it: the Finale 2010
+/// Document Options-Lyrics dialog has neither "Ignore Syllable Edge Punctuation" nor a
 /// "Punctuation to Ignore" field, the Finale 2011 dialog has both, and the Finale 2012 manual's
 /// "Finale 2011 Interface Changes" page says the feature arrived in 2011 outright.
 ///
-/// The installs corpus agrees at exactly that boundary: all 22 companion-backed Finale 2010
-/// documents carry 0 in this word and all 597 companion-backed Finale 2011 documents carry 1.
-/// The reference corpus could not have shown this, because it contains no Finale 2011 document
-/// at all; a boundary read off it alone is an interpolation across that gap, and this constant
-/// was 17 until the manuals contradicted it.
-///
-/// This is deliberately its own constant rather than a shared "Finale 2012" one, and now
-/// doubly so: the Unicode codepoint widening and the font-ordinal renumbering both fall at
-/// major 17 and this does not.
+/// This is deliberately its own constant rather than a shared "Finale 2012" one: the Unicode
+/// codepoint widening and the font-ordinal renumbering both fall at major 17, and this does
+/// not.
 constexpr std::uint8_t firstEdgePunctuationMajorVersion = 16; // Finale 2011
 
 /// @brief The first Enigma major version whose punctuation tail is verified as UTF-16.
-/// @details The switch arrives with Finale 2011 but the only document anywhere that carries a
-/// *list* is a Finale 2012 fixture, and Finale 2012 is the Unicode release. A Finale 2011 tail
-/// would therefore be 8-bit text of some code page, and nothing establishes which, or even
-/// whether it is packed two characters to a word or one -- no Finale 2011 document in any
-/// survey carries a tail at all, and none can be made, since that release is unavailable.
-/// Reading one through the Unicode rule would produce mojibake for any non-ASCII punctuation,
-/// so the reader declines and says so instead. See @ref captureLyricOptions.
+/// @details The switch itself arrives one release earlier, at
+/// @ref firstEdgePunctuationMajorVersion, but Finale 2012 is the Unicode release. A tail
+/// written by the intervening release would be 8-bit text of an undetermined code page, packed
+/// either one or two characters to a word. Reading one through the Unicode rule would produce
+/// mojibake for any non-ASCII punctuation, so such a tail is declined and reported rather than
+/// decoded. See @ref captureLyricOptions.
 constexpr std::uint8_t firstUnicodePunctuationMajorVersion = 17; // Finale 2012
 
 constexpr const char* lyricReportPrefix = "options.lyricOptions";
@@ -119,13 +112,11 @@ constexpr EpochMask fixedRowLyricEpochs = EpochMask::CodaBanner | EpochMask::Fix
 /// @details The two orders disagree and neither is a rotation of the other: musxdom follows
 /// Finale's general `Left, Right, Center` order from zero, while the lyric records number
 /// their own list `1 = centre, 2 = left, 3 = right`. The numbering is the distilled
-/// framework's, and the corpus confirms the two values it uses: every document that carries
-/// selector 87 stores 1 where its Finale 27 companion says `center` and 2 where the companion
-/// says `left`, for all four positions. **No surveyed document stores 3**, so `right` rests on
-/// the framework alone; it is the only value of this field that is not corpus-confirmed.
+/// framework's. 1 and 2 are established for all four positions. **Believed: 3 is `right`,**
+/// which rests on the framework alone -- no document seen stores it.
 ///
-/// Zero is not a member of the legacy list. A record storing it says nothing this reader can
-/// translate, so the seeded default is kept rather than a fourth meaning invented for it.
+/// Zero is not a member of the legacy list. A record storing it says nothing translatable, so
+/// the seeded default is kept rather than a fourth meaning invented for it.
 std::optional<LyricAlignJustify> lyricAlignment(std::int16_t stored)
 {
     switch (stored) {
@@ -141,10 +132,8 @@ std::optional<LyricAlignJustify> lyricAlignment(std::int16_t stored)
 }
 
 // Bit 15 of each position's flags word is "use this positioning", which musxdom spells as the
-// style's own `on`. The framework names the bit as 0x8000 for the three optional positions and
-// calls the fourth word a placeholder with no UI, and the corpus agrees on both counts: the
-// Finale 2000 multilayer fixture is the one tracked document that clears the bit for the three
-// optional positions, and its companion is the one whose conversion omits their <on/>.
+// style's own `on`. It applies to the three optional positions; the fourth word is a
+// placeholder with no UI behind it.
 constexpr std::uint8_t syllablePositionOnBit = 15;
 
 // The four positions in the order the record stores them, which is musxdom's own enum order.
@@ -167,14 +156,9 @@ constexpr std::size_t syllablePositionWords = 3;
 /// 0x10. Two of the six are also in a different order from musxdom's enum, so the value cannot
 /// be cast and has to be translated through this table.
 ///
-/// The corpus fixes the whole mapping directly. The Finale 2006 fixture stores every one of
-/// the six numbers with distinct offsets beside them, and its Finale 27 companion names each
-/// connection point next to those same offsets. The private framework study corroborates the
-/// starting number and the tail of the order from an unrelated place -- its smart-shape entry
-/// connection enum reaches `lyric right bottom` at exactly 0x10 and ends with the two system
-/// attachments -- with one difference: that enum has no entry for the dotted attachment, which
-/// is why its `duration` sits one place earlier than the records put it. The records and the
-/// companions agree with each other, so they govern.
+/// All six numbers are established. Note that Finale's smart-shape entry connection enum,
+/// which shares the numbering, has no entry for the dotted attachment and so places
+/// `duration` one earlier than the lyric records do; the records govern here.
 constexpr LyricConnectIndex legacyConnectIndexOrder[] = {
     LyricConnectIndex::LyricRightBottom,
     LyricConnectIndex::HeadRightLyrBaseline,
@@ -209,18 +193,15 @@ constexpr std::size_t wordExtConnectWords = 3;
 constexpr std::size_t wordExtConnectCount = std::size(wordExtConnectOrder);
 
 /// @brief Whether this source stores the word-extension connection table.
-/// @details Selectors 55 and 57 arrive together with Finale 2004, inside the DCL epoch: no
-/// Finale 2003 or earlier document in any survey carries either, and every Finale 2004 and
-/// later one carries both. Their presence is what decides, rather than a version range, so a
-/// document whose version cannot be recovered is read from what it actually carries.
+/// @details Selectors 55 and 57 arrive together with Finale 2004, inside the DCL epoch. Their
+/// presence is what decides, rather than a version range, so a document whose version cannot be
+/// recovered is read from what it actually carries.
 ///
-/// The Coda-banner epoch is excluded outright, and it has to be: those documents do carry a
-/// selector 55, and it is a different option that happens to reuse the number. The Finale 1.0.0
-/// and 2.6.3 fixtures store values such as 16128 and 16448 in it, which are not connection
-/// points at all, and one controlled Finale 1.0.0 stem-options edit moves its first two words.
-/// Reading it as this table would fabricate nine connection styles out of another option's
-/// bytes. The word count is a second, independent guard: that record is one six-word incidence
-/// where this table needs twenty-seven words.
+/// The Coda-banner epoch is excluded outright, and it has to be: those documents carry a
+/// selector 55 of their own, holding a different option that reuses the number. Reading it as
+/// this table would fabricate nine connection styles out of another option's bytes. The word
+/// count is a second, independent guard: that record is one six-word incidence where this
+/// table needs twenty-seven words.
 bool storesWordExtConnectTable(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -235,17 +216,13 @@ bool storesWordExtConnectTable(
 /// @brief Whether this source stores the Finale 2004 generation of smart-lyric settings.
 /// @details Selector 57 is the marker for the whole group, including the two switches that live
 /// on its neighbours: smart hyphens on selector 35 word 5 and smart word extensions on selector
-/// 34 word 5. Both of those selectors are present in every era, but each word is zero in every
-/// document before Finale 2004 and set in every one after, while every Finale 27 conversion of
-/// those earlier documents switches the option **on** regardless. That is what an option
-/// arriving with a default of on looks like from before it existed, and it means neither word
-/// can be read on a document that predates it: doing so would turn the option off for every
-/// Finale 2003-and-earlier file on the strength of a word that meant nothing yet. The
-/// Finale 2.6.3 fixture makes the point without ambiguity by storing 12 in selector 34 word 5,
-/// which is no boolean at all.
+/// 34 word 5. Both selectors exist in every era, but the words mean nothing before Finale 2004:
+/// they are zero in every document that predates the option, which arrives switched on. Reading
+/// them on such a document would turn the option off on the strength of a word that meant
+/// nothing yet. One earlier era stores 12 in selector 34 word 5, which is no boolean at all.
 ///
-/// The pinned baseline already switches smart hyphens on, which is exactly what those
-/// conversions produce, so the earlier era needs no assertion of its own here -- only the gate.
+/// The pinned baseline already switches smart hyphens on, so the earlier era needs no assertion
+/// of its own here -- only the gate.
 bool storesSmartLyricOptions(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -256,15 +233,11 @@ bool storesSmartLyricOptions(
 /// @details Automatic numbering arrives with **Finale 2011** -- the Finale 2010 lyric dialog
 /// has no such option and the Finale 2011 one does -- but it needs no version gate, because
 /// **the record states its own layout**. Selector 58 is six words in every era before it and
-/// twelve from Finale 2011 on, the four new fields occupying words 6 to 9. Every fixed-row
-/// fixture carries six words, the Finale 2007 class record carries twelve bytes, and the
-/// Finale 2011 and 2012 ones carry twenty-four.
+/// twelve from Finale 2011 on, with the four new fields at words 6 to 9.
 ///
-/// A marker is preferable here for the reason it always is, and for one specific to this class:
-/// the edge-punctuation gate a few lines up had to be a version range because its record does
-/// not change shape, and that gate was wrong for a year's worth of releases until MakeMusic's
-/// manuals corrected it. This field's record does change shape, so nothing has to be inferred
-/// about which release a file came from.
+/// A shape marker is preferable to a version range wherever the record offers one: nothing then
+/// has to be inferred about which release a file came from. The edge-punctuation gate a few
+/// lines up has to be a version range only because its record does not change shape.
 bool storesAutoNumbering(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -273,8 +246,8 @@ bool storesAutoNumbering(
 }
 
 /// @brief Whether this source stores the word-extension line width.
-/// @details Selector 67 is carried by every uncompressed, DCL and zlib document surveyed and by
-/// no Coda-banner one. Its presence decides, because @ref captureLyricOptions asserts a value
+/// @details Selector 67 is carried by the uncompressed, DCL and zlib epochs and by no
+/// Coda-banner document. Its presence decides, because @ref captureLyricOptions asserts a value
 /// when it is absent and the two must not be able to disagree.
 bool storesWordExtLineWidth(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
@@ -283,29 +256,21 @@ bool storesWordExtLineWidth(
 }
 
 /// @brief Whether this source's era stores the syllable-edge punctuation setting.
-/// @details The setting arrives with Finale 2011; see @ref firstEdgePunctuationMajorVersion for
-/// the manual and corpus evidence that puts it there rather than at Finale 2012.
+/// @details The setting arrives with Finale 2011; see @ref firstEdgePunctuationMajorVersion.
 ///
-/// The word exists for seven releases before it means anything. All 454 companion-backed
-/// documents of the reference corpus through Finale 2003 carry no selector 57 at all, and all
-/// 487 from Finale 2004 through Finale 2010 carry it with word 4 clear, and every one of those
-/// 941 converts with <lyricUseEdgePunctuation/> -- the reverse spelling, meaning the
-/// punctuation is *not* ignored. Reading the word on such a document would switch edge
-/// punctuation off for all 941 against every one of their companions. That is what the gate is
-/// for. The pinned baseline omits the element too, so an earlier document left to the baseline
-/// would claim a behavior its era did not have; the assertion is in @ref captureLyricOptions.
-///
-/// From Finale 2011 the word decides, and both surveyed releases bear that out: all 597
-/// companion-backed Finale 2011 documents carry 1 and convert with the element, and in Finale
-/// 2012 the cohort splits, all 198 with the word clear converting without it and all 50 with it
-/// set converting with it.
+/// The word exists for seven releases before it means anything. Documents from before Finale
+/// 2004 carry no selector 57 at all, and those from Finale 2004 through Finale 2010 carry it
+/// with word 4 clear while behaving as though edge punctuation is *not* ignored. Reading the
+/// word on such a document would switch the behavior off against what the era actually did.
+/// That is what the gate is for. The pinned baseline behaves the same way, so an earlier
+/// document left to the baseline would claim a behavior its era did not have; the assertion is
+/// in @ref captureLyricOptions. From Finale 2011 the word decides.
 ///
 /// This is a version gate because nothing structural distinguishes the two cases: the record is
 /// twelve bytes in Finale 2007 and in Finale 2011 alike, so its shape says nothing and only the
-/// release does. The gate is framed inside the zlib epoch and bounded below, and a file whose
-/// version cannot be recovered reads as the earlier behavior -- which is the era every other
-/// epoch is in anyway, so the gate fails closed onto the answer that is right for all but two
-/// releases.
+/// release does. The gate is framed inside the zlib epoch and bounded below, so a file whose
+/// version cannot be recovered reads as the earlier behavior -- the era every other epoch is in
+/// anyway, so it fails closed onto the answer that is right for all but two releases.
 bool storesEdgePunctuationSetting(
     const records::LegacyRecordIndex&, const SourceProfile& profile)
 {
@@ -313,36 +278,33 @@ bool storesEdgePunctuationSetting(
         && profile.version->major >= firstEdgePunctuationMajorVersion;
 }
 
-// The maximum hyphen separation, in the two epochs whose selector 15 states it. Its companion
-// agreement is exact wherever it is read.
+// The maximum hyphen separation, in the two epochs whose selector 15 states it.
 //
-// The Coda-banner epoch is deliberately excluded. Those documents do carry selector 15, but
-// word 1 is zero in every one of them while their Finale 27 companions all say 144, and the
-// rest of that record differs from the later one as well. The field is not there to be read,
-// and reading the zero would replace a correct default with a hyphen separation of nothing.
-// The baseline's 144 is what the conversions produce, so the era needs no assertion either.
+// The Coda-banner epoch is deliberately excluded. Those documents carry a selector 15, but its
+// word 1 is always zero and the rest of the record differs from the later one: the field is not
+// there to be read, and reading the zero would replace a correct default with a hyphen
+// separation of nothing. The baseline's 144 is the era's behavior, so it needs no assertion
+// either.
 const FieldMapping lyricHyphenFields[] = {
     MUS_WORD(LyricTarget, "15", GLOBALS_CMPER, /*incidence*/ 0, hyphenSeparationSlot,
         maxHyphenSeparation),
 };
 
 // The word-extension line width, wherever selector 67 exists. This is the one scalar of the
-// class that varies across the tracked fixtures, and it varies in all three epochs that carry
-// it: 118 in the Finale 3.7.2, 97, 2000 and 2002 documents, 224 from Finale 2003, and 115 in
-// one Finale 2012 document. Every companion agrees exactly.
+// class that varies from document to document, and it varies in all three epochs that carry
+// it.
 const FieldMapping lyricLineWidthFields[] = {
     MUS_WORD(LyricTarget, "67", GLOBALS_CMPER, /*incidence*/ 0, wordExtLineWidthSlot,
         wordExtLineWidth),
 };
 
-// The Finale 2004 generation of smart-lyric settings. Every tracked document that carries them
-// stores the same values, which are also the pinned baseline's, so these four agree with their
-// companions everywhere and are discriminated by nothing: the corpus survey is what can still
-// show them wrong.
+// The Finale 2004 generation of smart-lyric settings. Every document seen stores the same
+// values here, which are also the pinned baseline's, so nothing yet discriminates these four
+// slots from one another.
 //
 // `smartHyphenStart` passes through as a number because musxdom's SmartHyphenStart is in the
-// legacy order, `always, sometimes, never`. Only `sometimes` is witnessed, so the other two
-// positions of that list rest on the enum's own documentation.
+// legacy order, `always, sometimes, never`. **Believed for `always` and `never`:** only
+// `sometimes` has been observed, so the other two positions rest on that enum's documentation.
 const FieldMapping smartLyricFields[] = {
     MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, smartHyphenStartSlot,
         smartHyphenStart),
@@ -359,8 +321,8 @@ const FieldMapping smartLyricFields[] = {
 };
 
 // Finale 2007 and later. The same logical words, reached through the shared numericGlobalClass
-// rule and addressed by byte offset in the coalesced payload. Both byte orders are exercised by
-// the tracked fixtures: Finale 2007 is big-endian and Finale 2012 little-endian.
+// rule and addressed by byte offset in the coalesced payload. Both byte orders occur in this
+// era.
 const FieldMapping classLyricHyphenFields[] = {
     MUS_CLASS_WORD(LyricTarget, numericGlobalClass(hyphenSeparationSelector), GLOBALS_CMPER,
         classWordOffset(hyphenSeparationSlot), maxHyphenSeparation),
@@ -464,8 +426,7 @@ const FieldMapping classEdgePunctuationFields[] = {
 
 // Finale 2011 and later, selected by the record's own size rather than by a version. musxdom's
 // AutoNumberingAlign is in the legacy order, None then Align, so the type passes through as a
-// number: the controlled fixture stores 0 where its companion omits <lyricAutoNumType> and 1
-// where every other document says `align`.
+// number, 0 being `None` and 1 `Align`.
 const FieldMapping classAutoNumberFields[] = {
     MUS_CLASS_BIT(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER,
         classWordOffset(autoNumberVersesSlot), 0, showAutoNumbersOnVerses),
@@ -575,9 +536,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     auto target = std::const_pointer_cast<LyricTarget>(pooled);
 
     // Selector 87: four syllable positions, three words each, spread over two fixed rows. The
-    // whole group arrives with Finale 2000 -- no Coda-banner, 3.7.2 or Finale 97 document in
-    // any survey carries the selector, and every later one does -- so its presence rather than
-    // a version decides whether it can be read.
+    // whole group arrives with Finale 2000, so its presence rather than a version decides
+    // whether it can be read.
     const auto syllable = readGlobalWords(index, profile, syllablePosSelector);
     for (std::size_t position = 0; position < std::size(syllablePositionOrder); ++position) {
         const auto type = syllablePositionOrder[position];
@@ -605,11 +565,9 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
                 syllable.blockOffset, syllable.decodedOffset);
         } else if (type != LyricSyllableType::Default) {
             // Before the selector exists the three optional positions are simply not applied,
-            // and the pinned baseline says the opposite: it switches all three on. Every
-            // companion of a document without the selector omits their <on/>, so leaving them
+            // and the pinned baseline says the opposite: it switches all three on. Leaving them
             // to the baseline would claim positioning the source never asked for. The
-            // alignments are left alone, because the baseline already carries what those same
-            // conversions produce.
+            // alignments are left alone, the baseline already carrying what the era did.
             style->on = false;
             reportLyricField(report, name + ".on", ValueOrigin::LegacyBehavior, 0);
         }
@@ -646,15 +604,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
 
     // "Lift" and "Push" have homes of their own on selectors 29 and 30, word 5 of each, and
     // those homes exist in **every** epoch -- which is what makes them the only fields of this
-    // class a Coda-banner document can supply. `tests/evidence/F100/F100-wext-push-6-lift-5.*`
-    // is the controlled Finale 1.0.0 pair that names them: it moves selector 29 word 5 from 4
-    // to 5 and selector 30 word 5 from 4 to 6, moves no other word in the file, and its
-    // companion reads 5 and 6. Its ETF prints the same two rows.
-    //
-    // Every tracked fixture agrees across all four epochs, and the pair also explains something
-    // that had been recorded as an open correlation: pre-Finale-2004 documents whose companions
-    // show a vertical offset of 1 rather than 4 simply store 1 here. That looked like it
-    // tracked the word-extension positioning bit, and it never did.
+    // class a Coda-banner document can supply.
     const auto lift = readGlobalWords(index, profile, wordExtLiftSelector);
     if (lift.present) {
         target->wordExtVertOffset = wordAt(lift.words, wordExtOffsetSlot);
@@ -670,11 +620,9 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
 
     // musxdom keeps the same two numbers twice: as the class-level pair above and again as the
     // starting connection's own offsets. A source from Finale 2004 on states them twice as
-    // well, in selector 55's first element, and the two agree in every fixture that has both.
-    // Before selector 55 exists there is no connection table to read, so the starting element
-    // takes the dialog's values -- which is what Finale 27 does with these documents, and what
-    // the Finale 1.0.0 pair shows: its companion moves the defaultStart offsets to 6 and 5
-    // along with the class-level pair.
+    // well, in selector 55's first element, and the two always agree. Before selector 55 exists
+    // there is no connection table to read, so the starting element takes the dialog's values,
+    // which is the era's own behavior.
     if (!storesWordExtConnectTable(index, profile) && (lift.present || push.present)) {
         const auto starting = connectStyleFor(target, LyricConnectType::DefaultStart);
         starting->xOffset = target->wordExtHorzOffset;
@@ -682,10 +630,10 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     }
 
     // The word-extension line width predates its own record. A Coda-banner document has no
-    // selector 67, and the pinned baseline's 115 is not what those documents mean: all 25
-    // tracked Finale 1.0.0 and 2.6.3 fixtures convert to 224, which is also what the earliest
-    // document that does carry the selector stores. This is the one value of the class the
-    // baseline supplies and supplies wrongly for an era, so it is asserted rather than left.
+    // selector 67, and the pinned baseline's 115 is not what those documents mean: the era
+    // behaves as 224, which is also what the earliest document carrying the selector stores.
+    // This is the one value of the class the baseline supplies wrongly for an era, so it is
+    // asserted rather than left.
     if (!storesWordExtLineWidth(index, profile)) {
         target->wordExtLineWidth = unstatedWordExtLineWidth;
         reportLyricField(report, "wordExtLineWidth", ValueOrigin::LegacyBehavior,
@@ -693,21 +641,18 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     }
 
     // Syllable edge punctuation is ignored by default in a Finale 27 document and was not
-    // ignored at all before Finale 2012, so the baseline states the opposite of every earlier
-    // era's behavior. See @ref storesEdgePunctuationSetting for the boundary and for what a
-    // Finale 2012 document is left with.
+    // ignored at all in the earlier eras, so the baseline states the opposite of what they did.
+    // See @ref storesEdgePunctuationSetting for the boundary.
     if (!storesEdgePunctuationSetting(index, profile)) {
         target->lyricUseEdgePunctuation = true;
         reportLyricField(report, "lyricUseEdgePunctuation", ValueOrigin::LegacyBehavior, 1);
     }
 
     // The list of punctuation to ignore is stored as a variable-length tail on selector 57
-    // rather than in a record of its own, which is why searching for the stock set found
-    // nothing: **Finale writes the tail only when the list is not the stock one**. The record
-    // is twelve bytes in every corpus document and in five of the six tracked Finale 2012
-    // fixtures; `tests/evidence/F2012/F2012-lyric-punct.mus` sets the list to `#@%&` and its
-    // record grows to twenty-four bytes, the six scalars unchanged and the four characters
-    // appended as 16-bit code units followed by a zero.
+    // rather than in a record of its own, and **Finale writes the tail only when the list is
+    // not the stock one**. The record is twelve bytes with no tail; a list of four characters
+    // grows it to twenty-four, the six scalars unchanged and the characters appended followed
+    // by a zero terminator.
     //
     // A document with no tail therefore means the stock list, and the right thing to do is
     // nothing: the pinned baseline states no <lyricPunctuationToIgnore> either, and musxdom's
@@ -715,22 +660,15 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // would be a second copy of a default musxdom already owns.
     if (storesEdgePunctuationSetting(index, profile)) {
         const auto lyric = readGlobalWords(index, profile, wordExtSelector);
-        // **The tail has two layouts, and the Unicode release is the boundary.** Finale 2012
-        // stores one 16-bit code unit per character; Finale 2011 predates Unicode and stores
-        // packed 8-bit bytes in the saving platform's code page. The two are not variants of
-        // one rule and neither can be read as the other: the container is little-endian in
-        // both controlled fixtures, so decoding the Finale 2011 byte string through the word
-        // path would transpose every pair of characters.
+        // **The tail has two layouts, and the Unicode release is the boundary.** From Finale
+        // 2012 it is one 16-bit code unit per character; before that it is packed 8-bit bytes
+        // in the saving platform's code page. The two are not variants of one rule and neither
+        // can be read as the other -- the container is little-endian, so decoding the byte
+        // string through the word path would transpose every pair of characters.
         //
-        // `tests/evidence/F2011/F2011-lyric-punct.*` settles the older layout and the encoding
-        // at once. Its tail is `23 40 25 26 c7 c8`, six bytes in string order rather than
-        // three words, and its companion reads `#@%&«»`. Those last two bytes are what make
-        // the code page a measurement rather than an assumption: 0xc7 0xc8 is `«»` in Mac
-        // Roman and `ÇÈ` in Windows-1252, and the companion says `«»`.
-        //
-        // The bank comes from the document's own platform, as it does for a font definition
-        // that carries no charset of its own. That is the only source available here -- this
-        // text belongs to no font record -- and it is what the one specimen confirms.
+        // The code page's bank comes from the document's own platform, as it does for a font
+        // definition that carries no charset of its own. That is the only source available
+        // here, this text belonging to no font record.
         const bool unicodeTail = profile.version
             && profile.version->major >= firstUnicodePunctuationMajorVersion;
         std::string ignored;
@@ -743,11 +681,10 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
                 }
                 ++units;
                 char32_t codepoint = unit;
-                // UTF-16, so an astral character arrives as a surrogate pair. No specimen
-                // exercises this -- every character of the stock list and of both controlled
-                // fixtures is in the basic multilingual plane -- but the era is the Unicode
-                // one and a user can type anything into the field. A half pair passes through
-                // as itself rather than being dropped, so a malformed tail stays visible.
+                // UTF-16, so an astral character arrives as a surrogate pair. Nothing seen so
+                // far leaves the basic multilingual plane, but the era is the Unicode one and a
+                // user can type anything into the field. A half pair passes through as itself
+                // rather than being dropped, so a malformed tail stays visible.
                 if (unit >= 0xd800 && unit <= 0xdbff && word + 1 < lyric.words.size()) {
                     const auto low = static_cast<std::uint16_t>(lyric.words[word + 1]);
                     if (low >= 0xdc00 && low <= 0xdfff) {
@@ -794,21 +731,18 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // with Finale 2004 and did not exist before it, so all three are false for an earlier
     // document rather than merely unstated.
     //
-    // **The reason is about what this reader can produce, not only about what the era did.**
-    // Smart hyphens and smart word extensions are not settings that stand on their own: each
-    // is implemented as smart shapes, hyphen smart shapes for the one and word-extension smart
-    // shapes for the other. Finale 27 manufactures those during its upgrade, which is why every
-    // pre-Finale-2004 companion comes back with <useSmartHyphens/> and
-    // <useSmartWordExtensions/> and why the pinned baseline switches both on. **This reader
-    // does not manufacture them.** Leaving the switches on
-    // would describe a document it has not built -- an option claiming a rendering that nothing
-    // in the imported pools can draw -- so the honest value is false and the disagreement with
-    // the companions is deliberate.
+    // **The reason is about what this import can produce, not only about what the era did.**
+    // Smart hyphens and smart word extensions do not stand on their own: each is implemented as
+    // smart shapes, hyphen smart shapes for the one and word-extension smart shapes for the
+    // other. Finale's own upgrade manufactures those, which is why the pinned baseline switches
+    // both on. **This import does not manufacture them.** Leaving the switches on would
+    // describe a document it has not built -- an option claiming a rendering that nothing in the
+    // imported pools can draw -- so the honest value is false, and the resulting disagreement
+    // with Finale's upgrade is deliberate. It is a disagreement about capability rather than
+    // about what the bytes say.
     //
-    // That makes these the class's only deliberate disagreement with Finale 27, and it is a
-    // disagreement about capability rather than about what the bytes say. The underscore
-    // requirement is the quiet member of the group: baseline and companions already leave it
-    // false, and it is asserted for the same reason
+    // The underscore requirement is the quiet member of the group: the baseline already leaves
+    // it false, and it is asserted for the same reason
     // MultimeasureRestOptions::noHorizontalStretch is, because the era's behaviour is known
     // rather than inherited.
     if (!storesSmartLyricOptions(index, profile)) {
@@ -824,8 +758,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // still six words shows no automatic numbers at all. The pinned baseline agrees, and the
     // three switches are asserted anyway on the same footing as the smart-lyric group: the
     // era's behaviour is known rather than inherited. `lyricAutoNumType` is left alone, because
-    // the numbering type of a document that displays no numbers means nothing and the baseline
-    // already carries what every companion of every era shows.
+    // the numbering type of a document that displays no numbers means nothing.
     if (!storesAutoNumbering(index, profile)) {
         target->showAutoNumbersOnVerses = false;
         reportLyricField(report, "showAutoNumbersOnVerses", ValueOrigin::LegacyBehavior, 0);
@@ -835,18 +768,18 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         reportLyricField(report, "showAutoNumbersOnSections", ValueOrigin::LegacyBehavior, 0);
     }
 
-    // The alternate hyphen font is a setting that postdates Finale 2012, the last release this
-    // reader opens, so no legacy format has anywhere to put it and no legacy document uses a
-    // second font for its hyphens. The switch is therefore known false for every file this
-    // reader will ever open rather than guessed at.
+    // The alternate hyphen font postdates Finale 2012, the last release this library opens, so
+    // no legacy format has anywhere to put it and no legacy document uses a second font for its
+    // hyphens. The switch is known false for every file that can arrive here.
     //
-    // The pinned baseline also leaves it false, so the repository's usual rule -- leave a field
-    // to the baseline where the baseline already agrees, rather than keeping a second copy of
-    // one fact -- would say to omit this. It is asserted anyway, for the same reason
+    // The pinned baseline also leaves it false, so the usual rule -- leave a field to the
+    // baseline where the baseline already agrees, rather than keeping a second copy of one fact
+    // -- would say to omit this. It is asserted anyway, for the same reason
     // MultimeasureRestOptions::noHorizontalStretch is: the two statements are not the same
     // statement. The baseline saying false is one Finale 27 document's setting, which a later
     // pinned baseline could legitimately change; the setting postdating every legacy format is
-    // a fact about the formats, and it is what makes the value known rather than synthesized.
+    // a fact about the formats, and that is what makes the value known rather than
+    // synthesized.
     target->useAltHyphenFont = false;
     reportLyricField(report, "useAltHyphenFont", ValueOrigin::LegacyBehavior, 0);
 

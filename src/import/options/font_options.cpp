@@ -66,10 +66,8 @@ struct EarlyTuple
 // The fixed-row row is gated on the epoch rather than on a version range. Selector 24 is the
 // default-font array in every epoch that uses fixed rows except the Coda-banner era, where it
 // holds one row of unrelated values, and `EpochMask::FixedRow` excludes exactly that era. A
-// version range would add nothing and would cost real files: it previously read `Dcl` only,
-// so every Finale 3.0 through 2000 document reported all 45 font options as Finale 27
-// defaults while its source held 40 of them. Verified against the exact Finale 27 companions
-// of the Finale 97 and Finale 2000 fixtures, which agree tuple for tuple.
+// version range would add nothing here and could only cost files, since the era boundary and
+// the epoch boundary are the same one.
 const std::array<FontOptionsLayout, 2> layouts{{
     {EpochMask::FixedRow, versions::any(),
         RecordEncoding::FixedRow, records::packTag("24")},
@@ -121,13 +119,12 @@ const std::array<EarlyTuple, 13> earlyCodaTuples{{
 // sets all four identically. Propagating the one preference to all four is the reading that
 // preserves the source's own behavior.
 //
-// This is a deliberate divergence from the Finale 27 companions, which is recorded in
-// research/FORMAT_NOTES.md and is open to revision. Those companions disagree among
-// themselves about the four name types in a way that tracks the default file the upgrade was
-// performed under rather than the source document, so they do not settle the question. The
-// three propagated types report as ValueOrigin::LegacyBehavior, not LegacyMus: the bytes are
-// read from the source, but the assignment restores an era behavior rather than an option
-// the source stored.
+// This deliberately diverges from what Finale's own upgrade produces, and the divergence is
+// recorded in research/FORMAT_NOTES.md and open to revision: that upgrade's output for these
+// four types tracks the default file it ran under rather than the source document, so it does
+// not settle the question. The three propagated types report as ValueOrigin::LegacyBehavior,
+// not LegacyMus: the bytes are read from the source, but the assignment restores an era
+// behavior rather than an option the source stored.
 constexpr std::array<FontType, 3> codaNameCompanionTypes{
     FontType::AbbrvStaffNames,
     FontType::GroupNames,
@@ -268,18 +265,12 @@ constexpr std::uint8_t firstModernOrdinalMajorVersion = 17; // Finale 2012
 std::optional<FontType> semanticType(
     const SourceProfile& profile, std::size_t physicalOrdinal)
 {
-    // This boundary is Finale 2012 on the evidence of measurement, NOT on the documentation.
-    // Finale's own documentation, and this project's notes following it, place the 13/28
-    // renumbering at Finale 2003. Every document tested says otherwise, so the measurement
-    // is what is implemented here and the notes were corrected to match. If a future reader
-    // finds the 2003 claim in some MakeMusic source, it does not override this: check a file.
-    //
-    // Verified against 1,211 documents whose Finale 27 companion distinguishes tablature
-    // from percussion: 405 from Finale 2003-2010 and 597 from Finale 2011 place tablature at
-    // physical 28, and 209 from Finale 2012 place it at 13 with percussion at 28. No document
-    // contradicts it on either side, on either platform. Coding the boundary at Finale 2003
-    // cost every 2003-2011 document its tablature font and gave it a bogus percussion font --
-    // 2,516 of the 2,629 FontOptions disagreements in the corpus were this one rule.
+    // **This boundary is Finale 2012 by measurement, NOT by documentation.** Finale's own
+    // documentation places the 13/28 renumbering at Finale 2003. Documents say otherwise:
+    // through Finale 2011 tablature is at physical ordinal 28, and from Finale 2012 it is at 13
+    // with percussion at 28. If the 2003 claim turns up in some MakeMusic source, it does not
+    // override this -- check a file. Taking the boundary at Finale 2003 costs every 2003-2011
+    // document its tablature font and gives it a bogus percussion font.
     const bool modernOrdinals = profile.epoch == FormatEpoch::ZlibLegacy
         && profile.version
         && profile.version->major >= firstModernOrdinalMajorVersion;
@@ -435,9 +426,8 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
         replacement->setEnigmaStyles(referenceFont->getEnigmaStyles());
         target->fontOptions.insert_or_assign(type, std::move(replacement));
 
-        // Nothing in this tuple came from the source any more, so the report must stop
-        // saying it did. Leaving these as LegacyMus made a substituted value look
-        // recovered, which is exactly the claim a coverage survey relies on.
+        // Nothing in this tuple came from the source any more, so the report must stop saying
+        // it did: leaving these as LegacyMus would make a substituted value look recovered.
         retargetReportedOrigin(report, type, "fontId", resolvedId);
         retargetReportedOrigin(report, type, "fontSize", referenceFont->fontSize);
         retargetReportedOrigin(report, type, "effects", referenceFont->getEnigmaStyles());
@@ -504,8 +494,7 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     // The epoch alone, with no version test. The range this used to carry, 1.0 through 2.ff,
     // is simply a restatement of the Coda-banner era, so it could never exclude a Mac document
     // -- but it excluded every Windows one, because that era states a platform where it states
-    // a version and `PC 1.0+` yields none. The tuple locations below hold for both: all 24
-    // Windows documents agree with their exact Finale 27 companions on every recovered type.
+    // a version and `PC 1.0+` yields none. The tuple locations below hold for both platforms.
     if (profile.epoch == FormatEpoch::CodaBanner) {
         for (const auto& tuple : earlyCodaTuples) {
             const auto fontId = readEarlyTupleField(

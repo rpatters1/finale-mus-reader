@@ -486,6 +486,216 @@ void writeTextOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
     out << "]}";
 }
 
+const char* jsonBool(bool value) { return value ? "true" : "false"; }
+
+void writeStemOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    const auto options = document->getOptions()->get<musx::dom::options::StemOptions>();
+    if (!options) {
+        out << ",\"stem_options\":null";
+        return;
+    }
+    out << ",\"stem_options\":{"
+        << "\"half_stem_length\":" << options->halfStemLength
+        << ",\"stem_length\":" << options->stemLength
+        << ",\"short_stem_length\":" << options->shortStemLength
+        << ",\"rev_stem_adj\":" << options->revStemAdj
+        << ",\"stem_width\":" << options->stemWidth
+        << ",\"stem_offset\":" << options->stemOffset
+        << ",\"use_stem_connections\":" << jsonBool(options->useStemConnections)
+        << ",\"no_reverse_stems\":" << jsonBool(options->noReverseStems);
+    for (const auto* member : {"halfStemLength", "stemLength", "shortStemLength", "revStemAdj",
+             "stemWidth", "stemOffset", "useStemConnections", "noReverseStems"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(originOf(fields, std::string("options.stemOptions.") + member));
+    }
+    out << ",\"stem_connections\":[";
+    for (std::size_t index = 0; index < options->stemConnections.size(); ++index) {
+        const auto& connection = options->stemConnections[index];
+        const auto prefix
+            = "options.stemOptions.stemConnections[" + std::to_string(index) + "].";
+        if (index) {
+            out << ',';
+        }
+        // The face as well as the comparator. Finale 27 matches fonts against those installed
+        // on the upgrading machine and renumbers its own table accordingly, so comparing
+        // comparators against a companion manufactures disagreements; the face is what both
+        // sides agree about.
+        std::string connectionFace;
+        if (const auto definition = document->getOthers()
+                ->get<musx::dom::others::FontDefinition>(
+                    musx::dom::SCORE_PARTID, connection->fontId)) {
+            connectionFace = definition->name;
+        }
+        out << "{\"index\":" << index
+            << ",\"font_name\":" << jsonString(connectionFace)
+            << ",\"font_id\":" << connection->fontId
+            << ",\"symbol\":" << static_cast<std::uint32_t>(connection->symbol)
+            << ",\"up_stem_vert\":" << connection->upStemVert
+            << ",\"down_stem_vert\":" << connection->downStemVert
+            << ",\"up_stem_horz\":" << connection->upStemHorz
+            << ",\"down_stem_horz\":" << connection->downStemHorz;
+        for (const auto* member : {"fontId", "symbol", "upStemVert", "downStemVert",
+                 "upStemHorz", "downStemHorz"}) {
+            out << ",\"origin_" << member << "\":"
+                << jsonString(originOf(fields, prefix + member));
+        }
+        out << '}';
+    }
+    out << "]}";
+}
+
+void writeMusicSpacingOptions(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    const auto options = document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
+    if (!options) {
+        out << ",\"spacing_options\":null";
+        return;
+    }
+    out << ",\"spacing_options\":{"
+        << "\"min_width\":" << options->minWidth
+        << ",\"max_width\":" << options->maxWidth
+        << ",\"min_distance\":" << options->minDistance
+        << ",\"min_dist_tied_notes\":" << options->minDistTiedNotes;
+    for (const auto* member : {"minWidth", "maxWidth", "minDistance", "minDistTiedNotes"}) {
+        out << ",\"origin_" << member << "\":"
+            << jsonString(originOf(fields, std::string("options.musicSpacing.") + member));
+    }
+    out << '}';
+}
+
+void writeLayerAttributes(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
+{
+    out << ",\"layer_atts\":[";
+    bool first = true;
+    for (const auto& layer :
+        document->getOthers()->getArray<musx::dom::others::LayerAttributes>(
+            musx::dom::SCORE_PARTID)) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        out << "{\"cmper\":" << layer->getCmper()
+            << ",\"rest_offset\":" << layer->restOffset
+            << ",\"origin_restOffset\":"
+            << jsonString(originOf(fields,
+                   "others.layerAtts[" + std::to_string(layer->getCmper()) + "].restOffset"))
+            << '}';
+    }
+    out << ']';
+}
+
+// The graphic assignments, whose recovered values are the tuple the source stores rather than a
+// named field list. Both page and shape assignments carry the same sixteen words plus the
+// graphic they name, so one writer serves both.
+template <typename Target>
+void writeGraphicAssignments(std::ostream& out, const musx::dom::DocumentPtr& document,
+    const char* key)
+{
+    out << ",\"" << key << "\":[";
+    bool first = true;
+    for (const auto& assign :
+        document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        out << "{\"cmper\":" << assign->getCmper()
+            << ",\"inci\":" << assign->getInci().value_or(0)
+            << ",\"left\":" << assign->left
+            << ",\"bottom\":" << assign->bottom
+            << ",\"width\":" << assign->width
+            << ",\"height\":" << assign->height
+            << ",\"f_desc_id\":" << assign->fDescId
+            << '}';
+    }
+    out << ']';
+}
+
+// The measure graphic assignments, which are details rather than others and so carry a second
+// comparator. The fields are the ones both sides spell as plain numbers.
+void writeMeasureGraphicAssignments(std::ostream& out, const musx::dom::DocumentPtr& document)
+{
+    out << ",\"meas_graphic_assigns\":[";
+    bool first = true;
+    for (const auto& assign :
+        document->getDetails()->getArray<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID)) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        out << "{\"cmper1\":" << assign->getCmper1()
+            << ",\"cmper2\":" << assign->getCmper2()
+            << ",\"inci\":" << assign->getInci().value_or(0)
+            << ",\"left\":" << assign->left
+            << ",\"bottom\":" << assign->bottom
+            << ",\"width\":" << assign->width
+            << ",\"height\":" << assign->height
+            << ",\"f_desc_id\":" << assign->fDescId
+            << ",\"orig_width\":" << assign->origWidth
+            << ",\"orig_height\":" << assign->origHeight
+            << '}';
+    }
+    out << ']';
+}
+
+void writeShapeDefinitions(std::ostream& out, const musx::dom::DocumentPtr& document)
+{
+    out << ",\"shape_defs\":[";
+    bool first = true;
+    for (const auto& shape :
+        document->getOthers()->getArray<musx::dom::others::ShapeDef>(musx::dom::SCORE_PARTID)) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        out << "{\"cmper\":" << shape->getCmper()
+            << ",\"instruction_list\":" << shape->instructionList
+            << ",\"data_list\":" << shape->dataList
+            << ",\"shape_type\":" << static_cast<int>(shape->shapeType)
+            << ",\"blank\":" << jsonBool(shape->isBlank())
+            << '}';
+    }
+    out << ']';
+}
+
+// Every text class the reader recovers, as the records themselves. A text is compared by its
+// characters rather than by a field list, so the whole string is emitted and the comparison is
+// equality. The number goes with it because a recovered record claims a comparator as much as
+// it claims characters, and musxdom keys the pool by it.
+template <typename Target>
+void writeTextClass(std::ostream& out, const musx::dom::DocumentPtr& document, const char* key)
+{
+    out << ",\"" << key << "\":[";
+    bool first = true;
+    for (const auto& item : document->getTexts()->getArray<Target>()) {
+        if (!first) {
+            out << ',';
+        }
+        first = false;
+        out << "{\"number\":" << item->getTextNumber() << ",\"text\":" << jsonString(item->text)
+            << '}';
+    }
+    out << ']';
+}
+
+void writeTexts(std::ostream& out, const musx::dom::DocumentPtr& document)
+{
+    using namespace musx::dom::texts;
+    writeTextClass<BlockText>(out, document, "block_texts");
+    writeTextClass<BookmarkText>(out, document, "bookmark_texts");
+    writeTextClass<ExpressionText>(out, document, "expression_texts");
+    writeTextClass<FileInfoText>(out, document, "file_info_texts");
+    writeTextClass<LyricsChorus>(out, document, "lyrics_choruses");
+    writeTextClass<LyricsSection>(out, document, "lyrics_sections");
+    writeTextClass<LyricsVerse>(out, document, "lyrics_verses");
+    writeTextClass<SmartShapeText>(out, document, "smart_shape_texts");
+}
+
 void writeFontDefinitions(std::ostream& out, const musx::dom::DocumentPtr& document,
     const std::map<std::string, finale_mus_reader::FieldInfo>& fields)
 {
@@ -557,6 +767,16 @@ int main(int argc, char** argv)
             writeTextOptions(out, result.document, fields);
             writeLyricOptions(out, result.document, fields);
             writeFontDefinitions(out, result.document, fields);
+            writeStemOptions(out, result.document, fields);
+            writeMusicSpacingOptions(out, result.document, fields);
+            writeLayerAttributes(out, result.document, fields);
+            writeGraphicAssignments<musx::dom::others::PageGraphicAssign>(
+                out, result.document, "page_graphic_assigns");
+            writeGraphicAssignments<musx::dom::others::ShapeGraphicAssign>(
+                out, result.document, "shape_graphic_assigns");
+            writeShapeDefinitions(out, result.document);
+            writeMeasureGraphicAssignments(out, result.document);
+            writeTexts(out, result.document);
             out << '}';
         } catch (const std::exception& error) {
             ++failed;

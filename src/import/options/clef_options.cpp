@@ -46,16 +46,13 @@ constexpr std::uint32_t earlyClefCharSlot = 2;
 constexpr std::uint32_t earlyStaffPositionSlot = 3;
 constexpr std::uint32_t earlyBaselineDifferenceSlot = 4;
 
-// Before Finale 97 the baseline adjustment is a feature the document switches on, in bit 0
-// of word 5 of the *first* clef's selector. The switch is per document, not per clef: the
-// controlled Finale 3.7.2 pair toggles it 0 -> 1 and its companion then converts all eight
-// clefs, including ones that save never touched, while the same document with the switch off
-// loses baselines it plainly stores.
+// Before Finale 97 the baseline adjustment is a feature the document switches on, in bit 0 of
+// word 5 of the *first* clef's selector. The switch is per document, not per clef: clearing it
+// suppresses the adjustment for every clef, including ones that plainly store one.
 //
 // Finale 97, internally 3.8, dropped the checkbox and applies the adjustment unconditionally.
-// Its files still carry other bits in word 5 -- 24, 30 and 36 all occur -- so testing the
-// word for non-zero would read those as a switch that is not there and happen to be right
-// only because every 3.8-and-later corpus file leaves its baselines at zero.
+// Its files still carry other bits in word 5 -- 24, 30 and 36 all occur -- so testing the whole
+// word for non-zero would read those as a switch that is not there.
 //
 // The window is bounded at both ends rather than left open at "3.8 or later". The early path
 // only ever sees pre-2001 versions, so the upper bound changes nothing today; it is there so
@@ -88,9 +85,7 @@ constexpr double efixPerHarmonicLevel =
 // readings yields the collection Finale actually stores.
 constexpr std::size_t modernClefCount = 18;
 
-// Packed clef flags. Confirmed against exact Finale 27 companions: every tuple carrying
-// bit 1 has a non-zero font triple and its companion has <useOwnFont/>, and no tuple
-// without it ever does.
+// Packed clef flags. Bit 1 is set exactly when the tuple carries its own font triple.
 constexpr std::uint16_t isShapeBit = 0x0001;
 constexpr std::uint16_t useOwnFontBit = 0x0002;
 constexpr std::uint16_t scaleToStaffHeightBit = 0x0004;
@@ -104,19 +99,14 @@ struct PhysicalClef
     /// @brief The difference between the clef's musical baseline, such as the G line of a
     /// treble clef, and its typographic baseline. A music font whose clefs already sit on
     /// the musical baseline leaves it zero.
-    /// @details The unit changes with the era, and both halves now rest on controlled edits.
+    /// @details The unit changes with the era.
     ///
-    /// From Finale 2001 it is Efix, **confirmed**: a Finale 2005 fixture that sets one inch
-    /// on the treble clef stores 18432, which is exactly one inch, and its exact Finale 27
-    /// companion carries 18432 straight through as `<baseAdjust>`. The stored field is a
-    /// signed word, so its range is about +/-512 Evpu; the same fixture's second edit
-    /// saturated at -32768 rather than storing the -36864 the UI asked for.
+    /// From Finale 2001 it is Efix and passes through unchanged. The stored field is a signed
+    /// word, so its range is about +/-512 Evpu; Finale saturates at -32768 rather than storing
+    /// a larger negative the UI asks for.
     ///
-    /// Through Finale 2000 it is harmonic levels, and the conversion through
-    /// @ref efixPerHarmonicLevel is **confirmed** in two independent eras. A Finale 3.7.2
-    /// fixture storing 1, -2 and -5 upgrades to 768, -1536 and -3840, and a Finale 97 fixture
-    /// storing 1 and -2 upgrades to 768 and -1536. Controlled Finale 1.0.0 and 2.6.3 edits
-    /// move this word alone, and each era's own ETF shows the same numbers.
+    /// Through Finale 2000 it is harmonic levels, converted through
+    /// @ref efixPerHarmonicLevel.
     ///
     /// A stored value only applies when @ref baselineEnabled says so. The raw stored word is
     /// always reported, enabled or not. See research/FORMAT_NOTES.md.
@@ -285,10 +275,9 @@ bool captureEarlyClefs(const records::LegacyRecordIndex& index, const SourceProf
     // Read the document-wide switch from the first clef's record before any clef is built.
     const auto* firstRow = index.getOthers().get(
         numericGlobalTag(earlyFirstSelector), GLOBALS_CMPER, 0, 0);
-    // The Coda era is excluded outright. Its word 4 is a mid-measure-clef baseline rather
-    // than the general clef baseline musxdom means, its switch is never set in any corpus
-    // file, and Finale 27 discards the value. Transferring it would invent an offset from a
-    // field that does not mean the same thing.
+    // The Coda era is excluded outright. Its word 4 is a mid-measure-clef baseline rather than
+    // the general clef baseline musxdom means, and its switch is never set. Transferring it
+    // would invent an offset from a field that does not mean the same thing.
     const bool baselineEnabled = profile.epoch != FormatEpoch::CodaBanner
         && (alwaysAdjustsBaseline.includes(profile.version)
             || (firstRow
@@ -395,23 +384,17 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
     }
 }
 
-// The scalars around the collection. Each location was checked against every adjacent-exact
-// Finale 27 companion in the reference corpus, per epoch, because the eras do not agree
-// about what these selectors hold. The locations themselves are distilled in
-// research/data/legacy_option_mappings.csv; the per-epoch verification is in
-// research/FORMAT_NOTES.md.
+// The scalars around the collection. The eras do not agree about what these selectors hold, so
+// each has its own table. The locations are distilled in
+// research/data/legacy_option_mappings.csv.
 //
-// cautionaryClefChanges is bit 2 of the courtesy flags in selector 44 word 3, confirmed by a
-// controlled Finale 2005 pair: turning off the courtesy clef alone moves that word 7 -> 3,
-// and turning off the courtesy key signature alone moves it 7 -> 6, so bit 0 is the key and
-// bit 2 the clef. The corpus could not have settled this, because every companion has the
-// option set and only the values 5 and 7 occur, both of which have bit 2 set.
+// cautionaryClefChanges is bit 2 of the courtesy flags in selector 44 word 3, bit 0 of the same
+// word being the key signature's.
 //
-// The Coda era is excluded: it has no packed courtesy word. Selector 12 holds these as
-// separate boolean words, where the same controlled edit in Finale 2.6.3 moves word 1, the
-// key signature's. Which word is the clef's is **open**.
+// The Coda era is excluded: it has no packed courtesy word. Selector 12 holds these as separate
+// boolean words, of which word 1 is the key signature's. Which word is the clef's is **open**.
 
-// Finale 3.0 through 2006. All eight agree with 547 companions.
+// Finale 3.0 through 2006.
 const FieldMapping clefScalarFields[] = {
     MUS_WORD(ClefOptionsTarget, "01", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, defaultClef),
     MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, clefChangePercent),
@@ -429,9 +412,8 @@ const FieldMapping clefScalarFields[] = {
 // Finale 1.8.7 through 2.6. Only five of the eight selectors mean the same thing here.
 // Selector 27 word 1 and selector 39 word 4 are font sizes in this era, not clef spacing --
 // they are the lyric-chorus and clef font tuples the FontOptions mapping reads -- and
-// selector 38 word 5 disagrees with the companion on every file that has a non-default
-// value. Reading any of the three would produce a confident wrong number, so the era simply
-// leaves those three at the Finale 27 default.
+// selector 38 word 5 holds something else again. Reading any of the three would produce a
+// confident wrong number, so the era leaves them at the Finale 27 default.
 const FieldMapping earlyClefScalarFields[] = {
     MUS_WORD(ClefOptionsTarget, "01", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, defaultClef),
     MUS_WORD(ClefOptionsTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, clefChangePercent),
@@ -441,8 +423,7 @@ const FieldMapping earlyClefScalarFields[] = {
 };
 
 // Finale 2007 and later. The same eight logical options, reached through the shared
-// numericGlobalClass rule and addressed by byte offset rather than word slot. All eight
-// agree with 497 companions.
+// numericGlobalClass rule and addressed by byte offset rather than word slot.
 const FieldMapping classClefScalarFields[] = {
     MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(1), GLOBALS_CMPER, classWordOffset(0), defaultClef),
     MUS_CLASS_WORD(ClefOptionsTarget, numericGlobalClass(13), GLOBALS_CMPER, classWordOffset(2), clefChangePercent),
@@ -515,7 +496,7 @@ void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& r
     // The default clef is an index into the collection, and musxdom's accessor throws on an
     // out-of-range one. Warn and leave the recovered value rather than clamping it: clamping
     // would turn a decoding error, or a damaged file, into a plausible document and hide the
-    // very thing worth knowing. Every corpus file is in range, so this fires only on
+    // very thing worth knowing. An ordinary document is always in range, so this fires only on
     // something genuinely unexpected.
     if (target->defaultClef >= target->clefDefs.size()) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"The recovered default clef index "
@@ -541,10 +522,9 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     // Three neighbouring options -- the clef-to-key and clef-to-time spacings and
     // "display clef only on first system" -- do not exist in that era either, but they need
     // no assertion. Both pinned baselines omit all three, so the seeded values are already
-    // zero and false, which is what Finale 27 itself produces when it upgrades one of these
-    // documents: all 57 Coda companions in the corpus agree. Where the baseline already gives
-    // the value the upgrade would give, the baseline is the answer, and reporting it as a
-    // Finale 27 default is accurate rather than an understatement.
+    // zero and false, which is what the era means. Where the baseline already gives the right
+    // value, the baseline is the answer, and reporting it as a Finale 27 default is accurate
+    // rather than an understatement.
     //
     // Asserting them instead would buy nothing. The baseline is a pinned artifact, generated
     // from committed resources whose hashes AGENTS.md records, so depending on it is not the
@@ -573,19 +553,18 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
                 provenance.decodedOffset = row->decodedOffset;
                 if (*tupleWords == wideTupleWords
                     && profile.byteOrder == ByteOrder::BigEndian) {
-                    // The long clef character's word order has no big-endian witness and
-                    // almost certainly never will: see research/FORMAT_NOTES.md. Rather than
-                    // rely on that absence, say so when the case actually arrives.
+                    // **Unverified: the long clef character's word order in a big-endian
+                    // container.** No such document is known; see research/FORMAT_NOTES.md.
+                    // Rather than rely on that absence, the case announces itself when it
+                    // arrives.
                     //
                     // Warning rather than something quieter, despite firing for essentially no
-                    // real file. Every other diagnostic this reader emits says a value is
-                    // missing; this one says a value may be wrong. If the word order is the
-                    // other way, the clef characters are not slightly off but nonsense, and a
-                    // clef table of nonsense is worth interrupting for. The level costs
-                    // nothing when no such file exists and costs a silently broken document
-                    // when one does.
+                    // real file. Nearly every other diagnostic here says a value is missing;
+                    // this one says a value may be wrong. If the word order is the other way
+                    // the clef characters are not slightly off but nonsense, and a clef table
+                    // of nonsense is worth interrupting for.
                     report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"This document uses the Finale 2012 clef layout "
-                        "in big-endian order, which no surveyed file does; the clef "
+                        "in big-endian order, an untested combination; the clef "
                         "character's word order is unverified for it."});
                 }
                 captureFromWordStream(words, *tupleWords, provenance, target, report);

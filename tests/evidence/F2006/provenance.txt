@@ -12,6 +12,42 @@ F2006-single-title.mus
     them. The only structural difference from Finale 2005 is a fifth, empty
     0x0013 block, which this file carries.
 
+F2006-text-inserts.mus
+    sha256 aa5dfb3e175bc5b489a20f5155648a09699672d5178b02a33f9daf164b174c96
+F2006-text-inserts.etf
+    sha256 e32699f67d4b3452d7cef897138fa2126dde3fa18d4490c27f42094c052b2061
+F2006-text-inserts.musx
+    sha256 a486787619ee5e1a72468dcab5875dfadbc83b9c1c13793616e00c61d764bf83
+    Twenty-one text blocks and three expressions, each holding one Text Tool
+    insert or style command and nothing else, so that every one is identified by
+    its own block number. Written to decode the binary Enigma command codes,
+    which Finale stores in the MUS from Finale 2006 and which no public source
+    describes.
+
+    Finale 2006 is the only release that can answer this. It is the first to write
+    those codes and the last to export ETF, so the same document exists both
+    encoded and spelled out: the .mus stores `^\x8c\x01\x01\x01\x02` where the
+    .etf writes `^date(1)`. The Finale 27 companion agrees with the ETF on all 24
+    records, giving each pairing two independent witnesses. Together they fix 25
+    command codes and three things about the argument encoding that no other
+    document could settle:
+
+      * it is one value, not a sequence of shorter ones. Block 6 spells a page
+        offset of 275 as `01 01 01 01 01 02 02 04`; read as two arguments the
+        same bytes are 0 and 275, so a zero offset could never have told them
+        apart.
+      * the digit range runs the full 0 to 15. Block 21's `^superscript(15)` is
+        `01 01 01 01 01 01 01 10`, the only place a nibble of 0xf appears
+        anywhere, which is what confirms digits are stored one greater than
+        their value across the whole range rather than only where observed.
+      * an argument is signed. Block 19's `^baseline(-13)` is
+        `10 10 10 10 10 10 10 04`, or 0xfffffff3; read unsigned it is
+        4294967283.
+
+    The document also establishes that Finale 2006's File Info still has exactly
+    four fields, title, composer, copyright and description, so the lyricist,
+    arranger and subtitle that musxdom's FileInfoText models arrived later.
+
 Photo_tiff.tiff
     CC0 1.0 https://commons.wikimedia.org/wiki/File%3APhoto_tiff.tiff
     sha256 48a219c47c60a492d69ae714c60cabcfda9dc7fdc851c9dabed54f563fa8e10c

@@ -38,13 +38,13 @@ void convertNameToUtf8(void* instance, const SourceProfile&)
 // operating system and then convert exactly as every other era does: `charsetVal` stays 0,
 // which already means Mac Roman under the Mac bank and ANSI under the Windows bank.
 //
-// The synthesized bank is a starting position, not a discovery. It is currently untestable:
-// all 11,842 font names in the surveyed pre-3.2 corpus are 7-bit, so no observed name is
-// affected either way. It stops being arbitrary the moment an 8-bit pre-3.2 name appears.
+// **Unverified: the synthesized bank.** Every pre-3.2 font name seen is 7-bit, so no name is
+// affected either way and nothing yet distinguishes this choice from another. It stops being
+// arbitrary the moment an 8-bit pre-3.2 name appears.
 //
-// An unclassified platform is treated as Mac. Coda-banner files carry no platform tuple at
-// all, and no file earlier than Finale 3.0 in any survey is Windows-origin, so Mac is the
-// only origin those documents can have.
+// An unclassified platform is treated as Mac. Coda-banner files carry no platform tuple at all,
+// and nothing earlier than Finale 3.0 is Windows-origin, so Mac is the only origin those
+// documents can have.
 void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile)
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
@@ -62,18 +62,15 @@ void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile)
 // value. This says where the *font* came from, not where the document was written: a Mac
 // font can appear in a document saved on Windows.
 //
-// The values agree with musxdom's own documentation of the field, which records 0xfff as
-// the macOS symbol character set and 2 as the Windows one. The controlled Finale 2002
-// fixture stores 0x1fff for Maestro, a Mac symbol font, and 0x1000 for Times, a Mac text
-// font, and the matching ETF prints those same headers as 8191 and 4096.
+// The values agree with musxdom's own documentation of the field, which records 0xfff as the
+// macOS symbol character set and 2 as the Windows one. A Mac symbol font stores 0x1fff and a
+// Mac text font 0x1000.
 //
 // The header's second word carries the pitch in its low nibble and the family in its high
-// nibble. Across 7,622 header incidences in the corpus it is non-zero only for Windows-bank
-// fonts: every one of the 7,355 Mac-bank fonts stores zero, while Windows-bank fonts take
-// pitch values 1, 2, and 7 and family values 0, 1, 2, 4, and 5. That is consistent with the
-// field describing a Windows font-selection attribute that has no Mac equivalent.
+// nibble. It is non-zero only for Windows-bank fonts, Mac-bank fonts always storing zero, which
+// is consistent with a Windows font-selection attribute that has no Mac equivalent.
 //
-// The remaining four words are unused. Not one of them is non-zero anywhere in the corpus.
+// The remaining four words are unused, and are zero everywhere.
 constexpr std::uint8_t charsetBankBit = 13;
 constexpr std::uint8_t charsetValueBits = 12;
 constexpr std::uint8_t nibbleBits = 4;
@@ -103,19 +100,12 @@ const FieldMapping fontFields[] = {
 // these documents rather than merely unmapped, so this table carries only the name; the
 // bank is synthesized from the file's operating system by the finalizer above.
 //
-// The split is by version, not by platform. Finale 3.0 files occur in both origins — 79
-// macOS and 3 Windows across the surveyed corpora — and every one of them reads correctly
-// under this table, yielding 353 font names with none blank and none degenerate. A file
-// carrying the header would truncate at the first NUL of its packed charset word if read
-// this way, so clean names are positive evidence that no header is present. Finale 3.2 and
-// later, in both origins, read correctly only under the table above.
+// The split is by version, not by platform: both platforms behave alike on either side of the
+// boundary. A file carrying the header would truncate at the first NUL of its packed charset
+// word if read this way, so names that come out clean are positive evidence that no header is
+// present.
 //
-// This supersedes an earlier note that the corpus held only Windows-origin 3.0 files and
-// that a platform explanation therefore could not be ruled out. It can be: both platforms
-// behave alike on either side of the boundary.
-//
-// What remains open is where between 3.0 and 3.2 the header arrived, because no survey has
-// yet turned up a Finale 3.1 file.
+// Where between 3.0 and 3.2 the header arrived is **open**; no Finale 3.1 file is available.
 constexpr std::uint8_t headerFirstVersion = 3;
 constexpr std::uint8_t headerFirstMinor = 2;
 

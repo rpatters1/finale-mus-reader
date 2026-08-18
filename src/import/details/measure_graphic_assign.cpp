@@ -85,8 +85,8 @@ void importMeasureGraphicAssignments(const ImportContext& context)
 {
     switch (context.profile.epoch) {
     case FormatEpoch::CodaBanner:
-        // No assignment was found in either surveyed Coda-banner corpus. The normalized
-        // fixed detail pool remains accepted so a future specimen can use the same mg layout.
+        // No Coda-banner assignment has been seen. The normalized fixed detail pool remains
+        // accepted so a future specimen can use the same mg layout.
         [[fallthrough]];
     case FormatEpoch::UncompressedLegacy:
     case FormatEpoch::DclLegacy:

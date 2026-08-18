@@ -4,6 +4,42 @@
 
 """Aggregate options_coverage_probe observations into an epoch coverage report.
 
+Covers, against companions, **every class the reader recovers**: ClefOptions, FontOptions,
+LyricOptions, MultimeasureRestOptions, MusicSpacingOptions, StemOptions, TextOptions,
+FontDefinition, LayerAttributes, PageGraphicAssign, ShapeGraphicAssign, ShapeDef,
+MeasureGraphicAssign, and all eight text classes -- twenty-one in all, matching the importer
+registry in src/import/support/legacy_mapping.cpp one for one. A full regression is only as wide
+as this list, so adding an importer means adding it here.
+
+Some differences a run reports are intended and are not regressions. The largest are:
+
+  TextOptions.symbolInserts.*   Finale 3.7-2000 is mis-converted by Finale 27, which reads an
+                                17-byte element as the later 18-byte one. The reader reads the
+                                era's own stride and therefore disagrees on nearly every field.
+  StemOptions.connection        `past-terminator` counts elements Finale 27 carries beyond the
+                                first symbol-less one, where the reader stops.
+  BlockText.record              `companion-only` is dominated by the score's part name. Where
+                                the source's text pool holds that block the reader recovers it
+                                like any other, which is correct; where it does not, the name
+                                comes from PartDefinition, which the reader does not yet import.
+                                A coverage gap rather than an intended difference, and it closes
+                                when PartDefinition does. `reader-only` is a block for a staff
+                                the converted document no longer has.
+  ExpressionText.record         `companion-only` in the fixed-row and early DCL eras is the `DT`
+                                text whose recovery is deferred until TextExpressionDef.
+  *.record font-spelling-only   the reader writes a font under the name the source defines; the
+                                companion writes whichever spelling Finale 27 chose.
+  LyricOptions.use_smart_*      smart hyphens and smart word extensions are implemented as smart
+                                shapes. Finale's upgrade manufactures those and switches the
+                                options on; this reader does not manufacture them, so it reports
+                                false rather than claim a rendering nothing can draw.
+  default-omitted-by-companion  a companion omits an element holding musxdom's own default,
+                                which musxdom then fills in on the reader's side. Both mean the
+                                default; only a source-derived value can disagree with silence.
+
+A `differs` whose origin is `finale27-default` is not a reader error either: it says the pinned
+baseline disagrees with the companion for a field the source never stated.
+
 Reads the private JSON Lines emitted by tools/options_coverage_probe, optionally
 compares each observation with an independently extracted Finale 27 companion, and
 applies the acceptance rule from implement-musxdom-class: no epoch present in the
@@ -36,6 +72,137 @@ CLASSES = [
     ("text_options", "TextOptions"),
     ("font_definitions", "FontDefinition"),
 ]
+
+# The text classes are compared against companions but are deliberately **not** in CLASSES, so
+# the acceptance rule does not apply to them. That rule asks that no epoch be left entirely
+# uncovered for a class under study, which is meaningful for options because every document has
+# options: a document with none recovered is a reader failure. A document with no bookmark, no
+# lyric and no smart shape is an ordinary document, so the same rule would fail on absence that
+# means nothing. Texts are judged by the companion comparison below, where a record the reader
+# missed shows up as companion-only.
+
+# StemOptions: probe key, companion element. musxdom's XML names differ from its member names
+# in two places -- shortStemLength is <stem2> and stemOffset is <stemLift>. An absent element
+# means the field is 0 or false.
+STEM_NUMERIC = [
+    ("half_stem_length", "halfStemLength"),
+    ("stem_length", "stemLength"),
+    ("short_stem_length", "stem2"),
+    ("rev_stem_adj", "revStemAdj"),
+    ("stem_width", "stemWidth"),
+    ("stem_offset", "stemLift"),
+]
+STEM_BOOLEAN = [
+    ("use_stem_connections", "useStemConnections"),
+    ("no_reverse_stems", "noReverseStems"),
+]
+# The connection's font is <font>, not <fontID>: musxdom's StemConnection maps fontId to that
+# node. An absent element means zero, which is the document's default music font.
+STEM_CONNECT_FIELDS = [
+    ("font_id", "font"),
+    ("symbol", "symbol"),
+    ("up_stem_vert", "upStemVert"),
+    ("down_stem_vert", "downStemVert"),
+    ("up_stem_horz", "upStemHorz"),
+    ("down_stem_horz", "downStemHorz"),
+]
+
+SPACING_NUMERIC = [
+    ("min_width", "minWidth"),
+    ("max_width", "maxWidth"),
+    ("min_distance", "minDistance"),
+    ("min_dist_tied_notes", "minDistTiedNotes"),
+]
+
+# LyricOptions: probe key, companion element. An absent element means 0 or false.
+LYRIC_NUMERIC = [
+    ("hyphen_char", "hyphenChar"),
+    ("max_hyphen_separation", "maxHyphenSeparation"),
+    ("word_ext_vert_offset", "wordExtVertOffset"),
+    ("word_ext_horz_offset", "wordExtHorzOffset"),
+    ("word_ext_line_width", "wordExtLineWidth"),
+    ("word_ext_min_length", "wordExtMinLength"),
+]
+LYRIC_BOOLEAN = [
+    ("use_smart_word_extensions", "useSmartWordExtensions"),
+    ("use_smart_hyphens", "useSmartHyphens"),
+    ("use_alt_hyphen_font", "useAltHyphenFont"),
+    ("word_ext_need_underscore", "wordExtNeedUnderscore"),
+    ("word_ext_offset_to_notehead", "wordExtOffsetToNotehead"),
+    ("lyric_use_edge_punctuation", "lyricUseEdgePunctuation"),
+    ("show_auto_numbers_verses", "showAutoNumbersOnVerses"),
+    ("show_auto_numbers_choruses", "showAutoNumbersOnChoruses"),
+    ("show_auto_numbers_sections", "showAutoNumbersOnSections"),
+]
+# The companion writes an enum name; the probe writes musxdom's ordinal. An absent element is
+# the enum's first value, which is 0 for both of these.
+LYRIC_ENUMS = [
+    ("smart_hyphen_start", "smartHyphenStart",
+     {"always": 0, "sometimes": 1, "never": 2}),
+    ("lyric_auto_num_type", "lyricAutoNumType", {"none": 0, "align": 1}),
+]
+LYRIC_TEXT = [("punctuation_to_ignore", "lyricPunctuationToIgnore")]
+
+# The four syllable positions and the nine word-extension connection styles, both keyed by the
+# type name musxdom writes as an attribute rather than by position.
+ALIGN_JUSTIFY = {"left": 0, "right": 1, "center": 2}
+WORD_EXT_CONNECT_INDEX = {
+    "lyricRightBottom": 0, "headRightLyrBaseline": 1, "systemLeft": 2,
+    "systemRight": 3, "dotRightLyrBaseline": 4, "durationLyrBaseline": 5,
+}
+
+# The graphic assignments. The reader recovers the whole stored tuple; these are the members
+# whose companion spelling is a plain number and so can be compared without translating an
+# enumeration. Note fDescID, whose companion spelling capitalizes differently from the member.
+MEAS_GRAPHIC_FIELDS = [
+    ("left", "left"),
+    ("bottom", "bottom"),
+    ("width", "width"),
+    ("height", "height"),
+    ("f_desc_id", "fDescID"),
+    ("orig_width", "origWidth"),
+    ("orig_height", "origHeight"),
+]
+
+GRAPHIC_FIELDS = [
+    ("left", "left"),
+    ("bottom", "bottom"),
+    ("width", "width"),
+    ("height", "height"),
+    ("f_desc_id", "fDescID"),
+]
+
+# The text classes: probe key, companion element, report label. A text is compared by its
+# characters, so there is no field list -- the whole string is the value.
+TEXT_CLASSES = [
+    ("block_texts", "blockText", "BlockText"),
+    ("bookmark_texts", "bookmarkText", "BookmarkText"),
+    ("expression_texts", "expression", "ExpressionText"),
+    ("lyrics_choruses", "chorus", "LyricsChorus"),
+    ("lyrics_sections", "section", "LyricsSection"),
+    ("lyrics_verses", "verse", "LyricsVerse"),
+    ("smart_shape_texts", "smartShapeText", "SmartShapeText"),
+]
+
+# A font command is normalized away before two texts are compared. The reader writes the font
+# under the name the source's own definition carries; the companion writes whichever spelling
+# Finale 27 chose, which for the same document can be `^fontid(n)`, `^font(Name,charset)` or a
+# categorized command, and whose comparator is not stable across re-exports because Finale
+# matches fonts against those installed on the upgrading machine. Comparing the spellings would
+# manufacture a disagreement on nearly every record; comparing what is left of the text does not.
+FONT_COMMAND = re.compile(r"\^(?:font|fontid|Font|fontMus|fontTxt|fontNum)\([^)]*\)")
+
+
+def unescape_xml(value):
+    """The five predefined entities. musxdom escapes nothing else in these fields."""
+    for entity, ch in (("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'),
+                       ("&apos;", "'"), ("&amp;", "&")):
+        value = value.replace(entity, ch)
+    return value
+
+
+def normalize_text(value):
+    return FONT_COMMAND.sub("<F>", value or "")
 
 # MultimeasureRestOptions: probe key, companion element, musxdom member. The element names
 # are musxdom's own XML mapping and are not the member names -- measWidth is <meaSpace>,
@@ -232,6 +399,119 @@ def read_companion(path):
                 normalize_font(names.get(fid.group(1) if fid else "0", "")),
                 int(size.group(1)) if size else 0,
             )
+    lyric = {}
+    lo = re.search(r"<lyricOptions>(.*?)</lyricOptions>", xml, re.S)
+    if lo:
+        body = lo.group(1)
+        for probe_key, element in LYRIC_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (element, element), body)
+            lyric[probe_key] = int(m.group(1)) if m else 0
+        for probe_key, element in LYRIC_BOOLEAN:
+            lyric[probe_key] = ("<%s/>" % element) in body
+        for probe_key, element, mapping in LYRIC_ENUMS:
+            m = re.search(r"<%s>(\w+)</%s>" % (element, element), body)
+            lyric[probe_key] = mapping.get(m.group(1), 0) if m else 0
+        for probe_key, element in LYRIC_TEXT:
+            m = re.search(r"<%s>(.*?)</%s>" % (element, element), body, re.S)
+            lyric[probe_key] = unescape_xml(m.group(1)) if m else ""
+        syllables = {}
+        for m in re.finditer(
+                r'<lyricSyllPosStyle type="(\w+)">(.*?)</lyricSyllPosStyle>', body, re.S):
+            inner = m.group(2)
+            align = re.search(r"<align>(\w+)</align>", inner)
+            justify = re.search(r"<justify>(\w+)</justify>", inner)
+            syllables[m.group(1)] = {
+                "align": ALIGN_JUSTIFY.get(align.group(1), 0) if align else 0,
+                "justify": ALIGN_JUSTIFY.get(justify.group(1), 0) if justify else 0,
+                "on": "<on/>" in inner,
+            }
+        lyric["syllables"] = syllables
+        connects = {}
+        for m in re.finditer(
+                r'<wordExtConnectStyle type="(\w+)">(.*?)</wordExtConnectStyle>', body, re.S):
+            inner = m.group(2)
+            index = re.search(r"<connectIndex>(\w+)</connectIndex>", inner)
+            x = re.search(r"<xOffset>(-?\d+)</xOffset>", inner)
+            y = re.search(r"<yOffset>(-?\d+)</yOffset>", inner)
+            connects[m.group(1)] = {
+                "connect_index": WORD_EXT_CONNECT_INDEX.get(index.group(1), 0) if index else 0,
+                "x": int(x.group(1)) if x else 0,
+                "y": int(y.group(1)) if y else 0,
+            }
+        lyric["connects"] = connects
+
+    stem = {}
+    so = re.search(r"<stemOptions>(.*?)</stemOptions>", xml, re.S)
+    if so:
+        body = so.group(1)
+        for probe_key, element in STEM_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (element, element), body)
+            stem[probe_key] = int(m.group(1)) if m else 0
+        for probe_key, element in STEM_BOOLEAN:
+            stem[probe_key] = ("<%s/>" % element) in body
+        connections = []
+        for m in re.finditer(r'<stemConnect index="(\d+)">(.*?)</stemConnect>', body, re.S):
+            entry = {}
+            for probe_key, element in STEM_CONNECT_FIELDS:
+                mm = re.search(r"<%s>(-?\d+)</%s>" % (element, element), m.group(2))
+                entry[probe_key] = int(mm.group(1)) if mm else 0
+            fid = re.search(r"<font>(\d+)</font>", m.group(2))
+            entry["font_name"] = normalize_font(
+                names.get(fid.group(1) if fid else "0", ""))
+            connections.append(entry)
+        stem["connections"] = connections
+
+    spacing = {}
+    mso = re.search(r"<musicSpacingOptions>(.*?)</musicSpacingOptions>", xml, re.S)
+    if mso:
+        for probe_key, element in SPACING_NUMERIC:
+            m = re.search(r"<%s>(-?\d+)</%s>" % (element, element), mso.group(1))
+            spacing[probe_key] = int(m.group(1)) if m else 0
+
+    layers = {}
+    for m in re.finditer(r'<layerAtts cmper="(\d+)">(.*?)</layerAtts>', xml, re.S):
+        off = re.search(r"<restOffset>(-?\d+)</restOffset>", m.group(2))
+        layers[int(m.group(1))] = int(off.group(1)) if off else 0
+
+    graphics = {}
+    for probe_key, element in [("page_graphic_assigns", "pageGraphicAssign"),
+                               ("shape_graphic_assigns", "shapeGraphicAssign")]:
+        found = {}
+        for m in re.finditer(
+                r'<%s cmper="(\d+)" inci="(\d+)">(.*?)</%s>' % (element, element), xml, re.S):
+            entry = {}
+            for pk, el in GRAPHIC_FIELDS:
+                mm = re.search(r"<%s>(-?\d+)</%s>" % (el, el), m.group(3))
+                entry[pk] = int(mm.group(1)) if mm else 0
+            found[(int(m.group(1)), int(m.group(2)))] = entry
+        graphics[probe_key] = found
+
+    meas_graphics = {}
+    for m in re.finditer(
+            r'<measGraphicAssign cmper1="(\d+)" cmper2="(\d+)" inci="(\d+)">(.*?)'
+            r'</measGraphicAssign>', xml, re.S):
+        entry = {}
+        for pk, el in MEAS_GRAPHIC_FIELDS:
+            mm = re.search(r"<%s>(-?\d+)</%s>" % (el, el), m.group(4))
+            entry[pk] = int(mm.group(1)) if mm else 0
+        meas_graphics[(int(m.group(1)), int(m.group(2)), int(m.group(3)))] = entry
+
+    shapes = {}
+    for m in re.finditer(r'<shapeDef cmper="(\d+)"[^>]*>(.*?)</shapeDef>', xml, re.S):
+        inst = re.search(r"<instList>(\d+)</instList>", m.group(2))
+        shapes[int(m.group(1))] = int(inst.group(1)) if inst else 0
+
+    texts = {}
+    for probe_key, element, _label in TEXT_CLASSES:
+        found = {}
+        for m in re.finditer(
+                r'<%s number="(\d+)"[^>]*>(.*?)</%s>' % (element, element), xml, re.S):
+            found[int(m.group(1))] = m.group(2)
+        texts[probe_key] = found
+    file_info = {}
+    for m in re.finditer(r'<fileInfo type="(\w+)">(.*?)</fileInfo>', xml, re.S):
+        file_info[m.group(1)] = m.group(2)
+
     clefs = []
     co = re.search(r"<clefOptions>(.*?)</clefOptions>", xml, re.S)
     scalars = {}
@@ -310,12 +590,230 @@ def read_companion(path):
     return {"fonts": fonts,
             "font_names": {normalize_font(v) for v in names.values() if v},
             "clefs": clefs, "clef_scalars": scalars, "mmrest": mmrest,
-            "text": text, "text_inserts": inserts}
+            "text": text, "text_inserts": inserts,
+            "texts": texts, "file_info": file_info,
+            "lyric": lyric, "stem": stem, "spacing": spacing, "layers": layers,
+            "graphics": graphics, "shapes": shapes,
+            "meas_graphics": meas_graphics}
+
+
+def compare_texts(obs, comp, out):
+    """Compare every recovered text record with the companion's own.
+
+    Three outcomes are counted separately from a plain match, because each is a difference the
+    reader makes on purpose and none of them means a record was read wrongly:
+
+      font-spelling-only  the texts agree once the font command is normalized away
+      reader-only         a record the companion does not carry
+      companion-only      a record the reader does not produce, most often the part name
+                          Finale 27 synthesizes, or a style prefix it supplies where the source
+                          states none
+    """
+    for probe_key, _element, label in TEXT_CLASSES:
+        ours = {item["number"]: item["text"] for item in (obs.get(probe_key) or [])}
+        theirs = comp["texts"].get(probe_key, {})
+        for number in sorted(set(ours) | set(theirs)):
+            a, b = ours.get(number), theirs.get(number)
+            if a is None:
+                out[(label + ".record", "text", "companion-only")] += 1
+            elif b is None:
+                out[(label + ".record", "text", "reader-only")] += 1
+            elif a == b:
+                out[(label + ".record", "text", "match")] += 1
+            elif normalize_text(a) == normalize_text(b):
+                out[(label + ".record", "text", "font-spelling-only")] += 1
+            else:
+                out[(label + ".record", "text", "differ")] += 1
+
+    # File Info is keyed by type name in the companion and by musxdom's ordinal here, so it is
+    # compared through that enumeration rather than by number.
+    file_info_types = ["title", "composer", "copyright", "description",
+                       "lyricist", "arranger", "subtitle"]
+    ours = {item["number"]: item["text"] for item in (obs.get("file_info_texts") or [])}
+    for ordinal, type_name in enumerate(file_info_types, start=1):
+        a, b = ours.get(ordinal), comp["file_info"].get(type_name)
+        if a is None and b is None:
+            continue
+        if a is None:
+            out[("FileInfoText." + type_name, "text", "companion-only")] += 1
+        elif b is None:
+            out[("FileInfoText." + type_name, "text", "reader-only")] += 1
+        else:
+            out[("FileInfoText." + type_name, "text", "match" if a == b else "differ")] += 1
+
+
+def compare_lyric_options(obs, comp, out):
+    ours = obs.get("lyric_options")
+    theirs = comp.get("lyric")
+    if not ours or not theirs:
+        return
+    fields = ([(k, e) for k, e in LYRIC_NUMERIC] + [(k, e) for k, e in LYRIC_BOOLEAN]
+              + [(k, e) for k, e, _m in LYRIC_ENUMS] + [(k, e) for k, e in LYRIC_TEXT])
+    for field, _element in fields:
+        a, b = ours.get(field), theirs.get(field)
+        if a is None or b is None:
+            continue
+        origin = ours.get("origin_" + to_member(field), "absent")
+        # A companion omits an element whose value is musxdom's own default, and musxdom fills
+        # that default in during construction, so the reader holds it while the companion shows
+        # nothing. Where the reader did not take the value from the source the two agree about
+        # the default and the silence means the same thing; only a source-derived value can
+        # disagree with an omission.
+        if b in ("", 0, False) and origin != "legacy-mus" and a != b:
+            out[("LyricOptions." + field, origin, "default-omitted-by-companion")] += 1
+            continue
+        out[("LyricOptions." + field, origin,
+             "preserved" if a == b else "differs")] += 1
+
+    for name, style in (ours.get("syllable_pos_styles") or {}).items():
+        other = (theirs.get("syllables") or {}).get(name)
+        if other is None:
+            out[("LyricOptions.syllablePosStyles", "absent", "companion-only")] += 1
+            continue
+        for member in ("align", "justify", "on"):
+            out[("LyricOptions.syllablePosStyles." + member, "legacy-mus",
+                 "preserved" if style.get(member) == other.get(member) else "differs")] += 1
+
+    for name, style in (ours.get("word_ext_connect_styles") or {}).items():
+        other = (theirs.get("connects") or {}).get(name)
+        if other is None:
+            out[("LyricOptions.wordExtConnectStyles", "absent", "companion-only")] += 1
+            continue
+        for member in ("connect_index", "x", "y"):
+            out[("LyricOptions.wordExtConnectStyles." + member, "legacy-mus",
+                 "preserved" if style.get(member) == other.get(member) else "differs")] += 1
+
+
+def compare_simple_class(obs, comp, out, probe_key, comp_key, label, numeric, boolean=()):
+    """Compare a flat scalar class field by field."""
+    ours = obs.get(probe_key)
+    theirs = comp.get(comp_key)
+    if not ours or not theirs:
+        return
+    for field, _element in list(numeric) + list(boolean):
+        a, b = ours.get(field), theirs.get(field)
+        if a is None or b is None:
+            continue
+        origin = ours.get("origin_" + to_member(field), "absent")
+        out[(label + "." + field, origin, "preserved" if a == b else "differs")] += 1
+
+
+def compare_stem_connections(obs, comp, out):
+    ours = (obs.get("stem_options") or {}).get("stem_connections") or []
+    theirs = (comp.get("stem") or {}).get("connections") or []
+    for index in range(max(len(ours), len(theirs))):
+        if index >= len(ours):
+            # The reader stops at the first element with no symbol; Finale 27 carries the
+            # trailing elements through. The difference is intended, so it is named rather
+            # than counted as a plain absence.
+            out[("StemOptions.connection", "absent", "past-terminator")] += 1
+            continue
+        if index >= len(theirs):
+            out[("StemOptions.connection", "absent", "reader-only")] += 1
+            continue
+        a, b = ours[index], theirs[index]
+        for field, _element in STEM_CONNECT_FIELDS:
+            if field == "font_id":
+                # The comparator, because the companion writes it directly under <font> and it
+                # is what the reader claims to have read. The face is reported beside it rather
+                # than instead of it: a companion resolves the same comparator through its own
+                # font table, which Finale 27 renumbers, so a face difference under a matching
+                # comparator says something about the upgrade and not about the reader.
+                if a.get(field) != b.get(field):
+                    outcome = "differs"
+                elif normalize_font(a.get("font_name") or "") == (b.get("font_name") or ""):
+                    outcome = "preserved"
+                else:
+                    outcome = "renumbered-face"
+            else:
+                outcome = "preserved" if a.get(field) == b.get(field) else "differs"
+            out[("StemOptions.connection." + field,
+                 a.get("origin_" + to_member(field), "absent"), outcome)] += 1
+
+
+def compare_layers(obs, comp, out):
+    ours = {layer["cmper"]: layer for layer in (obs.get("layer_atts") or [])}
+    theirs = comp.get("layers") or {}
+    for cmper in sorted(set(ours) | set(theirs)):
+        a, b = ours.get(cmper), theirs.get(cmper)
+        if a is None:
+            out[("LayerAttributes.restOffset", "absent", "companion-only")] += 1
+        elif b is None:
+            out[("LayerAttributes.restOffset", "absent", "reader-only")] += 1
+        else:
+            out[("LayerAttributes.restOffset", a.get("origin_restOffset", "absent"),
+                 "preserved" if a["rest_offset"] == b else "differs")] += 1
+
+
+def compare_graphics(obs, comp, out):
+    for probe_key, label in [("page_graphic_assigns", "PageGraphicAssign"),
+                             ("shape_graphic_assigns", "ShapeGraphicAssign")]:
+        ours = {(g["cmper"], g["inci"]): g for g in (obs.get(probe_key) or [])}
+        theirs = (comp.get("graphics") or {}).get(probe_key, {})
+        for key in sorted(set(ours) | set(theirs)):
+            a, b = ours.get(key), theirs.get(key)
+            if a is None:
+                out[(label + ".record", "absent", "companion-only")] += 1
+                continue
+            if b is None:
+                out[(label + ".record", "absent", "reader-only")] += 1
+                continue
+            for field, _element in GRAPHIC_FIELDS:
+                out[(label + "." + field, "legacy-mus",
+                     "preserved" if a.get(field) == b.get(field) else "differs")] += 1
+
+
+def compare_measure_graphics(obs, comp, out):
+    ours = {(g["cmper1"], g["cmper2"], g["inci"]): g
+            for g in (obs.get("meas_graphic_assigns") or [])}
+    theirs = comp.get("meas_graphics") or {}
+    for key in sorted(set(ours) | set(theirs)):
+        a, b = ours.get(key), theirs.get(key)
+        if a is None:
+            out[("MeasureGraphicAssign.record", "absent", "companion-only")] += 1
+            continue
+        if b is None:
+            out[("MeasureGraphicAssign.record", "absent", "reader-only")] += 1
+            continue
+        for field, _element in MEAS_GRAPHIC_FIELDS:
+            out[("MeasureGraphicAssign." + field, "legacy-mus",
+                 "preserved" if a.get(field) == b.get(field) else "differs")] += 1
+
+
+def compare_shapes(obs, comp, out):
+    ours = {sh["cmper"]: sh for sh in (obs.get("shape_defs") or [])}
+    theirs = comp.get("shapes") or {}
+    for cmper in sorted(set(ours) | set(theirs)):
+        a, b = ours.get(cmper), theirs.get(cmper)
+        if a is None:
+            out[("ShapeDef.instList", "absent", "companion-only")] += 1
+        elif b is None:
+            out[("ShapeDef.instList", "absent", "reader-only")] += 1
+        else:
+            out[("ShapeDef.instList", "legacy-mus",
+                 "preserved" if a["instruction_list"] == b else "differs")] += 1
+
+
+def to_member(probe_key):
+    """snake_case probe key -> the musxdom member name the origin is reported under."""
+    head, *rest = probe_key.split("_")
+    return head + "".join(part.capitalize() for part in rest)
 
 
 def compare_companion(obs, comp):
     """Classify each comparable value. Returns Counter of (class, field, outcome)."""
     out = collections.Counter()
+    compare_texts(obs, comp, out)
+    compare_simple_class(obs, comp, out, "stem_options", "stem", "StemOptions",
+                         STEM_NUMERIC, STEM_BOOLEAN)
+    compare_stem_connections(obs, comp, out)
+    compare_simple_class(obs, comp, out, "spacing_options", "spacing", "MusicSpacingOptions",
+                         SPACING_NUMERIC)
+    compare_layers(obs, comp, out)
+    compare_graphics(obs, comp, out)
+    compare_shapes(obs, comp, out)
+    compare_lyric_options(obs, comp, out)
+    compare_measure_graphics(obs, comp, out)
     fonts = obs.get("font_options") or []
     ours_by_ordinal = {f["ordinal"]: f for f in fonts}
     for ordinal, type_name in FONT_TYPE_NAMES.items():
@@ -607,10 +1105,10 @@ def main():
                 by_ep[obs["epoch"]][(k[0], k[2])] += v
         quality_ok = seen
         print(f"  compared {seen} document(s)\n")
-        print(f"  {'field':<46}{'origin':<18}{'outcome':<24}{'count':>8}")
+        print(f"  {'field':<52}{'origin':<18}{'outcome':<24}{'count':>8}")
         for (field, origin, outcome), n in sorted(
                 outcomes.items(), key=lambda kv: (-kv[1], kv[0])):
-            print(f"  {field:<46}{origin:<18}{outcome:<24}{n:>8}")
+            print(f"  {field:<52}{origin:<18}{outcome:<24}{n:>8}")
 
     print()
     print("RESULT:", "ACCEPTED" if ok else "NOT ACCEPTED")

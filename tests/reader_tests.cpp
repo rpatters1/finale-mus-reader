@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
+#include "container/mus_container.h"
 #include "container/product_banner.h"
 #include <algorithm>
 #include <array>
@@ -2650,7 +2651,60 @@ TEST_CASE("Uncompressed epoch and overlays", "[reader]")
 TEST_CASE("Coda banner epoch", "[reader]") { testCodaBannerEpoch(); }
 TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
 TEST_CASE("Embedded graphics", "[reader]") { testEmbeddedGraphics(); }
+// A Coda-banner document's pools, built directly so the walk can be given an empty one. The
+// era chains pools nose to tail: an 8-byte prologue of page count and page size, then that
+// many 512-byte pages, and the chain ends where the next four bytes are not the page size.
+std::vector<std::uint8_t> makeCodaBannerPools(const std::vector<std::uint32_t>& pageCounts)
+{
+    std::vector<std::uint8_t> result(0x200, 0);
+    const std::string banner = "Finale(TM) 2.6 Copyright 1987 by Coda. All rights reserved.";
+    writeFixed(result, 0, banner, banner.size());
+    for (const auto pages : pageCounts) {
+        write32(result, pages, ByteOrder::BigEndian);
+        write32(result, 0x200, ByteOrder::BigEndian);
+        result.resize(result.size() + std::size_t{pages} * 0x200, 0);
+    }
+    // The text region that follows the last pool. Its first four bytes are a chunk length, so
+    // they end the walk on their own without a terminator of the era's making.
+    const std::string text = "^text()";
+    write32(result, static_cast<std::uint32_t>(text.size()), ByteOrder::BigEndian);
+    result.insert(result.end(), text.begin(), text.end());
+    return result;
+}
+
+// An empty pool is an ordinary pool, not the end of the chain. The earliest documents store
+// nothing in their details pool and still carry an entries pool behind it, so a walk that
+// stopped on the first zero-page prologue would never reach it.
+void testCodaBannerEmptyPool()
+{
+    const auto full = finale_mus_reader::container::parse(
+        makeCodaBannerPools({1, 1, 1}).data(), makeCodaBannerPools({1, 1, 1}).size());
+    expect(full.formatEpoch == FormatEpoch::CodaBanner && full.blocks.size() == 3,
+        "Three non-empty pools were not all found");
+
+    const auto bytes = makeCodaBannerPools({1, 0, 1});
+    const auto parsed = finale_mus_reader::container::parse(bytes.data(), bytes.size());
+    expect(parsed.formatEpoch == FormatEpoch::CodaBanner,
+        "A document with an empty pool was not classified as the Coda-banner era");
+    expect(parsed.blocks.size() == 3,
+        "An empty second pool ended the walk instead of being reported as empty");
+    expect(parsed.blocks[1].data.empty() && parsed.blocks[1].info.decodedSize == 0,
+        "The empty pool was not reported as empty");
+    expect(parsed.blocks[2].data.size() == 0x200,
+        "The pool behind the empty one was not reached");
+    expect(parsed.blocks[0].info.type == 1 && parsed.blocks[1].info.type == 2
+            && parsed.blocks[2].info.type == 3,
+        "An empty pool did not take its place in the type numbering");
+
+    // A run of empty pools advances by the prologue each time rather than spinning, and the
+    // text region still ends the chain behind them.
+    const auto sparse = makeCodaBannerPools({0, 0, 0});
+    const auto walked = finale_mus_reader::container::parse(sparse.data(), sparse.size());
+    expect(walked.blocks.size() == 3, "A run of empty pools was not walked to its end");
+}
+
 TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
+TEST_CASE("Coda-banner empty pool", "[reader]") { testCodaBannerEmptyPool(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
 TEST_CASE("Shape definitions", "[reader]") { testShapeDefinitions(); }
 

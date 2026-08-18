@@ -97,13 +97,18 @@ In practice:
   learned the third spelling and the reader did not, because the reader had two
   copies and only one was updated.
 
+Comments in `src/` and `include/` state how the code works, and how the format is believed to
+work where belief is all there is, with the confidence labelled. They do not carry how a
+behavior was derived, which fixture or survey established it, or what was believed before. That
+material is not lost: it belongs in `research/FORMAT_NOTES.md`, `research/EXPERIMENT_LOG.md`,
+and the fixture `provenance.txt` files, which exist to hold it. See the
+`comment-production-code` skill.
+
 Doxygen comments document the contract, not its history. State what a caller must know:
 behavior, parameters, return values, and what is thrown. Do not explain why a function or
 property was added, what it replaced, or which investigation prompted it. A reader arriving at
-the published API has none of that context. This constrains Doxygen only; ordinary
-implementation comments in this repository are expected to carry that reasoning, because the
-evidence behind a mapping is the thing hardest to reconstruct later. The same rule applies to
-Doxygen written in musxdom.
+the published API has none of that context. The same rule applies to Doxygen written in
+musxdom.
 
 This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
 apply to `scripts/`, `tools/`, or test code, which may repeat themselves as

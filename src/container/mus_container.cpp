@@ -31,11 +31,10 @@ namespace {
 constexpr std::size_t defaultBodyOffset = 0x200;
 
 // A banner-era header records where its record body actually begins, as a 16-bit value at
-// 0x60 subject to the file's byte order. It reads 0x200 in 1,162 of the 1,163 surveyed
-// banner files, which is why a constant worked for so long, but the file-info strings that
-// occupy 0x0b0 onwards can overrun that boundary and push the body later. Treating 0x200 as
-// a constant leaves such a file unframed, and the failure looks like an unknown variant
-// rather than a misread header.
+// 0x60 subject to the file's byte order. It reads 0x200 almost always, but the file-info
+// strings that occupy 0x0b0 onwards can overrun that boundary and push the body later.
+// Treating 0x200 as a constant leaves such a file unframed, and the failure looks like an
+// unknown variant rather than a misread header.
 constexpr std::size_t bodyOffsetField = 0x60;
 
 std::size_t readBodyOffset(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder);
@@ -213,9 +212,8 @@ std::optional<ParsedContainer> tryUncompressed(
 // used to happen -- one embedded EPS cost a document its options, fonts, and layers, because
 // the failed member discarded every good block decoded before it.
 //
-// Both lists are exhaustive over the reference corpus: 388 DCL files carry only 0x000f
-// through 0x0013, and 522 zlib files carry only 0x0013 and 0x0016 through 0x001d. Every
-// listed type decoded in every file that has it, and no unlisted type ever did.
+// The DCL era uses 0x000f through 0x0013 and the zlib era 0x0013 and 0x0016 through 0x001d.
+// No type outside those ranges has been seen to decode.
 bool isCompressedBlockType(std::uint16_t type, bool dcl)
 {
     if (dcl) {
@@ -331,8 +329,8 @@ std::optional<ParsedContainer> tryCompressed(
 // an 8-byte prologue holding a 512-byte page count and the page size, followed by that many
 // pages. The pools appear in the same order the later eras use for their typed blocks, so
 // they are reported under the uncompressed-era type numbers and everything downstream can
-// treat all pre-2007 epochs alike. Every surveyed file of this era holds exactly three
-// pools; the text region that follows them uses different framing and is not decoded here.
+// treat all pre-2007 epochs alike. A file of this era holds three pools; the text region that
+// follows them uses different framing and is not decoded here.
 ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
 {
     ParsedContainer parsed;
@@ -354,7 +352,16 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
     while (offset + 8 <= size) {
         const auto pages = read32(data + offset, byteOrder);
         const auto pageSize = read32(data + offset + 4, byteOrder);
-        if (pageSize != defaultBodyOffset || pages == 0) {
+        // The page size is what identifies a prologue, and it is the only thing that does. A
+        // pool of zero pages is an ordinary empty pool, not the end of the chain: the earliest
+        // documents store nothing in their details pool and still carry an entries pool behind
+        // it. Ending the walk on an empty pool would hide every pool that follows.
+        //
+        // The chain needs no terminator of its own. What follows the last pool is the text
+        // region, whose first four bytes are a chunk length rather than 0x200, so the page-size
+        // test ends the walk there. The offset advances by the prologue even when the pool is
+        // empty, so a run of empty pools cannot spin.
+        if (pageSize != defaultBodyOffset) {
             break;
         }
         const auto body = offset + 8;
@@ -376,6 +383,7 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
     }
 
     parsed.trailingByteCount = size - offset;
+    parsed.textRegion.assign(data + offset, data + size);
     return parsed;
 }
 
@@ -389,8 +397,8 @@ bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 
 // Files older than the signature open with a plain-text product banner instead, such as
 // `Finale(TM) 2.6 Copyright 1987 by Coda.` or Finale 1.0.0's `Finale<0xAA> 1.0.0 ENIGA
-// Structures ...`. Every signature-bearing file in the surveyed corpora spells it
-// `Finale(R)`, so a pre-signature spelling at offset 0 identifies the era on its own.
+// Structures ...`. A signature-bearing file always spells it `Finale(R)`, so a pre-signature
+// spelling at offset 0 identifies the era on its own.
 //
 // The spellings themselves live in banner::parse, which is the only place any of them is
 // recognized.
@@ -398,11 +406,10 @@ bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 //
 // This era states its platform in the banner product and its order follows from that: a `PC`
 // product is a Windows document and little-endian, and every other product of the era is
-// big-endian. A numeric product is the Mac form; requiring a number, as this once did,
-// rejected every Windows document of the era outright -- 24 of them in the installs corpus.
+// big-endian. A numeric product is the Mac form, so requiring a number here would reject every
+// Windows document of the era outright.
 //
-// One function so that the era's order is decided once. It was decided in three places
-// before, and two of them said big-endian unconditionally.
+// One function, so that the era's order is decided in one place.
 std::optional<ByteOrder> codaBannerByteOrder(const std::uint8_t* data, std::size_t size)
 {
     const auto parsed = banner::parse(data, size);
@@ -455,9 +462,9 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
     }
 
     // The body of a Coda-banner file opens with a count followed by the body offset
-    // itself. That second word, not anything at the top of the file, is what confirms
-    // the era: all 54 substantive Coda-banner files in the corpus satisfy both checks,
-    // and the one file that satisfies neither is an AppleDouble metadata artifact.
+    // itself. That second word, not anything at the top of the file, is what confirms the era.
+    // A file that satisfies neither check is not a Coda-banner document at all -- an
+    // AppleDouble metadata artifact, for instance.
     if (const auto byteOrder = codaBannerByteOrder(data, size);
         byteOrder && hasCodaBannerBody(data, size, *byteOrder)) {
         return parseCodaBanner(data, size);

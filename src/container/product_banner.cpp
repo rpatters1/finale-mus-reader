@@ -29,9 +29,9 @@ constexpr std::array<std::string_view, 3> productTerminators = {
     // Finale 1.0.0 puts this where every later era puts a copyright notice.
     //
     // DO NOT CORRECT THE SPELLING. `ENIGA` is Coda's own typo, present in the file, and
-    // this string has to match those bytes exactly. All 22 Finale 1.0.0 documents in the
-    // surveyed corpora carry `45 4e 49 47 41` — E N I G A, with no M — and not one spells
-    // it `ENIGMA`. Repairing the typo here would stop the terminator matching, and the
+    // this string has to match those bytes exactly. Finale 1.0.0 documents carry
+    // `45 4e 49 47 41` — E N I G A, with no M — and never spell it `ENIGMA`. Repairing the
+    // typo here would stop the terminator matching, and the
     // product would silently come back as `1.0.0 ENIGA Structures` instead of `1.0.0`.
     " ENIGA Structures",
 };

@@ -171,8 +171,12 @@ add_library(finale_mus_reader STATIC
     src/import/others/layer_attributes.cpp
     src/import/others/shape_definitions.cpp
     src/import/support/embedded_graphics.cpp
+    src/import/support/enigma_text.cpp
     src/import/support/legacy_mapping.cpp
     src/import/support/text_encoding.cpp
+    src/import/texts/file_info_text.cpp
+    src/import/texts/coda_texts.cpp
+    src/import/texts/text_pool.cpp
     src/reader/document_factory.cpp
     src/reader/reader.cpp
     src/records/legacy_others.cpp

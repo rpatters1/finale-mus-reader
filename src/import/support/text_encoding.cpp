@@ -3,6 +3,8 @@
 
 #include "import/support/text_encoding.h"
 
+#include <string_view>
+
 #if defined(_WIN32)
 #include <windows.h>
 #elif defined(__APPLE__)
@@ -40,10 +42,9 @@ constexpr int windowsThaiCharset = 222;
 constexpr int windowsEastEuropeCharset = 238;
 constexpr int windowsOemCharset = 255;
 
-// Classic Mac Script Manager codes, from Apple's Script.h. The surveyed corpora confirm
-// several directly: names stored under 1, 2, and 25 decode to correct Japanese, Traditional
-// Chinese, and Simplified Chinese and to nothing legible otherwise, and fonts whose own
-// names end `CY` and `CE` are stored under 7 and 29 respectively.
+// Classic Mac Script Manager codes, from Apple's Script.h. Codes 1, 2 and 25 are Japanese,
+// Traditional Chinese and Simplified Chinese, and 7 and 29 are Cyrillic and Central European;
+// each decodes legibly under that reading and under no other.
 constexpr int macRomanScript = 0;
 constexpr int macJapaneseScript = 1;
 constexpr int macTradChineseScript = 2;
@@ -58,9 +59,8 @@ constexpr int macCentralEuroScript = 29;
 constexpr int macTurkishScript = 81;
 // smUninterp, the last of the script codes. Apple glosses it as uninterpreted symbols: the
 // character codes are not text in any script and are not to be given a linguistic reading.
-// It is the Script Manager's way of saying "symbol font", and Finale does use it — two
-// fonts in the surveyed corpora carry it — even though Finale's usual Mac symbol marker is
-// the separate 0xfff sentinel. A font's *name* is still ordinary text whatever its content
+// It is the Script Manager's way of saying "symbol font", and Finale does use it, rarely, even
+// though its usual Mac symbol marker is the separate 0xfff sentinel. A font's *name* is still ordinary text whatever its content
 // is, so this resolves to the bank default like any other non-script value.
 constexpr int macUninterpretedScript = 32;
 
@@ -210,8 +210,8 @@ const char* iconvNameFor(CodePage codePage)
     case CodePage::Korean:            return "EUC-KR";
     case CodePage::Big5:              return "BIG5";
     case CodePage::MacRoman:          return "MACINTOSH";
-    // No Mac-specific iconv name exists for these four. The corpus confirms the fallbacks
-    // decode Mac-stored CJK font names correctly; Windows uses the exact Mac code page.
+    // No Mac-specific iconv name exists for these four; the fallbacks below decode Mac-stored
+    // CJK font names correctly. Windows uses the exact Mac code page.
     case CodePage::MacJapanese:       return "SHIFT-JIS";
     case CodePage::MacTradChinese:    return "BIG5";
     case CodePage::MacKorean:         return "EUC-KR";
@@ -386,9 +386,9 @@ CodePage codePageForCharset(Bank bank, int charsetVal)
         case windowsThaiCharset:        return CodePage::Thai874;
         case windowsEastEuropeCharset:  return CodePage::Windows1250;
         case windowsVietnameseCharset:
-            // Windows-1258 is the Vietnamese page, but no surveyed file uses this charset
-            // and the enum does not carry a value that has never been needed. It falls to
-            // the bank default until one appears.
+            // Windows-1258 is the Vietnamese page, but nothing has been seen to use this
+            // charset and the enum carries no value that has never been needed. It falls to the
+            // bank default until one appears.
         case windowsAnsiCharset:
         case windowsDefaultCharset:
         case windowsOemCharset:
@@ -435,7 +435,57 @@ std::string toUtf8(const std::string& source, CodePage codePage)
     if (auto converted = convert(codePage, source)) {
         return *converted;
     }
-    return source;
+    // The bytes are not what the charset field claimed: an unassigned byte, or a font whose
+    // record names a code page its content does not follow. Every byte is preserved as the
+    // code point of the same value, which is what the symbol path does and is reversible, so a
+    // later and better-informed pass can still recover the original.
+    //
+    // Returning the source unchanged would preserve the bytes too, and used to, but a string
+    // holding a byte above 0x7f is then not valid UTF-8. That is not a representation musxdom
+    // can carry: it would put a malformed string into the document and an unparseable one into
+    // any EnigmaXML written from it.
+    return symbolBytesToUtf8(source);
+}
+
+std::string normalizeLineBreaks(std::string source)
+{
+    std::string result;
+    result.reserve(source.size());
+    for (std::size_t at = 0; at < source.size(); ++at) {
+        if (source[at] != '\r') {
+            result.push_back(source[at]);
+            continue;
+        }
+        result.push_back('\n');
+        if (at + 1 < source.size() && source[at + 1] == '\n') {
+            ++at;
+        }
+    }
+    return result;
+}
+
+CodePage platformCodePage(SourcePlatform platform)
+{
+    using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
+    return codePageForCharset(
+        platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
+}
+
+std::string symbolBytesToUtf8(std::string_view source)
+{
+    std::string out;
+    out.reserve(source.size());
+    for (const char raw : source) {
+        const auto byte = static_cast<unsigned char>(raw);
+        if (byte < 0x80) {
+            out.push_back(static_cast<char>(byte));
+        } else {
+            // Every value from 0x80 to 0xff is two UTF-8 bytes, so no third case exists.
+            out.push_back(static_cast<char>(0xc0U | (byte >> 6U)));
+            out.push_back(static_cast<char>(0x80U | (byte & 0x3fU)));
+        }
+    }
+    return out;
 }
 
 } // namespace text

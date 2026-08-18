@@ -26,6 +26,29 @@ const std::string kMacAccented = "C\x8elino";
 
 } // namespace
 
+/// @brief Whether a string is well-formed UTF-8, which every recovered string must be.
+bool isValidUtf8(std::string_view value)
+{
+    for (std::size_t at = 0; at < value.size();) {
+        const auto lead = static_cast<unsigned char>(value[at]);
+        std::size_t length = lead < 0x80 ? 1
+            : (lead & 0xe0U) == 0xc0U   ? 2
+            : (lead & 0xf0U) == 0xe0U   ? 3
+            : (lead & 0xf8U) == 0xf0U   ? 4
+                                        : 0;
+        if (length == 0 || at + length > value.size()) {
+            return false;
+        }
+        for (std::size_t i = 1; i < length; ++i) {
+            if ((static_cast<unsigned char>(value[at + i]) & 0xc0U) != 0x80U) {
+                return false;
+            }
+        }
+        at += length;
+    }
+    return true;
+}
+
 TEST_CASE("Mac script codes select the encoding", "[text]")
 {
     CHECK(codePageForCharset(Bank::MacOS, 0) == CodePage::MacRoman);
@@ -128,7 +151,19 @@ TEST_CASE("The single-byte Mac encodings agree on every platform", "[text]")
 TEST_CASE("A name that contradicts its charset keeps its bytes", "[text]")
 {
     // Preserved mojibake can be re-decoded once the encoding is understood; discarded bytes
-    // cannot, and a thrown exception mid-import loses the whole document.
+    // cannot, and a thrown exception mid-import loses the whole document. What is preserved is
+    // each byte as the code point of the same value, which is reversible and, unlike the bytes
+    // themselves, is valid UTF-8. A string carrying a raw byte above 0x7f is not a
+    // representation musxdom can hold or EnigmaXML can spell.
     const std::string notShiftJis = "\xff\xfe\xff\xfe";
-    CHECK(toUtf8(notShiftJis, CodePage::ShiftJis) == notShiftJis);
+    const auto converted = toUtf8(notShiftJis, CodePage::ShiftJis);
+    CHECK(converted == "\u00ff\u00fe\u00ff\u00fe");
+    CHECK(isValidUtf8(converted));
+
+    // An unassigned byte inside an otherwise convertible string takes the whole string down
+    // the same path. 0x81 has no Windows-1252 meaning, and a real document was found writing
+    // one in a font whose record claims that code page.
+    const auto unassigned = toUtf8("\x81", CodePage::Windows1252);
+    CHECK(unassigned == "\u0081");
+    CHECK(isValidUtf8(unassigned));
 }

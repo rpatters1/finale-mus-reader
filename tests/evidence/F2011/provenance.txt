@@ -72,3 +72,41 @@ F2011-autonum-cs.mus
     to be the per-lyric state that numbering being in use creates. It is recorded here because
     a later class may want it, not because anything here reads it.
 
+
+F2011-text-inserts.mus
+    sha256 d89543077eefeae66a971c3890536d83deca6911a6779add93f3dfc58d586c7e
+F2011-text-inserts.musx
+    sha256 b8ff7ce5238bdff0645b4f3d4ceade6653cee670bc48623331868bfe71e6482d
+    The third and last of the text-insert fixtures, after F2006 and F2008, and the
+    one that closes the binary command table: with it, every command musxdom's
+    `EnigmaString.h` documents has a located code. Finale 2009 introduced marking
+    categories and Finale 2010 automatic rehearsal marks, so Finale 2011 is the
+    earliest available release able to write all four of the commands still
+    outstanding.
+
+    Its three expressions carry the font-category commands and fix 0xa4 as
+    `^fontTxt`, 0xa5 as `^fontMus` and 0xa6 as `^fontNum`, each named by the
+    companion. They are **appended past the inserts** at the top of the table, not
+    placed among the style commands at 0x80 to 0x83 where this reader had predicted
+    them. That is the second prediction drawn from the shape of the code table to be
+    refuted by the first fixture able to test it, after the Finale 2008 one, and the
+    two together are why the remaining six free slots are left empty rather than
+    filled by inference.
+
+    The three stored arguments are 9, 11 and 11 where the companion writes
+    `Times New Roman` and `Engraver Text T`, which settles that a categorized font
+    command states a comparator and not a name, exactly as `^fontid` does. The
+    reader keeps all three spellings and writes each font under the name its own
+    definition carries, falling back to `^fontid` only for a comparator the document
+    does not define -- the category a command names being the one thing `^fontid`
+    cannot carry.
+
+    Its fourth expression fixes 0xa7 as `^rehearsal` and shows directly that the
+    insert takes no argument -- the byte after the code is 0x20, the leading space
+    of the literal " Rehearsal", and 0x20 is not a digit byte.
+
+    Two companion differences remain, both intended. The reader drops the character-set
+    parenthetical Finale 27 writes after the name, since the font definition states the
+    same thing and musxdom reads it only from there. And Finale 27 renames
+    `EngraverTextT`, which is what this document stores, to `Engraver Text T`; the
+    reader reports the name the document carries.

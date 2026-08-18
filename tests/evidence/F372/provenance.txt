@@ -86,3 +86,67 @@ F372-lyricopts-changed.mus
     tracking Push. This era stores no connection table, so that is Finale 27 synthesizing one;
     the reader keeps the pinned baseline's 42 because a single specimen cannot distinguish the
     formula from several others that fit it.
+
+F372-fileinfo-text.mus
+    sha256 dd34b63b68f33c60aed4c61848f8de9ae12ac6e7f5d6913a70a27d8fb5c6d1c3
+F372-fileinfo-text.etf
+    sha256 292e0a61572fe739273a6c1d423b7f961890411aa4e1934b30f7750124354f07
+F372-fileinfo-text.musx
+    sha256 8535771204d246e2d07ea5f69e1b287dacf5e9441b35c54d2743d0544f1b27b6
+    Finale 3.7.2 is the earliest available release whose dialog lets the File Info
+    fields be entered at all, and the earliest that writes the modern inserts which
+    read them. This document fills all four fields and adds two block texts, one
+    carrying `^composer()` and one `^page(511)`, plus a verse, a chorus and three
+    sections.
+
+    That combination settles the lower end of File Info by the dialog rather than
+    by the bytes, which is the only way it can be settled: an unfilled dialog
+    leaves the same empty header offsets as a dialog that does not exist, so no
+    corpus of any size can distinguish them.
+
+    It also exposes a third text-pool framing, between the Coda-banner chunks and
+    the Finale 97 records. The stream is one pool block divided by the ETF section
+    markers themselves, `^text` and then `^lyrics`, and **a record has no
+    terminator**: it runs to the start of the next record, to the marker opening
+    the next section, or to the end of the stream. The other eight Finale 3.7.2
+    fixtures carry the bare bytes `^text^lyrics`, two markers with nothing between
+    them, which is what shows an empty section must not swallow the next one.
+
+    Its ETF export carries the same records in the same order and spelling,
+    differing only in the carriage returns ETF puts between sections, so a MUS of
+    this era stores very nearly what ETF prints. That gives every reading here two
+    independent witnesses.
+
+    `^section(2)` states its style run twice over. The repetition survived a
+    regeneration of the document, so it is a property of what Finale writes rather
+    than an artifact. Both runs are kept; Finale 27 collapses them to one.
+
+    A caution about this specimen's history rather than its content: an earlier
+    save of the same document lost both block texts, from the MUS and from the ETF
+    alike, leaving five lyric records where seven text items had been entered. The
+    file was structurally valid and nothing announced the loss. It was regenerated,
+    and the hashes above are the good save. Finale of this vintage running under
+    emulation can corrupt a document silently, so a fixture that disagrees with the
+    document it was meant to be is worth re-saving before it is worth explaining.
+
+F372-bookmarks.mus
+    sha256 57daf763e63b843e0041d17c7228ae529e2d69df6aa1c60efc1839d183a53b2e
+F372-bookmarks.etf
+    sha256 80a40b92de28f88f01e9d0eef2d8f53ce7da747552e4cf19fdeecf2b81e1df94
+F372-bookmarks.musx
+    sha256 500b6f53119658bc8f10521dbea3e771d170e42d9458e18ebd3b37605f1d868f
+    Two bookmarks, one scroll-view and one page-view, whose text carries the
+    guillemets and a u-umlaut so the encoding is measurable rather than assumed.
+    Finale 3.7.2 is the earliest available release that has bookmarks at all, which
+    bounds their arrival from above and says nothing more: no earlier release is
+    available to test.
+
+    This era keeps a bookmark's text in the `BK` others family, one family per
+    bookmark at comparators from 0x8000 up, in the same shape the Coda-banner era
+    uses for block text: the string occupies the first four incidences as 48 bytes
+    ending at the first NUL, and two numeric incidences follow it. The text pool of
+    this document holds no bookmark at all. The text is 8-bit -- `9f` is the
+    u-umlaut under Mac Roman -- and its ETF export prints the same rows.
+
+    Reading `BK` is deferred until the bookmark class itself is imported, so this
+    fixture's role for now is the assertion that nothing is synthesized from it.

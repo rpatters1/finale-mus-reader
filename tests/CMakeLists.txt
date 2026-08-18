@@ -23,7 +23,8 @@ set_target_properties(Catch2 PROPERTIES
     UNITY_BUILD_BATCH_SIZE 15)
 finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
-add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp text_encoding_tests.cpp)
+add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp
+    text_encoding_tests.cpp text_pool_tests.cpp)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader
