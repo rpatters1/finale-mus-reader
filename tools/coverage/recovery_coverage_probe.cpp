@@ -18,13 +18,18 @@
 // so a terminal log or redirected run that ends up somewhere tracked leaks as little as
 // possible.
 //
-// This probe reports what the reader produced and where each value came from. It does
-// not compare against a companion; that is the aggregator's job, so that the source and
-// the companion are extracted independently. Coverage is what makes it useful for
-// regression detection: because every class goes through the same
-// coverage::runAllSurveyors() harness (see registry.h), two runs' JSON Lines -- before and
-// after a change -- diff cleanly, and a class can never silently drop out of that diff the
-// way a hand-maintained list of writer calls could forget one.
+// This probe reports what the reader produced and where each value came from. When a
+// corpus declares a companion-naming convention (see the `#companion:` line
+// readCorpusRows() reads) and the row's source imported successfully, it also surveys the
+// matching Finale-27-written `.musx` companion -- loaded directly through musxdom's own
+// DocumentFactory, not this reader -- and nests that under a `"companion"` object using
+// the exact same surveyor output shape. Comparing the two is left to a separate script,
+// deliberately: this probe's job is producing both sides from the same JSON Lines row, not
+// classifying their differences. Coverage is what makes it useful for regression detection
+// on either side: because every class goes through the same coverage::runAllSurveyors()
+// harness (see registry.h), two runs' JSON Lines -- before and after a change -- diff
+// cleanly, and a class can never silently drop out of that diff the way a hand-maintained
+// list of writer calls could forget one.
 //
 // On macOS, a failed row also carries a best-effort `finder_type` when the source file's
 // classic Mac file type is still readable from its Finder Info (see macFinderFileType()):
@@ -58,7 +63,9 @@
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
 #endif
+#include "musx/factory/DocumentFactory.h"
 #include "musx/xml/PugiXmlImpl.h"
+#include "musx_companion.h"
 
 namespace {
 
@@ -116,7 +123,15 @@ void printHelp()
         "                  instead names another corpus TSV to pull rows from, so this\n"
         "                  can equally be a manifest selecting among several corpora. A\n"
         "                  '#root:' line declares that corpus's root directory, used to\n"
-        "                  shorten a FAILED line's path; it is never printed itself.\n"
+        "                  shorten a FAILED line's path; it is never printed itself. A\n"
+        "                  '#companion:' line, formatted '#companion: <dir-name> <suffix>',\n"
+        "                  declares one of that corpus's companion-naming conventions: a\n"
+        "                  source dir/name.mus pairs with dir/<dir-name>/name<suffix>.\n"
+        "                  Repeatable, for a corpus whose convention changed over time --\n"
+        "                  each row tries them in the order declared and uses the first\n"
+        "                  whose file actually exists. When one is found and the source\n"
+        "                  imports, that companion is surveyed too and nested under\n"
+        "                  \"companion\" in the same row.\n"
         "                  A path ending in .mus, or with no extension at all, is read\n"
         "                  directly as a single source instead of a corpus list.\n"
         "  <output-jsonl>  Path to write one JSON object per document.\n"
@@ -180,6 +195,22 @@ struct CorpusRow
     std::string corpusLabel;
 };
 
+// One of a corpus's companion-naming conventions (see private/corpora/*.conf's
+// HAS_EXPORTS, EXPORT_DIR_NAME, EXPORT_SUFFIX, and their _FALLBACK counterparts): a source
+// `dir/name.mus` pairs with `dir/companionDir/name<companionSuffix>`, or with nothing if
+// that file does not exist. A corpus can declare more than one -- see the (repeatable)
+// `#companion:` lines readCorpusRows() reads -- tried in the order declared, for a corpus
+// whose convention changed partway through (rpatters1-main moved from `-exports`/
+// `.fin27.musx` to `-finale27`/`.musx` for its more recent re-saves; a source with neither
+// simply has no companion). Declared once per corpus rather than per row, the same
+// reasoning `#root:` follows: it is a fixed property of the corpus, and a field repeated on
+// every row is one more thing to keep in sync with the source of truth.
+struct CompanionConvention
+{
+    std::string dirName;
+    std::string suffix;
+};
+
 // Recognizes a single legacy MUS source given directly as the <corpus-tsv> argument, matched
 // by extension alone since a .mus file is binary and can't be told apart from a corpus list
 // by trying to parse it as one. An empty extension counts too: classic Mac Finale kept the
@@ -202,6 +233,11 @@ bool isSingleMusFile(const std::filesystem::path& path)
 // to it (see displayPathFor()), so a corpus TSV -- itself private, under private/generated/
 // -- is the one place that root needs to be written down at all.
 //
+// A `#companion:` line declares one of that corpus's companion-naming conventions, as
+// "<dir-name> <suffix>", appended to the list recorded under `label` in `companions`; see
+// CompanionConvention. Repeatable: a corpus with more than one such line gets a fallback
+// chain, tried in the order the lines appear.
+//
 // Any other line with no tab is not a corpus_id/path row either: it names another corpus
 // TSV to pull rows from, opened relative to the current working directory exactly as the
 // top-level <corpus-tsv> argument is. That makes a manifest of several corpora just another
@@ -211,11 +247,13 @@ bool isSingleMusFile(const std::filesystem::path& path)
 // manifest commonly names corpora that are regenerated independently of it and may not all
 // exist yet. Rows pulled from a referenced file are labeled with its own name rather than
 // the caller's, so nested corpora stay distinguishable from whichever manifest included
-// them, and its own `#root:` line (if any) is recorded under that same label.
+// them, and its own `#root:`/`#companion:` lines (if any) are recorded under that same label.
 std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& label,
-    std::map<std::string, std::filesystem::path>& roots)
+    std::map<std::string, std::filesystem::path>& roots,
+    std::map<std::string, std::vector<CompanionConvention>>& companions)
 {
     constexpr std::string_view rootDirective = "#root:";
+    constexpr std::string_view companionDirective = "#companion:";
     std::vector<CorpusRow> rows;
     std::string line;
     while (std::getline(list, line)) {
@@ -228,6 +266,21 @@ std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& lab
             roots[label] = value;
             continue;
         }
+        if (line.substr(0, companionDirective.size()) == companionDirective) {
+            auto value = line.substr(companionDirective.size());
+            while (!value.empty() && value.front() == ' ') {
+                value.erase(value.begin());
+            }
+            const auto space = value.find(' ');
+            if (space != std::string::npos) {
+                companions[label].push_back({value.substr(0, space), value.substr(space + 1)});
+            } else {
+                std::fprintf(stderr,
+                    "malformed #companion: line for %s (want \"<dir-name> <suffix>\")\n",
+                    label.c_str());
+            }
+            continue;
+        }
         if (line[0] == '#') continue;
         const auto tab = line.find('\t');
         if (tab == std::string::npos) {
@@ -237,7 +290,7 @@ std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& lab
                 continue;
             }
             const auto nestedLabel = std::filesystem::path(line).stem().string();
-            const auto nestedRows = readCorpusRows(nested, nestedLabel, roots);
+            const auto nestedRows = readCorpusRows(nested, nestedLabel, roots, companions);
             rows.insert(rows.end(), nestedRows.begin(), nestedRows.end());
             continue;
         }
@@ -252,22 +305,30 @@ struct CorpusSegment
     std::size_t count;
     // From that corpus's `#root:` line, or empty when it did not declare one.
     std::filesystem::path root;
+    // From that corpus's `#companion:` line(s), in the order declared; empty when it did
+    // not declare any -- in which case no row in this segment is compared against a
+    // companion at all.
+    std::vector<CompanionConvention> companions;
 };
 
 // Rows pulled from the same corpus are always contiguous -- readCorpusRows() appends one
 // referenced file's rows as one block -- so grouping consecutive equal labels recovers the
 // per-corpus boundaries and counts without readCorpusRows() having to track them itself.
 std::vector<CorpusSegment> segmentByCorpus(const std::vector<CorpusRow>& rows,
-    const std::map<std::string, std::filesystem::path>& roots)
+    const std::map<std::string, std::filesystem::path>& roots,
+    const std::map<std::string, std::vector<CompanionConvention>>& companions)
 {
     std::vector<CorpusSegment> segments;
     for (const auto& row : rows) {
         if (!segments.empty() && segments.back().label == row.corpusLabel) {
             ++segments.back().count;
         } else {
-            const auto found = roots.find(row.corpusLabel);
-            segments.push_back(
-                {row.corpusLabel, 1, found != roots.end() ? found->second : std::filesystem::path{}});
+            const auto foundRoot = roots.find(row.corpusLabel);
+            const auto foundCompanion = companions.find(row.corpusLabel);
+            segments.push_back({row.corpusLabel, 1,
+                foundRoot != roots.end() ? foundRoot->second : std::filesystem::path{},
+                foundCompanion != companions.end() ? foundCompanion->second
+                    : std::vector<CompanionConvention>{}});
         }
     }
     return segments;
@@ -287,6 +348,30 @@ std::string displayPathFor(const std::filesystem::path& path, const std::filesys
         }
     }
     return path.filename().string();
+}
+
+// The companion path a source pairs with, tried under each of `conventions` in order (see
+// CompanionConvention) and matching the rule scripts/inventory.py uses to build the
+// corpus's own inventory: `source.parent / dirName / (source.stem() + suffix)`. Existence
+// is checked here, not left to the caller, because a fallback chain only means something if
+// the first convention that actually exists on disk wins -- a corpus with more than one
+// convention (rpatters1-main: some sources still pair under the older `-exports`/
+// `.fin27.musx`, more recent ones under `-finale27`/`.musx`) would otherwise always resolve
+// to the first declared convention's path whether or not that file is really there. Returns
+// nothing when no declared convention's candidate exists -- comparison against a companion
+// is opt-in per corpus and best-effort per row, not attempted speculatively.
+std::optional<std::filesystem::path> companionPathFor(
+    const std::filesystem::path& source, const std::vector<CompanionConvention>& conventions)
+{
+    for (const auto& convention : conventions) {
+        auto candidate =
+            source.parent_path() / convention.dirName / (source.stem().string() + convention.suffix);
+        std::error_code error;
+        if (std::filesystem::exists(candidate, error) && !error) {
+            return candidate;
+        }
+    }
+    return std::nullopt;
 }
 
 // The width "Processed X of T" needs so a shorter update never leaves stale characters
@@ -414,6 +499,7 @@ int main(int argc, char** argv)
 
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
+    std::map<std::string, std::vector<CompanionConvention>> corpusCompanions;
     if (isSingleMusFile(corpusListPath)) {
         // A source given directly rather than as a corpus list: one synthetic row, labeled
         // and identified by its own filename since there is no separate corpus_id for it.
@@ -424,7 +510,7 @@ int main(int argc, char** argv)
             std::fprintf(stderr, "cannot open corpus list: %s\n", options->corpusListPath.c_str());
             return 2;
         }
-        rows = readCorpusRows(list, topLabel, corpusRoots);
+        rows = readCorpusRows(list, topLabel, corpusRoots, corpusCompanions);
     }
     std::ofstream output(options->outputPath);
     if (!output) {
@@ -436,7 +522,7 @@ int main(int argc, char** argv)
     using namespace finale_mus_reader::coverage;
 
     const auto total = rows.size();
-    const auto segments = segmentByCorpus(rows, corpusRoots);
+    const auto segments = segmentByCorpus(rows, corpusRoots, corpusCompanions);
 
     // True exactly when a progress line is on screen with no trailing newline yet; every
     // stderr write below breaks it first via endProgressLine(), which is a no-op otherwise,
@@ -453,6 +539,7 @@ int main(int argc, char** argv)
     std::size_t segmentProgressWidth = 0;
     std::string currentLabel;
     std::filesystem::path currentRoot;
+    std::vector<CompanionConvention> currentCompanion;
 
     // Installed once, for the whole run, rather than reinstalled per row: Logger is a single
     // global callback (see musx/util/Logger.h), and there is exactly one thing here that
@@ -499,6 +586,7 @@ int main(int argc, char** argv)
             const auto& segment = segments.at(segmentIndex++);
             segmentTotal = segment.count;
             currentRoot = segment.root;
+            currentCompanion = segment.companions;
             segmentProgressWidth = progressLineWidth(segmentTotal);
             processedInSegment = 0;
             std::cout << "== " << currentLabel << ": " << segmentTotal << " file"
@@ -513,7 +601,11 @@ int main(int argc, char** argv)
         out << '{' << "\"corpus_id\":" << jsonString(corpusId);
         // Wall-clock time for exactly the work this row does -- reading and importing the
         // source plus running every surveyor -- not the line's JSON assembly around it, so a
-        // slow surveyor and a slow import are both visible in the same field.
+        // slow surveyor and a slow import are both visible in the same field. Measured only
+        // over the source phase: the companion phase below (when there is one) gets its own
+        // duration_ms nested under "companion", so a slow companion load never reads as a
+        // slow reader import or vice versa.
+        bool sourceOk = false;
         const auto started = std::chrono::steady_clock::now();
         try {
             const auto result = Reader::read<musx::xml::pugi::Document>(std::filesystem::path(path));
@@ -528,6 +620,7 @@ int main(int argc, char** argv)
                 << ",\"warning_count\":" << loggerCaptured.size();
             writeDiagnostics(out, loggerCaptured);
             runAllSurveyors(out, SurveyContext{result.document, result.report, fields});
+            sourceOk = true;
         } catch (const std::exception& error) {
             ++failed;
             const auto finderType = macFinderFileType(path);
@@ -559,8 +652,52 @@ int main(int argc, char** argv)
         }
         const std::chrono::duration<double, std::milli> elapsed =
             std::chrono::steady_clock::now() - started;
-        out << ",\"duration_ms\":" << std::fixed << std::setprecision(3) << elapsed.count()
-            << '}';
+        out << ",\"duration_ms\":" << std::fixed << std::setprecision(3) << elapsed.count();
+
+        // A companion is only worth loading when there is a source result to compare it
+        // against, and only attempted at all when this row's corpus declared a convention
+        // for finding one (see companionPathFor()). "companion" is omitted entirely rather
+        // than written with some "missing" status, so a row that was never compared looks
+        // nothing like one that compared clean.
+        if (sourceOk) {
+            const auto companionPath = companionPathFor(path, currentCompanion);
+            if (companionPath) {
+                loggerCaptured.clear();
+                std::ostringstream companionOut;
+                const auto companionStarted = std::chrono::steady_clock::now();
+                try {
+                    auto archive = readCompanionArchive(*companionPath);
+                    musx::factory::DocumentFactory::CreateOptions::EmbeddedGraphicFiles graphicFiles;
+                    for (auto& [name, bytes] : archive.embeddedGraphics) {
+                        graphicFiles.push_back({std::move(name), std::move(bytes)});
+                    }
+                    musx::factory::DocumentFactory::CreateOptions createOptions(*companionPath,
+                        archive.notationMetadata.value_or(std::vector<char>{}),
+                        std::move(graphicFiles));
+                    const auto companionDocument =
+                        musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
+                            archive.enigmaXml, std::move(createOptions));
+                    const ImportReport emptyReport;
+                    const FieldIndex emptyFields(emptyReport);
+                    companionOut << "\"status\":\"ok\""
+                        << ",\"warning_count\":" << loggerCaptured.size();
+                    writeDiagnostics(companionOut, loggerCaptured);
+                    runAllSurveyors(companionOut,
+                        SurveyContext{companionDocument, emptyReport, emptyFields});
+                } catch (const std::exception& error) {
+                    companionOut << "\"status\":\"error\""
+                        << ",\"error\":" << jsonString(error.what());
+                    writeDiagnostics(companionOut, loggerCaptured);
+                }
+                const std::chrono::duration<double, std::milli> companionElapsed =
+                    std::chrono::steady_clock::now() - companionStarted;
+                companionOut << ",\"duration_ms\":" << std::fixed << std::setprecision(3)
+                    << companionElapsed.count();
+                out << ",\"companion\":{" << companionOut.str() << "}";
+            }
+        }
+
+        out << '}';
         output << out.str() << '\n';
 
         if (options->showProgress
