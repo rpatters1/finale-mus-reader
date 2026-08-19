@@ -28,5 +28,8 @@ void importShapeGraphicAssignments(const ImportContext& context);
 /// @brief Recovers ShapeDef objects and their owned instruction and data lists.
 void importShapeDefinitions(const ImportContext& context);
 
+/// @brief Recovers SmartShapeCustomLine objects.
+void importSmartShapeCustomLines(const ImportContext& context);
+
 } // namespace others
 } // namespace finale_mus_reader

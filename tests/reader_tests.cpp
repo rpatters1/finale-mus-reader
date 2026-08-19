@@ -2605,12 +2605,257 @@ void testShapeDefinitions()
         "A blank Coda shape did not retain its source references in the report");
 }
 
+void testSmartShapeCustomLines()
+{
+    using namespace musx::dom;
+    using LineTarget = others::SmartShapeCustomLine;
+
+    // Fixed-row Finale 2000: cmper 1 is a Char line ('~', size 24, baseline -88 EMs), cmper
+    // 2 a bare Solid line (width 118 Efix). Confirmed against the tracked ETF/MUSX companion.
+    const auto fixedRow = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2000/F2000-baseline.mus");
+    const auto charLine = fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 1);
+    REQUIRE(charLine != nullptr);
+    CHECK(charLine->lineStyle == LineTarget::LineStyle::Char);
+    REQUIRE(charLine->charParams != nullptr);
+    CHECK(charLine->charParams->lineChar == U'~');
+    CHECK(charLine->charParams->font->fontSize == 24);
+    CHECK(charLine->charParams->baselineShiftEms == -88);
+    expect(field(fixedRow, "others.smartShapeCustomLine[1].charParams.lineChar").origin
+                == ValueOrigin::LegacyMus
+            && field(fixedRow, "others.smartShapeCustomLine[1].charParams.lineChar").rawValue
+                == 126,
+        "A recovered Char line style did not report its source raw character");
+
+    const auto solidLine = fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 2);
+    REQUIRE(solidLine != nullptr);
+    CHECK(solidLine->lineStyle == LineTarget::LineStyle::Solid);
+    REQUIRE(solidLine->solidParams != nullptr);
+    CHECK(solidLine->solidParams->lineWidth == 118);
+
+    // Finale 27 upgrades this baseline document to a third, synthesized default (a Solid
+    // line with an ArrowheadPreset end cap) that the Finale 2000 source itself never wrote.
+    // The importer must not fabricate that object from nothing.
+    CHECK(fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3) == nullptr);
+
+    // Every text-anchor and line-adjustment offset of one record, each set to its own value
+    // so that no two slots can be confused. The five X offsets interleave with the Y offsets
+    // they pair with rather than being grouped, and the line adjustments follow in musxdom's
+    // own declaration order. Confirmed against the Finale 27 companion, which names all
+    // fifteen.
+    const auto offsets = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2000/F2000-ssline-offsets.mus");
+    const auto positioned = offsets.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3);
+    REQUIRE(positioned != nullptr);
+    CHECK(positioned->leftStartRawTextId == 1);
+    CHECK(positioned->leftContRawTextId == 2);
+    CHECK(positioned->rightEndRawTextId == 3);
+    CHECK(positioned->centerFullRawTextId == 4);
+    CHECK(positioned->centerAbbrRawTextId == 5);
+    CHECK(positioned->leftStartX == 11);
+    CHECK(positioned->leftStartY == 13);
+    CHECK(positioned->leftContX == 17);
+    CHECK(positioned->leftContY == 19);
+    CHECK(positioned->rightEndX == 23);
+    CHECK(positioned->rightEndY == -29);
+    CHECK(positioned->centerFullX == 31);
+    CHECK(positioned->centerFullY == 37);
+    CHECK(positioned->centerAbbrX == 41);
+    CHECK(positioned->centerAbbrY == 43);
+    CHECK(positioned->lineStartX == 47);
+    CHECK(positioned->lineEndX == 59);
+    CHECK(positioned->lineContX == 53);
+    // Finale offers one vertical control for the whole line and writes it to both slots, so
+    // the two must come out equal from two different words rather than one being copied.
+    CHECK(positioned->lineStartY == 61);
+    CHECK(positioned->lineEndY == 61);
+    expect(field(offsets, "others.smartShapeCustomLine[3].lineEndY").origin
+            == ValueOrigin::LegacyMus,
+        "The second half of the synced vertical adjustment was not recovered from the source");
+
+    // The remaining three line styles of the same document, each settling one thing the
+    // earlier samples could not distinguish.
+    const auto dashed = offsets.document->getOthers()->get<LineTarget>(SCORE_PARTID, 4);
+    REQUIRE(dashed != nullptr);
+    REQUIRE(dashed->dashedParams != nullptr);
+    CHECK(dashed->dashedParams->lineWidth == 118);
+    // 3 and 7 EVPU. Unequal at last, so the two slots are told apart rather than assumed.
+    CHECK(dashed->dashedParams->dashOn == 192);
+    CHECK(dashed->dashedParams->dashOff == 448);
+
+    // A Char line in a named text font, bold and italic. The stored character is a byte in
+    // that font's encoding, so Mac Roman 199 is the code point 171 and not the number the
+    // file holds; the report keeps the source value while the document carries the code point.
+    const auto styled = offsets.document->getOthers()->get<LineTarget>(SCORE_PARTID, 5);
+    REQUIRE(styled != nullptr);
+    REQUIRE(styled->charParams != nullptr);
+    CHECK(styled->charParams->lineChar == U'\u00ab');
+    CHECK(styled->charParams->font->fontId == 6);
+    CHECK(styled->charParams->font->fontSize == 17);
+    CHECK(styled->charParams->font->bold);
+    CHECK(styled->charParams->font->italic);
+    CHECK_FALSE(styled->charParams->font->underline);
+    CHECK(styled->charParams->baselineShiftEms == -83);
+    expect(field(offsets, "others.smartShapeCustomLine[5].charParams.lineChar").rawValue == 199,
+        "The report did not keep the byte the source actually stored");
+
+    // A hook at one end and a custom arrowhead shape at the other, so each cap's shared value
+    // slot is read as the one its own type names.
+    const auto capped = offsets.document->getOthers()->get<LineTarget>(SCORE_PARTID, 6);
+    REQUIRE(capped != nullptr);
+    CHECK(capped->lineCapStartType == LineTarget::LineCapType::Hook);
+    CHECK(capped->lineCapEndType == LineTarget::LineCapType::ArrowheadCustom);
+    CHECK(capped->lineCapStartHookLength == 1984);
+    CHECK(capped->lineCapEndArrowId == 2);
+    CHECK(capped->lineCapStartArrowId == 0);
+    CHECK(capped->lineCapEndHookLength == 0);
+
+    // Confirmed absent, not merely unread: no `ls` row occurs anywhere in a genuinely
+    // pre-2000 uncompressed source, and none at all in CodaBanner.
+    const auto pre2000 = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F97/Fin97-baseline.mus");
+    CHECK(pre2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
+    const auto coda = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F263/F263-baseline.mus");
+    CHECK(coda.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
+
+    // Zlib class 0x00de, Finale 2012: the character slot widens from one word to two and
+    // every later field shifts by one word to keep the record 36 words long. cmper 2 here
+    // is a bare Solid line (width 224); cmper 3 adds an ArrowheadPreset end cap, which
+    // depends on the post-shift cap-type and cap-arrow slots being read correctly.
+    const auto zlib = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-baseline.mus");
+    const auto zlibChar = zlib.document->getOthers()->get<LineTarget>(SCORE_PARTID, 1);
+    REQUIRE(zlibChar != nullptr);
+    REQUIRE(zlibChar->charParams != nullptr);
+    CHECK(zlibChar->charParams->lineChar == U'~');
+    CHECK(zlibChar->charParams->font->fontSize == 24);
+    CHECK(zlibChar->charParams->baselineShiftEms == -88);
+
+    // The same six line styles back-saved to Finale 2012. Only the Char parameter block moves
+    // with the widened character: a Dashed record keeps its dash lengths where every earlier
+    // layout put them, while everything after the parameter block shifts for all three styles.
+    const auto wide = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-ssline-offsets.mus");
+    const auto wideDashed = wide.document->getOthers()->get<LineTarget>(SCORE_PARTID, 4);
+    REQUIRE(wideDashed != nullptr);
+    REQUIRE(wideDashed->dashedParams != nullptr);
+    CHECK(wideDashed->dashedParams->dashOn == 192);
+    CHECK(wideDashed->dashedParams->dashOff == 448);
+    const auto wideStyled = wide.document->getOthers()->get<LineTarget>(SCORE_PARTID, 5);
+    REQUIRE(wideStyled != nullptr);
+    REQUIRE(wideStyled->charParams != nullptr);
+    // Already a code point in this era, so nothing is decoded and the answer is the same one
+    // the fixed-row source reaches by decoding.
+    CHECK(wideStyled->charParams->lineChar == U'\u00ab');
+    CHECK(wideStyled->charParams->font->fontId == 6);
+    CHECK(wideStyled->charParams->font->fontSize == 17);
+    CHECK(wideStyled->charParams->font->bold);
+    CHECK(wideStyled->charParams->font->italic);
+    CHECK(wideStyled->charParams->baselineShiftEms == -83);
+    const auto wideCapped = wide.document->getOthers()->get<LineTarget>(SCORE_PARTID, 6);
+    REQUIRE(wideCapped != nullptr);
+    CHECK(wideCapped->lineCapStartHookLength == 1984);
+    CHECK(wideCapped->lineCapEndArrowId == 2);
+    const auto widePositions = wide.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3);
+    REQUIRE(widePositions != nullptr);
+    CHECK(widePositions->leftStartX == 11);
+    CHECK(widePositions->centerAbbrY == 43);
+    CHECK(widePositions->lineContX == 53);
+
+    const auto zlibCapped = zlib.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3);
+    REQUIRE(zlibCapped != nullptr);
+    CHECK(zlibCapped->lineStyle == LineTarget::LineStyle::Solid);
+    REQUIRE(zlibCapped->solidParams != nullptr);
+    CHECK(zlibCapped->solidParams->lineWidth == 224);
+    CHECK(zlibCapped->lineCapEndType == LineTarget::LineCapType::ArrowheadPreset);
+    CHECK(zlibCapped->lineCapEndArrowId == 1);
+}
+
+
+// A clef and a stem connection both store their character as a byte in the encoding of the
+// font that draws them, not as a code point. Every sampled document sets both in a music
+// font, where the byte is a glyph number and survives unchanged, so the distinction is only
+// visible once one of them is pointed at a text font.
+void testLegacyCharacterFonts()
+{
+    using namespace musx::dom;
+
+    const auto source = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2002/F2002-clef-stem-font.mus");
+
+    // Font 9 is Arial, a Mac-bank text font, so Mac Roman 199 is the code point 171.
+    const auto clefs = source.document->getOptions()->get<options::ClefOptions>();
+    REQUIRE(clefs != nullptr);
+    REQUIRE(clefs->clefDefs.size() > 4);
+    const auto& owned = clefs->clefDefs[4];
+    CHECK(owned->useOwnFont);
+    REQUIRE(owned->font != nullptr);
+    CHECK(owned->font->fontId == 9);
+    CHECK(owned->font->fontSize == 23);
+    CHECK(owned->font->bold);
+    CHECK(owned->font->italic);
+    CHECK(owned->clefChar == U'\u00ab');
+    // The report keeps the byte the source stored, which is the only place it survives.
+    expect(field(source, "options.clefOptions.clefDefs[4].clefChar").rawValue == 199,
+        "The clef report did not keep the byte the source actually stored");
+
+    const auto stems = source.document->getOptions()->get<options::StemOptions>();
+    REQUIRE(stems != nullptr);
+    REQUIRE(stems->stemConnections.size() > 1);
+    // Connection 0 names font 0, the document's default music font: a symbol font, whose byte
+    // is a glyph number and must come through untouched.
+    CHECK(stems->stemConnections[0]->fontId == 0);
+    CHECK(stems->stemConnections[0]->symbol == 192);
+    CHECK(stems->stemConnections[1]->fontId == 9);
+    CHECK(stems->stemConnections[1]->symbol == U'\u00ab');
+    CHECK(stems->stemConnections[1]->upStemVert == 320);
+    CHECK(stems->stemConnections[1]->downStemHorz == -448);
+    expect(field(source, "options.stemOptions.stemConnections[1].symbol").rawValue == 199,
+        "The stem report did not keep the byte the source actually stored");
+
+    // The flat symbol insert of Text Options, the third record type that stores a bare
+    // character. The four inserts beside it are the control: they keep font 0, so their bytes
+    // are glyph numbers and must read back exactly as stored.
+    const auto texts = source.document->getOptions()->get<options::TextOptions>();
+    REQUIRE(texts != nullptr);
+    const auto flat = texts->symbolInserts.find(options::AccidentalInsertSymbolType::Flat);
+    REQUIRE(flat != texts->symbolInserts.end());
+    REQUIRE(flat->second != nullptr);
+    REQUIRE(flat->second->symFont != nullptr);
+    CHECK(flat->second->symFont->fontId == 9);
+    CHECK(flat->second->symChar == U'\u00ab');
+    expect(field(source, "options.textOptions.symbolInserts[flat].symChar").rawValue == 199,
+        "The symbol-insert report did not keep the byte the source actually stored");
+    const auto natural
+        = texts->symbolInserts.find(options::AccidentalInsertSymbolType::Natural);
+    REQUIRE(natural != texts->symbolInserts.end());
+    REQUIRE(natural->second != nullptr);
+    REQUIRE(natural->second->symFont != nullptr);
+    CHECK(natural->second->symFont->fontId == 0);
+    CHECK(natural->second->symChar == 110);
+
+    // Its parent, which differs only by the three edits under test, has neither.
+    const auto parent = Reader::read<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2002/F2002-empty.mus");
+    const auto parentStems = parent.document->getOptions()->get<options::StemOptions>();
+    REQUIRE(parentStems != nullptr);
+    CHECK(parentStems->stemConnections.size() == 1);
+}
+
 } // namespace
 
 TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
 TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
 TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
 TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
+TEST_CASE("Legacy character fonts", "[reader]") { testLegacyCharacterFonts(); }
 TEST_CASE("Stem connection capture", "[reader]") { testStemConnectionCapture(); }
 TEST_CASE("Stem scalar recovery", "[reader]") { testStemScalarRecovery(); }
 TEST_CASE("Multimeasure rest recovery", "[reader]") { testMultimeasureRestRecovery(); }
@@ -2707,6 +2952,7 @@ TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
 TEST_CASE("Coda-banner empty pool", "[reader]") { testCodaBannerEmptyPool(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
 TEST_CASE("Shape definitions", "[reader]") { testShapeDefinitions(); }
+TEST_CASE("Smart shape custom lines", "[reader]") { testSmartShapeCustomLines(); }
 
 // Every banner spelling is recognized through the one parser, so a file that carries the
 // Finale 1.0.0 spelling reports a product and a version like any other era. Before the

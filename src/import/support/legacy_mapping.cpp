@@ -25,11 +25,12 @@ namespace {
 /// physical layouts a class has, which epochs each covers, and whether it needs a capture
 /// pass before its tables or a check after them are decisions its own translation unit owns.
 ///
-/// Order within a pool is free. Order between pools is a dependency statement: the others
-/// pool is filled first because option classes name its comparators. FontOptions validates
-/// recovered font ids against the definitions and may add one, and stem connections are
-/// checked against the pool after that, so it follows FontOptions rather than merely the
-/// definitions.
+/// Order is a dependency statement wherever one class reads what another has already built.
+/// The others pool is filled first because option classes name its comparators. FontOptions
+/// validates recovered font ids against the definitions and may add one, and stem connections
+/// are checked against the pool after that, so it follows FontOptions rather than merely the
+/// definitions. Within the others pool the font definitions come first, because a custom line
+/// style decodes its stored character through the charset of the font its own record names.
 ///
 /// The list is written out rather than assembled by self-registration, so that a static
 /// archive cannot discard an importer nothing else references.
@@ -42,6 +43,7 @@ const std::vector<ClassImporter>& registeredImporters()
         &others::importPageGraphicAssignments,
         &others::importShapeGraphicAssignments,
         &others::importShapeDefinitions,
+        &others::importSmartShapeCustomLines,
         // details
         &details::importMeasureGraphicAssignments,
         // texts, after others so that a font command in a text block resolves against the
@@ -281,7 +283,18 @@ std::string reportTarget(const MappingTable& table, const MappingTarget& target,
         result += '[' + std::to_string(target.cmper) + ']';
     }
     result += '.';
-    result += field.fieldName;
+    // A row names its destination once, as the C++ path that reaches it, so a field inside a
+    // contained object arrives here spelled with `->`. Every report target names a document
+    // path instead, whose separator is a dot, which is also how the capture passes spell the
+    // nested targets they build by hand.
+    for (const char* at = field.fieldName; *at != '\0'; ++at) {
+        if (at[0] == '-' && at[1] == '>') {
+            result += '.';
+            ++at;
+            continue;
+        }
+        result += *at;
+    }
     return result;
 }
 
@@ -479,10 +492,15 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
         if (table.targetKind == TargetKind::OthersFromRecords) {
             // The legacy file is the only source of these objects, so they are created from
             // the comparators the records themselves carry rather than found in the pool.
+            // Nothing is created when no table applies to this file: with no seeded object to
+            // overlay there is no default to report either, and an object built from a record
+            // no table can read would be an empty fabrication.
             const auto& pool = table.encoding == RecordEncoding::ClassRecord
                 ? index.getClassOthers() : index.getOthers();
-            for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
-                targets.push_back({cmper, table.createTarget(document, cmper)});
+            if (effective.applicable) {
+                for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
+                    targets.push_back({cmper, table.createTarget(document, cmper)});
+                }
             }
         } else {
             targets = table.enumerateTargets(document);
@@ -490,6 +508,16 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
 
         for (const auto& target : targets) {
             for (const auto& field : effective.fields) {
+                // A record that states its own layout decides which of its mutually exclusive
+                // fields exist. Such a field is neither read nor reported for a record that
+                // does not select it, because the destination itself is absent there. The test
+                // belongs to the destination rather than to any one era, so it is taken from
+                // the reporting row, and it sees every field declared before it already
+                // applied.
+                if (field.reporting->targetApplies
+                    && !field.reporting->targetApplies(target.instance)) {
+                    continue;
+                }
                 FieldInfo info;
                 info.target = reportTarget(table, target, *field.reporting);
                 info.origin = ValueOrigin::Finale27Default;
@@ -538,7 +566,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 report.fields.push_back(std::move(info));
             }
             if (table.finalizeTarget) {
-                table.finalizeTarget(target.instance, profile);
+                table.finalizeTarget(target.instance, profile, document);
             }
         }
     }

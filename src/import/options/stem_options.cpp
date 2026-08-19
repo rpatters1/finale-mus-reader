@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -45,6 +46,9 @@ constexpr std::uint32_t maximumCodepoint = 0x10FFFF;
 struct PhysicalConnection
 {
     std::uint16_t fontId{};
+    /// @brief Whether the source stored the symbol as a code point rather than as a byte in
+    /// the connection's own font encoding.
+    bool symbolIsCodepoint{};
     std::uint32_t symbol{};
     std::int16_t upStemVert{};
     std::int16_t downStemVert{};
@@ -65,6 +69,7 @@ PhysicalConnection decodeElement(
     result.symbol = shift == 0
         ? narrowCodepoint(wordAt(words, first + 1))
         : wideCodepoint(wordAt(words, first + 1), wordAt(words, first + 2));
+    result.symbolIsCodepoint = shift != 0;
     result.upStemVert = wordAt(words, first + 2 + shift);
     result.downStemVert = wordAt(words, first + 3 + shift);
     result.upStemHorz = wordAt(words, first + 4 + shift);
@@ -86,7 +91,13 @@ void reportConnectionField(ImportReport& report, std::size_t index, const char* 
 }
 
 /// @brief Turns one stored connection into a musxdom StemConnection and reports its values.
-void insertRecoveredConnection(const std::shared_ptr<StemOptionsTarget>& target,
+/// @details Before Finale 2012 the symbol is a byte in the encoding of the font the connection
+/// names, not a code point, so it is decoded through that font exactly as legacy text is. A
+/// music font is a symbol font and its byte is a glyph number that survives unchanged, which is
+/// what every connection in every sampled document uses; a connection pointed at a text font is
+/// the case that makes the difference visible.
+void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
+    const std::shared_ptr<StemOptionsTarget>& target,
     const PhysicalConnection& stored, bool adjustmentsAreEvpu,
     std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report)
 {
@@ -97,7 +108,10 @@ void insertRecoveredConnection(const std::shared_ptr<StemOptionsTarget>& target,
     };
     auto connection = std::make_shared<StemConnection>();
     connection->fontId = musx::dom::Cmper(stored.fontId);
-    connection->symbol = static_cast<char32_t>(stored.symbol);
+    connection->symbol = stored.symbolIsCodepoint
+        ? static_cast<char32_t>(stored.symbol)
+        : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol),
+            text::codePageForDocumentFont(document, connection->fontId, std::nullopt));
     connection->upStemVert = toEfix(stored.upStemVert);
     connection->downStemVert = toEfix(stored.downStemVert);
     connection->upStemHorz = toEfix(stored.upStemHorz);
@@ -430,8 +444,8 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
                 static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
             break;
         }
-        insertRecoveredConnection(target, stored, statesPreFinale35Units(index, profile),
-            blockOffset, decodedOffset, report);
+        insertRecoveredConnection(document, target, stored,
+            statesPreFinale35Units(index, profile), blockOffset, decodedOffset, report);
     }
 }
 

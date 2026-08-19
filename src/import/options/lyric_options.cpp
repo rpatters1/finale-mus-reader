@@ -710,10 +710,9 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
             }
             units = stored.size();
             if (!stored.empty()) {
-                const auto bank = profile.platform == SourcePlatform::Windows
-                    ? musx::dom::others::FontDefinition::CharacterSetBank::Windows
-                    : musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
-                ignored = text::toUtf8(stored, text::codePageForCharset(bank, 0));
+                // No font names an encoding for this string, so the document's own platform
+                // decides. @ref text::platformCodePage is where that fallback lives.
+                ignored = text::toUtf8(stored, text::platformCodePage(profile.platform));
             }
         }
         if (!ignored.empty()) {

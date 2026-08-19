@@ -631,23 +631,10 @@ private:
         if (!m_font) {
             return m_source.commandCodePage;
         }
-        // Font id zero is the document's default music font. Nothing else in Finale occupies
-        // that comparator, and text set in it is glyph numbers whatever character set the
-        // record claims. The fixed-row eras record an ordinary text charset for their own music
-        // font, because the charset fields did not carry a symbol marker until the compressed
-        // eras; the id is the only statement those files make, so it is the one to read.
-        if (*m_font == 0) {
-            return std::nullopt;
-        }
-        const auto definition = m_source.document->getOthers()
-            ->get<FontDefinitionSource>(musx::dom::SCORE_PARTID, *m_font);
-        if (!definition) {
-            return m_source.commandCodePage;
-        }
-        if (definition->calcIsSymbolFont()) {
-            return std::nullopt;
-        }
-        return codePageForCharset(definition->charsetBank, definition->charsetVal);
+        // A font the document does not define leaves the command's own code page in force,
+        // which is the document platform's: this is certainly a run of text, so the best
+        // guess available is better than none.
+        return codePageForDocumentFont(m_source.document, *m_font, m_source.commandCodePage);
     }
 
     void flushLiteral()

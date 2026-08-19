@@ -37,3 +37,30 @@ F2002-fileinfo-text.musx
     inside parentheses; a block that changes size and style partway through; and a
     long paragraph with curly quotes and an italic run. All twelve agree with the
     companion apart from the font-command spelling.
+
+F2002-empty.mus
+    sha256 9f96657cab89b15ae6c992aec3f98042f699294dd19c9484ed22d3e01342904b
+    An untouched new Finale 2002 document, authored in Finale 2002 itself running under
+    SheepShaver by this repository's author, and kept there as the parent of every fixture
+    derived from it so that each one's diff against it is exactly the edit under test.
+
+F2002-clef-stem-font.mus
+    sha256 ebc53a02b6fc8e1c1ffef49d72ce7eb2448dea56d0eca935af3025502f5f585f
+    From F2002-empty, with three edits, each pointing one of the three record types that store
+    a bare character at a font of its own: clef index 4 given Arial, bold and italic, at size
+    23; a second stem connection added naming the same font; and the flat symbol insert of Text
+    Options moved to it. Finale 2002 is the earliest available release whose clef dialog allows
+    a font override at all, which is why this document is not a Finale 2000 one like the other
+    fixtures authored this way.
+    All three edits set the same character, and all three records store it as 199. Finale 27
+    reads all three as 171, which is `U+00AB`: the byte is Mac Roman, the encoding of the Arial
+    definition each record names, and not a code point. This is the fixture that established
+    that a stored character belongs to its own font's encoding rather than to the document, and
+    it establishes it for every class that stores one.
+    Each edit leaves its own control beside it. The first stem connection still names font 0,
+    the default music font, and the four symbol inserts other than the flat still name it too.
+    Font 0 is a symbol font whose byte is a glyph number: the connection stores 192 and the
+    inserts store 35, 110, 186 and 220, and every one of them must read back unchanged, where
+    decoding 192 through Mac Roman would name an infinity sign. Every clef, connection and
+    insert in every other fixture is of that kind, which is why no earlier document showed the
+    difference.

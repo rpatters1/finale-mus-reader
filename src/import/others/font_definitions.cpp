@@ -25,7 +25,7 @@ using FontDefinitionTarget = musx::dom::others::FontDefinition;
 // ASCII would leave the conversion path untested against the bulk of real input. A name
 // whose bytes contradict the charset it claims is left exactly as it was found rather than
 // replaced or dropped: preserved mojibake can be re-decoded later, discarded bytes cannot.
-void convertNameToUtf8(void* instance, const SourceProfile&)
+void convertNameToUtf8(void* instance, const SourceProfile&, const musx::dom::DocumentPtr&)
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
     font->name = text::toUtf8(
@@ -45,13 +45,14 @@ void convertNameToUtf8(void* instance, const SourceProfile&)
 // An unclassified platform is treated as Mac. Coda-banner files carry no platform tuple at all,
 // and nothing earlier than Finale 3.0 is Windows-origin, so Mac is the only origin those
 // documents can have.
-void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile)
+void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile,
+    const musx::dom::DocumentPtr& document)
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
     font->charsetBank = profile.platform == SourcePlatform::Windows
         ? FontDefinitionTarget::CharacterSetBank::Windows
         : FontDefinitionTarget::CharacterSetBank::MacOS;
-    convertNameToUtf8(instance, profile);
+    convertNameToUtf8(instance, profile, document);
 }
 
 // A font definition is one `FN` family. Its first incidence is the header and every

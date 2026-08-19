@@ -170,6 +170,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/graphic_assignments.cpp
     src/import/others/layer_attributes.cpp
     src/import/others/shape_definitions.cpp
+    src/import/others/smart_shape_custom_lines.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp
     src/import/support/legacy_mapping.cpp

@@ -132,3 +132,19 @@ F2012-bookmarks.musx
     edited artifact rather than a raw conversion. Whether the corruption came from
     the character encoding or from Enigma tags the upgrade did or did not expect is
     not established, and this document does not answer it.
+
+F2012-ssline-offsets.mus
+    sha256 55ea2ec26ef98f70986a8e0c50b8449fb5e2b199b387187ae24eb13a5106e2d8
+    F2000-ssline-offsets back-saved to Finale 2012, so that one document states the same six
+    custom line styles in both the fixed-row layout and the Unicode-era class layout. Finale
+    adds a seventh of its own, the synthesized default it puts in every upgraded document.
+    It is the fixture that corrected how the Finale 2012 character widening shifts the record.
+    The widened character belongs to the Char parameter block, so only that block's own later
+    fields move with it: cmper 5's font id, size, mask and baseline shift each sit one word
+    later than in the fixed-row source, while cmper 4's dash lengths sit exactly where the
+    earlier layouts put them. Everything after the parameter block moves for all three line
+    styles, which cmpers 3 and 6 show. Read through a rule that shifted every slot alike, this
+    document reports a dashed line whose gap is zero.
+    Its Char line also shows that the era stores a code point rather than a byte: the character
+    the fixed-row source holds as Mac Roman 199 is 171 here, which is what the fixed-row
+    reader arrives at by decoding.

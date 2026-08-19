@@ -3,6 +3,15 @@ Finale 2000 (internal version 5.0), uncompressed fixed-row era, big-endian.
 Origin: a test case authored for the Mass Copy plug-in and released for
 publication by its author.
 
+F2000-empty.mus and the fixtures derived from it have a different origin: they were
+authored in Finale 2000 itself, running under SheepShaver, by this repository's author.
+F2000-empty.mus is a new document made with File > New, saved without any edit, and is
+their common parent. It exists because the Mass Copy documents above cannot be moved into
+that virtual machine, so a derived fixture cannot use one of them as its parent; a copy of
+it is kept inside SheepShaver so that further fixtures can be derived from the same file.
+It is structurally the same document as F2000-baseline.mus and differs from it only in the
+bytes a fresh save rewrites.
+
 F2000-multilayer.mus
     sha256 bfbfdabc42ac2d94bc746ef1d1a993a970052c96250b6292cb2a2ea3e930bb9e
     A multi-layer document. It is the tracked fixture for the uncompressed era,
@@ -29,3 +38,39 @@ F2000-lyropts-align-just.mus
     off -- so one record carries both states of the flag bit.
     Its ETF is not a corroborating export: it contains no (65534) rows at all, against 294 in
     F2000-baseline.etf, so it was written with options excluded.
+
+F2000-empty.mus
+    sha256 1b80f1797e36762e76d981e8aa6f1103bb23db82726a7ac20b3743867ab2215a
+    An untouched new Finale 2000 document, kept as the parent of every fixture authored in
+    the virtual machine so that each one's diff against it is exactly the edit under test.
+    It carries the two custom line styles Finale 2000 puts in every new document, cmpers 1
+    and 2, which is what makes an added third one unambiguous.
+
+F2000-ssline-offsets.mus
+    sha256 b53b944dd389fd39ec8f5767a055a674478c4a8f08fdf545dee919f14535cdb0
+    From F2000-empty, with four custom line styles added as cmpers 3 through 6. Together they
+    exercise every layout the `ls` record has, and every value is chosen so that no two slots
+    of the same record can be confused.
+    Cmper 3 is a Solid line with all five text anchors defined and every position box carrying
+    a distinct prime: the anchors take 11/13, 17/19, 23/-29, 31/37 and 41/43 as H and V, and
+    the line adjustments take 47 for Start H, 53 for Cont H, 59 for End H and 61 for V. The one
+    negative value exercises sign on a big-endian source. This is the record that established
+    words 19 through 33, which before it were presumed from position alone: the X and Y offsets
+    interleave per anchor rather than being grouped by axis, and the five line adjustments
+    follow in the order musxdom declares them. It also settles what no earlier sample could
+    distinguish, that the single "V" control writes one value into both word 30 and word 32, so
+    a document never has `lineStartY` and `lineEndY` disagreeing.
+    Cmper 4 is Dashed with a 3 EVPU dash and a 7 EVPU gap. Every earlier sample had the two
+    equal, which left the order of words 2 and 3 assumed from musxdom's declaration order; 192
+    against 448 tells them apart.
+    Cmper 5 is a Char line set in Arial, bold and italic, at size 17 with a -83 EMs baseline
+    shift. It established words 2 and 4 as the font id and the Enigma style mask, completing
+    the ordinary legacy font tuple of id, size and mask across words 2 to 4. Its character is
+    also the only evidence that a stored character is a byte in its *font's* encoding rather
+    than a code point: the file holds Mac Roman 199 and the companion reads 171.
+    Cmper 6 is Solid with a Hook start cap of 1984 EFIX and a custom arrowhead end cap naming
+    shape 2, so each cap's shared value slot is exercised as both of the things it can be, and
+    words 10 and 12 are shown to stay zero while 9 and 11 are in use.
+    Against its parent the only records that move are `ls` cmpers 3 through 6, which the parent
+    does not have at all, the five smart shape text blocks cmper 3's anchors reference, and the
+    font definition Arial takes.

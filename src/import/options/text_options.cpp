@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -646,7 +647,6 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
             = readInsertLong(block, base, insertTrackingAfterOffset, profile.byteOrder);
         insert->baselineShiftPerc = static_cast<std::int16_t>(
             readInsertField(block, base, insertBaselineShiftOffset, 2, profile.byteOrder));
-        insert->symChar = readInsertChar(block, base, profile.byteOrder);
 
         // The font is the ordinary Enigma tuple: comparator, size, effects bitmask. musxdom
         // owns the bitmask, and it drops the same two bits Finale 27 drops -- a stored 56
@@ -664,6 +664,16 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         font->fontSize = fontSize;
         font->setEnigmaStyles(effects);
         insert->symFont = std::move(font);
+
+        // The character is a byte in the encoding of the font just built, not a code point,
+        // and is decoded by the same rule that decodes a run of legacy text. An insert left at
+        // its default names a music font, whose byte is a glyph number and comes through
+        // unchanged; one pointed at a text font is decoded through that font's code page.
+        const auto storedChar = readInsertChar(block, base, profile.byteOrder);
+        insert->symChar = block.layout == InsertLayout::WideChar
+            ? storedChar
+            : text::codepointFromByte(static_cast<std::uint8_t>(storedChar),
+                text::codePageForDocumentFont(document, fontId, std::nullopt));
 
         if (!document->getOthers()->get<musx::dom::others::FontDefinition>(
                 musx::dom::SCORE_PARTID, fontId)) {
@@ -685,9 +695,10 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         reportInsertField(report, name, "symFont.fontId", ValueOrigin::LegacyMus, fontId, block);
         reportInsertField(report, name, "symFont.fontSize", ValueOrigin::LegacyMus, fontSize, block);
         reportInsertField(report, name, "symFont.effects", ValueOrigin::LegacyMus, effects, block);
+        // The byte the source stored, not the code point it decoded to, matching how the
+        // clef and stem-connection reports name the same kind of value.
         reportInsertField(report, name, "symChar", ValueOrigin::LegacyMus,
-            static_cast<std::int64_t>(target->symbolInserts[insertOrder[ordinal]]->symChar),
-            block);
+            static_cast<std::int64_t>(storedChar), block);
     }
     return true;
 }
