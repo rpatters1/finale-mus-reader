@@ -2351,8 +2351,6 @@ void testCodaBannerEpoch()
     expect(result.report.sourcePlatform == SourcePlatform::Unknown
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
-    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Warning),
-        "Coda-banner limitation was not reported as a warning");
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported Coda-banner option was not retained as a default");
@@ -2375,16 +2373,6 @@ void testZlibEpoch()
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported zlib-era option was not retained as a default");
-    // Info, not a warning: this message fires for every zlib document ever read and
-    // describes how far recovery reaches, so raising it to a user would report normal
-    // operation as a fault on every file. Other diagnostics from this synthetic fixture
-    // may legitimately be warnings, so the level is asserted on this message alone.
-    expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
-               [](const finale_mus_reader::Diagnostic& entry) {
-                   return entry.message.find("variable logical records") != std::string::npos
-                       && entry.level == musx::util::Logger::LogLevel::Info;
-               }),
-        "The zlib overlay limitation was not reported at info level");
     expectNoScoreContent(result);
 }
 

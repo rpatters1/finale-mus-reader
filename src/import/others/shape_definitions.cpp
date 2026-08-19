@@ -173,6 +173,14 @@ ShapeInstructionType instructionType(records::LegacyTag tag, bool early)
 void importShapeData(const ShapeSourceFamily& source, const ImportContext& context)
 {
     for (const auto cmper : source.pool->cmpersForTag(source.data)) {
+        if (cmper == 0) {
+            // Comparator 0 means "no data" wherever a ShapeDef stores it, so nothing ever
+            // resolves this comparator; a physical record here is leftover bytes from a
+            // deleted or never-populated slot, not content any real shape can reach.
+            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                "Skipped ShapeData comparator 0, which Finale reserves to mean \"no data\"."});
+            continue;
+        }
         const auto rows = source.pool->getArray(source.data, cmper);
         auto target = std::make_shared<ShapeDataTarget>(context.document,
             musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
@@ -221,6 +229,17 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
 void importShapeInstructions(const ShapeSourceFamily& source, const ImportContext& context)
 {
     for (const auto cmper : source.pool->cmpersForTag(source.instructions)) {
+        if (cmper == 0) {
+            // Comparator 0 means "no instructions" wherever a ShapeDef stores it (see
+            // ShapeDef::isBlank(), which returns true on sight without resolving it), so
+            // nothing ever resolves this comparator; a physical record here is leftover
+            // bytes from a deleted or never-populated slot, not content any real shape can
+            // reach.
+            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                "Skipped ShapeInstructionList comparator 0, which Finale reserves to mean "
+                "\"no instructions\"."});
+            continue;
+        }
         const auto rows = source.pool->getArray(source.instructions, cmper);
         const auto packed = shapeLongs(source, source.instructions, cmper, context);
         auto target = std::make_shared<ShapeInstructionTarget>(context.document,
@@ -262,6 +281,16 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
 void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& context)
 {
     for (const auto cmper : source.pool->cmpersForTag(source.definition)) {
+        if (cmper == 0) {
+            // Comparator 0 means "no shape" wherever it is stored (ClefDef::shapeId,
+            // MultimeasureRestOptions::shapeDef, and so on all treat 0 as absent before
+            // ever resolving it), so nothing ever resolves this comparator; a physical
+            // record here is leftover bytes from a deleted or never-populated slot, not a
+            // shape any reference can reach.
+            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                "Skipped ShapeDef comparator 0, which Finale reserves to mean \"no shape\"."});
+            continue;
+        }
         const auto rows = source.pool->getArray(source.definition, cmper);
         if (rows.empty()) {
             continue;

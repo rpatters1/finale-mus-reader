@@ -110,11 +110,15 @@ property was added, what it replaced, or which investigation prompted it. A read
 the published API has none of that context. The same rule applies to Doxygen written in
 musxdom.
 
-This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
-apply to `scripts/`, `tools/`, or test code, which may repeat themselves as
-freely as makes sense — a probe is meant to be written quickly while a question
-is live, and a test that spells out its own expectations is clearer than one that
-shares a helper with the code under test.
+This applies to `src/`, `include/`, `tests/evidence/` fixtures, and
+`tools/coverage/`. It does not apply to the rest of `tools/`, `scripts/`, or
+test code, which may repeat themselves as freely as makes sense — a probe is
+meant to be written quickly while a question is live, and a test that spells
+out its own expectations is clearer than one that shares a helper with the
+code under test. `tools/coverage/` is the exception within `tools/`: it is
+the one probe meant to stay comprehensible and regression-safe over time
+rather than rewritten on demand, so its comments follow production discipline
+even though its code may still repeat itself as freely as any other probe.
 
 ## Format and decoder rules
 

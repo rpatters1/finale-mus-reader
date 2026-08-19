@@ -1,32 +1,29 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-// Targeted private extractor for page-graphic records, embedded image signatures,
-// and ShapeDef ExternalGraphic operands. Input is
-// survey_id<TAB>corpus_id<TAB>source_path. Output deliberately omits paths.
+// Targeted private extractor for page/measure-graphic records and embedded image
+// signatures, at the record layer rather than through the reader: it reports what is
+// physically stored, not what the importer makes of it. The reader-facing half of what
+// used to be graphics_coverage_probe (shape<->graphic cross-referencing, unresolved
+// references, embedded-graphics count) now lives in
+// tools/coverage/surveyors/others/shape_definitions.cpp, alongside the rest of ShapeDef
+// coverage.
+//
+// Input is survey_id<TAB>corpus_id<TAB>source_path. Output deliberately omits paths.
 
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstdio>
-#include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <sstream>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "container/mus_container.h"
-#include "finale_mus_reader/reader.h"
-#include "musx/musx.h"
 #include "records/legacy_record_index.h"
-#ifndef MUSX_USE_PUGIXML
-#define MUSX_USE_PUGIXML
-#endif
-#include "musx/xml/PugiXmlImpl.h"
 
 namespace {
 
@@ -176,48 +173,14 @@ std::vector<std::pair<std::string_view, std::size_t>> imageSignatures(
     return result;
 }
 
-struct ShapeGraphicReference
-{
-    int shapeCmper{};
-    int graphicCmper{};
-};
-
-std::vector<ShapeGraphicReference> shapeGraphicReferences(
-    const musx::dom::DocumentPtr& document)
-{
-    std::vector<ShapeGraphicReference> result;
-    const auto others = document->getOthers();
-    for (const auto& shape : others->getArray<musx::dom::others::ShapeDef>(musx::dom::SCORE_PARTID)) {
-        const auto instructions = others->get<musx::dom::others::ShapeInstructionList>(
-            musx::dom::SCORE_PARTID, shape->instructionList);
-        const auto data = others->get<musx::dom::others::ShapeData>(
-            musx::dom::SCORE_PARTID, shape->dataList);
-        if (!instructions || !data) continue;
-        std::size_t dataIndex = 0;
-        for (const auto& instruction : instructions->instructions) {
-            const auto count = static_cast<std::size_t>(instruction->numData);
-            if (dataIndex + count > data->values.size()) break;
-            if (instruction->type == musx::dom::ShapeDefInstructionType::ExternalGraphic) {
-                const std::vector<int> values(data->values.begin() + dataIndex,
-                    data->values.begin() + dataIndex + count);
-                if (const auto graphic = musx::dom::ShapeDefInstruction::parseExternalGraphic(values))
-                    result.push_back({shape->getCmper(), graphic->cmper});
-            }
-            dataIndex += count;
-        }
-    }
-    return result;
-}
-
 } // namespace
 
 int main(int argc, char** argv)
 {
     if (argc != 3) {
-        std::fprintf(stderr, "usage: graphics_coverage_probe <corpus-tsv> <output-jsonl>\n");
+        std::fprintf(stderr, "usage: graphics_record_probe <corpus-tsv> <output-jsonl>\n");
         return 2;
     }
-    musx::util::Logger::setCallback([](musx::util::Logger::LogLevel, const std::string&) {});
     std::ifstream input(argv[1]);
     std::ofstream output(argv[2]);
     if (!input || !output) return 2;
@@ -243,27 +206,11 @@ int main(int argc, char** argv)
             const auto words = pageGraphicWords(index, parsed.formatEpoch, parsed.byteOrder);
             const auto measureRecords = measureGraphicRecords(index, parsed);
             const auto signatures = imageSignatures(bytes);
-            const auto imported = finale_mus_reader::Reader::read<musx::xml::pugi::Document>(
-                std::filesystem::path(path));
-            if (!imported.document) throw std::runtime_error("reader import failed");
-            const auto shapeReferences = shapeGraphicReferences(imported.document);
-            const auto shapeAssignments = imported.document->getOthers()
-                ->getArray<musx::dom::others::ShapeGraphicAssign>(musx::dom::SCORE_PARTID);
-            const auto pageAssignments = imported.document->getOthers()
-                ->getArray<musx::dom::others::PageGraphicAssign>(musx::dom::SCORE_PARTID);
-            const auto unresolvedShapeRefs = std::count_if(
-                shapeReferences.begin(), shapeReferences.end(), [&](const auto& reference) {
-                    return !musx::dom::others::ShapeGraphicAssign::findForGraphic(
-                        imported.document, musx::dom::SCORE_PARTID,
-                        static_cast<musx::dom::Cmper>(reference.graphicCmper));
-                });
             output << ",\"status\":\"ok\",\"epoch\":" << quote(epochName(parsed.formatEpoch))
-                << ",\"saving_product\":" << quote(imported.report.savingProduct)
                 << ",\"page_words\":[";
             for (std::size_t i = 0; i < words.size(); ++i)
                 output << (i ? "," : "") << static_cast<std::int16_t>(words[i]);
             output << "],\"page_payload_remainder\":" << (words.size() % 18)
-                << ",\"page_assignments\":" << pageAssignments.size()
                 << ",\"measure_graphic_records\":[";
             for (std::size_t i = 0; i < measureRecords.size(); ++i) {
                 const auto& record = measureRecords[i];
@@ -274,21 +221,6 @@ int main(int argc, char** argv)
                 output << "]}";
             }
             output << "]"
-                << ",\"shape_graphic_cmpers\":[";
-            for (std::size_t i = 0; i < shapeReferences.size(); ++i)
-                output << (i ? "," : "") << shapeReferences[i].graphicCmper;
-            output << "],\"shape_graphic_references\":[";
-            for (std::size_t i = 0; i < shapeReferences.size(); ++i) {
-                output << (i ? "," : "") << "{\"shape_cmper\":"
-                    << shapeReferences[i].shapeCmper << ",\"graphic_cmper\":"
-                    << shapeReferences[i].graphicCmper << '}';
-            }
-            output << "],\"shape_assignment_graphic_cmpers\":[";
-            for (std::size_t i = 0; i < shapeAssignments.size(); ++i)
-                output << (i ? "," : "") << shapeAssignments[i]->graphicCmper;
-            output << "],\"shape_graphic_assignments\":" << shapeAssignments.size()
-                << ",\"unresolved_shape_graphic_refs\":" << unresolvedShapeRefs
-                << ",\"embedded_graphics\":" << imported.document->getEmbeddedGraphics().size()
                 << ",\"image_signatures\":[";
             for (std::size_t i = 0; i < signatures.size(); ++i) {
                 output << (i ? "," : "") << "{\"kind\":" << quote(signatures[i].first)

@@ -48,19 +48,7 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     result.document = createDocument(
         parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
 
-    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
-        // A warning because this era yields no score content at all, only options.
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "Coda-banner pool directories are unresolved; supported fallback options "
-            "remain at Finale 27 defaults."});
-    } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
-        // Info, not a warning: this describes how far recovery currently reaches and fires
-        // for every zlib document ever read. Raising it to a user would report normal
-        // operation as a fault on every single file.
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-            "Only supported later variable logical records are overlaid; other options "
-            "remain at Finale 27 defaults."});
-    } else if (parsed.formatEpoch == FormatEpoch::Unknown) {
+    if (parsed.formatEpoch == FormatEpoch::Unknown) {
         result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
             "The banner header was recovered, but the body framing was not recognized."});
     }

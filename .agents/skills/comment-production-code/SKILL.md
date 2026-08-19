@@ -1,6 +1,6 @@
 ---
 name: comment-production-code
-description: Write or revise comments in this repository's production C++ (src/, include/). Use when adding a decoder, reviewing a diff for comment quality, or cleaning up comments that have drifted into narrating how a finding was made. Covers what a production comment may state, how to label a claim this repository is not certain of, and where derivation history belongs instead.
+description: Write or revise comments in this repository's production C++ (src/, include/, tools/coverage/). Use when adding a decoder, reviewing a diff for comment quality, or cleaning up comments that have drifted into narrating how a finding was made. Covers what a production comment may state, how to label a claim this repository is not certain of, and where derivation history belongs instead.
 ---
 
 # Comment production code
@@ -8,9 +8,15 @@ description: Write or revise comments in this repository's production C++ (src/,
 A production comment states **how the code works**, and **how we believe it ought
 to work** where belief is all we have. Nothing else.
 
-This applies to `src/` and `include/`. It does not apply to `tests/`, `tools/`,
-or `scripts/`, and it does not apply to the research documents, which exist
-precisely to hold what this rule keeps out of the source.
+This applies to `src/`, `include/`, and `tools/coverage/`. It does not apply to
+the rest of `tests/`, `tools/`, or `scripts/`, and it does not apply to the
+research documents, which exist precisely to hold what this rule keeps out of
+the source.
+
+`tools/coverage/` is the one probe meant to stay comprehensible and
+regression-safe over time rather than rewritten on demand the way the rest of
+`tools/` is, so it earns the same comment discipline as `src/`/`include/` even
+though — unlike them — its code is still free to repeat itself, per `AGENTS.md`.
 
 ## The rule
 

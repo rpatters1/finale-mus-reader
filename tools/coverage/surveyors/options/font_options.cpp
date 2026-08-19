@@ -1,0 +1,152 @@
+// Copyright (c) 2026 Robert G. Patterson
+// SPDX-License-Identifier: MIT
+
+#include <cstddef>
+#include <map>
+#include <optional>
+#include <ostream>
+#include <string>
+
+#include "coverage/json.h"
+#include "coverage/registry.h"
+#include "finale_mus_reader/reader.h"
+#include "musx/musx.h"
+
+namespace {
+
+using namespace finale_mus_reader::coverage;
+using finale_mus_reader::FieldInfo;
+
+struct Tuple
+{
+    std::optional<FieldInfo> fontId;
+    std::optional<FieldInfo> fontSize;
+    std::optional<FieldInfo> effects;
+};
+
+std::map<std::size_t, Tuple> collectTuples(const finale_mus_reader::ImportReport& report)
+{
+    constexpr std::string_view prefix = "options.fontOptions[";
+    std::map<std::size_t, Tuple> result;
+    for (const auto& field : report.fields) {
+        if (!std::string_view(field.target).starts_with(prefix)) continue;
+        const auto close = field.target.find(']', prefix.size());
+        if (close == std::string::npos || close + 2 > field.target.size()) continue;
+        const auto ordinal = static_cast<std::size_t>(
+            std::stoul(field.target.substr(prefix.size(), close - prefix.size())));
+        const auto member = std::string_view(field.target).substr(close + 2);
+        auto& tuple = result[ordinal];
+        if (member == "fontId") tuple.fontId = field;
+        else if (member == "fontSize") tuple.fontSize = field;
+        else if (member == "effects") tuple.effects = field;
+    }
+    return result;
+}
+
+// The decoded field offset a source tuple's word occupied, so a disagreement can be
+// chased back to its exact bytes without re-deriving the epoch's record layout by hand.
+std::size_t decodedFieldOffset(const FieldInfo& field, finale_mus_reader::FormatEpoch epoch,
+    std::size_t ordinal, std::size_t fieldIndex)
+{
+    std::size_t offset = field.decodedOffset;
+    if (epoch == finale_mus_reader::FormatEpoch::DclLegacy) {
+        constexpr std::size_t fixedRowHeaderSize = 4;
+        constexpr std::size_t wordsPerRow = 6;
+        offset += fixedRowHeaderSize + ((ordinal * 3 + fieldIndex) % wordsPerRow) * 2;
+    } else if (epoch == finale_mus_reader::FormatEpoch::ZlibLegacy) {
+        constexpr std::size_t classRecordHeaderSize = 10;
+        offset += classRecordHeaderSize + ordinal * 6 + fieldIndex * 2;
+    }
+    return offset;
+}
+
+void writeSourceField(std::ostream& out, std::string_view name, const FieldInfo& field,
+    finale_mus_reader::FormatEpoch epoch, std::size_t ordinal, std::size_t fieldIndex)
+{
+    out << ",\"" << name << "\":" << field.rawValue
+        << ",\"" << name << "_block_offset\":" << field.blockOffset
+        << ",\"" << name << "_decoded_field_offset\":"
+        << decodedFieldOffset(field, epoch, ordinal, fieldIndex);
+}
+
+void writeTuple(std::ostream& out, std::size_t ordinal, const Tuple& tuple,
+    const SurveyContext& ctx)
+{
+    if (!tuple.fontId || !tuple.fontSize || !tuple.effects) return;
+
+    const auto options = ctx.document->getOptions()->get<musx::dom::options::FontOptions>();
+    const auto actual = options->getFontInfo(
+        static_cast<musx::dom::options::FontOptions::FontType>(ordinal));
+    std::string fontStatus = "missing";
+    std::string fontName;
+    const auto fontId = actual->fontId;
+    if (fontId == 0) fontStatus = "default";
+    if (const auto font = ctx.document->getOthers()
+            ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fontId)) {
+        if (fontId != 0) fontStatus = "resolved";
+        fontName = font->name;
+    }
+
+    out << "{\"ordinal\":" << ordinal;
+    writeSourceField(out, "source_font_id", *tuple.fontId, ctx.report.formatEpoch, ordinal, 0);
+    writeSourceField(out, "source_font_size", *tuple.fontSize, ctx.report.formatEpoch, ordinal, 1);
+    writeSourceField(out, "source_effects", *tuple.effects, ctx.report.formatEpoch, ordinal, 2);
+    out << ",\"font_id\":" << fontId
+        << ",\"font_size\":" << actual->fontSize
+        << ",\"effects\":" << actual->getEnigmaStyles()
+        << ",\"font_id_origin\":" << jsonString(originName(tuple.fontId->origin))
+        << ",\"font_status\":" << jsonString(fontStatus)
+        << ",\"font_name\":" << jsonString(fontName)
+        << ",\"normalized_font_name\":" << jsonString(musx::dom::normalizeFontName(fontName))
+        << '}';
+}
+
+void writeFontOptions(std::ostream& out, const SurveyContext& ctx)
+{
+    const auto options = ctx.document->getOptions()->get<musx::dom::options::FontOptions>();
+    if (!options) {
+        out << "null";
+        return;
+    }
+    const auto tuples = collectTuples(ctx.report);
+
+    std::size_t danglingNonzeroCount = 0;
+    std::size_t recoveredCount = 0;
+    std::size_t behaviorCount = 0;
+    std::size_t defaultCount = 0;
+    for (const auto& [type, font] : options->fontOptions) {
+        static_cast<void>(type);
+        if (font->fontId != 0
+                && !ctx.document->getOthers()->get<musx::dom::others::FontDefinition>(
+                musx::dom::SCORE_PARTID, font->fontId)) {
+            ++danglingNonzeroCount;
+        }
+    }
+    for (const auto& [ordinal, tuple] : tuples) {
+        if (!tuple.fontId) continue;
+        switch (tuple.fontId->origin) {
+        case finale_mus_reader::ValueOrigin::LegacyMus: ++recoveredCount; break;
+        case finale_mus_reader::ValueOrigin::LegacyBehavior: ++behaviorCount; break;
+        case finale_mus_reader::ValueOrigin::Finale27Default: ++defaultCount; break;
+        }
+    }
+
+    out << "{\"option_count\":" << options->fontOptions.size()
+        << ",\"recovered_count\":" << recoveredCount
+        << ",\"legacy_behavior_count\":" << behaviorCount
+        << ",\"default_count\":" << defaultCount
+        << ",\"dangling_nonzero_font_id_count\":" << danglingNonzeroCount
+        << ",\"tuples\":[";
+    bool first = true;
+    for (const auto& [ordinal, tuple] : tuples) {
+        if (!tuple.fontId || !tuple.fontSize || !tuple.effects) continue;
+        out << (first ? "" : ",");
+        writeTuple(out, ordinal, tuple, ctx);
+        first = false;
+    }
+    out << "]}";
+}
+
+COVERAGE_SURVEYOR("font_options", writeFontOptions);
+
+} // namespace
