@@ -63,6 +63,17 @@ const char* byteOrderName(ByteOrder byteOrder)
     return "unknown";
 }
 
+const char* diagnosticLevelName(musx::util::Logger::LogLevel level)
+{
+    switch (level) {
+    case musx::util::Logger::LogLevel::Verbose: return "verbose";
+    case musx::util::Logger::LogLevel::Info: return "info";
+    case musx::util::Logger::LogLevel::Warning: return "warning";
+    case musx::util::Logger::LogLevel::Error: return "error";
+    }
+    return "unknown";
+}
+
 std::string versionName(const ImportReport& report)
 {
     if (!report.sourceVersion) {

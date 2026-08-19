@@ -1413,8 +1413,10 @@ void testStemStaleUnicodeRecord()
         "The twelve-byte zlib element stopped decoding before Finale 2012");
 }
 
-// A connection names its font by comparator. A dangling one is preserved and reported rather
-// than replaced, because a default would invent a typeface the source never named.
+// A connection names its font by comparator. A dangling one is preserved rather than replaced,
+// because a default would invent a typeface the source never named; registering it is what lets
+// musxdom mint and log a placeholder for it at the end of construction instead of leaving the
+// comparator unusable, which is what testDanglingFontComparatorRequiresRegistration verifies.
 void testStemFontReferenceValidation()
 {
     ImportReport report;
@@ -1424,15 +1426,10 @@ void testStemFontReferenceValidation()
             {GLOBALS_CMPER, "40", {0, 0, 0, 0, 0, 0}}}),
         profileFor(5, 0), document, report);
     musx::factory::ConstructionContext construction;
-    finale_mus_reader::options::validateStemOptions(document, report, construction);
+    finale_mus_reader::options::validateStemOptions(document, construction);
     expectMapping(options->stemConnections.size() == 1
             && options->stemConnections[0]->fontId == 7,
         "A stem connection did not keep the font comparator the source stated");
-    expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
-                      [](const auto& entry) {
-                          return entry.message.find("does not define") != std::string::npos;
-                      }),
-        "A dangling stem-connection font reference was not reported");
 }
 
 // No real Finale save can stand in for a comparator that resolves to nothing: Finale always

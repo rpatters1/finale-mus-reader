@@ -27,8 +27,13 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     const auto parsed = container::parse(data, size);
-    if (parsed.formatEpoch == FormatEpoch::Unknown && !hasBanner(data, size)) {
-        throw std::invalid_argument("Input is not a recognized legacy Finale MUS file");
+    if (parsed.formatEpoch == FormatEpoch::Unknown) {
+        // A document whose body framing cannot be classified has nothing dependable to
+        // recover fallbacks against, so this exits before attempting framing, options, or
+        // clef recovery rather than after producing a document built entirely from Finale 27
+        // defaults. Whether a banner was found narrows why internally but is not surfaced:
+        // either way this input is not something the caller can treat as a document.
+        throw std::invalid_argument("This file does not appear to be a Finale MUS document.");
     }
 
     ImportResult result;
@@ -48,10 +53,6 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     result.document = createDocument(
         parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
 
-    if (parsed.formatEpoch == FormatEpoch::Unknown) {
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "The banner header was recovered, but the body framing was not recognized."});
-    }
     // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
     // made a routine fallback indistinguishable from an unreadable document.
     for (const auto& diagnostic : result.report.diagnostics) {

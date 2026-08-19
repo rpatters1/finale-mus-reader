@@ -269,6 +269,13 @@ private:
     /// closing parenthesis ends it. A command whose arguments are unterminated is treated as
     /// having none, which leaves its bytes to be read as ordinary text rather than swallowing
     /// the rest of the record.
+    ///
+    /// Leading and trailing whitespace is trimmed from the argument before it is returned:
+    /// Finale's own writer is loose about spacing around and between commands -- confirmed
+    /// against a Finale 27 companion, whose own upgrade of a legacy `^efx( bold)` still
+    /// applied bold despite the stray space -- so a caller matching an argument against a
+    /// fixed vocabulary, such as an effect name, must not fail on account of it. Interior
+    /// spaces are left alone; a multi-word argument such as a font name is not affected.
     std::optional<std::string_view> argumentsAt(std::size_t start, std::size_t& end) const
     {
         end = start;
@@ -278,8 +285,15 @@ private:
         for (std::size_t at = start + 1; at < m_body.size(); ++at) {
             if (m_body[at] == ')') {
                 end = at + 1;
-                return std::string_view(
+                std::string_view argument(
                     reinterpret_cast<const char*>(m_body.data() + start + 1), at - start - 1);
+                while (!argument.empty() && isSpace(argument.front())) {
+                    argument.remove_prefix(1);
+                }
+                while (!argument.empty() && isSpace(argument.back())) {
+                    argument.remove_suffix(1);
+                }
+                return argument;
             }
         }
         return std::nullopt;

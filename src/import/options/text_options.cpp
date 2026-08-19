@@ -675,15 +675,6 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
             : text::codepointFromByte(static_cast<std::uint8_t>(storedChar),
                 text::codePageForDocumentFont(document, fontId, std::nullopt));
 
-        if (!document->getOthers()->get<musx::dom::others::FontDefinition>(
-                musx::dom::SCORE_PARTID, fontId)) {
-            report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "The text options " + std::string(name) + " insert names font definition "
-                    + std::to_string(fontId)
-                    + ", which this document does not define; the comparator is kept as"
-                      " stored and reads as a missing font."});
-        }
-
         target->symbolInserts[insertOrder[ordinal]] = std::move(insert);
 
         reportInsertField(report, name, "trackingBefore", ValueOrigin::LegacyMus,

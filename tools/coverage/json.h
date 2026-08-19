@@ -19,6 +19,7 @@ inline const char* jsonBool(bool value) { return value ? "true" : "false"; }
 const char* originName(ValueOrigin origin);
 const char* epochName(FormatEpoch epoch);
 const char* byteOrderName(ByteOrder byteOrder);
+const char* diagnosticLevelName(musx::util::Logger::LogLevel level);
 std::string versionName(const ImportReport& report);
 
 // The reader returns failure rather than throwing: a null document means the import

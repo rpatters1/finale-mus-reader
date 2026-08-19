@@ -118,8 +118,13 @@ struct RawRecord
 /// @brief The length of a section marker at @p at, or zero when there is none.
 /// @details The earliest streams divide themselves into sections with a bare `^text` and
 /// `^lyrics`, a keyword carrying no comparator. Finale 97 drops them, each record naming its
-/// own kind. They say nothing a record does not, so they are skipped rather than read; what
-/// they are needed for is telling the two framings apart.
+/// own kind. Some documents spell the same marker with an empty argument list instead,
+/// `^text()` and `^lyrics()`, which is accepted here too -- but only for those two keywords:
+/// an empty list is also how an ordinary inline command with no argument reads (`^composer()`,
+/// `^date()`, and the like), and those must stay in the body rather than being mistaken for a
+/// section boundary. A nonempty list is a numbered record and is left to fail there rather
+/// than be consumed as a marker. Markers say nothing a record does not, so they are skipped
+/// rather than read; what they are needed for is telling the two framings apart.
 std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at)
 {
     if (at >= stream.size() || stream[at] != '^') {
@@ -129,7 +134,17 @@ std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at
     while (cursor < stream.size() && isLetter(stream[cursor])) {
         ++cursor;
     }
-    if (cursor == at + 1 || (cursor < stream.size() && stream[cursor] == '(')) {
+    if (cursor == at + 1) {
+        return 0;
+    }
+    if (cursor < stream.size() && stream[cursor] == '(') {
+        if (cursor + 1 < stream.size() && stream[cursor + 1] == ')') {
+            const std::string_view keyword(
+                reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
+            if (keyword == "text" || keyword == "lyrics") {
+                return cursor + 2 - at;
+            }
+        }
         return 0;
     }
     return cursor - at;
@@ -231,11 +246,15 @@ void reportUnread(ImportReport& report, const std::vector<std::uint8_t>& codes,
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, message + "."});
     }
     if (!effects.empty()) {
+        // Warning, not info: argumentsAt() already trims stray whitespace before an argument
+        // reaches this table, which was the one known source of a real effect name failing to
+        // match. What's left is a name this reader's vocabulary genuinely does not cover, and
+        // the styling it names is silently dropped from the recovered text.
         std::string message = "Legacy text effects with no known bit were ignored:";
         for (const auto& effect : effects) {
             message += ' ' + effect;
         }
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, message + "."});
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning, message + "."});
     }
     if (!keywords.empty()) {
         std::string message = "The text pool named record kinds this reader does not import:";

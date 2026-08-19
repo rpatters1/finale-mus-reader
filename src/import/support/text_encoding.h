@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cctype>
+#include <concepts>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -110,6 +112,19 @@ CodePage codePageForCharset(
 /// bytes is recoverable by a later, better-informed pass; a thrown exception in the middle
 /// of importing a document is not, and an empty string silently destroys evidence.
 std::string toUtf8(const std::string& source, CodePage codePage);
+
+/// @brief Whether a byte is ASCII whitespace, for whichever integral or character type it
+/// arrives as (`char`, `unsigned char`, `std::uint8_t`, and so on).
+/// @details `std::isspace` is only well-defined for a value representable as `unsigned char`
+/// or `EOF`, and is locale-dependent beyond ASCII; casting to `unsigned char` and rejecting
+/// anything at or above 0x80 avoids both, and keeps a UTF-8 continuation byte -- always 0x80
+/// or above -- from ever being misread as whitespace while trimming multibyte text.
+template <std::integral T>
+bool isSpace(T ch)
+{
+    const auto byte = static_cast<unsigned char>(ch);
+    return byte < 0x80 && std::isspace(byte) != 0;
+}
 
 /// @brief Restates legacy line breaks in the convention EnigmaXML uses.
 /// @details Legacy MUS separates the lines of a text block with a carriage return, which is

@@ -64,11 +64,11 @@ void repairMissingRecoveredFontDefinitions(const musx::dom::DocumentPtr& documen
 void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report);
 
-/// @brief Checks the font references of recovered stem connections against the font pool,
-/// and registers them.
+/// @brief Registers the font references of recovered stem connections so musxdom can resolve
+/// a dangling one to a placeholder instead of leaving it unusable.
 /// @details Runs after the font definitions are decoded and after FontOptions has repaired
 /// what it needed, because both may add to the pool a connection could be naming.
-void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+void validateStemOptions(const musx::dom::DocumentPtr& document,
     musx::factory::ConstructionContext& construction);
 
 } // namespace options
