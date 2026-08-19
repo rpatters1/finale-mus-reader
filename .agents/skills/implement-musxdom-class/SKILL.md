@@ -374,6 +374,34 @@ Apply these as questions, not universal rules:
 - A complete modern options collection can legitimately combine source-recovered values
   with explicitly reported reference defaults.
 
+## Step 8 — Widen the full regression to the new class
+
+**The full regression is only as wide as its class list, and it does not discover a new class
+by itself.** `tools/options_coverage_probe` emits one observation per document and
+`scripts/options_coverage_report.py` compares each against its Finale 27 companion; between
+them they cover every class the reader recovers, matching the importer registry in
+`src/import/support/legacy_mapping.cpp` one for one. A class absent from that pair is silently
+untested across every corpus, however thoroughly its own fixtures and unit tests pass.
+
+Do this before reporting the class complete:
+
+1. Add an emitter to `tools/options_coverage_probe.cpp` and call it from the dispatch. Emit
+   the fields a comparison can classify, and name a contained object rather than flattening it
+   -- flattening a variant block loses which variant the record chose.
+2. Add the companion extractor and a `compare_*` function to
+   `scripts/options_coverage_report.py`, dispatch it from `compare_companion`, and update the
+   class list in that file's docstring, including its count.
+3. Record any difference that is intended rather than a regression in that same docstring,
+   beside the ones already there. Finale's upgrade synthesizing an object the source never
+   stored is the common case, and it will otherwise be re-investigated by whoever next reads a
+   `companion-only` row.
+4. Re-run the regression over **every registered survey**, not only the cohort the class was
+   developed against, and present the per-survey import table with the results.
+
+A class that recovers correctly for its own fixtures can still break another class for every
+document in a corpus: a shared decoder touched along the way -- the text encoding, a font
+lookup, the record index -- is exactly what this step catches and what per-class tests cannot.
+
 ## Completion standard
 
 After the user has approved the completed work and its pull request, identify the exact transient analysis artifacts that are unlikely to help with the next musxdom class, prompt for explicit approval, and clean up only the approved artifacts. Preserve reusable corpus inventories, path and companion mappings, and expensive archive caches.
@@ -381,6 +409,9 @@ After the user has approved the completed work and its pull request, identify th
 Finish with a concise account of the implemented class and fields, supported epochs and
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, remaining open layouts, and the next smallest evidence request.
+**Include the full-regression import table from Step 8, per survey.** A completion report
+without it is not a completion report: nothing else in this procedure would notice that the
+work broke a class it never mentions.
 Call the result partial whenever any epoch or field remains unsupported.
 
 **State every completely uncovered epoch explicitly, every time.** Name the epoch, say
