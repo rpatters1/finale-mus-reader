@@ -182,6 +182,22 @@ platform's charset numbering and `charsetVal` selects within it, so a Mac font i
 saved on Windows still decodes correctly. Before Finale 3.2 the font record carries no
 charset at all, and the bank is synthesized from the document's own platform instead.
 
+**Never re-encode pre-Finale-2012 text to Unicode without using that text's own font.** This
+is the default position and it applies to a single stored character exactly as it applies to a
+run of text: a clef character, a stem-connection symbol, a custom line style's character and a
+text symbol insert are each a byte in the encoding of the font their own record names, not a
+code point. Decoding one through the wrong encoding does not merely garble it -- it names a
+different glyph, which is why a symbol font's byte must survive untouched rather than being read
+as Mac Roman. `text::codePageForDocumentFont` answers the question once, including that font id
+zero is the default music font whatever charset its record claims, and
+`text::codepointFromByte` applies the answer to one character.
+
+Where no font names an encoding, fall back to the platform default: Mac Roman on Mac and
+Windows-1252 on Windows. That fallback is `text::platformCodePage` and belongs only to text
+that genuinely has no font -- the File Info header strings, the name inside a font command,
+literal text before any font command in a block, and the lyric punctuation string. Do not
+restate it anywhere else.
+
 **Aim for the best result obtainable on the machine that is running.** Conversion need not
 be bit-identical across platforms, and insisting on that would mean giving up real accuracy:
 Windows can name encodings iconv cannot, so it gets the more faithful code page rather than

@@ -161,14 +161,14 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00bf` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x2f3e) |
 | `0x00c0` | unknown | unknown/options | open | 2011 | 12 | `mus-d89543077eefeae6` (0:0x1e24) |
 | `0x00c2` | unknown | unknown/options | open | 2008 | 144 | `mus-ed8096788fa377bf` (0:0x1db4) |
-| `0x00d5` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 168, 180, 264 | `mus-86fafceb1ef2ebe2` (0:0x1c48) |
+| `0x00d5` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 84, 168, 180, 264 | `mus-86fafceb1ef2ebe2` (0:0x1c48) |
 | `0x00d6` | shapeDef | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1ee2) |
-| `0x00d7` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 48, 60, 84 | `mus-86fafceb1ef2ebe2` (0:0x1f30) |
+| `0x00d7` | shapeList | others | moderate | 2007, 2008, 2011, 2012 | 36, 48, 60, 84 | `mus-86fafceb1ef2ebe2` (0:0x1f30) |
 | `0x00d8` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x3444) |
 | `0x00d9` | unknown | unknown/options | open | 2007 | 96 | `mus-86fafceb1ef2ebe2` (0:0x2026) |
 | `0x00da` | unknown | unknown/options | open | 2007 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x2102) |
-| `0x00db` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x262a) |
-| `0x00de` | ssLineStyle | others | weak | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x2142) |
+| `0x00db` | frameSpec | others | weak | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x262a) |
+| `0x00de` | ssLineStyle | others | moderate | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x2142) |
 | `0x00df` | staffSystemSpec | others | moderate | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x2244) |
 | `0x00e6` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x2276) |
 | `0x00e7` | staffSpec | others | weak | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |

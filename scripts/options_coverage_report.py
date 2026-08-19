@@ -7,7 +7,8 @@
 Covers, against companions, **every class the reader recovers**: ClefOptions, FontOptions,
 LyricOptions, MultimeasureRestOptions, MusicSpacingOptions, StemOptions, TextOptions,
 FontDefinition, LayerAttributes, PageGraphicAssign, ShapeGraphicAssign, ShapeDef,
-MeasureGraphicAssign, and all eight text classes -- twenty-one in all, matching the importer
+MeasureGraphicAssign, SmartShapeCustomLine, and all eight text classes -- twenty-two in all,
+matching the importer
 registry in src/import/support/legacy_mapping.cpp one for one. A full regression is only as wide
 as this list, so adding an importer means adding it here.
 
@@ -501,6 +502,46 @@ def read_companion(path):
         inst = re.search(r"<instList>(\d+)</instList>", m.group(2))
         shapes[int(m.group(1))] = int(inst.group(1)) if inst else 0
 
+    ss_lines = {}
+    for m in re.finditer(r'<ssLineStyle cmper="(\d+)"[^>]*>(.*?)</ssLineStyle>', xml, re.S):
+        body = m.group(2)
+
+        def num(element, where=body):
+            mm = re.search(r"<%s>(-?\d+)</%s>" % (element, element), where)
+            return int(mm.group(1)) if mm else 0
+
+        def block(name):
+            mm = re.search(r"<%s>(.*?)</%s>" % (name, name), body, re.S)
+            return mm.group(1) if mm else ""
+
+        def named(element, table, absent, where=body):
+            """An enumerated element, as the int musxdom declares it. Absent means the default."""
+            mm = re.search(r"<%s>(\w+)</%s>" % (element, element), where)
+            return table[mm.group(1) if mm else absent]
+
+        char_params, solid_params, dashed_params = (
+            block("charParams"), block("solidParams"), block("dashedParams"))
+        ss_lines[int(m.group(1))] = {
+            "line_style": named("lineStyle", SS_LINE_STYLES, "char"),
+            "cap_start_type": named("lineCapStartType", SS_LINE_CAPS, "none"),
+            "cap_end_type": named("lineCapEndType", SS_LINE_CAPS, "none"),
+            "cap_start_arrow_id": num("lineCapStartArrowID"),
+            "cap_end_arrow_id": num("lineCapEndArrowID"),
+            "cap_start_hook_length": num("lineCapStartHookLength"),
+            "cap_end_hook_length": num("lineCapEndHookLength"),
+            "left_start_x": num("leftStartX"),
+            "left_start_y": num("leftStartY"),
+            "line_start_x": num("lineStartX"),
+            "line_end_x": num("lineEndX"),
+            "line_cont_x": num("lineContX"),
+            "line_char": num("lineChar", char_params),
+            "char_font_id": num("fontID", char_params),
+            "char_font_size": num("fontSize", char_params),
+            "solid_width": num("lineWidth", solid_params),
+            "dash_on": num("dashOn", dashed_params),
+            "dash_off": num("dashOff", dashed_params),
+        }
+
     texts = {}
     for probe_key, element, _label in TEXT_CLASSES:
         found = {}
@@ -593,7 +634,7 @@ def read_companion(path):
             "text": text, "text_inserts": inserts,
             "texts": texts, "file_info": file_info,
             "lyric": lyric, "stem": stem, "spacing": spacing, "layers": layers,
-            "graphics": graphics, "shapes": shapes,
+            "graphics": graphics, "shapes": shapes, "ss_lines": ss_lines,
             "meas_graphics": meas_graphics}
 
 
@@ -780,6 +821,37 @@ def compare_measure_graphics(obs, comp, out):
                  "preserved" if a.get(field) == b.get(field) else "differs")] += 1
 
 
+# musxdom's declaration order for the two enums, which is what the probe writes as an int.
+SS_LINE_STYLES = {"char": 0, "solid": 1, "dashed": 2}
+SS_LINE_CAPS = {"none": 0, "hook": 1, "arrowheadPreset": 2, "arrowheadCustom": 3}
+
+# Every field the probe emits for a custom line style, compared as plain numbers.
+SS_LINE_FIELDS = (
+    "line_style", "cap_start_type", "cap_end_type", "cap_start_arrow_id", "cap_end_arrow_id",
+    "cap_start_hook_length", "cap_end_hook_length", "left_start_x", "left_start_y",
+    "line_start_x", "line_end_x", "line_cont_x", "line_char", "char_font_id",
+    "char_font_size", "solid_width", "dash_on", "dash_off")
+
+
+def compare_ss_lines(obs, comp, out):
+    """Custom line styles, keyed by comparator on each side independently."""
+    ours = {line["cmper"]: line for line in (obs.get("ss_line_styles") or [])}
+    theirs = comp.get("ss_lines") or {}
+    for cmper in sorted(set(ours) | set(theirs)):
+        a, b = ours.get(cmper), theirs.get(cmper)
+        if a is None:
+            # Finale's upgrade adds a built-in default the source never stored. Counted, so a
+            # real absence is still visible, but expected rather than a reader gap.
+            out[("SmartShapeCustomLine.record", "absent", "companion-only")] += 1
+            continue
+        if b is None:
+            out[("SmartShapeCustomLine.record", "absent", "reader-only")] += 1
+            continue
+        for field in SS_LINE_FIELDS:
+            out[("SmartShapeCustomLine." + to_member(field), "legacy-mus",
+                 "preserved" if a.get(field) == b.get(field) else "differs")] += 1
+
+
 def compare_shapes(obs, comp, out):
     ours = {sh["cmper"]: sh for sh in (obs.get("shape_defs") or [])}
     theirs = comp.get("shapes") or {}
@@ -812,6 +884,7 @@ def compare_companion(obs, comp):
     compare_layers(obs, comp, out)
     compare_graphics(obs, comp, out)
     compare_shapes(obs, comp, out)
+    compare_ss_lines(obs, comp, out)
     compare_lyric_options(obs, comp, out)
     compare_measure_graphics(obs, comp, out)
     fonts = obs.get("font_options") or []

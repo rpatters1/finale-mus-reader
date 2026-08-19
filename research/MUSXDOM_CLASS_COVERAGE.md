@@ -10,7 +10,7 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**16 done, 7 partial, 167 to do, 190 total.** Verified class for class against the registry on
+**17 done, 7 partial, 166 to do, 190 total.** Verified class for class against the registry on
 2026-08-18: every registered type appears here and nothing here is unregistered.
 
 ## options  (6 done, 1 partial, 21 to do, 28 total)
@@ -44,7 +44,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TimeSignatureOptions
     [ ] TupletOptions
 
-## others  (4 done, 3 partial, 86 to do, 93 total)
+## others  (5 done, 3 partial, 85 to do, 93 total)
 
     [ ] AcciAmountFlats
     [ ] AcciAmountSharps
@@ -108,7 +108,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [~] ShapeGraphicAssign                      graphic_assignments.cpp         placement only
     [x] ShapeInstructionList                    shape_definitions.cpp
     [ ] SmartShape
-    [ ] SmartShapeCustomLine
+    [x] SmartShapeCustomLine                    smart_shape_custom_lines.cpp
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
     [ ] Staff

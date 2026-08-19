@@ -133,6 +133,33 @@ std::string normalizeLineBreaks(std::string source);
 /// pre-Finale-3.2 document that records no bank of its own.
 CodePage platformCodePage(SourcePlatform platform);
 
+/// @brief The encoding of legacy text set in one of the document's fonts, or nothing when its
+/// bytes are glyph numbers rather than characters.
+/// @details A legacy character belongs to the font that draws it rather than to the document,
+/// so the font's own charset fields decide -- and a symbol font decides that the byte is a
+/// glyph number with no character meaning at all.
+///
+/// Font id zero is the document's default music font. Nothing else in Finale occupies that
+/// comparator, and text set in it is glyph numbers whatever character set the record claims.
+/// The fixed-row eras record an ordinary text charset for their own music font, because the
+/// charset fields did not carry a symbol marker until the compressed eras; the id is the only
+/// statement those files make, so it is the one to read.
+///
+/// @param unknownFont What a font the document does not define means for the caller's own
+/// material. A run of text takes the document platform's code page, because that is the best
+/// guess available for something that is certainly text; a single stored character takes
+/// nothing, preserving the byte rather than naming a letter on the strength of a font that
+/// is not there.
+std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont);
+
+/// @brief The code point one legacy character byte names in a given encoding.
+/// @details The single-character counterpart of @ref toUtf8, for the records that store a
+/// character as a number rather than as text. A disengaged @p codePage is the symbol case
+/// @ref symbolBytesToUtf8 describes, where the byte is a glyph number and is therefore its own
+/// code point.
+char32_t codepointFromByte(std::uint8_t stored, std::optional<CodePage> codePage);
+
 /// @brief Widens every byte to the code point of the same value and encodes that as UTF-8.
 /// @details The conversion for text set in a symbol font, where a byte is a glyph number
 /// rather than a character. Decoding such a byte through a code page would name a letter the

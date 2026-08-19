@@ -471,6 +471,67 @@ CodePage platformCodePage(SourcePlatform platform)
         platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
 }
 
+std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
+{
+    if (fontId == 0) {
+        return std::nullopt;
+    }
+    const auto definition = document->getOthers()
+        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fontId);
+    if (!definition) {
+        return unknownFont;
+    }
+    if (definition->calcIsSymbolFont()) {
+        return std::nullopt;
+    }
+    return codePageForCharset(definition->charsetBank, definition->charsetVal);
+}
+
+namespace {
+
+/// @brief The first code point of a UTF-8 string, or nothing when it is empty or malformed.
+std::optional<char32_t> firstCodepoint(std::string_view utf8)
+{
+    if (utf8.empty()) {
+        return std::nullopt;
+    }
+    const auto lead = static_cast<unsigned char>(utf8[0]);
+    const std::size_t length = lead < 0x80U ? 1 : (lead & 0xe0U) == 0xc0U ? 2
+        : (lead & 0xf0U) == 0xe0U ? 3 : (lead & 0xf8U) == 0xf0U ? 4 : 0;
+    if (length == 0 || length > utf8.size()) {
+        return std::nullopt;
+    }
+    static constexpr unsigned char leadMask[] = {0, 0x7fU, 0x1fU, 0x0fU, 0x07U};
+    char32_t code = lead & leadMask[length];
+    for (std::size_t at = 1; at < length; ++at) {
+        const auto continuation = static_cast<unsigned char>(utf8[at]);
+        if ((continuation & 0xc0U) != 0x80U) {
+            return std::nullopt;
+        }
+        code = (code << 6U) | (continuation & 0x3fU);
+    }
+    return code;
+}
+
+} // namespace
+
+char32_t codepointFromByte(std::uint8_t stored, std::optional<CodePage> codePage)
+{
+    if (!codePage) {
+        return static_cast<char32_t>(stored);
+    }
+    // Converting the byte and then reading back the code point keeps one decoder rather than
+    // two: the byte-to-code-point tables and the platform converters both live behind
+    // @ref toUtf8, and only one of them is a table this file owns.
+    const auto converted = toUtf8(std::string(1, static_cast<char>(stored)), *codePage);
+    const auto decoded = firstCodepoint(converted);
+    // toUtf8 always yields valid UTF-8, falling back to the symbol encoding when a converter
+    // rejects the byte, so this is unreachable rather than a policy; preserving the byte keeps
+    // it that way if a future converter ever returns something else.
+    return decoded.value_or(static_cast<char32_t>(stored));
+}
+
 std::string symbolBytesToUtf8(std::string_view source)
 {
     std::string out;

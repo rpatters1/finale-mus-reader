@@ -350,6 +350,21 @@ struct FieldMapping
     /// without a separately maintained list of supported fields.
     std::int64_t (*read)(const void* instance){};
     void (*applyText)(void* instance, std::string_view value){};
+    /// @brief Optional test against the destination object, for a field only some records carry.
+    /// @details Some records state their own layout in a field of their own: a custom line style
+    /// stores a character where a solid line stores a width, and a line cap stores an arrowhead
+    /// comparator where a hook stores a length. Reading the deciding field and then testing it is
+    /// the same preference for self-description that @ref MappingTable::applies expresses for a
+    /// whole file, one record at a time.
+    ///
+    /// The test runs against the target after every field declared before it has been applied, so
+    /// the deciding field must appear earlier in the table than the rows that test it. A row whose
+    /// test fails is neither read nor reported: the field does not exist for that record, and
+    /// reporting it as a synthesized default would claim a destination the object does not have.
+    ///
+    /// The test belongs to the destination rather than to any one era, so every table that layers
+    /// onto the same field must state the same one.
+    bool (*targetApplies)(const void* instance){};
 };
 
 /// @brief How a table finds the objects it writes to.
@@ -410,7 +425,14 @@ struct MappingTable
     /// the name cannot be converted until both are in hand. Doing it here rather than inside
     /// the name's own apply keeps the reader from depending on the order fields happen to be
     /// declared in.
-    void (*finalizeTarget)(void* instance, const SourceProfile& profile){};
+    ///
+    /// The document is passed because a record may name something the document holds rather
+    /// than something the record carries: a stored character is a byte in the encoding of the
+    /// font definition its own field names, so decoding it needs both the recovered font id
+    /// and the pool that id points into. A finalizer that reads the document depends on the
+    /// classes it reads being imported first, which the registry order states.
+    void (*finalizeTarget)(void* instance, const SourceProfile& profile,
+        const musx::dom::DocumentPtr& document){};
 };
 
 /// @brief Creates one others object of type T and adds it to the document pool.
@@ -537,9 +559,13 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 
 } // namespace finale_mus_reader
 
-/// @brief Declares a numeric field mapping with every column stated explicitly.
-#define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                  orderValue, bitsValue, versionsValue, member) \
+/// @brief Declares a numeric field mapping with every column stated explicitly, including the
+/// @ref FieldMapping::targetApplies test.
+/// @details `member` names the destination as the C++ path that reaches it from `Class`, so a
+/// field inside a contained object is written `charParams->lineChar` and needs no second
+/// spelling: the report turns that path into the dotted one it prints.
+#define MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+                     orderValue, bitsValue, versionsValue, appliesValue, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
@@ -554,23 +580,28 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         [](const void* instance) -> std::int64_t { \
             return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
-        nullptr \
+        nullptr, \
+        (appliesValue) \
     }
 
-/// @brief A bit range of a class-identified record, addressed by byte offset in its payload,
-/// in a record found under an explicit comparator.
-#define MUS_CLASS_SELECTED_BITS(Class, classId, selectorValue, byteOffset, firstBit, \
-                                bitCount, member) \
+/// @brief Declares a numeric field mapping with every column stated explicitly.
+#define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+                  orderValue, bitsValue, versionsValue, member) \
+    MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+        orderValue, bitsValue, versionsValue, nullptr, member)
+
+/// @brief Declares a class-record field mapping with every column stated explicitly, including
+/// the @ref FieldMapping::targetApplies test.
+/// @details Every class-record spelling below is this form with one or more columns fixed.
+#define MUS_CLASS_FIELD_IF(Class, identityValue, selectorValue, byteOffset, widthValue, \
+                           orderValue, bitsValue, appliesValue, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            (identityValue), static_cast<std::uint16_t>(selectorValue), 0, \
             static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::ValueWidth::Word, \
-            ::finale_mus_reader::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::BitRange{ \
-                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+            (widthValue), (orderValue), (bitsValue) }, \
         ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
             ::finale_mus_reader::assignFrom( \
@@ -578,8 +609,20 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         [](const void* instance) -> std::int64_t { \
             return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
-        nullptr \
+        nullptr, \
+        (appliesValue) \
     }
+
+/// @brief A bit range of a class-identified record, addressed by byte offset in its payload,
+/// in a record found under an explicit comparator.
+#define MUS_CLASS_SELECTED_BITS(Class, classId, selectorValue, byteOffset, firstBit, \
+                                bitCount, member) \
+    MUS_CLASS_FIELD_IF(Class, classId, selectorValue, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{ \
+            static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
+        nullptr, member)
 
 /// @brief A bit range of a class-identified record, addressed by byte offset in its payload.
 /// @details The comparator is left at zero because the tables that use this are others
@@ -603,25 +646,44 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @details The order is the mapping's own, not the container's: the zlib serialization kept
 /// the word pair the fixed rows carried, so the same word-order rule applies to both.
 #define MUS_CLASS_LONG(Class, classId, selector, byteOffset, order, member) \
+    MUS_CLASS_FIELD_IF(Class, classId, selector, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Long, (order), \
+        ::finale_mus_reader::BitRange{}, nullptr, member)
+
+/// @brief A whole two-byte field a record carries only when it selects that layout.
+#define MUS_CLASS_WORD_IF(Class, classId, selector, byteOffset, applies, member) \
+    MUS_CLASS_FIELD_IF(Class, classId, selector, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, (applies), member)
+
+/// @brief A four-byte field a record carries only when it selects that layout.
+#define MUS_CLASS_LONG_IF(Class, classId, selector, byteOffset, order, applies, member) \
+    MUS_CLASS_FIELD_IF(Class, classId, selector, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Long, (order), \
+        ::finale_mus_reader::BitRange{}, (applies), member)
+
+/// @brief The counterpart of @ref MUS_CLASS_FIELD_IF for a value that needs converting on the
+/// way in. `value` names the extracted source value.
+#define MUS_CLASS_FIELD_AS_IF(Class, identityValue, selectorValue, byteOffset, widthValue, \
+                              orderValue, bitsValue, appliesValue, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            (classId), static_cast<std::uint16_t>(selector), 0, \
+            (identityValue), static_cast<std::uint16_t>(selectorValue), 0, \
             static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::ValueWidth::Long, (order), \
-            ::finale_mus_reader::BitRange{} }, \
+            (widthValue), (orderValue), (bitsValue) }, \
         ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
-            ::finale_mus_reader::assignFrom( \
-                static_cast<Class*>(instance)->member, value); }, \
+            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
             return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
-        nullptr \
+        nullptr, \
+        (appliesValue) \
     }
 
-/// @brief A bit range of a class-identified record, assigned through a conversion expression.
 /// @brief A transformed bit range of a class-identified record, in a record found under an
 /// explicit comparator.
 /// @details The counterpart of @ref MUS_CLASS_SELECTED_BITS for a value that needs converting
@@ -630,42 +692,51 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @ref MUS_CLASS_BITS_AS would leave the comparator at zero and find no record.
 #define MUS_CLASS_SELECTED_BITS_AS(Class, classId, selectorValue, byteOffset, firstBit, \
                                    bitCount, member, ...) \
+    MUS_CLASS_FIELD_AS_IF(Class, classId, selectorValue, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{ \
+            static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
+        nullptr, member, __VA_ARGS__)
+
+/// @brief A bit range of a class-identified record, assigned through a conversion expression.
+#define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
+    MUS_CLASS_SELECTED_BITS_AS(Class, classId, 0, byteOffset, firstBit, bitCount, member, \
+        __VA_ARGS__)
+
+/// @brief A whole two-byte field a record carries only when it selects that layout, assigned
+/// through a conversion expression.
+#define MUS_CLASS_WORD_AS_IF(Class, classId, selector, byteOffset, applies, member, ...) \
+    MUS_CLASS_FIELD_AS_IF(Class, classId, selector, byteOffset, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, (applies), member, __VA_ARGS__)
+
+/// @brief A field musxdom exposes only through a setter, applied by calling it.
+/// @details Use where musxdom owns the meaning of the stored value -- a packed style mask is
+/// the case in hand -- so that meaning is decoded in musxdom rather than restated here.
+/// `owner` is the path to the object holding the property, `field` names it for the report,
+/// and `setter` is the method that applies the value once cast to `Stored`.
+///
+/// The seeded default is not read back, because a table that needs this form builds its
+/// objects from the records themselves and so has no seeded default to report.
+#define MUS_CLASS_SET_IF(Class, classId, selector, byteOffset, applies, owner, field, setter, \
+                         Stored) \
     ::finale_mus_reader::FieldMapping { \
-        #member, \
+        #owner "." #field, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            (classId), static_cast<std::uint16_t>(selectorValue), 0, \
+            (classId), static_cast<std::uint16_t>(selector), 0, \
             static_cast<std::uint32_t>(byteOffset), \
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::BitRange{ \
-                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
+            ::finale_mus_reader::BitRange{} }, \
         ::finale_mus_reader::VersionRange{}, \
         [](void* instance, std::int64_t value) { \
-            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
-        [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::readAs( \
-                static_cast<const Class*>(instance)->member); }, \
-        nullptr \
-    }
-
-#define MUS_CLASS_BITS_AS(Class, classId, byteOffset, firstBit, bitCount, member, ...) \
-    ::finale_mus_reader::FieldMapping { \
-        #member, \
-        ::finale_mus_reader::FieldKind::Number, \
-        ::finale_mus_reader::SourceLocation{ \
-            (classId), 0, 0, static_cast<std::uint32_t>(byteOffset), \
-            ::finale_mus_reader::ValueWidth::Word, \
-            ::finale_mus_reader::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::BitRange{ \
-                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
-        ::finale_mus_reader::VersionRange{}, \
-        [](void* instance, std::int64_t value) { \
-            static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
-        [](const void* instance) -> std::int64_t { \
-            return ::finale_mus_reader::readAs( \
-                static_cast<const Class*>(instance)->member); }, \
-        nullptr \
+            static_cast<Class*>(instance)->owner->setter(static_cast<Stored>(value)); }, \
+        nullptr, \
+        nullptr, \
+        (applies) \
     }
 
 /// @brief Text running from a byte offset to the end of a class-identified record's payload.
@@ -685,28 +756,66 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             static_cast<Class*>(instance)->member.assign(value); } \
     }
 
-/// @brief A bit range assigned through an explicit conversion expression.
-/// @details Use where the stored encoding does not match the destination type, such as an
-/// enum whose values differ from the legacy encoding. `value` names the extracted bits.
-#define MUS_BITS_AS(Class, tagText, selectorValue, incidenceValue, slotValue, firstBit, \
-                    bitCount, member, ...) \
+/// @brief The counterpart of @ref MUS_FIELD_IF for a value that needs converting on the way
+/// in. `value` names the extracted source value.
+#define MUS_FIELD_AS_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+                        orderValue, bitsValue, versionsValue, appliesValue, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
-            ::finale_mus_reader::ValueWidth::Word, \
-            ::finale_mus_reader::LongWordOrder::HighFirst, \
-            (::finale_mus_reader::BitRange{ \
-                static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}) }, \
-        ::finale_mus_reader::VersionRange{}, \
+            (widthValue), (orderValue), (bitsValue) }, \
+        (versionsValue), \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
             return ::finale_mus_reader::readAs( \
                 static_cast<const Class*>(instance)->member); }, \
-        nullptr \
+        nullptr, \
+        (appliesValue) \
+    }
+
+/// @brief A bit range assigned through an explicit conversion expression.
+/// @details Use where the stored encoding does not match the destination type, such as an
+/// enum whose values differ from the legacy encoding. `value` names the extracted bits.
+#define MUS_BITS_AS(Class, tagText, selectorValue, incidenceValue, slotValue, firstBit, \
+                    bitCount, member, ...) \
+    MUS_FIELD_AS_IF(Class, tagText, selectorValue, incidenceValue, slotValue, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{ \
+            static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
+        ::finale_mus_reader::VersionRange{}, nullptr, member, __VA_ARGS__)
+
+/// @brief A two-byte field a record carries only when it selects that layout, assigned
+/// through a conversion expression.
+#define MUS_WORD_AS_IF(Class, tagText, selector, incidence, slot, applies, member, ...) \
+    MUS_FIELD_AS_IF(Class, tagText, selector, incidence, slot, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, \
+        ::finale_mus_reader::VersionRange{}, (applies), member, __VA_ARGS__)
+
+/// @brief The fixed-row spelling of @ref MUS_CLASS_SET_IF.
+#define MUS_SET_IF(Class, tagText, selector, incidence, slot, applies, owner, field, setter, \
+                   Stored) \
+    ::finale_mus_reader::FieldMapping { \
+        #owner "." #field, \
+        ::finale_mus_reader::FieldKind::Number, \
+        ::finale_mus_reader::SourceLocation{ \
+            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selector), \
+            static_cast<std::uint32_t>(incidence), static_cast<std::uint32_t>(slot), \
+            ::finale_mus_reader::ValueWidth::Word, \
+            ::finale_mus_reader::LongWordOrder::HighFirst, \
+            ::finale_mus_reader::BitRange{} }, \
+        ::finale_mus_reader::VersionRange{}, \
+        [](void* instance, std::int64_t value) { \
+            static_cast<Class*>(instance)->owner->setter(static_cast<Stored>(value)); }, \
+        nullptr, \
+        nullptr, \
+        (applies) \
     }
 
 /// @brief Text assembled from every incidence at or after `firstIncidence`.
@@ -773,3 +882,11 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         (::finale_mus_reader::BitRange{ \
             static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
         ::finale_mus_reader::VersionRange{}, member)
+
+/// @brief A two-byte field a record carries only when it selects that layout.
+#define MUS_WORD_IF(Class, tagText, selector, incidence, slot, applies, member) \
+    MUS_FIELD_IF(Class, tagText, selector, incidence, slot, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, \
+        ::finale_mus_reader::VersionRange{}, (applies), member)
