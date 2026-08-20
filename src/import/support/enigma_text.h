@@ -4,10 +4,12 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "musx/dom/CommonClasses.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/Document.h"
 
@@ -58,12 +60,22 @@ struct EnigmaTextSource
     /// @brief The code page for text that belongs to a command rather than to the document,
     /// principally a font name. Such text is not covered by any font's own character set.
     CodePage commandCodePage = CodePage::MacRoman;
+    /// @brief The text class's document default, used until an explicit font command changes it.
+    /// @details Its face also supplies the initial font command when the record omits one, and
+    /// its size and effects complete an otherwise partial initial formatting state.
+    std::shared_ptr<const musx::dom::FontInfo> initialFont;
 };
 
 /// @brief Converts one legacy Enigma text record body to the modern, UTF-8 spelling.
 /// @param body The record's bytes, between its `^keyword(n)` header and its `^end`.
 [[nodiscard]] ConvertedEnigmaText toModernEnigmaText(
     std::span<const std::uint8_t> body, const EnigmaTextSource& source);
+
+/// @brief Completes the initial face, size, and effects commands from @p defaultFont.
+/// @param value A modern Enigma string whose explicit commands must be preserved.
+/// @param defaultFont The document default for the text class containing @p value.
+[[nodiscard]] std::string initializeEnigmaTextFontState(
+    std::string value, const musx::dom::FontInfo& defaultFont);
 
 } // namespace text
 } // namespace finale_mus_reader

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/texts.h"
+#include "import/texts/internal.h"
 
 #include <algorithm>
 #include <memory>
 #include <span>
 #include <string>
 
+#include "import/support/enigma_text.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -89,7 +91,7 @@ std::string readString(std::span<const std::uint8_t> source, std::size_t offset,
 
 } // namespace
 
-void importFileInfoTexts(const ImportContext& context)
+void importHeaderFileInfoTexts(const ImportContext& context)
 {
     // The Coda-banner epoch is excluded on purpose, and the exclusion is structural rather
     // than a version test: that era has no 0x200 header of this shape at all -- it opens with
@@ -103,6 +105,8 @@ void importFileInfoTexts(const ImportContext& context)
     }
     const auto limit = readBodyOffset(context.source, context.profile.byteOrder);
     const auto codePage = text::platformCodePage(context.profile.platform);
+    const auto defaultFont = musx::dom::options::FontOptions::getFontInfoOrNull(
+        context.document, musx::dom::options::FontOptions::FontType::TextBlock);
 
     for (const auto& field : fileInfoFields) {
         if (context.document->getTexts()->get<FileInfoTarget>(
@@ -122,6 +126,10 @@ void importFileInfoTexts(const ImportContext& context)
         auto instance = std::make_shared<FileInfoTarget>(
             context.document, static_cast<musx::dom::Cmper>(field.type));
         instance->text = text::normalizeLineBreaks(text::toUtf8(raw, codePage));
+        if (defaultFont) {
+            instance->text = text::initializeEnigmaTextFontState(
+                std::move(instance->text), *defaultFont);
+        }
         context.document->getTexts()->add(FileInfoTarget::XmlNodeName, instance);
 
         FieldInfo info;

@@ -2546,6 +2546,18 @@ void testShapeDefinitions()
     verifyModern("evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007");
     verifyModern("evidence/F2012/F2012-upstem-flags.mus", "Finale 2012");
 
+    const auto zlibTypes = readShapeFixture("evidence/F2012/F2012-graphics-types.mus");
+    expect(zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 2)->shapeType
+                == others::ShapeDef::ShapeType::Clef
+            && zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 3)->shapeType
+                == others::ShapeDef::ShapeType::Clef
+            && zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 4)->shapeType
+                == others::ShapeDef::ShapeType::Expression,
+        "Zlib ShapeDef word 2 was not recovered as shapeType");
+
     // Shape list 2 in the fixed-row fixture has two stale packed instructions after
     // its zero terminator. Finale's own ETF/MUSX representation stops at the zero.
     const auto terminated = readShapeFixture("evidence/F2002/F2002-baseline.mus");

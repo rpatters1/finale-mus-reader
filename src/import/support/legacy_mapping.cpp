@@ -26,19 +26,27 @@ namespace {
 /// pass before its tables or a check after them are decisions its own translation unit owns.
 ///
 /// Order is a dependency statement wherever one class reads what another has already built.
-/// The others pool is filled first because option classes name its comparators. FontOptions
-/// validates recovered font ids against the definitions and may add one, and stem connections
-/// are checked against the pool after that, so it follows FontOptions rather than merely the
-/// definitions. Within the others pool the font definitions come first, because a custom line
-/// style decodes its stored character through the charset of the font its own record names.
+/// FontDefinitions and FontOptions form a bootstrap stage: option and text classes name font
+/// comparators, and text conversion also needs its class default before decoding literal bytes.
+/// The remaining importers follow Finale's pool order. Within the others pool, a custom line
+/// style can therefore decode its stored character through the charset of its named font.
 ///
 /// The list is written out rather than assembled by self-registration, so that a static
 /// archive cannot discard an importer nothing else references.
 const std::vector<ClassImporter>& registeredImporters()
 {
     static const std::vector<ClassImporter> result = {
-        // others
+        // bootstrap
         &others::importFontDefinitions,
+        &options::importFontOptions,
+        // options
+        &options::importClefOptions,
+        &options::importLyricOptions,
+        &options::importMultimeasureRestOptions,
+        &options::importMusicSpacingOptions,
+        &options::importStemOptions,
+        &options::importTextOptions,
+        // others
         &others::importLayerAttributes,
         &others::importPageGraphicAssignments,
         &others::importShapeGraphicAssignments,
@@ -46,19 +54,9 @@ const std::vector<ClassImporter>& registeredImporters()
         &others::importSmartShapeCustomLines,
         // details
         &details::importMeasureGraphicAssignments,
-        // texts, after others so that a font command in a text block resolves against the
-        // font definitions the source itself supplies rather than against nothing.
-        &texts::importTextPool,
-        &texts::importFileInfoTexts,
-        &texts::importCodaTexts,
-        // options
-        &options::importClefOptions,
-        &options::importFontOptions,
-        &options::importLyricOptions,
-        &options::importMultimeasureRestOptions,
-        &options::importMusicSpacingOptions,
-        &options::importStemOptions,
-        &options::importTextOptions
+        // entries (none recovered yet)
+        // texts
+        &texts::importTexts,
     };
     return result;
 }

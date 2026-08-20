@@ -14,6 +14,7 @@
 // because block text goes to `HT` instead.
 
 #include "import/texts.h"
+#include "import/texts/internal.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -34,6 +35,7 @@ namespace {
 
 using musx::dom::Cmper;
 using records::LegacyRow;
+using CodaTextFontType = musx::dom::options::FontOptions::FontType;
 
 constexpr records::LegacyTag codaStyleRecord = records::packTag("HS");
 constexpr records::LegacyTag codaTextRecord = records::packTag("HT");
@@ -134,12 +136,15 @@ std::string spellCodaBlock(
 /// @brief Converts a synthesized Enigma string and adds it to the document.
 template <typename Target>
 void addCodaText(const ImportContext& context, const text::EnigmaTextSource& source,
-    Cmper number, const std::string& spelled)
+    Cmper number, const std::string& spelled, CodaTextFontType defaultFontType)
 {
+    auto recordSource = source;
+    recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
+        context.document, defaultFontType);
     auto converted = text::toModernEnigmaText(
         std::span<const std::uint8_t>(
             reinterpret_cast<const std::uint8_t*>(spelled.data()), spelled.size()),
-        source);
+        recordSource);
     auto instance = std::make_shared<Target>(
         context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(converted.text);
@@ -179,7 +184,8 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
                     "A legacy text block carries an insert this reader has no command for; the "
                     "insert character was kept as it stands."});
             }
-            addCodaText<musx::dom::texts::BlockText>(context, source, number, spelled);
+            addCodaText<musx::dom::texts::BlockText>(
+                context, source, number, spelled, CodaTextFontType::TextBlock);
         }
     }
 }
@@ -189,13 +195,15 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
 struct CodaLyricKeyword
 {
     std::string_view keyword;
-    void (*add)(const ImportContext&, const text::EnigmaTextSource&, Cmper, const std::string&);
+    void (*add)(const ImportContext&, const text::EnigmaTextSource&, Cmper, const std::string&,
+        CodaTextFontType);
+    CodaTextFontType defaultFontType;
 };
 
 constexpr CodaLyricKeyword codaLyricKeywords[] = {
-    {"verse", &addCodaText<musx::dom::texts::LyricsVerse>},
-    {"chorus", &addCodaText<musx::dom::texts::LyricsChorus>},
-    {"section", &addCodaText<musx::dom::texts::LyricsSection>},
+    {"verse", &addCodaText<musx::dom::texts::LyricsVerse>, CodaTextFontType::LyricVerse},
+    {"chorus", &addCodaText<musx::dom::texts::LyricsChorus>, CodaTextFontType::LyricChorus},
+    {"section", &addCodaText<musx::dom::texts::LyricsSection>, CodaTextFontType::LyricSection},
 };
 
 /// @brief The chunks of the text region, each a four-byte big-endian count and that many bytes.
@@ -280,7 +288,8 @@ void importCodaLyricTexts(const ImportContext& context, const text::EnigmaTextSo
             while (!body.empty() && body.back() == '\0') {
                 body.pop_back();
             }
-            codaLyricKeywords[header->keyword].add(context, source, header->number, body);
+            const auto& keyword = codaLyricKeywords[header->keyword];
+            keyword.add(context, source, header->number, body, keyword.defaultFontType);
             at = end;
         }
     }
@@ -288,7 +297,7 @@ void importCodaLyricTexts(const ImportContext& context, const text::EnigmaTextSo
 
 } // namespace
 
-void importCodaTexts(const ImportContext& context)
+void importCodaStoredTexts(const ImportContext& context)
 {
     if (context.profile.epoch != FormatEpoch::CodaBanner) {
         return;

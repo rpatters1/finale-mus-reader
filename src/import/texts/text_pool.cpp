@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/texts.h"
+#include "import/texts/internal.h"
 
 #include <algorithm>
 #include <format>
@@ -20,6 +21,7 @@ namespace texts {
 namespace {
 
 using musx::dom::Cmper;
+using TextFontType = musx::dom::options::FontOptions::FontType;
 
 // The text pool is the one pre-2007 pool that is not made of records, and the one place the
 // legacy format describes itself in words. It holds `^keyword(n) ... ^end` chunks end to end,
@@ -40,6 +42,7 @@ struct TextKeyword
     std::string_view keyword;
     void (*create)(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text);
     std::string_view nodeName;
+    TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
     /// @details `texts::FileInfoText` throws on a number outside its own enumeration, so a
     /// malformed chunk would abort the import rather than being skipped. Nothing else in the
@@ -57,9 +60,11 @@ void createText(const musx::dom::DocumentPtr& document, Cmper number, std::strin
 }
 
 template <typename Target>
-constexpr TextKeyword textKeyword(std::string_view keyword, bool (*accepts)(Cmper) = nullptr)
+constexpr TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
+    bool (*accepts)(Cmper) = nullptr)
 {
-    return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, accepts};
+    return TextKeyword{
+        keyword, &createText<Target>, Target::XmlNodeName, defaultFontType, accepts};
 }
 
 bool isFileInfoType(Cmper number)
@@ -77,22 +82,23 @@ bool isFileInfoType(Cmper number)
 // silently: an unrecognized keyword is reported by name below, which is how the right one
 // would be found.
 constexpr TextKeyword textKeywords[] = {
-    textKeyword<musx::dom::texts::BlockText>("block"),
-    textKeyword<musx::dom::texts::LyricsVerse>("verse"),
-    textKeyword<musx::dom::texts::LyricsChorus>("chorus"),
-    textKeyword<musx::dom::texts::LyricsSection>("section"),
-    textKeyword<musx::dom::texts::SmartShapeText>("smartshape"),
+    textKeyword<musx::dom::texts::BlockText>("block", TextFontType::TextBlock),
+    textKeyword<musx::dom::texts::LyricsVerse>("verse", TextFontType::LyricVerse),
+    textKeyword<musx::dom::texts::LyricsChorus>("chorus", TextFontType::LyricChorus),
+    textKeyword<musx::dom::texts::LyricsSection>("section", TextFontType::LyricSection),
+    textKeyword<musx::dom::texts::SmartShapeText>("smartshape", TextFontType::TextBlock),
     // A bookmark's text carries no style commands of its own, and musxdom documents any Enigma
     // insert appearing in one as meaningless. It is read through the same converter regardless:
     // the record still needs its bytes decoded through a code page, and a caret still has to
     // survive as an escaped one.
-    textKeyword<musx::dom::texts::BookmarkText>("bookmark"),
-    textKeyword<musx::dom::texts::ExpressionText>("expression"),
+    textKeyword<musx::dom::texts::BookmarkText>("bookmark", TextFontType::TextBlock),
+    textKeyword<musx::dom::texts::ExpressionText>("expression", TextFontType::Expression),
     // File Info starts out in the header and becomes ordinary pool records in a later era.
     // Where in between the move happens does not matter here: the header pass fills in only
     // the types the pool did not supply, so each document states for itself which way it
     // stores them. The number is musxdom's own `FileInfoText::TextType`.
-    textKeyword<musx::dom::texts::FileInfoText>("fileInfo", &isFileInfoType),
+    textKeyword<musx::dom::texts::FileInfoText>(
+        "fileInfo", TextFontType::TextBlock, &isFileInfoType),
 };
 
 constexpr std::string_view recordTerminator = "^end";
@@ -274,7 +280,7 @@ void rememberTextPoolName(std::vector<std::string>& list, std::string_view value
 
 } // namespace
 
-void importTextPool(const ImportContext& context)
+void importLaterTextPool(const ImportContext& context)
 {
     // The Coda-banner epoch's text stream is length-prefixed chunks rather than
     // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
@@ -335,7 +341,10 @@ void importTextPool(const ImportContext& context)
             continue;
         }
 
-        auto converted = text::toModernEnigmaText(record->body, source);
+        auto recordSource = source;
+        recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
+            context.document, found->defaultFontType);
+        auto converted = text::toModernEnigmaText(record->body, recordSource);
         for (const auto code : converted.unreadCommandCodes) {
             if (std::find(unknownCodes.begin(), unknownCodes.end(), code) == unknownCodes.end()) {
                 unknownCodes.push_back(code);
@@ -358,6 +367,16 @@ void importTextPool(const ImportContext& context)
     }
 
     reportUnread(context.report, unknownCodes, unknownEffects, unknownKeywords);
+}
+
+void importTexts(const ImportContext& context)
+{
+    // The physical readers are ordered so a text-pool FileInfoText wins over its older
+    // header spelling; the header pass fills only types the pool did not provide. The Coda
+    // pass is disjoint by epoch and leaves both later stores untouched.
+    importLaterTextPool(context);
+    importHeaderFileInfoTexts(context);
+    importCodaStoredTexts(context);
 }
 
 } // namespace texts

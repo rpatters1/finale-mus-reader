@@ -444,10 +444,19 @@ data count impossible. The importer recognizes the instruction tags represented 
 `ShapeDefInstructionType`; revision-1 `sw` becomes `LineWidth`, with its data converted from
 hundredths of a point to Efix, and the Coda meaning of `gs` becomes `GoToOrigin`.
 
-The first two `SD` words are the instruction-list and data-list comparators. Only the Finale
-3-2006 fixed-row layout stores modern `ShapeType` in word 2. Coda `SD` and zlib `0x00d6` put the
-old bounding rectangle after the list ids, so the reader supplies `Other`; testing a coordinate
-for the enum's numeric range would silently misclassify small bounding coordinates.
+The first two `SD` words are the instruction-list and data-list comparators. Finale 3-2006
+fixed rows store modern `ShapeType` in word 2. **The earlier claim that zlib dropped this field
+was wrong:** every controlled 12-byte `0x00d6` record stores `ShapeType` in word 2, in both byte
+orders, and its value agrees with the Finale 27 companion for Other, Expression, Arrowhead, and
+Clef. Its last three words are zero. The tracked companion cohort contains 38 nonzero examples:
+36 Clef, one Expression, and one Arrowhead.
+
+The broader installed zlib corpus has nonzero values in the last three words and sometimes a word
+2 outside the enum. The importer reads an enum-valued word 2 and otherwise retains `Other`; the
+remaining words are opaque. Some class records have 24, 36, or 60-byte payloads containing
+multiple six-word units. **Open:** the meaning of those trailing fields and the aggregated class-
+record form. Only the first unit currently supplies the definition named by the class-record
+header. Coda `SD` remains bounds-bearing and supplies `Other`.
 
 The `shape_definitions` sweep selected all 15,841 inventoried occurrences in `rpatters1-main` and
 `rpatters1-installs`, de-duplicated to 6,890 content identities. All 6,890 imported. Of 364,482
@@ -2222,8 +2231,8 @@ when the real field has not been found yet.
 
 **Where selector 55 does not exist, the starting connection takes the dialog's values.** That is what Finale 27
 does with such documents and what both new companions show. One further synthesis is deliberately *not*
-reproduced: the companion also moves the `oneEntryEnd` connection's horizontal offset with Push, 42 to 44 in the
-Finale 3.7.2 pair. A single specimen cannot distinguish that formula from several others that fit it, so the
+reproduced: the companions also move the `oneEntryEnd` connection's horizontal offset from 42 to 44 in both
+Finale 1.0 and Finale 3.7 documents. These observations establish the upgrade result but not its formula, so the
 reader keeps the pinned baseline's 42 and the difference is intended.
 
 The **syllable position table** at selector `87` is four three-word positions across two fixed rows, again in
@@ -2530,8 +2539,8 @@ and the question stays **open**.
 
 ## The text pool
 
-**Confirmed** for the uncompressed, DCL, and zlib epochs against the controlled fixtures and
-their Finale 27 companions. **Open** for the Coda-banner epoch.
+**Confirmed** for the Coda-banner, uncompressed, DCL, and zlib epochs against the controlled
+fixtures and their Finale 27 companions.
 
 The text pool is the one pre-2007 pool that is not made of records, and the one place the
 format describes itself in words. It is a byte stream of `^keyword(n) ... ^end` chunks packed
@@ -2557,9 +2566,37 @@ Keywords observed, with the musxdom class each names:
 | `smartshape` | `texts::SmartShapeText` | `F2006-embedded-tiff.mus` |
 | `expression` | `texts::ExpressionText` | `F2006-embedded-tiff.mus` |
 | `fileInfo` | `texts::FileInfoText` | `F2008-BE-text-inserts.mus` |
+| `bookmark` | `texts::BookmarkText` | `F2012-bookmarks.mus` |
 
-No keyword has been found for `texts::BookmarkText`. The reader reports any keyword it does
-not recognize, by name, which is how a missing spelling is meant to be found.
+The reader reports any keyword it does not recognize, by name, which is how a missing spelling
+is meant to be found.
+
+### Initial formatting state
+
+**Strong for formatted text.** A legacy text record can begin with literal text or with only
+part of a face, size, and effects state. Finale's upgraded EnigmaXML completes missing initial
+settings in block and lyric text from the document's corresponding `FontOptions` default. The
+reader does the same before the first literal byte, while preserving every explicit command,
+its order, and any literal whitespace between later commands. It spells a synthesized face as
+`^font(name)`, not `^fontid(cmper)`, so the result remains stable if font-definition comparators
+are renumbered.
+
+The defaults are TextBlock for block, bookmark, File Info, and smart-shape text; Expression for
+expression text; and LyricVerse, LyricChorus, or LyricSection for the corresponding lyric kind.
+Smart-shape text was verified in Finale as the line text of a smart-shape line and follows the
+TextBlock default. Finale does not use font information on File Info or bookmark text, and its
+companions may therefore omit their formatting state; the reader nevertheless completes them
+so each is a valid self-contained Enigma string.
+
+This makes `FontDefinitions` followed by `FontOptions` a bootstrap dependency ahead of the
+ordinary pool order: options, others, details, entries, then texts. The reader exposes one text-
+family import stage; whether a text came from the text stream, fixed header offsets, or a Coda-
+banner store remains an implementation detail of that family.
+
+Finale also removes an exact adjacent duplicate complete state during upgrade. Section lyric 2
+in `F372-fileinfo-text` contains the same face, size, and effects commands twice in both its MUS
+text stream and ETF, while its Finale 27 companion contains them once. The reader preserves the
+source commands; companion-quality reporting treats that no-op normalization as equal.
 
 ### Section markers before Finale 97
 

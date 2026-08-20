@@ -225,7 +225,9 @@ class RecordConverter
 {
 public:
     RecordConverter(std::span<const std::uint8_t> body, const EnigmaTextSource& source)
-        : m_body(body), m_source(source)
+        : m_body(body), m_source(source),
+          m_font(source.initialFont
+                  ? std::optional<Cmper>(source.initialFont->fontId) : std::nullopt)
     {
     }
 
@@ -250,6 +252,10 @@ public:
         flushEffects();
         flushLiteral();
         m_result.text = normalizeLineBreaks(std::move(m_result.text));
+        if (m_source.initialFont) {
+            m_result.text = initializeEnigmaTextFontState(
+                std::move(m_result.text), *m_source.initialFont);
+        }
         return std::move(m_result);
     }
 
@@ -689,6 +695,56 @@ private:
 };
 
 } // namespace
+
+std::string initializeEnigmaTextFontState(
+    std::string value, const musx::dom::FontInfo& defaultFont)
+{
+    // A literal byte, including whitespace, ends the initial command run. Missing settings
+    // are inserted before it so the first content is interpreted under one complete state;
+    // explicit settings remain in their original order.
+    bool hasFont = false;
+    bool hasSize = false;
+    bool hasEffects = false;
+    std::size_t at = 0;
+    while (at < value.size() && value[at] == '^') {
+        const auto nameStart = at + 1;
+        auto nameEnd = nameStart;
+        while (nameEnd < value.size()
+            && isCommandNameByte(static_cast<std::uint8_t>(value[nameEnd]))) {
+            ++nameEnd;
+        }
+        if (nameEnd == nameStart || nameEnd >= value.size() || value[nameEnd] != '(') {
+            break;
+        }
+        const auto close = value.find(')', nameEnd + 1);
+        if (close == std::string::npos) {
+            break;
+        }
+        const std::string_view name(value.data() + nameStart, nameEnd - nameStart);
+        hasFont = hasFont || name == "font" || name == "Font" || name == "fontid"
+            || name == "fontMus" || name == "fontTxt" || name == "fontNum";
+        hasSize = hasSize || name == "size";
+        hasEffects = hasEffects || name == "nfx";
+        at = close + 1;
+    }
+
+    std::string completed;
+    if (!hasFont) {
+        // A name survives document-local comparator renumbering. FontOptions has already
+        // guaranteed that its comparator resolves, so the unresolved `^fontid` fallback used
+        // while converting a source command is unnecessary for a class default.
+        completed = "^font(" + defaultFont.getName() + ')';
+    }
+    completed.append(value, 0, at);
+    if (!hasSize) {
+        completed += "^size(" + std::to_string(defaultFont.fontSize) + ')';
+    }
+    if (!hasEffects) {
+        completed += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
+    }
+    completed.append(value, at, std::string::npos);
+    return completed;
+}
 
 ConvertedEnigmaText toModernEnigmaText(
     std::span<const std::uint8_t> body, const EnigmaTextSource& source)

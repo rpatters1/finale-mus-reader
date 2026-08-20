@@ -306,11 +306,12 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
             musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
         target->instructionList = static_cast<musx::dom::Cmper>(words[0]);
         target->dataList = static_cast<musx::dom::Cmper>(words[1]);
-        // Fixed-row Finale 3-2006 SD puts the semantic enum in word 2. Coda SD and
-        // zlib class 0x00d6 instead carry a bounding rectangle after the two list ids;
-        // even a small coordinate must not be mistaken for an enum.
+        // Coda SD carries a bounding rectangle after the two list ids. Later SD and
+        // zlib class 0x00d6 put the semantic enum in word 2; out-of-range values are
+        // retained as Other rather than constructing an invalid enum.
         const bool hasStoredShapeType = context.profile.epoch == FormatEpoch::UncompressedLegacy
-            || context.profile.epoch == FormatEpoch::DclLegacy;
+            || context.profile.epoch == FormatEpoch::DclLegacy
+            || context.profile.epoch == FormatEpoch::ZlibLegacy;
         if (hasStoredShapeType && words.size() >= 3
                 && words[2] >= static_cast<int>(ShapeDefTarget::ShapeType::Other)
                 && words[2] <= static_cast<int>(ShapeDefTarget::ShapeType::Clef)) {
@@ -321,7 +322,7 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
             target->instructionList, rows.front());
         reportShapeValue(context.report, prefix + "dataList", target->dataList, rows.front());
         if (!hasStoredShapeType) {
-            // These layouts carry a bounding rectangle in this position. `Other` is
+            // This layout carries a bounding rectangle in this position. `Other` is
             // the behavior represented by an absent modern type, not a recovered value.
             context.report.fields.push_back({"others.shapeDef[" + std::to_string(cmper)
                     + "].shapeType",
