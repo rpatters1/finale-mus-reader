@@ -1,6 +1,6 @@
 ---
 name: implement-musxdom-class
-description: Research, draft, test, and iteratively refine legacy Finale MUS recovery for a specified musxdom DOM class. Use when the user says they want to implement, recover, decode, or map a musxdom class or a tightly related set of classes from legacy .mus files, especially when they provide preliminary selectors, record identifiers, sample edits, structure hints, or epoch-specific evidence. This is an interactive implementation workflow; use survey-class-coverage afterward for broad corpus validation, not as a substitute for the initial evidence-driven draft.
+description: Research, draft, test, and iteratively refine legacy Finale MUS recovery for a specified musxdom DOM class. Use when the user says they want to implement, recover, decode, or map a musxdom class or a tightly related set of classes from legacy .mus files, especially when they provide preliminary selectors, record identifiers, sample edits, structure hints, or epoch-specific evidence. This is an interactive implementation workflow; use analyze-recovery-coverage afterward for broad corpus validation, not as a substitute for the initial evidence-driven draft.
 ---
 
 # Implement a musxdom class
@@ -342,7 +342,7 @@ Run the focused test, the full test suite, generated-resource checks when releva
 ## Step 7 — Refine with class coverage
 
 Once the narrow implementation and its surveyor (Step 5) both exist and pass controlled
-fixtures, read and use `../survey-class-coverage/SKILL.md`. **Do not run a corpus survey
+fixtures, read and use `../analyze-recovery-coverage/SKILL.md`. **Do not run recovery coverage
 before that point.** A survey answers questions about an implementation -- which fields
 it recovers, which epochs it fails, where companions disagree with it -- and none of
 those questions has a meaning yet if the class exists only as notes, or if it has an
@@ -366,12 +366,11 @@ Run `tools/coverage/recovery_coverage_probe` over the chosen cohort, on a corpus
 declares a `#companion:` convention for it (see `recovery_coverage_probe.cpp`'s
 `readCorpusRows()`) so every row also surveys its Finale 27 companion, through the same
 surveyor written in Step 5. Summarize the JSONL with `scripts/recovery_coverage_report.py`.
-Unlike the retired `options_coverage_probe`/`options_coverage_report.py` pairing, this needs
-**no per-class code on the Python side**: source and companion are surveyed through the
+This needs **no per-class code on the Python side**: source and companion are surveyed through the
 identical `runAllSurveyors()` harness into the identical JSON shape, so the report's
 recursive diff already covers a new class the moment its surveyor exists -- there is one
 source of truth for the JSON, not two hand-kept in sync. The only thing to maintain by hand
-is `EXPECTED_DIFFERENCES` in that script: record there any difference this class's own
+is `EXPECTED_DIFFERENCES` in `scripts/recovery_coverage_report.py`: record there any difference this class's own
 comparison shows to be intended rather than a regression -- Finale's upgrade synthesizing an
 object the source never stored is the common case -- so it reads as a known difference to
 whoever next sees an unexpected-diff row naming this class, not something to re-investigate

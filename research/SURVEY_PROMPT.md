@@ -91,7 +91,7 @@ I have a collection of legacy Finale `.mus` files that I would like to inventory
 using this repository's survey pipeline, and I may contribute the results back.
 
 Please run the survey for me. Before doing anything else, read `AGENTS.md` and
-then `.agents/skills/survey-a-corpus/SKILL.md`, and follow that skill — it is the
+then `.agents/skills/inventory-a-corpus/SKILL.md`, and follow that skill — it is the
 procedure for this task, and it covers details that are not repeated here.
 
 Work in this order:

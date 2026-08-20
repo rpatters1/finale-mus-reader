@@ -17,8 +17,7 @@ The companion comparison walks every leaf under each surveyor's output (skipping
 by construction) and classifies each non-matching leaf through EXPECTED_DIFFERENCES below.
 That table starts small and is meant to grow: an "unexpected" count is not necessarily a
 regression, it is the next entry to characterize and, if it is a real known difference, add
-a rule for -- exactly the role options_coverage_report.py's documented exceptions played
-for the retired options_coverage_probe.
+a rule for. This script is the maintained home for those exceptions.
 """
 
 from __future__ import annotations
@@ -58,9 +57,8 @@ Category = str  # "differs" | "reader_only" | "companion_only" ("same" is never 
 # category is in `categories` (None means any), and whose source-side origin annotation is
 # in `origins` (None means don't care) is an intended difference or a structurally
 # one-sided value, not a regression candidate. Seeded from real unexpected-difference runs
-# against tracked-evidence, and from the documented exceptions options_coverage_report.py
-# (the retired predecessor's own comparator) carried for the same reader -- see that file's
-# module docstring for the fuller reasoning behind each one. Scoping by category and origin
+# against tracked-evidence and exceptions carried forward from the retired options comparator.
+# Scoping by category and origin
 # matters: a leaf that is reader_only or companion_only because one side's collection is
 # longer than the other is a different claim from the same path *differing* where both
 # sides have a value, and a rule should not paper over the second just because the first is

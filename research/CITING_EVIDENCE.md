@@ -93,5 +93,5 @@ be simply inapplicable to a 1997 file rather than contradicted by it.
 
 A fixture in `tests/evidence/` outranks any amount of corpus statistics, because
 it makes a claim checkable by everyone forever. Contributors who own their
-material may donate files; see `.agents/skills/survey-a-corpus/SKILL.md` for how
+material may donate files; see `.agents/skills/inventory-a-corpus/SKILL.md` for how
 that is solicited and recorded.

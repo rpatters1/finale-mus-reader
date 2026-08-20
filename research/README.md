@@ -17,7 +17,7 @@ Published findings identify each source by a stable content-derived `corpus_id`,
 surveyed corpus; [data/surveys.csv](data/surveys.csv) registers them.
 
 To survey your own corpus, paste [SURVEY_PROMPT.md](SURVEY_PROMPT.md) into a coding agent; the procedure it follows
-is [`.agents/skills/survey-a-corpus/SKILL.md`](../.agents/skills/survey-a-corpus/SKILL.md), and
+is [`.agents/skills/inventory-a-corpus/SKILL.md`](../.agents/skills/inventory-a-corpus/SKILL.md), and
 [REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md) gives the underlying commands.
 
 For StuffIt archives, install the `unar` package so that both `unar` and `lsar` are available. Use `lsar` for a non-destructive member listing and `unar -o <temporary-directory> <archive>` for extraction; never extract over the source corpus.

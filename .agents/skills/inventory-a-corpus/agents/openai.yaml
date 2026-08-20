@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inventory a Corpus"
+  short_description: "Discover and regenerate a Finale corpus inventory"
+  default_prompt: "Use $inventory-a-corpus to discover or refresh a registered legacy Finale corpus without running reader coverage."

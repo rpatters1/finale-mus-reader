@@ -2,7 +2,7 @@
 """Survey imported FontOptions and compare available Finale 27 companions.
 
 All path-bearing and per-fixture output is private. The input inventory is the
-ignored corpus_inventory.csv produced by survey-a-corpus; this script never
+ignored corpus_inventory.csv produced by inventory-a-corpus; this script never
 modifies the corpus or its exports.
 """
 
