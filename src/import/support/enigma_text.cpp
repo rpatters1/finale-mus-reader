@@ -253,8 +253,15 @@ public:
         flushLiteral();
         m_result.text = normalizeLineBreaks(std::move(m_result.text));
         if (m_source.initialFont) {
+            bool fontWasSynthesized = false;
+            bool sizeWasSynthesized = false;
+            bool effectsWereSynthesized = false;
             m_result.text = initializeEnigmaTextFontState(
-                std::move(m_result.text), *m_source.initialFont);
+                std::move(m_result.text), *m_source.initialFont, &fontWasSynthesized,
+                &sizeWasSynthesized, &effectsWereSynthesized);
+            m_result.fontWasSynthesized = fontWasSynthesized;
+            m_result.sizeWasSynthesized = sizeWasSynthesized;
+            m_result.effectsWereSynthesized = effectsWereSynthesized;
         }
         return std::move(m_result);
     }
@@ -697,7 +704,8 @@ private:
 } // namespace
 
 std::string initializeEnigmaTextFontState(
-    std::string value, const musx::dom::FontInfo& defaultFont)
+    std::string value, const musx::dom::FontInfo& defaultFont,
+    bool* fontWasSynthesized, bool* sizeWasSynthesized, bool* effectsWereSynthesized)
 {
     // A literal byte, including whitespace, ends the initial command run. Missing settings
     // are inserted before it so the first content is interpreted under one complete state;
@@ -730,6 +738,7 @@ std::string initializeEnigmaTextFontState(
 
     std::string completed;
     if (!hasFont) {
+        if (fontWasSynthesized) *fontWasSynthesized = true;
         // A name survives document-local comparator renumbering. FontOptions has already
         // guaranteed that its comparator resolves, so the unresolved `^fontid` fallback used
         // while converting a source command is unnecessary for a class default.
@@ -737,9 +746,11 @@ std::string initializeEnigmaTextFontState(
     }
     completed.append(value, 0, at);
     if (!hasSize) {
+        if (sizeWasSynthesized) *sizeWasSynthesized = true;
         completed += "^size(" + std::to_string(defaultFont.fontSize) + ')';
     }
     if (!hasEffects) {
+        if (effectsWereSynthesized) *effectsWereSynthesized = true;
         completed += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
     }
     completed.append(value, at, std::string::npos);

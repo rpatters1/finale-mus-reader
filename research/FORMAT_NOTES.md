@@ -1147,7 +1147,11 @@ the serialized sizes and ordering. This is the clearest solved part of the legac
 
 ## Finale 2007+ generic record frame
 
-**Confirmed for successfully framed `0x001a` and `0x001b` members.** The frame is variable-length and ends with two zero words. More than 1.59 million records across Finale 2007–2012 were accepted only when the proposed frame consumed the complete decompressed member and every trailer was zero.
+**Confirmed for ordinary records in successfully framed `0x001a` and `0x001b` members.** The frame
+is variable-length and ordinarily ends with two zero words. More than 1.59 million records across
+Finale 2007–2012 were accepted only when the proposed frame consumed the complete decompressed
+member and every trailer was zero. The continuation form documented below adds a second terminal
+state.
 
 Two serialized variants were observed:
 
@@ -1165,7 +1169,20 @@ The literal **16-word fixed-record hypothesis is disproved for these blocks**:
 - observed payload sizes include 12, 24, 26, 36, 48, 60, 72, 84, 96, 108, 120, 132, 180, 276, 1,536, 8,796, and others;
 - records begin at variable offsets rather than a 32-byte grid.
 
-The hypothesized two unaccounted words do exist in this era, but as a **four-byte all-zero record trailer/reserved terminator**, not as the last two words of a fixed 16-word structure. Their semantic purpose remains open (reserved fields versus terminator/padding), but their position and zero value are strongly established.
+The hypothesized two unaccounted words do exist in this era, but as an ordinary record's
+**four-byte all-zero trailer/reserved terminator**, not as the last two words of a fixed 16-word
+structure. Their semantic purpose remains open (reserved fields versus terminator/padding), but
+their position and zero value are strongly established.
+
+**Strong for `mus-aab617acbbb54646`.** A little-endian Finale 2011 `0x001a` member also permits a
+same-sized continuation segment between the declared primary payload and the terminal words. The
+continuation begins by repeating the 16-bit payload byte count followed by zero and occupies exactly
+the declared payload size including that prefix. Its terminal state is either `0000 0000` or
+`ffff 0000`; the latter occurs on classes `0x00cb` and `0x00cc` in this document. Advancing across
+145 such continuations consumes the complete 293,030-byte member and exposes 189 `ShapeData`, 115
+`ShapeDef`, and 189 `ShapeInstruction` records, exactly matching the independently parsed companion.
+The continuation's semantics remain open; part or sharing state is a candidate, so it is not exposed
+as another incidence.
 
 This later variable frame does not retain the earlier fixed 16-byte physical rows. Many payload sizes are multiples
 of the old 12-byte other capacity, suggesting that later versions coalesced successive incidences into one

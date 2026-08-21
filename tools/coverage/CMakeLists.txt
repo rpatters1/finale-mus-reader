@@ -12,6 +12,7 @@ add_executable(recovery_coverage_probe
     context.cpp
     json.cpp
     support/musx_companion.cpp
+    support/relationships.cpp
     ${COVERAGE_SURVEYOR_SOURCES}
 )
 target_link_libraries(recovery_coverage_probe PRIVATE

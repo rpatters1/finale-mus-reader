@@ -126,9 +126,13 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         auto instance = std::make_shared<FileInfoTarget>(
             context.document, static_cast<musx::dom::Cmper>(field.type));
         instance->text = text::normalizeLineBreaks(text::toUtf8(raw, codePage));
+        bool fontWasSynthesized = false;
+        bool sizeWasSynthesized = false;
+        bool effectsWereSynthesized = false;
         if (defaultFont) {
             instance->text = text::initializeEnigmaTextFontState(
-                std::move(instance->text), *defaultFont);
+                std::move(instance->text), *defaultFont, &fontWasSynthesized,
+                &sizeWasSynthesized, &effectsWereSynthesized);
         }
         context.document->getTexts()->add(FileInfoTarget::XmlNodeName, instance);
 
@@ -137,6 +141,8 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         info.origin = ValueOrigin::LegacyMus;
         info.decodedOffset = field.offset;
         info.rawValue = static_cast<std::int64_t>(instance->text.size());
+        recordTextFieldInfo(context.report, info.target, fontWasSynthesized,
+            sizeWasSynthesized, effectsWereSynthesized);
         context.report.fields.push_back(std::move(info));
     }
 }

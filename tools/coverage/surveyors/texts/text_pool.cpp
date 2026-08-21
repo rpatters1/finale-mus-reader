@@ -7,6 +7,9 @@
 // it claims characters, and musxdom keys the pool by it.
 
 #include <ostream>
+#include <algorithm>
+#include <string>
+#include <vector>
 
 #include "coverage/json.h"
 #include "coverage/registry.h"
@@ -29,6 +32,32 @@ void writeTextClass(std::ostream& out, const SurveyContext& ctx)
     }
     out << ']';
 }
+
+void writeTextMetadata(std::ostream& out, const SurveyContext& ctx)
+{
+    std::vector<std::string> targets;
+    targets.reserve(ctx.report.textFields.size());
+    for (const auto& entry : ctx.report.textFields) {
+        targets.push_back(entry.first);
+    }
+    std::sort(targets.begin(), targets.end());
+
+    out << '{';
+    bool first = true;
+    for (const auto& target : targets) {
+        const auto& info = ctx.report.textFields.at(target);
+        if (!first) out << ',';
+        first = false;
+        out << jsonString(target) << ":{\"font_synthesized\":"
+            << (info.fontWasSynthesized ? "true" : "false")
+            << ",\"size_synthesized\":" << (info.sizeWasSynthesized ? "true" : "false")
+            << ",\"effects_synthesized\":"
+            << (info.effectsWereSynthesized ? "true" : "false") << '}';
+    }
+    out << '}';
+}
+
+COVERAGE_SURVEYOR("text_metadata", writeTextMetadata)
 
 #define TEXT_CLASS_SURVEYOR(key, Target) \
     void write_##Target(std::ostream& out, const SurveyContext& ctx) { \

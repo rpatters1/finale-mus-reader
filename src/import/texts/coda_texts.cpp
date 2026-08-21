@@ -153,6 +153,7 @@ void addCodaText(const ImportContext& context, const text::EnigmaTextSource& sou
     FieldInfo info;
     info.target = "texts." + std::string(Target::XmlNodeName) + '[' + std::to_string(number) + ']';
     info.origin = ValueOrigin::LegacyMus;
+    recordTextFieldInfo(context.report, info.target, converted);
     context.report.fields.push_back(std::move(info));
 }
 

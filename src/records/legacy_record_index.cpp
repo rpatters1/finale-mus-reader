@@ -4,6 +4,7 @@
 #include "records/legacy_record_index.h"
 
 #include <algorithm>
+#include <limits>
 #include <tuple>
 #include <utility>
 
@@ -177,7 +178,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
     constexpr std::uint16_t detailRecordBlockType = 0x001b;
     constexpr std::size_t otherHeaderSize = 10;
     constexpr std::size_t littleEndianDetailHeaderSize = 12;
-    constexpr std::size_t paddingSize = 4;
+    constexpr std::size_t trailerSize = 4;
 
     std::vector<LegacyRow> result;
     for (const auto& block : parsed.blocks) {
@@ -208,6 +209,32 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
                 break;
             }
 
+            const auto primaryEnd = offset + headerSize + length;
+            auto trailerOffset = primaryEnd;
+            // Some records carry a same-sized continuation segment. Its first two words
+            // repeat the byte count and zero. It has no independent class/key header, so
+            // the normalized row retains the primary payload and advances across the segment.
+            bool hasContinuation = false;
+            if (length >= 4
+                && length <= (std::numeric_limits<std::uint16_t>::max)()
+                && length <= block.data.size() - primaryEnd
+                && readCmper(block.data.data() + primaryEnd, parsed.byteOrder) == length
+                && readCmper(block.data.data() + primaryEnd + 2, parsed.byteOrder) == 0) {
+                trailerOffset += length;
+                hasContinuation = true;
+            }
+            if (trailerOffset + trailerSize > block.data.size()) {
+                break;
+            }
+            const auto trailerFirst = readWord(
+                block.data.data() + trailerOffset, parsed.byteOrder);
+            const auto trailerSecond = readWord(
+                block.data.data() + trailerOffset + 2, parsed.byteOrder);
+            if ((trailerFirst != 0 && !(hasContinuation && trailerFirst == -1))
+                || trailerSecond != 0) {
+                break;
+            }
+
             LegacyRow decoded;
             decoded.tag = classId;
             decoded.cmper1 = readCmper(header + 2, parsed.byteOrder);
@@ -226,7 +253,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             decoded.decodedOffset = offset;
             result.push_back(decoded);
 
-            offset += headerSize + length + paddingSize;
+            offset = trailerOffset + trailerSize;
         }
     }
     return result;

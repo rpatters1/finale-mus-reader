@@ -161,6 +161,58 @@ finale_mus_reader::container::ParsedContainer makeClassContainer(
     return parsed;
 }
 
+void testClassRecordContinuationSegment()
+{
+    finale_mus_reader::container::ParsedContainer parsed;
+    parsed.formatEpoch = FormatEpoch::ZlibLegacy;
+    parsed.byteOrder = ByteOrder::LittleEndian;
+
+    finale_mus_reader::container::DecodedBlock block;
+    block.info.type = 0x001a;
+    const auto push16 = [&](std::uint16_t value) {
+        block.data.push_back(static_cast<std::uint8_t>(value));
+        block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+    };
+    const auto appendHeader = [&](std::uint16_t classId, std::uint16_t cmper,
+                                  std::uint16_t incidence, std::uint32_t length) {
+        push16(classId);
+        push16(cmper);
+        push16(incidence);
+        push16(static_cast<std::uint16_t>(length));
+        push16(static_cast<std::uint16_t>(length >> 16U));
+    };
+
+    appendHeader(0x00b1, 1, 1, 12);
+    block.data.insert(block.data.end(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+    // The continuation occupies the declared byte count including its repeated-size
+    // prefix. It is framing, not another searchable incidence.
+    push16(12);
+    push16(0);
+    block.data.insert(block.data.end(), {21, 22, 23, 24, 25, 26, 27, 28});
+    push16(0xffff);
+    push16(0);
+
+    appendHeader(0x00d6, 3, 0, 4);
+    block.data.insert(block.data.end(), {31, 32, 33, 34});
+    block.data.insert(block.data.end(), 4, 0);
+    block.info.decodedSize = block.data.size();
+    parsed.blocks.push_back(std::move(block));
+
+    const auto index = LegacyRecordIndex::build(parsed);
+    const auto first = index.getClassOthers().get(0x00b1, 1, 0, 1);
+    const auto firstPayload = first
+        ? index.getClassOthers().payloadOf(*first) : std::span<const std::uint8_t>{};
+    expectMapping(firstPayload.size() == 12 && firstPayload.front() == 1
+            && firstPayload.back() == 12,
+        "A class-record continuation replaced the primary payload");
+    const auto following = index.getClassOthers().get(0x00d6, 3, 0, 0);
+    const auto followingPayload = following
+        ? index.getClassOthers().payloadOf(*following) : std::span<const std::uint8_t>{};
+    expectMapping(followingPayload.size() == 4 && followingPayload.front() == 31
+            && followingPayload.back() == 34,
+        "A class-record continuation stopped the remaining pool");
+}
+
 finale_mus_reader::container::ParsedContainer makeDetailContainer(
     FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
     const std::vector<std::int16_t>& words)
@@ -1984,6 +2036,10 @@ TEST_CASE("Other rows remain searchable", "[mapping]") { testOtherRowsRemainSear
 TEST_CASE("Four-byte incidence straddling", "[mapping]")
 {
     testFourByteStraddlesIncidence();
+}
+TEST_CASE("Class-record continuation segment", "[mapping]")
+{
+    testClassRecordContinuationSegment();
 }
 TEST_CASE("Long word order", "[mapping]") { testLongWordOrder(); }
 TEST_CASE("Bit extraction", "[mapping]") { testBitExtraction(); }

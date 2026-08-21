@@ -18,6 +18,21 @@
 
 namespace finale_mus_reader {
 namespace texts {
+
+void recordTextFieldInfo(ImportReport& report, std::string target,
+    bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized)
+{
+    report.textFields.emplace(std::move(target), TextFieldInfo{
+        fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
+}
+
+void recordTextFieldInfo(ImportReport& report, std::string target,
+    const text::ConvertedEnigmaText& converted)
+{
+    recordTextFieldInfo(report, std::move(target), converted.fontWasSynthesized,
+        converted.sizeWasSynthesized, converted.effectsWereSynthesized);
+}
+
 namespace {
 
 using musx::dom::Cmper;
@@ -361,6 +376,7 @@ void importLaterTextPool(const ImportContext& context)
         info.origin = ValueOrigin::LegacyMus;
         info.decodedOffset = record->start;
         info.rawValue = static_cast<std::int64_t>(converted.text.size());
+        recordTextFieldInfo(context.report, info.target, converted);
         context.report.fields.push_back(std::move(info));
 
         found->create(context.document, record->number, std::move(converted.text));

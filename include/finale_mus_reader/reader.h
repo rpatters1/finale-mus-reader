@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include "musx/dom/Document.h"
@@ -129,6 +130,19 @@ struct FieldInfo
     std::int64_t rawValue{};
 };
 
+/// @brief Provenance for formatting commands completed on one imported text field.
+/// @details Each flag is independent: a legacy string can omit any subset of the font, size,
+/// and effects commands from its initial formatting run.
+struct TextFieldInfo
+{
+    /// @brief The reader supplied the initial font command from the text class default.
+    bool fontWasSynthesized{};
+    /// @brief The reader supplied the initial size command from the text class default.
+    bool sizeWasSynthesized{};
+    /// @brief The reader supplied the initial effects command from the text class default.
+    bool effectsWereSynthesized{};
+};
+
 /// @brief One message about the import, with the level that decides where it surfaces.
 /// @details The level is musxdom's own @c Logger::LogLevel rather than a parallel enum, so a
 /// host can forward a diagnostic straight to its logging callback without translating.
@@ -170,6 +184,8 @@ struct ImportReport
     std::string savingProduct;
     std::vector<BlockInfo> blocks;
     std::vector<FieldInfo> fields;
+    /// @brief Text conversion provenance keyed by the corresponding field target.
+    std::unordered_map<std::string, TextFieldInfo> textFields;
     std::vector<Diagnostic> diagnostics;
 };
 

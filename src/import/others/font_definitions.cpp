@@ -74,7 +74,6 @@ void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile,
 // The remaining four words are unused, and are zero everywhere.
 constexpr std::uint8_t charsetBankBit = 13;
 constexpr std::uint8_t charsetValueBits = 12;
-constexpr std::uint8_t nibbleBits = 4;
 
 const FieldMapping fontFields[] = {
     // Bit 13 distinguishes the two banks: the nibble holds 1 for Mac and 2 for Windows, so
@@ -85,10 +84,10 @@ const FieldMapping fontFields[] = {
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
     MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
         /*firstBit*/ 0, charsetValueBits, charsetVal),
-    MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
-        /*firstBit*/ 0, nibbleBits, pitch),
-    MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
-        /*firstBit*/ nibbleBits, nibbleBits, family),
+    MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
+        /*firstBit*/ 0, /*bitCount*/ 8, pitch, value & 0x0F),
+    MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
+        /*firstBit*/ 0, /*bitCount*/ 8, family, value & 0xF0),
     // The name runs from the second incidence to the end of the family, so a long name
     // simply occupies more rows. It is read as bytes because character payloads are not
     // byte-order sensitive, and it ends at the first NUL.
@@ -130,8 +129,10 @@ const FieldMapping classFontFields[] = {
     MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, charsetBankBit, 1, charsetBank,
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
     MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, 0, charsetValueBits, charsetVal),
-    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, nibbleBits, pitch),
-    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, nibbleBits, nibbleBits, family),
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, pitch,
+        value & 0x0F),
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, family,
+        value & 0xF0),
     // The payload is length-governed, so the name simply runs to its end. A longer name grows
     // the record rather than spilling into another incidence.
     MUS_CLASS_TEXT(FontDefinitionTarget, fontDefinitionClass, nameOffset, name),

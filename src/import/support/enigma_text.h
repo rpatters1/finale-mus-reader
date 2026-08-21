@@ -43,6 +43,9 @@ struct ConvertedEnigmaText
     std::vector<std::uint8_t> unreadCommandCodes;
     /// @brief `^efx` effect names with no known bit, deduplicated.
     std::vector<std::string> unknownEffectNames;
+    bool fontWasSynthesized{};
+    bool sizeWasSynthesized{};
+    bool effectsWereSynthesized{};
 };
 
 /// @brief What a record needs in order to be read: a document to resolve fonts against, and
@@ -75,7 +78,9 @@ struct EnigmaTextSource
 /// @param value A modern Enigma string whose explicit commands must be preserved.
 /// @param defaultFont The document default for the text class containing @p value.
 [[nodiscard]] std::string initializeEnigmaTextFontState(
-    std::string value, const musx::dom::FontInfo& defaultFont);
+    std::string value, const musx::dom::FontInfo& defaultFont,
+    bool* fontWasSynthesized = nullptr, bool* sizeWasSynthesized = nullptr,
+    bool* effectsWereSynthesized = nullptr);
 
 } // namespace text
 } // namespace finale_mus_reader

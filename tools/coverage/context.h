@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <map>
 #include <string>
+#include <unordered_map>
 
 #include "finale_mus_reader/reader.h"
 #include "musx/dom/Document.h"
@@ -21,9 +21,11 @@ public:
 
     /// @brief "legacy-mus" / "legacy-behavior" / "finale27-default" / "absent".
     const char* originOf(const std::string& target) const;
+    const TextFieldInfo* textInfoOf(const std::string& target) const;
 
 private:
-    std::map<std::string, FieldInfo> byTarget_;
+    std::unordered_map<std::string, FieldInfo> byTarget_;
+    std::unordered_map<std::string, TextFieldInfo> textByTarget_;
 };
 
 struct SurveyContext

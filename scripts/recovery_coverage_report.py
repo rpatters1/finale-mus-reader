@@ -9,8 +9,8 @@ found. Two things are summarized:
     failure reasons, all counted across every row in the file.
   - how it compares to Finale's own companion, for rows the probe ran with a
     `#companion:`-declared corpus (see recovery_coverage_probe.cpp): same /
-    expected-difference / unexpected-difference / reader-only / companion-only counts per
-    surveyed class.
+    expected-difference / Finale-encoding / unexpected-difference / reader-only /
+    companion-only counts per surveyed class.
 
 The companion comparison walks every leaf under each surveyor's output (skipping
 `origin_*` annotations, which exist only on the source side and would differ on every row
@@ -42,7 +42,9 @@ METADATA_KEYS = {
 # fields as reader regressions while preserving the snapshot for later analysis.
 COMPARISON_EXCLUDED_CLASSES = {
     "layer_atts",
+    "relationships",
     "spacing_options",
+    "text_metadata",
 }
 
 # The probe's surveyor directories define pool ownership; keep the same names here so the
@@ -76,14 +78,18 @@ SURVEY_CLASS_POOLS = {
     "text_options": "options",
 }
 
+UNEXPECTED_VALUE_DISPLAY_WIDTH = 60
+
 
 def is_noncontent_key(key: str) -> bool:
     """True when a key has the same non-content meaning wherever it appears.
 
-    Field origins and legacy byte offsets are recovery provenance. Indices and cmpers
+    Field origins and legacy byte offsets are recovery diagnostics. Indices and cmpers
     identify leaves; counting them again as values only multiplies a one-sided object
     difference. Aggregate instruction/data counts duplicate the collections themselves.
-    All remain useful in the JSONL but none participates in companion comparison.
+    All remain useful in the JSONL but none participates in companion comparison. Dangling
+    reference flags deliberately remain comparable: they can expose a lost referent much
+    more clearly than a large one-sided pool count.
     """
     return (key in {"origin", "index", "cmper", "instruction_count", "value_count",
             "external_graphic_count", "undocumented_instruction_count"}
@@ -119,20 +125,31 @@ COMPARISON_EXCLUDED_PATH_PATTERNS = [
 # subject to exact comparison here.
 ENIGMA_FONT_COMMAND = re.compile(
     r"\^(?:font|fontid|Font|fontMus|fontTxt|fontNum)\([^)]*\)")
+ENIGMA_FONT_COMMAND_PARTS = re.compile(
+    r"\^(?P<kind>font|fontid|Font|fontMus|fontTxt|fontNum)\((?P<argument>[^)]*)\)")
 ENIGMA_TIME_INSERT = re.compile(r"\^time\([^)]*\)")
 ENIGMA_COMPLETE_FONT_STATE = re.compile(
     r"(\^(?:font|fontid|Font|fontMus|fontTxt|fontNum)\([^)]*\)"
     r"\^size\([^)]*\)\^nfx\([^)]*\))(?:\1)+")
 
-# Finale does not use font information on these two text classes, and its companions may
-# therefore omit the entire initial state. The reader emits a complete state so the Enigma
-# string is independently valid. Keep this narrower than general text normalization: a
-# companion that names any font, or a source prefix that is not exactly the reader's
-# face/size/nfx completion, remains comparable content.
-NONDISPLAY_TEXT_CLASSES = {"bookmark_texts", "file_info_texts"}
 COMPLETE_INITIAL_FONT_STATE = re.compile(
     r"^\^(?:font|fontid|Font|fontMus|fontTxt|fontNum)\([^)]*\)"
     r"\^size\([^)]*\)\^nfx\([^)]*\)")
+
+BLOCK_TEXT_PATH = re.compile(r"^block_texts\[number=(\d+)\]\.text$")
+TEXT_PATH_TO_TARGET = {
+    "block_texts": "blockText",
+    "bookmark_texts": "bookmarkText",
+    "expression_texts": "expression",
+    "file_info_texts": "fileInfo",
+    "lyrics_choruses": "lyricsChorus",
+    "lyrics_sections": "lyricsSection",
+    "lyrics_verses": "lyricsVerse",
+    "smart_shape_texts": "smartShapeText",
+}
+TEXT_PATH = re.compile(r"^(?P<class>[^[]+)\[number=(?P<number>\d+)\]\.text$")
+INITIAL_ENIGMA_COMMAND = re.compile(
+    r"\^(?P<kind>font|fontid|Font|fontMus|fontTxt|fontNum|size|nfx)\([^)]*\)")
 
 
 def normalize_enigma_font_commands(value: Any) -> Any:
@@ -149,14 +166,265 @@ def normalize_duplicate_enigma_font_states(value: Any) -> Any:
     return ENIGMA_COMPLETE_FONT_STATE.sub(r"\1", value) if isinstance(value, str) else value
 
 
-def equal_when_companion_omits_nondisplay_font_state(
-        class_name: str, source_value: Any, companion_value: Any) -> bool:
-    """Treats the reader's validity prefix as absent when Finale omitted it."""
-    if (class_name not in NONDISPLAY_TEXT_CLASSES
-            or not isinstance(source_value, str) or not isinstance(companion_value, str)
-            or ENIGMA_FONT_COMMAND.search(companion_value)):
+def relationship_text_ids(row: dict, role: str) -> tuple[int, set[int]]:
+    """Returns the role's document coverage and its distinct text-pool references."""
+    relationship = (row.get("relationships") or {}).get(role) or {}
+    return (relationship.get("total_parts", 0), set(relationship.get("text_ids") or []))
+
+
+def equal_part_name_text(path: str, source_value: Any, companion_value: Any,
+        source_row: dict, companion_row: dict) -> bool:
+    """Ignores initial formatting only for a structurally identified part-name text.
+
+    The source relationship wins once the reader recovers PartDefinition and TextBlock.
+    Until then, the independently parsed companion supplies the role. When both sides
+    provide the relationship they must agree, so a relationship mismatch cannot silently
+    excuse a text difference.
+    """
+    match = BLOCK_TEXT_PATH.fullmatch(path)
+    if not match or not isinstance(source_value, str) or not isinstance(companion_value, str):
         return False
-    return COMPLETE_INITIAL_FONT_STATE.sub("", source_value, count=1) == companion_value
+    text_id = int(match.group(1))
+    source_parts, source_ids = relationship_text_ids(source_row, "part_names")
+    companion_parts, companion_ids = relationship_text_ids(companion_row, "part_names")
+    if source_parts and companion_parts:
+        is_part_name = text_id in source_ids and text_id in companion_ids
+    elif source_parts:
+        is_part_name = text_id in source_ids
+    else:
+        is_part_name = text_id in companion_ids
+    if not is_part_name:
+        return False
+    return (COMPLETE_INITIAL_FONT_STATE.sub("", source_value, count=1)
+        == COMPLETE_INITIAL_FONT_STATE.sub("", companion_value, count=1))
+
+
+def synthesized_text_state(source_row: dict, class_name: str, path: str) -> dict | None:
+    """Returns source text provenance for one surveyed text path, if available."""
+    match = TEXT_PATH.fullmatch(path)
+    node_name = TEXT_PATH_TO_TARGET.get(class_name)
+    if not match or node_name is None:
+        return None
+    target = (f"texts.{node_name}[{match.group('number')}].text")
+    return (source_row.get("text_metadata") or {}).get(target)
+
+
+def strip_synthesized_initial_state(value: str, metadata: dict) -> str:
+    """Removes only the initial commands the reader explicitly supplied."""
+    remove_kinds = set()
+    if metadata.get("font_synthesized"):
+        remove_kinds.update({"font", "fontid", "Font", "fontMus", "fontTxt", "fontNum"})
+    if metadata.get("size_synthesized"):
+        remove_kinds.add("size")
+    if metadata.get("effects_synthesized"):
+        remove_kinds.add("nfx")
+    if not remove_kinds:
+        return value
+    result = []
+    at = 0
+    while at < len(value) and value[at] == "^":
+        command = INITIAL_ENIGMA_COMMAND.match(value, at)
+        if command is None:
+            break
+        if command.group("kind") not in remove_kinds:
+            result.append(value[at:command.end()])
+        at = command.end()
+    return "".join(result) + value[at:]
+
+
+def equal_after_synthesized_initial_state(path: str, class_name: str,
+        source_value: Any, companion_value: Any, source_row: dict,
+        companion_row: dict) -> bool:
+    """Recognizes differences caused solely by reader-completed initial text state."""
+    metadata = synthesized_text_state(source_row, class_name, path)
+    if (metadata is None or not isinstance(source_value, str)
+            or not isinstance(companion_value, str)):
+        return False
+    source_text = normalize_enigma_time_inserts(
+        normalize_duplicate_enigma_font_states(
+            strip_synthesized_initial_state(source_value, metadata)))
+    companion_text = normalize_enigma_time_inserts(
+        normalize_duplicate_enigma_font_states(
+            strip_synthesized_initial_state(companion_value, metadata)))
+    return equal_enigma_text_fonts(source_text, companion_text, source_row, companion_row)
+
+
+FontReference = tuple[str, Any]  # ("id", cmper) or ("name", spelling)
+
+
+def font_definition(row: dict, reference: FontReference) -> dict | None:
+    """Resolves one ID or spelling through this row's own font-definition table."""
+    definitions = (row.get("font_definitions") or {}).get("definitions") or []
+    kind, value = reference
+    if kind == "id":
+        return next((item for item in definitions if item.get("cmper") == value), None)
+    folded = str(value).casefold()
+    by_name = next((item for item in definitions
+        if str(item.get("name", "")).casefold() == folded
+        or str(item.get("normalized_name", "")).casefold() == folded), None)
+    if by_name:
+        return by_name
+    # Finale may spell a document-local comparator as `font(FontN,...)` rather than
+    # `fontid(N)`. An actual definition carrying that literal face name wins above.
+    placeholder = re.fullmatch(r"font(\d+)", folded)
+    return (next((item for item in definitions
+        if item.get("cmper") == int(placeholder.group(1))), None) if placeholder else None)
+
+
+def font_identity(row: dict, reference: FontReference) -> str | None:
+    """Returns musxdom's normalized identity for one font reference."""
+    definition = font_definition(row, reference)
+    if not definition:
+        return None
+    # Comparator 0 is the default music font as a role, even when a save gives its face a
+    # placeholder spelling such as Font0. This is the same identity rule used to align the
+    # font-definition arrays in _font_definition_key().
+    return "<default-music-font>" if definition.get("cmper") == 0 else definition.get(
+        "normalized_name")
+
+
+def fonts_equal(source_row: dict, source_reference: FontReference,
+        companion_row: dict, companion_reference: FontReference) -> bool:
+    """The report's sole decision point for semantic font equality."""
+    source_identity = font_identity(source_row, source_reference)
+    return (source_identity is not None
+        and source_identity == font_identity(companion_row, companion_reference))
+
+
+def enigma_font_reference(command: re.Match[str]) -> FontReference | None:
+    """Parses an ordinary Enigma font command into a document-local reference."""
+    parts = ENIGMA_FONT_COMMAND_PARTS.fullmatch(command.group())
+    if not parts:
+        return None
+    argument = parts.group("argument").split(",", 1)[0]
+    if parts.group("kind") == "fontid":
+        try:
+            return ("id", int(argument))
+        except ValueError:
+            return None
+    return ("name", argument)
+
+
+def resolved_text_fonts(value: str, row: dict) -> list[dict] | None:
+    """Resolves every ordinary text-font command, rejecting category font commands."""
+    commands = list(ENIGMA_FONT_COMMAND.finditer(value))
+    resolved = []
+    for command in commands:
+        reference = enigma_font_reference(command)
+        definition = font_definition(row, reference) if reference else None
+        if definition is None:
+            return None
+        resolved.append(definition)
+    return resolved or None
+
+
+def equal_enigma_text_fonts(source_value: str, companion_value: str,
+        source_row: dict, companion_row: dict) -> bool:
+    """Compares Enigma text after proving every corresponding font selection equal."""
+    source_commands = list(ENIGMA_FONT_COMMAND.finditer(source_value))
+    companion_commands = list(ENIGMA_FONT_COMMAND.finditer(companion_value))
+    if len(source_commands) != len(companion_commands):
+        return False
+    for source_command, companion_command in zip(source_commands, companion_commands):
+        source_reference = enigma_font_reference(source_command)
+        companion_reference = enigma_font_reference(companion_command)
+        if (source_reference is None or companion_reference is None
+                or not fonts_equal(source_row, source_reference,
+                    companion_row, companion_reference)):
+            return False
+    return (normalize_enigma_font_commands(source_value)
+        == normalize_enigma_font_commands(companion_value))
+
+
+def wrong_platform_encoding_by_font_run(
+        value: str, fonts: list[dict]) -> tuple[str, frozenset[str]] | None:
+    """Applies the opposite Roman platform encoding inside each eligible font run."""
+    commands = list(ENIGMA_FONT_COMMAND.finditer(value))
+    if len(commands) != len(fonts) or not commands or commands[0].start() != 0:
+        return None
+    converted = []
+    conversions: set[str] = set()
+    for index, command in enumerate(commands):
+        converted.append("<F>")
+        run_start = command.end()
+        run_end = commands[index + 1].start() if index + 1 < len(commands) else len(value)
+        run = value[run_start:run_end]
+        font = fonts[index]
+        charset = (font.get("charset_bank"), font.get("charset_value"))
+        encodings = ({(0, 0): ("mac_roman", "windows-1252", "mac-to-windows"),
+            (1, 0): ("windows-1252", "mac_roman", "windows-to-mac")}).get(charset)
+        if encodings:
+            try:
+                misdecoded = run.encode(encodings[0]).decode(encodings[1])
+            except UnicodeError:
+                return None
+            converted.append(misdecoded)
+            if misdecoded != run:
+                conversions.add(encodings[2])
+        else:
+            converted.append(run)
+    return ("".join(converted), frozenset(conversions)) if conversions else None
+
+
+def finale_wrong_platform_encoding(source_value: Any, companion_value: Any,
+        source_row: dict, companion_row: dict) -> str | None:
+    """Labels an exact font-run-aware Roman platform misdecoding by Finale.
+
+    Both complete font-command sequences must resolve to the same named fonts. Each source
+    run explicitly governed by Mac Roman or Windows-1252 is round-tripped through its stated
+    encoding and decoded through the other platform's Roman encoding; other runs are retained.
+    The complete result must equal the normalized companion, so partial substitutions never
+    qualify.
+    """
+    if not isinstance(source_value, str) or not isinstance(companion_value, str):
+        return None
+    source_fonts = resolved_text_fonts(source_value, source_row)
+    companion_fonts = resolved_text_fonts(companion_value, companion_row)
+    if source_fonts is None or companion_fonts is None or len(source_fonts) != len(companion_fonts):
+        return None
+    if not all(fonts_equal(source_row, ("id", source_font.get("cmper")),
+            companion_row, ("id", companion_font.get("cmper")))
+            for source_font, companion_font in zip(source_fonts, companion_fonts)):
+        return None
+    companion_text = normalize_enigma_font_commands(companion_value)
+    converted = wrong_platform_encoding_by_font_run(source_value, source_fonts)
+    if converted is None or converted[0] != companion_text:
+        return None
+    labels = {
+        frozenset({"mac-to-windows"}): "Finale decoded Mac Roman text as Windows-1252",
+        frozenset({"windows-to-mac"}): "Finale decoded Windows-1252 text as Mac Roman",
+        frozenset({"mac-to-windows", "windows-to-mac"}):
+            "Finale swapped Roman platform encodings by font run",
+    }
+    return labels.get(converted[1])
+
+
+def equal_empty_enigma_text(source_value: Any, companion_value: Any) -> bool:
+    """Treats one complete formatting state with no content as an empty Enigma string."""
+    if not isinstance(source_value, str) or not isinstance(companion_value, str):
+        return False
+    return ((not source_value and COMPLETE_INITIAL_FONT_STATE.fullmatch(companion_value) is not None)
+        or (not companion_value and COMPLETE_INITIAL_FONT_STATE.fullmatch(source_value) is not None))
+
+
+def equal_symbol_font_platform_spelling(path: str,
+        source_leaves: dict[str, tuple[Any, Optional[str]]],
+        companion_leaves: dict[str, tuple[Any, Optional[str]]]) -> bool:
+    """Recognizes equivalent Windows-symbol and Mac-symbol font descriptors.
+
+    Every leaf is ambiguous alone, so the same normalized font definition must carry the
+    complete `(bank, charset, pitch)` descriptor `(1, 2, 2)` and `(0, 4095, 0)`, in either
+    direction.
+    """
+    if not path.endswith((".charset_bank", ".charset_value", ".pitch")):
+        return False
+    prefix = path.rsplit(".", 1)[0]
+    def descriptor(leaves: dict[str, tuple[Any, Optional[str]]]) -> tuple[Any, Any, Any]:
+        return (leaves.get(prefix + ".charset_bank", (None, None))[0],
+            leaves.get(prefix + ".charset_value", (None, None))[0],
+            leaves.get(prefix + ".pitch", (None, None))[0])
+    return {descriptor(source_leaves), descriptor(companion_leaves)} == {
+        (1, 2, 2), (0, 4095, 0)}
 
 
 def is_comparison_excluded_path(path: str) -> bool:
@@ -397,7 +665,7 @@ def shape_set_font_paths(row: dict) -> dict[str, int]:
     whenever the two streams agree instruction-for-instruction, which is the common case,
     but not always -- when they diverge, the companion's raw value at that position is
     whatever its own, differently-shaped stream put there, not a font id, and
-    resolve_font_name() correctly fails to find it rather than reporting a wrong name.
+    font_identity() correctly fails to find it rather than reporting a wrong name.
     """
     instructions_by_cmper = {lst["cmper"]: lst["instructions"]
         for lst in (row.get("shape_instruction_lists") or {}).get("lists") or []}
@@ -419,13 +687,21 @@ def shape_set_font_paths(row: dict) -> dict[str, int]:
     return paths
 
 
-def resolve_font_name(row: dict, font_id: Any) -> str | None:
-    """The normalized_name of the font_definitions entry `font_id` names in `row` (source
-    row or companion object), or None if `row` has no such entry -- a document only ever
-    resolves a font id against its own font table, never another document's."""
-    definitions = (row.get("font_definitions") or {}).get("definitions") or []
-    match = next((d for d in definitions if d.get("cmper") == font_id), None)
-    return match.get("normalized_name") if match else None
+def equal_resolved_font_name(path: str,
+        source_leaves: dict[str, tuple[Any, Optional[str]]],
+        companion_leaves: dict[str, tuple[Any, Optional[str]]],
+        source_row: dict, companion_row: dict) -> bool:
+    """Compares a displayed font name through an adjacent ID when one exists."""
+    if not path.endswith("font_name"):
+        return False
+    font_id_path = path.removesuffix(".font_name") + ".font_id"
+    source_id = source_leaves.get(font_id_path, (None, None))[0]
+    companion_id = companion_leaves.get(font_id_path, (None, None))[0]
+    source_reference = (("id", source_id) if source_id is not None
+        else ("name", source_leaves[path][0]))
+    companion_reference = (("id", companion_id) if companion_id is not None
+        else ("name", companion_leaves[path][0]))
+    return fonts_equal(source_row, source_reference, companion_row, companion_reference)
 
 
 def _instruction_signature(instruction_list: dict | None) -> tuple:
@@ -827,12 +1103,13 @@ class ClassStats:
     def __init__(self) -> None:
         self.same = 0
         self.expected_diff = 0
+        self.finale_encoding = 0
         self.unexpected_diff = 0
         self.reader_only = 0
         self.companion_only = 0
 
     def total(self) -> int:
-        return (self.same + self.expected_diff + self.unexpected_diff
+        return (self.same + self.expected_diff + self.finale_encoding + self.unexpected_diff
                 + self.reader_only + self.companion_only)
 
 
@@ -880,12 +1157,36 @@ def compare_row(source: dict, companion: dict) -> tuple[
                 if source_leaves[full_path][0] == companion_leaves[full_path][0]:
                     class_stats.same += 1
                     continue
-                if (full_path.endswith(".text")
-                        and equal_when_companion_omits_nondisplay_font_state(
-                            class_name, source_leaves[full_path][0],
-                            companion_leaves[full_path][0])):
+                if equal_resolved_font_name(full_path, source_leaves, companion_leaves,
+                        source, companion):
                     class_stats.same += 1
-                    transformations["Finale-omitted non-display text font state"] += 1
+                    transformations["Equivalent normalized font-name spelling"] += 1
+                    continue
+                if equal_symbol_font_platform_spelling(
+                        full_path, source_leaves, companion_leaves):
+                    class_stats.same += 1
+                    if full_path.endswith(".charset_bank"):
+                        transformations[
+                            "Equivalent Windows/Mac symbol font descriptor"] += 1
+                    continue
+                if full_path.endswith(".text") and equal_empty_enigma_text(
+                        source_leaves[full_path][0], companion_leaves[full_path][0]):
+                    class_stats.same += 1
+                    transformations["Equivalent empty Enigma text"] += 1
+                    continue
+                if (class_name == "block_texts" and equal_part_name_text(full_path,
+                        source_leaves[full_path][0], companion_leaves[full_path][0],
+                        source, companion)):
+                    class_stats.same += 1
+                    transformations["Finale-reformatted part-name text"] += 1
+                    continue
+                if (SURVEY_CLASS_POOLS.get(class_name) == "texts"
+                        and full_path.endswith(".text")
+                        and equal_after_synthesized_initial_state(
+                            full_path, class_name, source_leaves[full_path][0],
+                            companion_leaves[full_path][0], source, companion)):
+                    class_stats.expected_diff += 1
+                    transformations["Reader-synthesized initial text state"] += 1
                     continue
                 if SURVEY_CLASS_POOLS.get(class_name) == "texts" and full_path.endswith(".text"):
                     source_text = source_leaves[full_path][0]
@@ -894,8 +1195,8 @@ def compare_row(source: dict, companion: dict) -> tuple[
                     companion_without_duplicates = normalize_duplicate_enigma_font_states(companion_text)
                     source_without_time = normalize_enigma_time_inserts(source_without_duplicates)
                     companion_without_time = normalize_enigma_time_inserts(companion_without_duplicates)
-                    if (normalize_enigma_font_commands(source_without_time)
-                            == normalize_enigma_font_commands(companion_without_time)):
+                    if equal_enigma_text_fonts(source_without_time, companion_without_time,
+                            source, companion):
                         class_stats.same += 1
                         if (source_without_duplicates != source_text
                                 or companion_without_duplicates != companion_text):
@@ -913,9 +1214,11 @@ def compare_row(source: dict, companion: dict) -> tuple[
                 category = "companion_only"
 
             if category == "differs" and full_path in source_font_id_paths:
-                source_name = resolve_font_name(source, source_leaves[full_path][0])
-                companion_name = resolve_font_name(companion, companion_leaves[full_path][0])
-                if source_name is not None and source_name == companion_name:
+                source_reference = ("id", source_leaves[full_path][0])
+                companion_reference = ("id", companion_leaves[full_path][0])
+                source_name = font_identity(source, source_reference)
+                companion_name = font_identity(companion, companion_reference)
+                if fonts_equal(source, source_reference, companion, companion_reference):
                     class_stats.same += 1
                     continue
                 class_stats.expected_diff += 1
@@ -930,6 +1233,23 @@ def compare_row(source: dict, companion: dict) -> tuple[
             if label is not None:
                 class_stats.expected_diff += 1
                 continue
+
+            # This is deliberately the final differing-value comparison. Resolving every
+            # font run and proving a whole-string legacy-code-page conversion is expensive;
+            # exact equality, the normal text transformations, SetFont handling, and all
+            # ordinary expected-difference rules must get the first chance to settle it.
+            if (category == "differs" and SURVEY_CLASS_POOLS.get(class_name) == "texts"
+                    and full_path.endswith(".text")):
+                source_text = normalize_enigma_time_inserts(
+                    normalize_duplicate_enigma_font_states(source_value))
+                companion_text = normalize_enigma_time_inserts(
+                    normalize_duplicate_enigma_font_states(companion_value))
+                encoding_label = finale_wrong_platform_encoding(
+                    source_text, companion_text, source, companion)
+                if encoding_label:
+                    class_stats.finale_encoding += 1
+                    transformations[encoding_label] += 1
+                    continue
 
             if category == "differs":
                 class_stats.unexpected_diff += 1
@@ -958,6 +1278,11 @@ def table_widths(headers: list[str], rows: Iterable[list[str]]) -> list[int]:
         for index, cell in enumerate(row):
             widths[index] = max(widths[index], len(cell))
     return widths
+
+
+def truncate_display(value: str, width: int) -> str:
+    """Fits one display cell to @p width Unicode characters, including the ellipsis."""
+    return value if len(value) <= width else value[:width - 1] + "…"
 
 
 def print_table(title: str, headers: list[str], rows: Iterable[list[str]],
@@ -1043,6 +1368,7 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
             total = totals.setdefault(class_name, ClassStats())
             total.same += class_stats.same
             total.expected_diff += class_stats.expected_diff
+            total.finale_encoding += class_stats.finale_encoding
             total.unexpected_diff += class_stats.unexpected_diff
             total.reader_only += class_stats.reader_only
             total.companion_only += class_stats.companion_only
@@ -1059,18 +1385,19 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
         ([source_name, companion_name, str(count)]
             for (source_name, companion_name), count in font_substitutions.most_common()))
 
-    print_table("Normalized companion transformations (excluded from leaf differences)",
+    print_table("Recognized companion transformations",
         ["transformation", "count"],
         ([name, str(count)] for name, count in transformations.most_common() if count))
 
-    pool_headers = ["class", "same", "expected-diff", "unexpected-diff", "reader-only",
-        "companion-only", "total"]
+    pool_headers = ["class", "same", "expected-diff", "finale-encoding",
+        "unexpected-diff", "reader-only", "companion-only", "total"]
     pool_order = ("options", "others", "details", "texts", "unclassified")
     pool_rows: dict[str, list[list[str]]] = {}
     for pool in pool_order:
         pool_rows[pool] = [
-            [name, str(stats.same), str(stats.expected_diff), str(stats.unexpected_diff),
-                str(stats.reader_only), str(stats.companion_only), str(stats.total())]
+            [name, str(stats.same), str(stats.expected_diff), str(stats.finale_encoding),
+                str(stats.unexpected_diff), str(stats.reader_only),
+                str(stats.companion_only), str(stats.total())]
             for name, stats in sorted(totals.items())
             if SURVEY_CLASS_POOLS.get(name, "unclassified") == pool]
     shared_pool_widths = table_widths(pool_headers,
@@ -1091,7 +1418,11 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
         print_table(
             f"Unexpected differences (first {len(shown)} of {len(all_unexpected_diffs)})",
             ["corpus_id", "path", "source", "companion"],
-            ([corpus_id, full_path, json.dumps(source_value), json.dumps(companion_value)]
+            ([corpus_id, full_path,
+                truncate_display(json.dumps(source_value, ensure_ascii=False),
+                    UNEXPECTED_VALUE_DISPLAY_WIDTH),
+                truncate_display(json.dumps(companion_value, ensure_ascii=False),
+                    UNEXPECTED_VALUE_DISPLAY_WIDTH)]
                 for corpus_id, _class_name, full_path, source_value, companion_value in shown))
 
 
