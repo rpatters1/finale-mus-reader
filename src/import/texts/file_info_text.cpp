@@ -134,8 +134,6 @@ void importHeaderFileInfoTexts(const ImportContext& context)
                 std::move(instance->text), *defaultFont, &fontWasSynthesized,
                 &sizeWasSynthesized, &effectsWereSynthesized);
         }
-        context.document->getTexts()->add(FileInfoTarget::XmlNodeName, instance);
-
         FieldInfo info;
         info.target = "texts.fileInfo[" + std::to_string(static_cast<int>(field.type)) + "].text";
         info.origin = ValueOrigin::LegacyMus;
@@ -144,6 +142,7 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         recordTextFieldInfo(context.report, info.target, fontWasSynthesized,
             sizeWasSynthesized, effectsWereSynthesized);
         context.report.fields.push_back(std::move(info));
+        context.document->getTexts()->add(FileInfoTarget::XmlNodeName, std::move(instance));
     }
 }
 

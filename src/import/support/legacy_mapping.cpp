@@ -15,6 +15,7 @@
 #include "import/options.h"
 #include "import/others.h"
 #include "import/texts.h"
+#include "reader/timing.h"
 
 namespace finale_mus_reader {
 
@@ -33,33 +34,52 @@ namespace {
 ///
 /// The list is written out rather than assembled by self-registration, so that a static
 /// archive cannot discard an importer nothing else references.
-const std::vector<ClassImporter>& registeredImporters()
+struct RegisteredImporter
 {
-    static const std::vector<ClassImporter> result = {
+#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+    timing::Phase phase;
+#endif
+    ClassImporter importer;
+};
+
+#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#define FINALE_MUS_READER_IMPORTER(phase, importer) {timing::Phase::phase, importer}
+#else
+#define FINALE_MUS_READER_IMPORTER(phase, importer) {importer}
+#endif
+
+const std::vector<RegisteredImporter>& registeredImporters()
+{
+    // Keep one line per importer so the complete execution order stays directly scannable.
+    // clang-format off
+    static const std::vector<RegisteredImporter> result = {
         // bootstrap
-        &others::importFontDefinitions,
-        &options::importFontOptions,
+        FINALE_MUS_READER_IMPORTER(ImportFontDefinitions, &others::importFontDefinitions),
+        FINALE_MUS_READER_IMPORTER(ImportFontOptions, &options::importFontOptions),
         // options
-        &options::importClefOptions,
-        &options::importLyricOptions,
-        &options::importMultimeasureRestOptions,
-        &options::importMusicSpacingOptions,
-        &options::importStemOptions,
-        &options::importTextOptions,
+        FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
+        FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
+        FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
+        FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
+        FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
+        FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others
-        &others::importLayerAttributes,
-        &others::importPageGraphicAssignments,
-        &others::importShapeGraphicAssignments,
-        &others::importShapeDefinitions,
-        &others::importSmartShapeCustomLines,
+        FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
+        FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
+        FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
+        FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
+        FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         // details
-        &details::importMeasureGraphicAssignments,
+        FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         // entries (none recovered yet)
         // texts
-        &texts::importTexts,
+        FINALE_MUS_READER_IMPORTER(ImportTexts, &texts::importTexts),
     };
+    // clang-format on
     return result;
 }
+
+#undef FINALE_MUS_READER_IMPORTER
 
 // Reads a numeric value from a class-identified record, addressed by byte offset inside a
 // single record's payload rather than by word slot across an incidence stream.
@@ -470,13 +490,17 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     PendingReferences pending;
     const ImportContext context{
         index, profile, source, document, referenceDocument, report, pending, construction};
-    for (const auto importer : registeredImporters()) {
-        importer(context);
+    for (const auto& entry : registeredImporters()) {
+        FINALE_MUS_READER_TIMED_SCOPE(entry.phase);
+        entry.importer(context);
     }
     // Last, and it must stay last. Copying a reference object allocates comparators, so this
     // cannot run while any pool is still being filled. It is the one phase that belongs to no
     // single class: it drains what every importer asked for.
-    resolveDeferredReferences(document, referenceDocument, pending, report);
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::DeferredReferences);
+        resolveDeferredReferences(document, referenceDocument, pending, report);
+    }
 }
 
 

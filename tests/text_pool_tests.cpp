@@ -659,6 +659,15 @@ void testSyntheticStreamBoundaries()
 {
     using namespace musx::dom::texts;
 
+    // Reusing a conversion must not reuse the text object: comparators remain distinct even
+    // when their source bytes and converted values are identical.
+    const auto repeated = importStream(
+        "^block(1)^font(Times)a^end^block(2)^font(Times)a^end");
+    expectText(repeated.document->getTexts()->getArray<BlockText>().size() == 2
+            && textOf<BlockText>(repeated, 1) == "^font(Times)a"
+            && textOf<BlockText>(repeated, 2) == "^font(Times)a",
+        "An exact-source cache hit collapsed two text objects into one");
+
     // An escaped caret is content, and stays escaped so that musxdom reads it back as one.
     const auto escaped = importStream("^block(1)^font(Times)a^^b^end");
     expectText(textOf<BlockText>(escaped, 1) == "^font(Times)a^^b",
@@ -795,6 +804,32 @@ void testNestedParenthesesInInitialFontName()
         "An unspellable default font name produced an invalid synthesized command");
 }
 
+void testEnigmaFontResolutionCache()
+{
+    const auto document = makeTextDocument();
+    finale_mus_reader::text::EnigmaFontResolutionCache cache;
+    const finale_mus_reader::text::EnigmaTextSource source{
+        document, false, SourcePlatform::MacOS, nullptr, nullptr, &cache};
+    const auto convert = [&](std::string_view value) {
+        return finale_mus_reader::text::toModernEnigmaText(
+            std::span<const std::uint8_t>(
+                reinterpret_cast<const std::uint8_t*>(value.data()), value.size()),
+            source);
+    };
+
+    expectText(convert("^font(Times)a").text == "^font(Times)a"
+            && convert("^font(Times)b").text == "^font(Times)b"
+            && cache.fontIdsByName.size() == 1
+            && cache.fontIdsByName.at("Times") == musx::dom::Cmper(4),
+        "Repeated resolved font names were not served by one cached result");
+
+    expectText(convert("^font(Missing)a").text == "^font(Missing)a"
+            && convert("^font(Missing)b").text == "^font(Missing)b"
+            && cache.fontIdsByName.size() == 2
+            && !cache.fontIdsByName.at("Missing"),
+        "Repeated unresolved font names were not served by one cached result");
+}
+
 } // namespace
 
 TEST_CASE("Uncompressed text pool", "[texts]") { testUncompressedTextPool(); }
@@ -820,4 +855,8 @@ TEST_CASE("Text pool stream boundaries", "[texts]") { testSyntheticStreamBoundar
 TEST_CASE("Parentheses in initial font name", "[texts]")
 {
     testNestedParenthesesInInitialFontName();
+}
+TEST_CASE("Enigma font resolution cache", "[texts]")
+{
+    testEnigmaFontResolutionCache();
 }

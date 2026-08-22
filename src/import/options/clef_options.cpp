@@ -532,7 +532,6 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     PendingReferences& pending)
 {
     auto target = std::make_shared<ClefOptionsTarget>(document);
-    document->getOptions()->add(ClefOptionsTarget::XmlNodeName, target);
     copyScalarsFromReference(referenceDocument, target);
 
     // The Coda era has no courtesy-clef option; the first version found to offer one is 3.6.2.
@@ -624,6 +623,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
             + " Finale 27 stores."});
     }
     completeFromReference(referenceDocument, target, report, pending);
+    document->getOptions()->add(ClefOptionsTarget::XmlNodeName, std::move(target));
 }
 
 void importClefOptions(const ImportContext& context)

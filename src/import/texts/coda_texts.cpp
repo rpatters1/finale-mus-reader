@@ -25,6 +25,7 @@
 #include "import/support/enigma_text.h"
 #include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
+#include "reader/timing.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -146,6 +147,8 @@ template <typename Target>
 void addCodaText(const ImportContext& context, const text::EnigmaTextSource& source,
     Cmper number, const std::string& spelled, CodaTextFontType defaultFontType)
 {
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, spelled.size());
     auto recordSource = source;
     recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
         context.document, defaultFontType);
@@ -156,7 +159,7 @@ void addCodaText(const ImportContext& context, const text::EnigmaTextSource& sou
     auto instance = std::make_shared<Target>(
         context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(converted.text);
-    context.document->getTexts()->add(Target::XmlNodeName, instance);
+    context.document->getTexts()->add(Target::XmlNodeName, std::move(instance));
 
     FieldInfo info;
     info.target = "texts." + std::string(Target::XmlNodeName) + '[' + std::to_string(number) + ']';
@@ -312,9 +315,10 @@ void importCodaStoredTexts(const ImportContext& context)
         return;
     }
     // This era predates Unicode by a wide margin, so its bytes are always a code page.
+    text::EnigmaFontResolutionCache fontResolutionCache;
     const text::EnigmaTextSource source{context.document, /*utf8*/ false,
         context.profile.platform, nullptr,
-        context.profile.symbolFontNames};
+        context.profile.symbolFontNames, &fontResolutionCache};
     importCodaBlockTexts(context, source);
     importCodaLyricTexts(context, source);
 }

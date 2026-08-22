@@ -59,6 +59,7 @@
 #include "coverage/json.h"
 #include "coverage/registry.h"
 #include "finale_mus_reader/reader.h"
+#include "reader/timing.h"
 #include "musx/musx.h"
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
@@ -85,6 +86,87 @@ struct Options
 // Printed every this many documents rather than a multiple of five or ten, so the printed
 // count's last digit cycles through all ten values instead of only ever landing on 0 or 5.
 constexpr std::size_t progressInterval = 29;
+
+void writeTimingValue(std::ostream& out, double durationMs)
+{
+    out << std::fixed << std::setprecision(3) << durationMs;
+}
+
+void writeSurveyTimings(std::ostream& out,
+    const finale_mus_reader::coverage::SurveyTimings& timings)
+{
+    out << "\"surveyors_ms\":";
+    writeTimingValue(out, timings.durationMs);
+    out << ",\"surveyors\":{";
+    bool first = true;
+    for (const auto& [key, durationMs] : timings.surveyors) {
+        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(key) << ':';
+        writeTimingValue(out, durationMs);
+        first = false;
+    }
+    out << '}';
+}
+
+void writeReaderPhaseTimings(std::ostream& out,
+    const std::vector<finale_mus_reader::timing::Measurement>& measurements)
+{
+    out << "\"reader_phases\":{";
+    bool first = true;
+    for (const auto& measurement : measurements) {
+        out << (first ? "" : ",")
+            << finale_mus_reader::coverage::jsonString(
+                   finale_mus_reader::timing::phaseName(measurement.phase))
+            << ':';
+        writeTimingValue(out, measurement.durationMs);
+        first = false;
+    }
+    out << '}';
+}
+
+void writeReaderCounters(std::ostream& out,
+    const std::vector<finale_mus_reader::timing::CounterMeasurement>& counters)
+{
+    out << "\"reader_counters\":{";
+    bool first = true;
+    for (const auto& counter : counters) {
+        out << (first ? "" : ",")
+            << finale_mus_reader::coverage::jsonString(
+                   finale_mus_reader::timing::counterName(counter.counter))
+            << ':' << counter.value;
+        first = false;
+    }
+    out << '}';
+}
+
+void writeContainerAttempts(std::ostream& out,
+    const std::vector<finale_mus_reader::timing::ContainerAttemptMeasurement>& attempts)
+{
+    out << "\"container_attempts\":[";
+    bool first = true;
+    for (const auto& attempt : attempts) {
+        out << (first ? "" : ",") << '{'
+            << "\"candidate\":" << finale_mus_reader::coverage::jsonString(
+                   finale_mus_reader::timing::containerCandidateName(attempt.candidate))
+            << ",\"byte_order\":\"" << (attempt.bigEndian ? "big" : "little") << '"'
+            << ",\"result\":" << finale_mus_reader::coverage::jsonString(
+                   finale_mus_reader::timing::containerAttemptResultName(attempt.result))
+            << ",\"duration_ms\":";
+        writeTimingValue(out, attempt.durationMs);
+        out << ",\"decompression_calls\":" << attempt.decompressionCalls
+            << ",\"successful_blocks\":" << attempt.decompressedBlocks
+            << ",\"compressed_input_bytes\":" << attempt.compressedInputBytes
+            << ",\"decompressed_bytes\":" << attempt.decompressedBytes;
+        if (attempt.decompressedBlocks != 0) {
+            out << ",\"disposition\":\""
+                << (attempt.result == finale_mus_reader::timing::ContainerAttemptResult::Accepted
+                        ? "retained" : "discarded")
+                << '"';
+        }
+        out << '}';
+        first = false;
+    }
+    out << ']';
+}
 
 // LogLevel's declaration order (Info, Warning, Error, Verbose) is not its severity order,
 // so filtering compares this rank instead of the enum value directly.
@@ -657,9 +739,22 @@ int main(int argc, char** argv)
         // slow reader import or vice versa.
         bool sourceOk = false;
         const auto started = std::chrono::steady_clock::now();
+        std::optional<double> readerDurationMs;
+        std::vector<timing::Measurement> readerPhaseTimings;
+        std::vector<timing::CounterMeasurement> readerCounters;
+        std::vector<timing::ContainerAttemptMeasurement> containerAttemptTimings;
+        std::optional<SurveyTimings> sourceSurveyTimings;
         try {
+            const auto readerStarted = std::chrono::steady_clock::now();
+            timing::Session readerTimingSession;
             const auto result = Reader::read<musx::xml::pugi::Document>(
                 std::filesystem::path(path), readerOptions);
+            const std::chrono::duration<double, std::milli> readerElapsed =
+                std::chrono::steady_clock::now() - readerStarted;
+            readerDurationMs = readerElapsed.count();
+            readerPhaseTimings = readerTimingSession.measurements();
+            readerCounters = readerTimingSession.counters();
+            containerAttemptTimings = readerTimingSession.containerAttempts();
             if (!result.document) {
                 throw std::runtime_error(importError(result.report));
             }
@@ -670,9 +765,15 @@ int main(int argc, char** argv)
                 << ",\"source_version\":" << jsonString(versionName(result.report))
                 << ",\"warning_count\":" << loggerCaptured.size();
             writeDiagnostics(out, loggerCaptured);
-            runAllSurveyors(out, SurveyContext{result.document, result.report, fields});
+            sourceSurveyTimings =
+                runAllSurveyors(out, SurveyContext{result.document, result.report, fields});
             sourceOk = true;
         } catch (const std::exception& error) {
+            if (!readerDurationMs) {
+                const std::chrono::duration<double, std::milli> readerElapsed =
+                    std::chrono::steady_clock::now() - started;
+                readerDurationMs = readerElapsed.count();
+            }
             ++failed;
             const auto finderType = macFinderFileType(path);
             std::string message = error.what();
@@ -703,7 +804,27 @@ int main(int argc, char** argv)
         }
         const std::chrono::duration<double, std::milli> elapsed =
             std::chrono::steady_clock::now() - started;
-        out << ",\"duration_ms\":" << std::fixed << std::setprecision(3) << elapsed.count();
+        out << ",\"duration_ms\":";
+        writeTimingValue(out, elapsed.count());
+        out << ",\"timings\":{\"reader_ms\":";
+        writeTimingValue(out, *readerDurationMs);
+        if (!readerPhaseTimings.empty()) {
+            out << ',';
+            writeReaderPhaseTimings(out, readerPhaseTimings);
+        }
+        if (!readerCounters.empty()) {
+            out << ',';
+            writeReaderCounters(out, readerCounters);
+        }
+        if (!containerAttemptTimings.empty()) {
+            out << ',';
+            writeContainerAttempts(out, containerAttemptTimings);
+        }
+        if (sourceSurveyTimings) {
+            out << ',';
+            writeSurveyTimings(out, *sourceSurveyTimings);
+        }
+        out << '}';
 
         // A companion is only worth loading when there is a source result to compare it
         // against, and only attempted at all when this row's corpus declared a convention
@@ -716,8 +837,18 @@ int main(int argc, char** argv)
                 loggerCaptured.clear();
                 std::ostringstream companionOut;
                 const auto companionStarted = std::chrono::steady_clock::now();
+                std::optional<double> documentLoadDurationMs;
+                std::optional<double> archiveDurationMs;
+                std::optional<double> documentFactoryDurationMs;
+                std::optional<SurveyTimings> companionSurveyTimings;
                 try {
+                    const auto documentLoadStarted = std::chrono::steady_clock::now();
+                    const auto archiveStarted = std::chrono::steady_clock::now();
                     auto archive = readCompanionArchive(*companionPath);
+                    const std::chrono::duration<double, std::milli> archiveElapsed =
+                        std::chrono::steady_clock::now() - archiveStarted;
+                    archiveDurationMs = archiveElapsed.count();
+                    const auto documentFactoryStarted = std::chrono::steady_clock::now();
                     musx::factory::DocumentFactory::CreateOptions::EmbeddedGraphicFiles graphicFiles;
                     for (auto& [name, bytes] : archive.embeddedGraphics) {
                         graphicFiles.push_back({std::move(name), std::move(bytes)});
@@ -728,12 +859,18 @@ int main(int argc, char** argv)
                     const auto companionDocument =
                         musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
                             archive.enigmaXml, std::move(createOptions));
+                    const std::chrono::duration<double, std::milli> documentFactoryElapsed =
+                        std::chrono::steady_clock::now() - documentFactoryStarted;
+                    documentFactoryDurationMs = documentFactoryElapsed.count();
+                    const std::chrono::duration<double, std::milli> documentLoadElapsed =
+                        std::chrono::steady_clock::now() - documentLoadStarted;
+                    documentLoadDurationMs = documentLoadElapsed.count();
                     const ImportReport emptyReport;
                     const FieldIndex emptyFields(emptyReport);
                     companionOut << "\"status\":\"ok\""
                         << ",\"warning_count\":" << loggerCaptured.size();
                     writeDiagnostics(companionOut, loggerCaptured);
-                    runAllSurveyors(companionOut,
+                    companionSurveyTimings = runAllSurveyors(companionOut,
                         SurveyContext{companionDocument, emptyReport, emptyFields});
                 } catch (const std::exception& error) {
                     companionOut << "\"status\":\"error\""
@@ -742,8 +879,30 @@ int main(int argc, char** argv)
                 }
                 const std::chrono::duration<double, std::milli> companionElapsed =
                     std::chrono::steady_clock::now() - companionStarted;
-                companionOut << ",\"duration_ms\":" << std::fixed << std::setprecision(3)
-                    << companionElapsed.count();
+                companionOut << ",\"duration_ms\":";
+                writeTimingValue(companionOut, companionElapsed.count());
+                companionOut << ",\"timings\":{";
+                bool firstTiming = true;
+                if (documentLoadDurationMs) {
+                    companionOut << "\"document_load_ms\":";
+                    writeTimingValue(companionOut, *documentLoadDurationMs);
+                    firstTiming = false;
+                }
+                if (archiveDurationMs) {
+                    companionOut << (firstTiming ? "" : ",") << "\"archive_ms\":";
+                    writeTimingValue(companionOut, *archiveDurationMs);
+                    firstTiming = false;
+                }
+                if (documentFactoryDurationMs) {
+                    companionOut << (firstTiming ? "" : ",") << "\"document_factory_ms\":";
+                    writeTimingValue(companionOut, *documentFactoryDurationMs);
+                    firstTiming = false;
+                }
+                if (companionSurveyTimings) {
+                    companionOut << (firstTiming ? "" : ",");
+                    writeSurveyTimings(companionOut, *companionSurveyTimings);
+                }
+                companionOut << '}';
                 out << ",\"companion\":{" << companionOut.str() << "}";
             }
         }

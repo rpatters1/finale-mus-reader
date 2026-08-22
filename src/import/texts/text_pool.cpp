@@ -5,6 +5,7 @@
 #include "import/texts/internal.h"
 
 #include <algorithm>
+#include <array>
 #include <format>
 #include <limits>
 #include <memory>
@@ -12,8 +13,10 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "import/support/enigma_text.h"
+#include "reader/timing.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -55,7 +58,8 @@ using TextFontType = musx::dom::options::FontOptions::FontType;
 struct TextKeyword
 {
     std::string_view keyword;
-    void (*create)(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text);
+    void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
+        Cmper number, std::string&& text);
     std::string_view nodeName;
     TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
@@ -66,12 +70,13 @@ struct TextKeyword
 };
 
 template <typename Target>
-void createText(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text)
+void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
+    Cmper number, std::string&& text)
 {
     auto instance = std::make_shared<Target>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(text);
-    document->getTexts()->add(Target::XmlNodeName, instance);
+    pool.add(Target::XmlNodeName, std::move(instance));
 }
 
 template <typename Target>
@@ -297,6 +302,7 @@ void rememberTextPoolName(std::vector<std::string>& list, std::string_view value
 
 void importLaterTextPool(const ImportContext& context)
 {
+    FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLaterPool);
     // The Coda-banner epoch's text stream is length-prefixed chunks rather than
     // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
     // `importCodaTexts` reads both; walking them here would only report a malformed pool.
@@ -325,13 +331,25 @@ void importLaterTextPool(const ImportContext& context)
     std::vector<std::uint8_t> unknownCodes;
     std::vector<std::string> unknownEffects;
     std::vector<std::string> unknownKeywords;
+    text::EnigmaFontResolutionCache fontResolutionCache;
+    // Each cache has one initial-font context. The source bytes are therefore the complete
+    // key: document, encoding, platform and default font stay fixed for the cache's lifetime.
+    std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>,
+        std::size(textKeywords)> convertedByKeyword;
+    std::array<std::shared_ptr<const musx::dom::FontInfo>, std::size(textKeywords)> initialFonts;
+    std::array<bool, std::size(textKeywords)> initialFontsCached{};
+    auto& textPool = *context.document->getTexts();
     std::size_t at = 0;
     while (at < stream.size()) {
         if (const auto marker = sectionMarkerAt(stream, at)) {
             at += marker;
             continue;
         }
-        const auto record = readRecord(stream, at, terminated);
+        std::optional<RawRecord> record;
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextPoolFraming);
+            record = readRecord(stream, at, terminated);
+        }
         if (!record) {
             // Stopping is deliberate. The chunks are packed end to end with nothing between
             // them, so bytes that are not a chunk mean the stream is not a text pool, and
@@ -357,10 +375,38 @@ void importLaterTextPool(const ImportContext& context)
             continue;
         }
 
+        const auto keywordIndex = static_cast<std::size_t>(found - std::begin(textKeywords));
+        if (!initialFontsCached[keywordIndex]) {
+            FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheMisses, 1);
+            initialFonts[keywordIndex] = musx::dom::options::FontOptions::getFontInfoOrNull(
+                context.document, found->defaultFontType);
+            initialFontsCached[keywordIndex] = true;
+        } else {
+            FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheHits, 1);
+        }
         auto recordSource = source;
-        recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
-            context.document, found->defaultFontType);
-        auto converted = text::toModernEnigmaText(record->body, recordSource);
+        recordSource.initialFont = initialFonts[keywordIndex];
+        recordSource.fontResolutionCache = &fontResolutionCache;
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
+        FINALE_MUS_READER_TIMING_INCREMENT(
+            timing::Counter::TextRecordBytes, record->body.size());
+        text::ConvertedEnigmaText converted;
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextConversion);
+            const std::string_view sourceText(
+                reinterpret_cast<const char*>(record->body.data()), record->body.size());
+            auto& cache = convertedByKeyword[keywordIndex];
+            if (const auto cached = cache.find(sourceText); cached != cache.end()) {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheHits, 1);
+                FINALE_MUS_READER_TIMING_INCREMENT(
+                    timing::Counter::TextCacheAvoidedBytes, record->body.size());
+                converted = cached->second;
+            } else {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheMisses, 1);
+                converted = text::toModernEnigmaText(record->body, recordSource);
+                cache.emplace(sourceText, converted);
+            }
+        }
         for (const auto code : converted.unreadCommandCodes) {
             if (std::find(unknownCodes.begin(), unknownCodes.end(), code) == unknownCodes.end()) {
                 unknownCodes.push_back(code);
@@ -371,16 +417,24 @@ void importLaterTextPool(const ImportContext& context)
         }
 
 
-        FieldInfo info;
-        info.target = "texts." + std::string(found->nodeName) + '['
-            + std::to_string(record->number) + "].text";
-        info.origin = ValueOrigin::LegacyMus;
-        info.decodedOffset = record->start;
-        info.rawValue = static_cast<std::int64_t>(converted.text.size());
-        recordTextFieldInfo(context.report, info.target, converted);
-        context.report.fields.push_back(std::move(info));
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextReportConstruction);
+            FieldInfo info;
+            info.target = "texts." + std::string(found->nodeName) + '['
+                + std::to_string(record->number) + "].text";
+            info.origin = ValueOrigin::LegacyMus;
+            info.decodedOffset = record->start;
+            info.rawValue = static_cast<std::int64_t>(converted.text.size());
+            recordTextFieldInfo(context.report, info.target, converted);
+            context.report.fields.push_back(std::move(info));
+        }
 
-        found->create(context.document, record->number, std::move(converted.text));
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextDomInsertion);
+            found->create(
+                context.document, textPool, record->number, std::move(converted.text));
+        }
     }
 
     reportUnread(context.report, unknownCodes, unknownEffects, unknownKeywords);
@@ -392,8 +446,14 @@ void importTexts(const ImportContext& context)
     // header spelling; the header pass fills only types the pool did not provide. The Coda
     // pass is disjoint by epoch and leaves both later stores untouched.
     importLaterTextPool(context);
-    importHeaderFileInfoTexts(context);
-    importCodaStoredTexts(context);
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextHeaderFileInfo);
+        importHeaderFileInfoTexts(context);
+    }
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextCodaStored);
+        importCodaStoredTexts(context);
+    }
 }
 
 } // namespace texts

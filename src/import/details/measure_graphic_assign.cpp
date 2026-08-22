@@ -72,7 +72,8 @@ void importMeasureGraphicFamily(const ImportContext& context,
                     reportMeasureGraphicValue(
                         context, prefix, names[index], tuple[slot], sourceRow);
                 }
-                context.document->getDetails()->add(MeasureGraphicTarget::XmlNodeName, target);
+                context.document->getDetails()->add(
+                    MeasureGraphicTarget::XmlNodeName, std::move(target));
             }
         }
     }

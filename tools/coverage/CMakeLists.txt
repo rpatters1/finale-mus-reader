@@ -17,10 +17,12 @@ add_executable(recovery_coverage_probe
 )
 target_link_libraries(recovery_coverage_probe PRIVATE
     finale_mus_reader::finale_mus_reader
+    finale_mus_reader_timing_config
     ${FINALE_MUS_READER_PUGIXML_TARGET}
     ${FINALE_MUS_READER_ZLIB_TARGET}
 )
 target_include_directories(recovery_coverage_probe PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/support")
+target_include_directories(recovery_coverage_probe PRIVATE "${PROJECT_SOURCE_DIR}/src")
 # Lets every surveyor write #include "coverage/registry.h" regardless of how deep it sits
 # under surveyors/, mirroring how src/import/ files include "import/options.h".
 target_include_directories(recovery_coverage_probe PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")

@@ -57,6 +57,13 @@ Capture stderr privately. Every failed occurrence must still be printed locally 
 source path and error. Validate row count, JSON parsing, source status counts, companion count, and
 the selected-corpus funnel before analysis.
 
+For any timing study, run a separately configured instrumented Release probe (normally
+`build-release`, with `CMAKE_BUILD_TYPE=Release` and `FINALE_MUS_READER_TIMING=ON`). Treat a Debug
+probe, especially one launched under LLDB or another debugger, as diagnostic only: unoptimized
+standard-library, map, shared-pointer, and instrumentation overhead can swamp or distort the
+production-code differences being measured. Compare timings only between equivalent Release
+configurations, and record the build type and whether instrumentation was enabled with the result.
+
 ### Analysis loop — repeat freely
 
 Do not rerun the probe merely because a hypothesis, aggregation, matching rule, or report changed.

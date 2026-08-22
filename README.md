@@ -148,6 +148,15 @@ pugixml and instantiate the reader with its musxdom adapter.
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.
 
+Reader phase timing is controlled by `FINALE_MUS_READER_TIMING`, whose values
+are `AUTO`, `ON`, and `OFF`. `AUTO` enables the internal timing scopes in Debug
+and RelWithDebInfo configurations and compiles them out of Release. `ON` and
+`OFF` override that selection. The recovery coverage probe activates the
+collector and writes the measurements; the library's public API is unchanged.
+Along with reader phases, the probe reports each speculative container candidate,
+its rejection stage and duration, decompression calls and byte counts, and whether
+successfully decoded blocks were retained or discarded.
+
 ## API
 
 ```cpp

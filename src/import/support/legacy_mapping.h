@@ -445,7 +445,7 @@ template <typename T>
     auto instance = std::make_shared<T>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
     auto* raw = instance.get();
-    document->getOthers()->add(T::XmlNodeName, instance);
+    document->getOthers()->add(T::XmlNodeName, std::move(instance));
     return raw;
 }
 

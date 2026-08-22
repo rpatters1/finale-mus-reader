@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/support/enigma_text.h"
+#include "reader/timing.h"
 
 #include <algorithm>
 #include <limits>
@@ -318,6 +319,7 @@ public:
             }
             flushEffects();
             if (m_body[m_at] == '^') {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCommands, 1);
                 readCommand();
             } else {
                 m_literal.push_back(static_cast<char>(m_body[m_at++]));
@@ -329,6 +331,7 @@ public:
         flushLiteral();
         m_result.text = normalizeLineBreaks(std::move(m_result.text));
         if (m_source.initialFont) {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextFontState);
             bool fontWasSynthesized = false;
             bool sizeWasSynthesized = false;
             bool effectsWereSynthesized = false;
@@ -731,12 +734,31 @@ private:
         if (const auto byId = fontIdFromSpelling(spelled)) {
             return byId;
         }
+        const auto name = convertCommandText(spelled, packedCharset);
+        if (m_source.fontResolutionCache) {
+            auto& resolved = m_source.fontResolutionCache->fontIdsByName;
+            if (const auto cached = resolved.find(name); cached != resolved.end()) {
+                FINALE_MUS_READER_TIMING_INCREMENT(
+                    timing::Counter::TextFontResolutionCacheHits, 1);
+                return cached->second;
+            }
+            FINALE_MUS_READER_TIMING_INCREMENT(
+                timing::Counter::TextFontResolutionCacheMisses, 1);
+            const auto font = resolveFontName(name);
+            resolved.emplace(name, font);
+            return font;
+        }
+        return resolveFontName(name);
+    }
+
+    std::optional<Cmper> resolveFontName(const std::string& name) const
+    {
         // musxdom owns the rule that matches a name to a definition, so it is asked rather
         // than reimplemented. It reports absence by throwing, which is the only reason this
         // is written as a caught exception rather than a test.
         musx::dom::FontInfo info(m_source.document);
         try {
-            info.setFontIdByName(convertCommandText(spelled, packedCharset));
+            info.setFontIdByName(name);
         } catch (const std::invalid_argument&) {
             return std::nullopt;
         }
@@ -758,6 +780,10 @@ private:
         if (m_literal.empty()) {
             return;
         }
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextLiteralRuns, 1);
+        FINALE_MUS_READER_TIMING_INCREMENT(
+            timing::Counter::TextLiteralBytes, m_literal.size());
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLiteralEncoding);
         if (m_source.utf8) {
             m_result.text.append(m_literal);
         } else if (m_font) {
@@ -837,25 +863,29 @@ std::string initializeEnigmaTextFontState(
         at = *commandEnd;
     }
 
-    std::string completed;
+    if (hasFont && hasSize && hasEffects) {
+        return value;
+    }
+
+    std::string completedInitial;
     if (!hasFont) {
         if (fontWasSynthesized) *fontWasSynthesized = true;
         // A name survives document-local comparator renumbering. A name that cannot fit the
         // command argument syntax retains its already-resolved comparator instead.
-        completed = spellResolvedEnigmaFontCommand(
+        completedInitial = spellResolvedEnigmaFontCommand(
             "font", defaultFont.fontId, defaultFont.getName());
     }
-    completed.append(value, 0, at);
+    completedInitial.append(value, 0, at);
     if (!hasSize) {
         if (sizeWasSynthesized) *sizeWasSynthesized = true;
-        completed += "^size(" + std::to_string(defaultFont.fontSize) + ')';
+        completedInitial += "^size(" + std::to_string(defaultFont.fontSize) + ')';
     }
     if (!hasEffects) {
         if (effectsWereSynthesized) *effectsWereSynthesized = true;
-        completed += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
+        completedInitial += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
     }
-    completed.append(value, at, std::string::npos);
-    return completed;
+    value.replace(0, at, completedInitial);
+    return value;
 }
 
 ConvertedEnigmaText toModernEnigmaText(
