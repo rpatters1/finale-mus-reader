@@ -26,8 +26,10 @@ import argparse
 import json
 import re
 import sys
+import time
 from collections import Counter
 from dataclasses import dataclass, replace
+from functools import cache
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Optional
 
@@ -103,8 +105,10 @@ FONT_NAME_ALIASES = {
 }
 
 UNEXPECTED_VALUE_DISPLAY_WIDTH = 60
+PROGRESS_INTERVAL_SECONDS = 1.9
 
 
+@cache
 def is_noncontent_key(key: str) -> bool:
     """True when a key has the same non-content meaning wherever it appears.
 
@@ -804,9 +808,15 @@ def equal_symbol_font_platform_spelling(path: str,
 
 
 def is_comparison_excluded_path(path: str) -> bool:
-    return (any(path == excluded or path.startswith(excluded + ".")
-        or path.startswith(excluded + "[") for excluded in COMPARISON_EXCLUDED_PATHS)
-        or any(pattern.search(path) for pattern in COMPARISON_EXCLUDED_PATH_PATTERNS))
+    # leaf_paths() stops descending as soon as it reaches an excluded subtree, so descendants
+    # never arrive here and exact membership is sufficient for those paths. The patterned
+    # exclusions belong to only two classes; avoid running both regexes over every leaf in
+    # every other class.
+    if path in COMPARISON_EXCLUDED_PATHS:
+        return True
+    if not path.startswith(("font_definitions.", "shape_defs[")):
+        return False
+    return any(pattern.search(path) for pattern in COMPARISON_EXCLUDED_PATH_PATTERNS)
 
 
 Category = str  # "differs" | "reader_only" | "companion_only" ("same" is never classified)
@@ -1812,12 +1822,14 @@ def list_path_segments(items: list, list_path: str) -> list[str]:
     return segments
 
 
+@cache
 def snake_to_camel(name: str) -> str:
     first, *rest = name.split("_")
     return first + "".join(word.capitalize() for word in rest)
 
 
-def leaf_paths(value: Any, prefix: str = "", origin: str | None = None) -> Iterator[tuple[str, Any, str | None]]:
+def leaf_paths(value: Any, prefix: str = "", origin: str | None = None,
+        include_origins: bool = True) -> Iterator[tuple[str, Any, str | None]]:
     """Yields (dotted/bracketed path, leaf value, origin) for every leaf under `value`,
     skipping metadata, globally non-content keys, and path-specific recovery diagnostics
     (see is_noncontent_key() and COMPARISON_EXCLUDED_PATHS) at any depth.
@@ -1838,11 +1850,14 @@ def leaf_paths(value: Any, prefix: str = "", origin: str | None = None) -> Itera
             child_prefix = f"{prefix}.{key}" if prefix else key
             if is_comparison_excluded_path(child_prefix):
                 continue
-            child_origin = value.get(f"origin_{snake_to_camel(key)}") or value.get(f"{key}_origin")
-            yield from leaf_paths(sub, child_prefix, child_origin)
+            child_origin = None
+            if include_origins:
+                child_origin = (value.get(f"origin_{snake_to_camel(key)}")
+                    or value.get(f"{key}_origin"))
+            yield from leaf_paths(sub, child_prefix, child_origin, include_origins)
     elif isinstance(value, list):
         for segment, item in zip(list_path_segments(value, prefix), value):
-            yield from leaf_paths(item, f"{prefix}{segment}")
+            yield from leaf_paths(item, f"{prefix}{segment}", include_origins=include_origins)
     else:
         yield prefix, value, origin
 
@@ -1934,7 +1949,8 @@ def compare_row(source: dict, companion: dict) -> tuple[
         source_leaves = {path: (value, origin)
             for path, value, origin in leaf_paths(source.get(class_name), class_name)}
         companion_leaves = {path: (value, origin)
-            for path, value, origin in leaf_paths(companion.get(class_name), class_name)}
+            for path, value, origin in leaf_paths(
+                companion.get(class_name), class_name, include_origins=False)}
         for full_path in set(source_leaves) | set(companion_leaves):
             in_source = full_path in source_leaves
             in_companion = full_path in companion_leaves
@@ -2016,15 +2032,41 @@ def compare_row(source: dict, companion: dict) -> tuple[
     return stats, unexpected, substitutions, textual, transformations
 
 
-def read_rows(path: Path) -> list[dict]:
-    rows = []
-    with path.open(encoding="utf-8") as handle:
+def read_rows(path: Path, show_progress: bool = False) -> Iterator[dict]:
+    total_bytes = path.stat().st_size
+    consumed_bytes = 0
+    row_count = 0
+    companion_count = 0
+    started = time.monotonic()
+    next_progress = started + PROGRESS_INTERVAL_SECONDS
+    stderr_is_terminal = sys.stderr.isatty()
+
+    def display_progress(done: bool = False) -> None:
+        elapsed = time.monotonic() - started
+        percent = 100.0 if total_bytes == 0 else consumed_bytes * 100.0 / total_bytes
+        rate = 0.0 if elapsed == 0 else row_count / elapsed
+        message = (f"Processed {row_count} row(s), {companion_count} companion(s), "
+            f"{percent:.1f}% of input in {elapsed:.1f}s ({rate:.1f} rows/s)")
+        print(message, file=sys.stderr,
+            end="\n" if done or not stderr_is_terminal else "\r", flush=True)
+
+    with path.open("rb") as handle:
         for line in handle:
-            line = line.strip()
-            if not line:
+            consumed_bytes += len(line)
+            if not line.strip():
                 continue
-            rows.append(json.loads(line))
-    return rows
+            row = json.loads(line)
+            row_count += 1
+            if row.get("companion"):
+                companion_count += 1
+            yield row
+            if show_progress:
+                now = time.monotonic()
+                if row_count == 1 or now >= next_progress:
+                    display_progress()
+                    next_progress = now + PROGRESS_INTERVAL_SECONDS
+    if show_progress:
+        display_progress(done=True)
 
 
 def table_widths(headers: list[str], rows: Iterable[list[str]]) -> list[int]:
@@ -2058,47 +2100,41 @@ def print_table(title: str, headers: list[str], rows: Iterable[list[str]],
         print(line(row))
 
 
-def report_import_summary(rows: list[dict]) -> None:
-    status_counts = Counter(row.get("status", "?") for row in rows)
-    epoch_counts = Counter(
-        row.get("epoch", "-") for row in rows if row.get("status") == "ok")
-    print(f"\n{len(rows)} document(s): "
-        f"{status_counts.get('ok', 0)} ok, {status_counts.get('error', 0)} error")
-    print_table("Epoch (ok documents)", ["epoch", "count"],
-        ([epoch, str(count)] for epoch, count in epoch_counts.most_common()))
-
-
-def report_failures(rows: list[dict]) -> None:
-    counts: Counter[str] = Counter()
-    examples: dict[str, str] = {}
-    for row in rows:
-        if row.get("status") != "error":
-            continue
-        message = row.get("error", "")
-        counts[message] += 1
-        examples.setdefault(message, row.get("corpus_id", "?"))
-    print_table("Failure reasons", ["count", "example", "message"],
-        ([str(count), examples[message], message] for message, count in counts.most_common()))
-
-
-def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
-    companion_rows = [row for row in rows if row.get("companion")]
-    if not companion_rows:
-        print("\nNo rows carried a companion (corpus declared no #companion: convention, "
-            "or every source failed to import).")
-        return
-
-    companion_status = Counter(row["companion"].get("status", "?") for row in companion_rows)
-    print(f"\n{len(companion_rows)} row(s) with a companion: "
-        f"{companion_status.get('ok', 0)} ok, {companion_status.get('error', 0)} error")
-
+def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
+    row_count = 0
+    status_counts: Counter[str] = Counter()
+    epoch_counts: Counter[str] = Counter()
+    failure_counts: Counter[str] = Counter()
+    failure_examples: dict[str, str] = {}
+    companion_count = 0
+    companion_status: Counter[str] = Counter()
     totals: dict[str, ClassStats] = {}
-    all_unexpected_diffs: list[tuple[str, str, str, Any, Any]] = []
-    all_textual_diffs: list[tuple[str, str, str, Any, Any, str]] = []
+    unexpected_diff_count = 0
+    unexpected_diff_examples: list[tuple[str, str, str, Any, Any]] = []
+    textual_counts: Counter[tuple[str, str]] = Counter()
+    textual_classes: set[str] = set()
+    missing_run_count = 0
+    missing_run_examples: list[tuple[str, str, str, Any, Any, str]] = []
+    other_text_count = 0
+    other_text_examples: list[tuple[str, str, str, Any, Any, str]] = []
     font_substitutions: Counter[tuple[str, str]] = Counter()
     transformations: Counter[str] = Counter()
-    for row in companion_rows:
-        companion = row["companion"]
+    for row in rows:
+        row_count += 1
+        status = row.get("status", "?")
+        status_counts[status] += 1
+        if status == "ok":
+            epoch_counts[row.get("epoch", "-")] += 1
+        elif status == "error":
+            message = row.get("error", "")
+            failure_counts[message] += 1
+            failure_examples.setdefault(message, row.get("corpus_id", "?"))
+
+        companion = row.get("companion")
+        if not companion:
+            continue
+        companion_count += 1
+        companion_status[companion.get("status", "?")] += 1
         if companion.get("status") != "ok":
             continue
         stats, unexpected, substitutions, textual, row_transformations = compare_row(row, companion)
@@ -2112,15 +2148,45 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
             total.companion_only += class_stats.companion_only
         for class_name, path, category, source_value, companion_value in unexpected:
             if category == "differs":
-                all_unexpected_diffs.append(
-                    (row.get("corpus_id", "?"), class_name, path,
-                        source_value, companion_value))
+                unexpected_diff_count += 1
+                if len(unexpected_diff_examples) < max_unexpected:
+                    unexpected_diff_examples.append(
+                        (row.get("corpus_id", "?"), class_name, path,
+                            source_value, companion_value))
         for class_name, path, category, source_value, companion_value, kind in textual:
-            all_textual_diffs.append(
-                (row.get("corpus_id", "?"), class_name, path,
-                    source_value, companion_value, kind))
+            textual_counts[(class_name, kind)] += 1
+            textual_classes.add(class_name)
+            item = (row.get("corpus_id", "?"), class_name, path,
+                source_value, companion_value, kind)
+            if kind == "missing run":
+                missing_run_count += 1
+                if len(missing_run_examples) < max_unexpected:
+                    missing_run_examples.append(item)
+            elif kind == "other":
+                other_text_count += 1
+                if len(other_text_examples) < max_unexpected:
+                    other_text_examples.append(item)
         for _path, source_name, companion_name in substitutions:
             font_substitutions[(source_name, companion_name)] += 1
+
+    if row_count == 0:
+        return False
+
+    print(f"\n{row_count} document(s): "
+        f"{status_counts.get('ok', 0)} ok, {status_counts.get('error', 0)} error")
+    print_table("Epoch (ok documents)", ["epoch", "count"],
+        ([epoch, str(count)] for epoch, count in epoch_counts.most_common()))
+    print_table("Failure reasons", ["count", "example", "message"],
+        ([str(count), failure_examples[message], message]
+            for message, count in failure_counts.most_common()))
+
+    if companion_count == 0:
+        print("\nNo rows carried a companion (corpus declared no #companion: convention, "
+            "or every source failed to import).")
+        return True
+
+    print(f"\n{companion_count} row(s) with a companion: "
+        f"{companion_status.get('ok', 0)} ok, {companion_status.get('error', 0)} error")
 
     print_table("SetFont substitutions (also counted as expected differences)",
         ["source font", "companion font", "count"],
@@ -2182,14 +2248,12 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
     print("  ".join(cell.ljust(shared_pool_widths[index])
         for index, cell in enumerate(grand_total)))
 
-    textual_counts = Counter((item[1], item[5]) for item in all_textual_diffs)
-    textual_classes = sorted({item[1] for item in all_textual_diffs})
     textual_kinds = ("known encoding glitch", "whitespace", "font", "size", "effects",
         "added font info", "empty part-name template", "missing run", "other")
     textual_rows = [
         [class_name, *[str(textual_counts[(class_name, kind)]) for kind in textual_kinds],
             str(sum(textual_counts[(class_name, kind)] for kind in textual_kinds))]
-        for class_name in textual_classes]
+        for class_name in sorted(textual_classes)]
     textual_rows.append([
         "TOTAL",
         *[str(sum(int(row[index]) for row in textual_rows))
@@ -2199,13 +2263,11 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
         ["raw text type", "encoding", "whitespace", "font", "size", "effects",
             "added font info", "empty part-name", "missing run", "other", "total"],
         textual_rows)
-    missing_run_textual_diffs = [
-        item for item in all_textual_diffs if item[5] == "missing run"]
-    if missing_run_textual_diffs:
-        shown = missing_run_textual_diffs[:max_unexpected]
+    if missing_run_count:
+        shown = missing_run_examples
         print_table(
             f"Missing-run Enigma-text differences (first {len(shown)} of "
-            f"{len(missing_run_textual_diffs)})",
+            f"{missing_run_count})",
             ["kind", "corpus_id", "path", "source", "companion"],
             ([kind, corpus_id, full_path,
                 truncate_display(json.dumps(source_value, ensure_ascii=False),
@@ -2214,12 +2276,11 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
                     UNEXPECTED_VALUE_DISPLAY_WIDTH)]
                 for corpus_id, _class_name, full_path, source_value, companion_value, kind
                 in shown))
-    other_textual_diffs = [item for item in all_textual_diffs if item[5] == "other"]
-    if other_textual_diffs:
-        shown = other_textual_diffs[:max_unexpected]
+    if other_text_count:
+        shown = other_text_examples
         print_table(
             f"Other Enigma-text differences (first {len(shown)} of "
-            f"{len(other_textual_diffs)})",
+            f"{other_text_count})",
             ["kind", "corpus_id", "path", "source", "companion"],
             ([kind, corpus_id, full_path,
                 truncate_display(json.dumps(source_value, ensure_ascii=False),
@@ -2229,10 +2290,10 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
                 for corpus_id, _class_name, full_path, source_value, companion_value, kind
                 in shown))
 
-    if all_unexpected_diffs:
-        shown = all_unexpected_diffs[:max_unexpected]
+    if unexpected_diff_count:
+        shown = unexpected_diff_examples
         print_table(
-            f"Unexpected differences (first {len(shown)} of {len(all_unexpected_diffs)})",
+            f"Unexpected differences (first {len(shown)} of {unexpected_diff_count})",
             ["corpus_id", "path", "source", "companion"],
             ([corpus_id, full_path,
                 truncate_display(json.dumps(source_value, ensure_ascii=False),
@@ -2240,6 +2301,7 @@ def report_companion_comparison(rows: list[dict], max_unexpected: int) -> None:
                 truncate_display(json.dumps(companion_value, ensure_ascii=False),
                     UNEXPECTED_VALUE_DISPLAY_WIDTH)]
                 for corpus_id, _class_name, full_path, source_value, companion_value in shown))
+    return True
 
 
 def main() -> int:
@@ -2248,16 +2310,14 @@ def main() -> int:
     parser.add_argument("jsonl", type=Path, help="recovery_coverage_probe output")
     parser.add_argument("--max-unexpected", type=int, default=80,
         help="cap on unexpected-difference rows printed (default: 80)")
+    parser.add_argument("--progress", action="store_true",
+        help="write input progress to stderr after the first row and every 1.9 seconds")
     args = parser.parse_args()
 
-    rows = read_rows(args.jsonl)
-    if not rows:
+    if not report_recovery_coverage(
+            read_rows(args.jsonl, args.progress), args.max_unexpected):
         print("no rows in input", file=sys.stderr)
         return 1
-
-    report_import_summary(rows)
-    report_failures(rows)
-    report_companion_comparison(rows, args.max_unexpected)
     return 0
 
 
