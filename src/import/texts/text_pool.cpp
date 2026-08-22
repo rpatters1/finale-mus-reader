@@ -5,6 +5,7 @@
 #include "import/texts/internal.h"
 
 #include <algorithm>
+#include <array>
 #include <format>
 #include <limits>
 #include <memory>
@@ -12,6 +13,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "import/support/enigma_text.h"
 #include "reader/timing.h"
@@ -327,6 +329,10 @@ void importLaterTextPool(const ImportContext& context)
     std::vector<std::uint8_t> unknownCodes;
     std::vector<std::string> unknownEffects;
     std::vector<std::string> unknownKeywords;
+    // Each cache has one initial-font context. The source bytes are therefore the complete
+    // key: document, encoding, platform and default font stay fixed for the cache's lifetime.
+    std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>,
+        std::size(textKeywords)> convertedByKeyword;
     std::size_t at = 0;
     while (at < stream.size()) {
         if (const auto marker = sectionMarkerAt(stream, at)) {
@@ -366,10 +372,26 @@ void importLaterTextPool(const ImportContext& context)
         auto recordSource = source;
         recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
             context.document, found->defaultFontType);
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
+        FINALE_MUS_READER_TIMING_INCREMENT(
+            timing::Counter::TextRecordBytes, record->body.size());
         text::ConvertedEnigmaText converted;
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextConversion);
-            converted = text::toModernEnigmaText(record->body, recordSource);
+            const std::string_view sourceText(
+                reinterpret_cast<const char*>(record->body.data()), record->body.size());
+            auto& cache = convertedByKeyword[
+                static_cast<std::size_t>(found - std::begin(textKeywords))];
+            if (const auto cached = cache.find(sourceText); cached != cache.end()) {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheHits, 1);
+                FINALE_MUS_READER_TIMING_INCREMENT(
+                    timing::Counter::TextCacheAvoidedBytes, record->body.size());
+                converted = cached->second;
+            } else {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheMisses, 1);
+                converted = text::toModernEnigmaText(record->body, recordSource);
+                cache.emplace(sourceText, converted);
+            }
         }
         for (const auto code : converted.unreadCommandCodes) {
             if (std::find(unknownCodes.begin(), unknownCodes.end(), code) == unknownCodes.end()) {

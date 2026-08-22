@@ -659,6 +659,15 @@ void testSyntheticStreamBoundaries()
 {
     using namespace musx::dom::texts;
 
+    // Reusing a conversion must not reuse the text object: comparators remain distinct even
+    // when their source bytes and converted values are identical.
+    const auto repeated = importStream(
+        "^block(1)^font(Times)a^end^block(2)^font(Times)a^end");
+    expectText(repeated.document->getTexts()->getArray<BlockText>().size() == 2
+            && textOf<BlockText>(repeated, 1) == "^font(Times)a"
+            && textOf<BlockText>(repeated, 2) == "^font(Times)a",
+        "An exact-source cache hit collapsed two text objects into one");
+
     // An escaped caret is content, and stays escaped so that musxdom reads it back as one.
     const auto escaped = importStream("^block(1)^font(Times)a^^b^end");
     expectText(textOf<BlockText>(escaped, 1) == "^font(Times)a^^b",

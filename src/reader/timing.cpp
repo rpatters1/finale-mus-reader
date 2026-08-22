@@ -68,6 +68,9 @@ std::string_view counterName(Counter counter)
     case Counter::TextCommands: return "text_commands";
     case Counter::TextLiteralRuns: return "text_literal_runs";
     case Counter::TextLiteralBytes: return "text_literal_bytes";
+    case Counter::TextCacheHits: return "text_cache_hits";
+    case Counter::TextCacheMisses: return "text_cache_misses";
+    case Counter::TextCacheAvoidedBytes: return "text_cache_avoided_bytes";
     case Counter::Count: break;
     }
     throw std::logic_error("invalid reader timing counter");

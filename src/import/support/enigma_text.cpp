@@ -868,8 +868,6 @@ std::string initializeEnigmaTextFontState(
 ConvertedEnigmaText toModernEnigmaText(
     std::span<const std::uint8_t> body, const EnigmaTextSource& source)
 {
-    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
-    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, body.size());
     return RecordConverter(body, source).run();
 }
 

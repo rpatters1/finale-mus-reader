@@ -25,6 +25,7 @@
 #include "import/support/enigma_text.h"
 #include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
+#include "reader/timing.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -146,6 +147,8 @@ template <typename Target>
 void addCodaText(const ImportContext& context, const text::EnigmaTextSource& source,
     Cmper number, const std::string& spelled, CodaTextFontType defaultFontType)
 {
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, spelled.size());
     auto recordSource = source;
     recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
         context.document, defaultFontType);
