@@ -16,13 +16,22 @@
 #pragma once
 
 #include <iosfwd>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "coverage/context.h"
 
 namespace finale_mus_reader::coverage {
 
 using SurveyorFn = void (*)(std::ostream& out, const SurveyContext& ctx);
+
+struct SurveyTimings
+{
+    double durationMs{};
+    std::vector<std::pair<std::string, double>> surveyors;
+};
 
 /// @brief Registers `fn` to run under JSON member name `key`. Called only by
 /// @ref COVERAGE_SURVEYOR; a duplicate key throws at static-init time.
@@ -33,8 +42,9 @@ void registerSurveyor(std::string_view key, SurveyorFn fn);
 /// @details A surveyor that throws does not stop the others: it contributes
 /// `,"<key>":null,"<key>_error":"<message>"` and the loop continues, so one class's bug
 /// or a newly added, still-broken surveyor can never blank the rest of the document's
-/// coverage.
-void runAllSurveyors(std::ostream& out, const SurveyContext& ctx);
+/// coverage. The return value reports the whole pass and each registered surveyor's
+/// wall-clock duration.
+SurveyTimings runAllSurveyors(std::ostream& out, const SurveyContext& ctx);
 
 } // namespace finale_mus_reader::coverage
 

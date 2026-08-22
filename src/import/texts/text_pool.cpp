@@ -14,6 +14,7 @@
 #include <string_view>
 
 #include "import/support/enigma_text.h"
+#include "reader/timing.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -297,6 +298,7 @@ void rememberTextPoolName(std::vector<std::string>& list, std::string_view value
 
 void importLaterTextPool(const ImportContext& context)
 {
+    FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLaterPool);
     // The Coda-banner epoch's text stream is length-prefixed chunks rather than
     // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
     // `importCodaTexts` reads both; walking them here would only report a malformed pool.
@@ -331,7 +333,11 @@ void importLaterTextPool(const ImportContext& context)
             at += marker;
             continue;
         }
-        const auto record = readRecord(stream, at, terminated);
+        std::optional<RawRecord> record;
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextPoolFraming);
+            record = readRecord(stream, at, terminated);
+        }
         if (!record) {
             // Stopping is deliberate. The chunks are packed end to end with nothing between
             // them, so bytes that are not a chunk mean the stream is not a text pool, and
@@ -360,7 +366,11 @@ void importLaterTextPool(const ImportContext& context)
         auto recordSource = source;
         recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
             context.document, found->defaultFontType);
-        auto converted = text::toModernEnigmaText(record->body, recordSource);
+        text::ConvertedEnigmaText converted;
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextConversion);
+            converted = text::toModernEnigmaText(record->body, recordSource);
+        }
         for (const auto code : converted.unreadCommandCodes) {
             if (std::find(unknownCodes.begin(), unknownCodes.end(), code) == unknownCodes.end()) {
                 unknownCodes.push_back(code);
@@ -371,6 +381,7 @@ void importLaterTextPool(const ImportContext& context)
         }
 
 
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
         FieldInfo info;
         info.target = "texts." + std::string(found->nodeName) + '['
             + std::to_string(record->number) + "].text";
@@ -392,8 +403,14 @@ void importTexts(const ImportContext& context)
     // header spelling; the header pass fills only types the pool did not provide. The Coda
     // pass is disjoint by epoch and leaves both later stores untouched.
     importLaterTextPool(context);
-    importHeaderFileInfoTexts(context);
-    importCodaStoredTexts(context);
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextHeaderFileInfo);
+        importHeaderFileInfoTexts(context);
+    }
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextCodaStored);
+        importCodaStoredTexts(context);
+    }
 }
 
 } // namespace texts

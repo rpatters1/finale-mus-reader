@@ -3,6 +3,7 @@
 
 #include "coverage/registry.h"
 
+#include <chrono>
 #include <ostream>
 #include <sstream>
 #include <stdexcept>
@@ -37,9 +38,12 @@ void registerSurveyor(std::string_view key, SurveyorFn fn)
     registry().emplace_back(std::string(key), fn);
 }
 
-void runAllSurveyors(std::ostream& out, const SurveyContext& ctx)
+SurveyTimings runAllSurveyors(std::ostream& out, const SurveyContext& ctx)
 {
+    SurveyTimings timings;
+    const auto allStarted = std::chrono::steady_clock::now();
     for (const auto& [key, fn] : registry()) {
+        const auto surveyorStarted = std::chrono::steady_clock::now();
         out << ",\"" << key << "\":";
         std::ostringstream value;
         try {
@@ -48,7 +52,14 @@ void runAllSurveyors(std::ostream& out, const SurveyContext& ctx)
         } catch (const std::exception& error) {
             out << "null,\"" << key << "_error\":" << jsonString(error.what());
         }
+        const std::chrono::duration<double, std::milli> elapsed =
+            std::chrono::steady_clock::now() - surveyorStarted;
+        timings.surveyors.emplace_back(key, elapsed.count());
     }
+    const std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::steady_clock::now() - allStarted;
+    timings.durationMs = elapsed.count();
+    return timings;
 }
 
 } // namespace finale_mus_reader::coverage

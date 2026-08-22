@@ -4,6 +4,7 @@
 #include "container/mus_container.h"
 
 #include "container/product_banner.h"
+#include "reader/timing.h"
 
 #include <algorithm>
 #include <array>
@@ -167,8 +168,12 @@ bool crcMatches(const std::vector<std::uint8_t>& bytes, std::uint32_t expected)
 std::optional<ParsedContainer> tryUncompressed(
     const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
 {
+    FINALE_MUS_READER_CONTAINER_ATTEMPT(containerAttempt,
+        timing::ContainerCandidate::Uncompressed, byteOrder == ByteOrder::BigEndian);
     const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+            containerAttempt, timing::ContainerAttemptResult::InputBounds);
         return std::nullopt;
     }
 
@@ -178,12 +183,16 @@ std::optional<ParsedContainer> tryUncompressed(
     std::size_t offset = bodyOffset;
     while (offset < size) {
         if (size - offset < 6) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         const auto type = read16(data + offset, byteOrder);
         const auto storedSize32 = read32(data + offset + 2, byteOrder);
         const std::size_t storedSize = storedSize32;
         if (storedSize < 6 || storedSize > size - offset) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         DecodedBlock block;
@@ -195,13 +204,19 @@ std::optional<ParsedContainer> tryUncompressed(
 
     constexpr std::array<std::uint16_t, 4> expectedTypes{1, 2, 3, 4};
     if (parsed.blocks.size() != expectedTypes.size()) {
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+            containerAttempt, timing::ContainerAttemptResult::Framing);
         return std::nullopt;
     }
     for (std::size_t index = 0; index < expectedTypes.size(); ++index) {
         if (parsed.blocks[index].info.type != expectedTypes[index]) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::FirstType);
             return std::nullopt;
         }
     }
+    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+        containerAttempt, timing::ContainerAttemptResult::Accepted);
     return parsed;
 }
 
@@ -227,8 +242,13 @@ bool isCompressedBlockType(std::uint16_t type, bool dcl)
 std::optional<ParsedContainer> tryCompressed(
     const std::uint8_t* data, std::size_t size, ByteOrder byteOrder, bool dcl)
 {
+    FINALE_MUS_READER_CONTAINER_ATTEMPT(containerAttempt,
+        dcl ? timing::ContainerCandidate::Dcl : timing::ContainerCandidate::Zlib,
+        byteOrder == ByteOrder::BigEndian);
     const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+            containerAttempt, timing::ContainerAttemptResult::InputBounds);
         return std::nullopt;
     }
 
@@ -237,16 +257,22 @@ std::optional<ParsedContainer> tryCompressed(
     parsed.byteOrder = byteOrder;
     const auto expectedFirstType = dcl ? std::uint16_t{0x000f} : std::uint16_t{0x001a};
     if (read16(data + bodyOffset, byteOrder) != expectedFirstType) {
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+            containerAttempt, timing::ContainerAttemptResult::FirstType);
         return std::nullopt;
     }
     std::size_t offset = bodyOffset;
     while (offset < size) {
         if (size - offset < 6) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         const auto type = read16(data + offset, byteOrder);
         const std::size_t storedSize = read32(data + offset + 2, byteOrder);
         if (storedSize < 6 || storedSize > size - offset) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
 
@@ -262,6 +288,8 @@ std::optional<ParsedContainer> tryCompressed(
             offset += storedSize;
             if (isTerminal) {
                 parsed.trailingByteCount = size - offset;
+                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                    containerAttempt, timing::ContainerAttemptResult::Accepted);
                 return parsed;
             }
             continue;
@@ -278,20 +306,27 @@ std::optional<ParsedContainer> tryCompressed(
             offset += storedSize;
             if (isTerminal) {
                 parsed.trailingByteCount = size - offset;
+                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                    containerAttempt, timing::ContainerAttemptResult::Accepted);
                 return parsed;
             }
             continue;
         }
         if (storedSize < 10) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
 
         const auto expectedCrc = read32(data + offset + 6, byteOrder);
         const auto compressedSize = storedSize - 10;
+        FINALE_MUS_READER_CONTAINER_DECOMPRESSION_BEGIN(containerAttempt, compressedSize);
         auto decoded = dcl
             ? inflateDcl(data + offset + 10, compressedSize)
             : inflateZlib(data + offset + 10, compressedSize);
         if (!decoded) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Inflate);
             // Verbose, not Error. This runs inside a speculative attempt: parse() tries
             // both byte orders and both codecs and keeps the first that works, so a
             // rejection here is ordinary format detection and is routinely followed by a
@@ -303,7 +338,11 @@ std::optional<ParsedContainer> tryCompressed(
                 + std::to_string(offset));
             return std::nullopt;
         }
+        FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(
+            containerAttempt, decoded->size());
         if (!crcMatches(*decoded, expectedCrc)) {
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+                containerAttempt, timing::ContainerAttemptResult::Checksum);
             // Verbose for the same reason as the decompression rejection above: a wrong
             // speculative byte order can inflate to bytes that simply fail the checksum.
             musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
@@ -320,8 +359,12 @@ std::optional<ParsedContainer> tryCompressed(
     }
 
     if (parsed.blocks.empty()) {
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+            containerAttempt, timing::ContainerAttemptResult::Incomplete);
         return std::nullopt;
     }
+    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
+        containerAttempt, timing::ContainerAttemptResult::Accepted);
     return parsed;
 }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "reader/document_factory.h"
+#include "reader/timing.h"
 
 #include <memory>
 #include <span>
@@ -68,36 +69,62 @@ musx::dom::DocumentPtr createDocument(
     XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report)
 {
-    musx::factory::DocumentFactory::ConstructionOptions constructionOptions;
-    constructionOptions.sourcePath = sourcePath;
-    constructionOptions.embeddedGraphics = recoverEmbeddedGraphics(parsed, report);
-    auto session = musx::factory::DocumentFactory::begin(std::move(constructionOptions));
+    auto embeddedGraphics = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::EmbeddedGraphics);
+        return recoverEmbeddedGraphics(parsed, report);
+    }();
+    auto session = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ConstructionBegin);
+        musx::factory::DocumentFactory::ConstructionOptions constructionOptions;
+        constructionOptions.sourcePath = sourcePath;
+        constructionOptions.embeddedGraphics = std::move(embeddedGraphics);
+        return musx::factory::DocumentFactory::begin(std::move(constructionOptions));
+    }();
     const auto& document = session.getDocument();
 
     // Keep both baseline representations alive through the complete import. The XML tree
     // owns the elements used to seed filtered pools; the fully formed document is the
     // read-only source for later completion passes.
-    const auto pinned = defaults::parseDefault(
-        parseXml, parseDocument, report.sourcePlatform);
-    seedPinnedDefaults(document, pinned, report, session.getConstructionContext());
-    document->getHeader() = header::recover(data, size, report);
+    const auto pinned = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::DefaultsParse);
+        return defaults::parseDefault(parseXml, parseDocument, report.sourcePlatform);
+    }();
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::DefaultsSeed);
+        seedPinnedDefaults(document, pinned, report, session.getConstructionContext());
+    }
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::HeaderRecovery);
+        document->getHeader() = header::recover(data, size, report);
+    }
 
-    const auto macSymbolFonts = text::parseMacSymbolFonts(options.macSymbolFonts);
+    const auto macSymbolFonts = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::MacSymbolFonts);
+        return text::parseMacSymbolFonts(options.macSymbolFonts);
+    }();
     SourceProfile profile;
     profile.epoch = report.formatEpoch;
     profile.version = report.sourceVersion;
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;
     profile.symbolFontNames = &macSymbolFonts;
+    const auto recordIndex = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::RecordIndex);
+        return records::LegacyRecordIndex::build(parsed);
+    }();
     applyLegacyMappings(
-        records::LegacyRecordIndex::build(parsed), profile,
+        recordIndex, profile,
         std::span<const std::uint8_t>(data, size),
         document, pinned.referenceDocument, report, session.getConstructionContext());
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every
     // legacy overlay has been applied. That includes resolving the registered font
     // comparators, so every font id above must already have been registered.
-    return std::move(session).finish();
+    const auto result = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ConstructionFinish);
+        return std::move(session).finish();
+    }();
+    return result;
 }
 
 } // namespace finale_mus_reader

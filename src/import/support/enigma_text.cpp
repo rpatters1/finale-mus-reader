@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/support/enigma_text.h"
+#include "reader/timing.h"
 
 #include <algorithm>
 #include <limits>
@@ -318,6 +319,7 @@ public:
             }
             flushEffects();
             if (m_body[m_at] == '^') {
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCommands, 1);
                 readCommand();
             } else {
                 m_literal.push_back(static_cast<char>(m_body[m_at++]));
@@ -329,6 +331,7 @@ public:
         flushLiteral();
         m_result.text = normalizeLineBreaks(std::move(m_result.text));
         if (m_source.initialFont) {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextFontState);
             bool fontWasSynthesized = false;
             bool sizeWasSynthesized = false;
             bool effectsWereSynthesized = false;
@@ -758,6 +761,10 @@ private:
         if (m_literal.empty()) {
             return;
         }
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextLiteralRuns, 1);
+        FINALE_MUS_READER_TIMING_INCREMENT(
+            timing::Counter::TextLiteralBytes, m_literal.size());
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLiteralEncoding);
         if (m_source.utf8) {
             m_result.text.append(m_literal);
         } else if (m_font) {
@@ -861,6 +868,8 @@ std::string initializeEnigmaTextFontState(
 ConvertedEnigmaText toModernEnigmaText(
     std::span<const std::uint8_t> body, const EnigmaTextSource& source)
 {
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
+    FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, body.size());
     return RecordConverter(body, source).run();
 }
 

@@ -28,6 +28,13 @@ option(FINALE_MUS_READER_BUILD_TOOLS
     "Build on-demand corpus probe tools in tools/" OFF)
 option(FINALE_MUS_READER_USE_SYSTEM_ZLIB
     "Use an installed zlib when a parent project has not already provided one" OFF)
+set(FINALE_MUS_READER_TIMING "AUTO" CACHE STRING
+    "Reader timing instrumentation: AUTO, ON, or OFF")
+set_property(CACHE FINALE_MUS_READER_TIMING PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER "${FINALE_MUS_READER_TIMING}" FINALE_MUS_READER_TIMING)
+if(NOT FINALE_MUS_READER_TIMING MATCHES "^(AUTO|ON|OFF)$")
+    message(FATAL_ERROR "FINALE_MUS_READER_TIMING must be AUTO, ON, or OFF")
+endif()
 set(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR "" CACHE PATH
     "Use an existing musxdom source tree instead of fetching the pinned revision")
 
@@ -120,7 +127,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 3be2a3a8eb0ecae027ef74c6cb3c880e7c5c293d
+            GIT_TAG f961b418ac9bdecaf215ffd7e7e3c79951586bb1
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -180,10 +187,20 @@ add_library(finale_mus_reader STATIC
     src/import/texts/text_pool.cpp
     src/reader/document_factory.cpp
     src/reader/reader.cpp
+    src/reader/timing.cpp
     src/records/legacy_others.cpp
     src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
+
+add_library(finale_mus_reader_timing_config INTERFACE)
+if(FINALE_MUS_READER_TIMING STREQUAL "ON")
+    target_compile_definitions(finale_mus_reader_timing_config INTERFACE
+        FINALE_MUS_READER_ENABLE_TIMING=1)
+elseif(FINALE_MUS_READER_TIMING STREQUAL "AUTO")
+    target_compile_definitions(finale_mus_reader_timing_config INTERFACE
+        $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:FINALE_MUS_READER_ENABLE_TIMING=1>)
+endif()
 
 target_include_directories(finale_mus_reader
     PUBLIC
@@ -194,7 +211,9 @@ target_include_directories(finale_mus_reader
 
 target_link_libraries(finale_mus_reader
     PUBLIC musx
-    PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
+    PRIVATE
+        ${FINALE_MUS_READER_ZLIB_TARGET}
+        finale_mus_reader_timing_config)
 
 # Legacy MUS stores text in whatever encoding the saving machine used, so the reader has to
 # convert it to the UTF-8 that musxdom expects. Each platform gets the most accurate

@@ -13,6 +13,7 @@
 
 #include "container/mus_container.h"
 #include "reader/document_factory.h"
+#include "reader/timing.h"
 #include "musx/util/Logger.h"
 
 namespace finale_mus_reader {
@@ -27,7 +28,10 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
         throw std::invalid_argument("MUS input is empty");
     }
 
-    const auto parsed = container::parse(data, size);
+    const auto parsed = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ContainerParse);
+        return container::parse(data, size);
+    }();
     if (parsed.formatEpoch == FormatEpoch::Unknown) {
         // A document whose body framing cannot be classified has nothing dependable to
         // recover fallbacks against, so this exits before attempting framing, options, or
@@ -38,17 +42,20 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     ImportResult result;
-    result.report.formatEpoch = parsed.formatEpoch;
-    result.report.byteOrder = parsed.byteOrder;
-    result.report.sourceSize = size;
-    describeSourceIdentity(data, size, result.report);
-    for (const auto& block : parsed.blocks) {
-        result.report.blocks.push_back(block.info);
-    }
-    if (parsed.trailingByteCount != 0) {
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "Preserved classification after a terminal block with "
-            + std::to_string(parsed.trailingByteCount) + " trailing bytes."});
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::SourceReport);
+        result.report.formatEpoch = parsed.formatEpoch;
+        result.report.byteOrder = parsed.byteOrder;
+        result.report.sourceSize = size;
+        describeSourceIdentity(data, size, result.report);
+        for (const auto& block : parsed.blocks) {
+            result.report.blocks.push_back(block.info);
+        }
+        if (parsed.trailingByteCount != 0) {
+            result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
+                "Preserved classification after a terminal block with "
+                + std::to_string(parsed.trailingByteCount) + " trailing bytes."});
+        }
     }
 
     result.document = createDocument(
@@ -56,8 +63,11 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
 
     // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
     // made a routine fallback indistinguishable from an unreadable document.
-    for (const auto& diagnostic : result.report.diagnostics) {
-        musx::util::Logger::log(diagnostic.level, diagnostic.message);
+    {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::DiagnosticDelivery);
+        for (const auto& diagnostic : result.report.diagnostics) {
+            musx::util::Logger::log(diagnostic.level, diagnostic.message);
+        }
     }
     return result;
 }
@@ -103,26 +113,31 @@ ImportResult Reader::readWithParser(
     XmlParser parseXml, DocumentParser parseDocument)
 {
     return runGuarded([&] {
-    std::ifstream input(path, std::ios::binary | std::ios::ate);
-    if (!input) {
-        throw std::runtime_error("Unable to open MUS input: " + path.string());
-    }
-    const auto end = input.tellg();
-    if (end <= 0) {
-        throw std::invalid_argument("MUS input is empty: " + path.string());
-    }
-    const auto unsignedSize = static_cast<std::uintmax_t>(end);
-    if (unsignedSize > (std::numeric_limits<std::size_t>::max)()
-        || unsignedSize > static_cast<std::uintmax_t>(
-            (std::numeric_limits<std::streamsize>::max)())) {
-        throw std::length_error("MUS input is too large for this platform");
-    }
-    std::vector<std::uint8_t> data(static_cast<std::size_t>(unsignedSize));
-    input.seekg(0);
-    input.read(reinterpret_cast<char*>(data.data()), static_cast<std::streamsize>(data.size()));
-    if (!input) {
-        throw std::runtime_error("Unable to read complete MUS input: " + path.string());
-    }
+    auto data = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::FileIo);
+        std::ifstream input(path, std::ios::binary | std::ios::ate);
+        if (!input) {
+            throw std::runtime_error("Unable to open MUS input: " + path.string());
+        }
+        const auto end = input.tellg();
+        if (end <= 0) {
+            throw std::invalid_argument("MUS input is empty: " + path.string());
+        }
+        const auto unsignedSize = static_cast<std::uintmax_t>(end);
+        if (unsignedSize > (std::numeric_limits<std::size_t>::max)()
+            || unsignedSize > static_cast<std::uintmax_t>(
+                (std::numeric_limits<std::streamsize>::max)())) {
+            throw std::length_error("MUS input is too large for this platform");
+        }
+        std::vector<std::uint8_t> result(static_cast<std::size_t>(unsignedSize));
+        input.seekg(0);
+        input.read(
+            reinterpret_cast<char*>(result.data()), static_cast<std::streamsize>(result.size()));
+        if (!input) {
+            throw std::runtime_error("Unable to read complete MUS input: " + path.string());
+        }
+        return result;
+    }();
     return readImpl(data.data(), data.size(), path, options, parseXml, parseDocument);
     });
 }
