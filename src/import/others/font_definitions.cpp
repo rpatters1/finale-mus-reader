@@ -28,8 +28,7 @@ using FontDefinitionTarget = musx::dom::others::FontDefinition;
 void convertNameToUtf8(void* instance, const SourceProfile&, const musx::dom::DocumentPtr&)
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
-    font->name = text::toUtf8(
-        font->name, text::codePageForCharset(font->charsetBank, font->charsetVal));
+    font->name = text::toUtf8(font->name, font->charsetBank, font->charsetVal);
 }
 
 // Before Finale 3.2 the font record carries no charset at all, so `charsetBank` and
@@ -72,18 +71,15 @@ void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile,
 // is consistent with a Windows font-selection attribute that has no Mac equivalent.
 //
 // The remaining four words are unused, and are zero everywhere.
-constexpr std::uint8_t charsetBankBit = 13;
-constexpr std::uint8_t charsetValueBits = 12;
-
 const FieldMapping fontFields[] = {
     // Bit 13 distinguishes the two banks: the nibble holds 1 for Mac and 2 for Windows, so
     // only a Windows font sets it. An explicit conversion keeps the enum honest rather than
     // relying on the legacy encoding happening to match musxdom's enumerators.
     MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
-        charsetBankBit, 1, charsetBank,
+        text::legacyCharsetBankBit, 1, charsetBank,
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
     MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
-        /*firstBit*/ 0, charsetValueBits, charsetVal),
+        /*firstBit*/ 0, text::legacyCharsetValueBits, charsetVal),
     MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
         /*firstBit*/ 0, /*bitCount*/ 8, pitch, value & 0x0F),
     MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 1,
@@ -126,9 +122,9 @@ constexpr std::uint8_t pitchFamilyOffset = 2;
 constexpr std::uint8_t nameOffset = 12;
 
 const FieldMapping classFontFields[] = {
-    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, charsetBankBit, 1, charsetBank,
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, text::legacyCharsetBankBit, 1, charsetBank,
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
-    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, 0, charsetValueBits, charsetVal),
+    MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, 0, text::legacyCharsetValueBits, charsetVal),
     MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, pitch,
         value & 0x0F),
     MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, family,

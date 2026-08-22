@@ -20,6 +20,7 @@ namespace {
 
 ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     if (!data || size == 0) {
@@ -51,7 +52,7 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     result.document = createDocument(
-        parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
+        parsed, data, size, sourcePath, options, parseXml, parseDocument, result.report);
 
     // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
     // made a routine fallback indistinguishable from an unreadable document.
@@ -98,6 +99,7 @@ ImportResult runGuarded(Body&& body)
 
 ImportResult Reader::readWithParser(
     const std::filesystem::path& path,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     return runGuarded([&] {
@@ -121,16 +123,17 @@ ImportResult Reader::readWithParser(
     if (!input) {
         throw std::runtime_error("Unable to read complete MUS input: " + path.string());
     }
-    return readImpl(data.data(), data.size(), path, parseXml, parseDocument);
+    return readImpl(data.data(), data.size(), path, options, parseXml, parseDocument);
     });
 }
 
 ImportResult Reader::readWithParser(
     const std::uint8_t* data, std::size_t size,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     return runGuarded(
-        [&] { return readImpl(data, size, std::nullopt, parseXml, parseDocument); });
+        [&] { return readImpl(data, size, std::nullopt, options, parseXml, parseDocument); });
 }
 
 } // namespace finale_mus_reader

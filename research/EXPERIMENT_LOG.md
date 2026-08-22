@@ -358,6 +358,20 @@
   prefix is insufficient to establish the sequence. The complete procedure is in
   `LEGACY_OPTION_MAPPINGS.md`; the evidence request is C7 in `EVIDENCE_REQUESTS.md`.
 
+## 2026-08-21 — Zlib class-record part dimension
+
+- **Question:** Does the fourth header word of a zlib detail record identify an incidence or
+  the source part?
+- **Method:** Compared all class `0x041d` headers and payloads in two Finale 2008 documents
+  with the raw `measGraphicAssign` nodes in their independently decoded Finale 27 companions.
+- **Observation:** Each source has nine records whose header value is zero and three whose
+  value is 17. The latter repeat the complete score payloads for the same staff and measures.
+  Each companion has corresponding empty nodes with `part="17" shared="true"`; every node's
+  XML incidence is zero. Header and trailer bytes otherwise match their score counterparts.
+- **Conclusion:** **Confirmed for `0x041d`.** The header field is the part id. Incidence remains
+  structural within the class payload. Current import remains deliberately score-only; linked
+  part reconstruction and sharing-mode inference are deferred.
+
 ## 2026-08-11 — Source-only FontOptions capture
 
 - **Question:** Can the reader safely capture the default-font tuples already identified without first deciding how
@@ -471,6 +485,11 @@
   it never stored. 2,516 of the 2,629 FontOptions disagreements then present in the corpus were this single rule.
 - **Artifacts:** `src/import/options/font_options.cpp` (`semanticType`), `tests/reader_tests.cpp`,
   `tools/options_coverage_probe.cpp`, `scripts/options_coverage_report.py`.
+  The two coverage tools are historical names retained because they performed this experiment;
+  both were later replaced by the registry-driven recovery-coverage pipeline and deleted. Their
+  historical forms on main remain available as
+  `git show f3b8905:tools/options_coverage_probe.cpp` and
+  `git show f3b8905:scripts/options_coverage_report.py`.
 
 ## 2026-08-16 — MultimeasureRestOptions, and a layout boundary inside the uncompressed epoch
 
@@ -524,7 +543,8 @@
   can be named. Nothing else about this class is outstanding.
 - **Artifacts:** `src/import/options/multimeasure_rest_options.cpp`, `tests/reader_tests.cpp`,
   `tests/mapping_tests.cpp`, `tools/options_coverage_probe.cpp`, `scripts/options_coverage_report.py`,
-  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#multimeasure-rest-defaults).
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#multimeasure-rest-defaults). The two coverage-tool names
+  refer to the deleted historical tools identified in the 2026-08-12 entry above.
 
 ## 2026-08-17 — LyricOptions: six selectors, four arrival dates, and eleven fields nobody stores
 
@@ -1054,6 +1074,40 @@
   2 and 3 after.
 - **Artifacts:** `src/import/texts/text_pool.cpp`, `tests/text_pool_tests.cpp`,
   [`FORMAT_NOTES.md`](FORMAT_NOTES.md#bookmarks).
+
+## 2026-08-21 — The first word-extension connection table has eight entries
+
+- **Question:** why did one Finale 2004 source disagree with its Finale 27 companion on six fields in selector
+  `55`'s word-extension connection table?
+- **Result:** the source has four incidences, exactly 24 words or eight complete three-word elements. Reading those
+  eight elements in the established style order reproduces every companion connection point and offset. The
+  previous nine-element assumption admitted only the later 30-word layout and caused the early payload to be
+  interpreted from seeded values rather than from its own bytes.
+- **Structural boundary:** 24 words carries the first eight style types and omits `zeroOffset`; 27 or more words
+  carries all nine, with the observed fixed-row form using 30 words and leaving its final three as padding. The
+  importer now selects the layout from that payload length rather than from the saving version.
+- **Validation:** a focused synthetic test exercises both shapes, and a one-document recovery probe reproduces all
+  nine companion values with no lyric-options differences. The ninth value in the early document remains the
+  pinned baseline because no source element states it.
+- **Artifacts:** `src/import/options/lyric_options.cpp`, `tests/mapping_tests.cpp`, and
+  [`FORMAT_NOTES.md`](FORMAT_NOTES.md#two-collections-and-the-two-orders-that-do-not-match-musxdom).
+
+## 2026-08-21 — FontOptions semantic companion comparison deferred
+
+- **Current limitation:** `tools/coverage/surveyors/options/font_options.cpp` obtains its tuple
+  list from `ImportReport` field provenance. Independently parsed companions have no such
+  provenance, so they currently report no FontOptions tuples and
+  `scripts/recovery_coverage_report.py` excludes `font_options.tuples` from comparison.
+- **Deferred design:** emit each document's actual FontOptions values independently of optional
+  source provenance, identify entries by FontType, and compare normalized font identity, size,
+  and effects. Source-only provenance can remain attached as diagnostic metadata.
+- **Acceptance criterion:** source and companion observations both contain every actual
+  FontOptions entry; semantic comparison reports missing types, unresolved fonts, and value
+  differences; and the tuple exclusion in `recovery_coverage_report.py` is removed.
+- **Historical implementation:** the deleted standalone analyzer remains available as
+  `git show f3b8905:scripts/font_options_coverage.py` from main. Its direct corpus inventory,
+  subprocess, MUSX parsing, hard-coded FontType count, and duplicate normalization logic are
+  obsolete; only the semantic comparison it attempted should be carried forward.
 
 ## Commands
 

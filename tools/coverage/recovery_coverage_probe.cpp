@@ -75,6 +75,7 @@ struct Options
 {
     std::string corpusListPath;
     std::string outputPath;
+    std::string macSymbolFontsPath;
     // Verbose is the most permissive threshold, matching today's unfiltered default: no
     // flag means every diagnostic still prints, exactly as before this option existed.
     LogLevel minDiagnosticLevel = LogLevel::Verbose;
@@ -103,6 +104,7 @@ void printUsage()
     std::fprintf(stderr,
         "usage: recovery_coverage_probe [-h|--help] "
         "[--min-diagnostic-level=verbose|info|warning|error] "
+        "[--mac-symbol-fonts=path] "
         "[--progress] <corpus-tsv> <output-jsonl>\n");
 }
 
@@ -140,6 +142,9 @@ void printHelp()
         "  --min-diagnostic-level=verbose|info|warning|error\n"
         "                  Drop reader diagnostics below this level on stderr instead\n"
         "                  of printing them. Default: verbose (nothing is dropped).\n"
+        "  --mac-symbol-fonts=path\n"
+        "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
+        "                  contents to the reader for symbol-glyph decoding.\n"
         "  --progress      Print \"Processed X of T\" to stdout, updated in place, as\n"
         "                  documents are read.\n"
         "  -h, --help      Print this help and exit.\n");
@@ -160,6 +165,7 @@ std::optional<Options> parseOptions(int argc, char** argv)
     for (int i = 1; i < argc; ++i) {
         const std::string_view arg = argv[i];
         constexpr std::string_view levelFlag = "--min-diagnostic-level=";
+        constexpr std::string_view symbolFontsFlag = "--mac-symbol-fonts=";
         if (arg == "--progress") {
             options.showProgress = true;
         } else if (arg.substr(0, levelFlag.size()) == levelFlag) {
@@ -172,6 +178,12 @@ std::optional<Options> parseOptions(int argc, char** argv)
                 std::fprintf(stderr,
                     "unrecognized --min-diagnostic-level value: %.*s (ignoring)\n",
                     static_cast<int>(value.size()), value.data());
+            }
+        } else if (arg.substr(0, symbolFontsFlag.size()) == symbolFontsFlag) {
+            options.macSymbolFontsPath = std::string(arg.substr(symbolFontsFlag.size()));
+            if (options.macSymbolFontsPath.empty()) {
+                std::fprintf(stderr, "--mac-symbol-fonts requires a path\n");
+                return std::nullopt;
             }
         } else {
             positional.emplace_back(arg);
@@ -497,6 +509,33 @@ int main(int argc, char** argv)
     const std::filesystem::path corpusListPath = options->corpusListPath;
     const auto topLabel = corpusListPath.stem().string();
 
+    std::vector<std::uint8_t> macSymbolFonts;
+    if (!options->macSymbolFontsPath.empty()) {
+        std::ifstream input(options->macSymbolFontsPath, std::ios::binary | std::ios::ate);
+        if (!input) {
+            std::fprintf(stderr, "cannot open MacSymbolFonts file: %s\n",
+                options->macSymbolFontsPath.c_str());
+            return 2;
+        }
+        const auto end = input.tellg();
+        if (end < 0 || static_cast<std::uintmax_t>(end)
+                > static_cast<std::uintmax_t>((std::numeric_limits<std::streamsize>::max)())) {
+            std::fprintf(stderr, "MacSymbolFonts file is too large: %s\n",
+                options->macSymbolFontsPath.c_str());
+            return 2;
+        }
+        macSymbolFonts.resize(static_cast<std::size_t>(end));
+        input.seekg(0);
+        input.read(reinterpret_cast<char*>(macSymbolFonts.data()),
+            static_cast<std::streamsize>(macSymbolFonts.size()));
+        if (!input && !macSymbolFonts.empty()) {
+            std::fprintf(stderr, "cannot read MacSymbolFonts file: %s\n",
+                options->macSymbolFontsPath.c_str());
+            return 2;
+        }
+    }
+    const finale_mus_reader::ReaderOptions readerOptions{macSymbolFonts};
+
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
     std::map<std::string, std::vector<CompanionConvention>> corpusCompanions;
@@ -520,6 +559,17 @@ int main(int argc, char** argv)
 
     using namespace finale_mus_reader;
     using namespace finale_mus_reader::coverage;
+
+    std::cout << "Options:\n"
+        << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
+        << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
+        << "  MacSymbolFonts: ";
+    if (options->macSymbolFontsPath.empty()) {
+        std::cout << "not supplied";
+    } else {
+        std::cout << std::quoted(options->macSymbolFontsPath);
+    }
+    std::cout << '\n';
 
     const auto total = rows.size();
     const auto segments = segmentByCorpus(rows, corpusRoots, corpusCompanions);
@@ -608,7 +658,8 @@ int main(int argc, char** argv)
         bool sourceOk = false;
         const auto started = std::chrono::steady_clock::now();
         try {
-            const auto result = Reader::read<musx::xml::pugi::Document>(std::filesystem::path(path));
+            const auto result = Reader::read<musx::xml::pugi::Document>(
+                std::filesystem::path(path), readerOptions);
             if (!result.document) {
                 throw std::runtime_error(importError(result.report));
             }

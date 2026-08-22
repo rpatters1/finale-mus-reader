@@ -60,13 +60,14 @@ struct EnigmaTextSource
     /// needs no code page at all, and its binary command codes appear as the two-byte UTF-8
     /// spelling of the same value.
     bool utf8{};
-    /// @brief The code page for text that belongs to a command rather than to the document,
-    /// principally a font name. Such text is not covered by any font's own character set.
-    CodePage commandCodePage = CodePage::MacRoman;
+    /// @brief The source platform for text that no font or packed character set identifies.
+    SourcePlatform platform = SourcePlatform::Unknown;
     /// @brief The text class's document default, used until an explicit font command changes it.
     /// @details Its face also supplies the initial font command when the record omits one, and
     /// its size and effects complete an otherwise partial initial formatting state.
     std::shared_ptr<const musx::dom::FontInfo> initialFont;
+    /// @brief Optional names whose character values are symbol glyph numbers.
+    const SymbolFontNames* symbolFontNames{};
 };
 
 /// @brief Converts one legacy Enigma text record body to the modern, UTF-8 spelling.

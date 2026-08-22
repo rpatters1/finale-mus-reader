@@ -3,6 +3,7 @@
 
 #include "import/support/text_encoding.h"
 
+#include <optional>
 #include <string_view>
 
 #if defined(_WIN32)
@@ -20,9 +21,64 @@
 namespace finale_mus_reader {
 namespace text {
 
+SymbolFontNames parseMacSymbolFonts(std::span<const std::uint8_t> contents)
+{
+    SymbolFontNames result;
+    std::size_t lineStart = 0;
+    while (lineStart < contents.size()) {
+        std::size_t lineEnd = lineStart;
+        while (lineEnd < contents.size() && contents[lineEnd] != '\n') {
+            ++lineEnd;
+        }
+        while (lineStart < lineEnd && isSpace(contents[lineStart])) ++lineStart;
+        while (lineEnd > lineStart && isSpace(contents[lineEnd - 1])) --lineEnd;
+        if (lineEnd > lineStart) {
+            const auto* first = reinterpret_cast<const char*>(contents.data() + lineStart);
+            auto normalized = musx::dom::normalizeFontName(
+                std::string(first, static_cast<std::size_t>(lineEnd - lineStart)));
+            if (!normalized.empty()) result.insert(std::move(normalized));
+        }
+        lineStart = lineEnd;
+        while (lineStart < contents.size() && contents[lineStart] != '\n') ++lineStart;
+        if (lineStart < contents.size()) ++lineStart;
+    }
+    return result;
+}
+
 namespace {
 
 using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
+
+// Windows code page numbers are the portable encoding identifier: Windows consumes them
+// directly, while the other platforms map them to their native conversion APIs.
+enum class CodePage : int
+{
+    Windows1250 = 1250,
+    Windows1251 = 1251,
+    Windows1252 = 1252,
+    Windows1253 = 1253,
+    Windows1254 = 1254,
+    Windows1255 = 1255,
+    Windows1256 = 1256,
+    Windows1257 = 1257,
+    Thai874 = 874,
+    ShiftJis = 932,
+    Gb2312 = 936,
+    Korean = 949,
+    Big5 = 950,
+    MacRoman = 10000,
+    MacJapanese = 10001,
+    MacTradChinese = 10002,
+    MacKorean = 10003,
+    MacArabic = 10004,
+    MacHebrew = 10005,
+    MacGreek = 10006,
+    MacCyrillic = 10007,
+    MacSimpChinese = 10008,
+    MacThai = 10021,
+    MacCentralEurope = 10029,
+    MacTurkish = 10081,
+};
 
 // Windows LOGFONT charset values, from wingdi.h.
 constexpr int windowsAnsiCharset = 0;
@@ -195,7 +251,6 @@ std::string convertWithTable(const char16_t* table, const std::string& source)
 const char* iconvNameFor(CodePage codePage)
 {
     switch (codePage) {
-    case CodePage::Utf8:              return "UTF-8";
     case CodePage::Windows1250:       return "CP1250";
     case CodePage::Windows1251:       return "CP1251";
     case CodePage::Windows1252:       return "CP1252";
@@ -223,9 +278,6 @@ const char* iconvNameFor(CodePage codePage)
     case CodePage::MacThai:           return "MACTHAI";
     case CodePage::MacCentralEurope:  return "MACCENTRALEUROPE";
     case CodePage::MacTurkish:        return "MACTURKISH";
-    case CodePage::Platform:
-        // Deliberately unmapped: see the enumerator's documentation.
-        return nullptr;
     }
     return nullptr;
 }
@@ -368,7 +420,7 @@ std::optional<std::string> convert(CodePage codePage, const std::string& source)
 
 } // namespace
 
-CodePage codePageForCharset(Bank bank, int charsetVal)
+static CodePage codePageForCharset(Bank bank, int charsetVal)
 {
     switch (bank) {
     case Bank::Windows:
@@ -430,7 +482,9 @@ CodePage codePageForCharset(Bank bank, int charsetVal)
     return CodePage::MacRoman;
 }
 
-std::string toUtf8(const std::string& source, CodePage codePage)
+static std::string symbolBytesToUtf8(std::string_view source);
+
+static std::string toUtf8WithCodePage(const std::string& source, CodePage codePage)
 {
     if (auto converted = convert(codePage, source)) {
         return *converted;
@@ -445,6 +499,14 @@ std::string toUtf8(const std::string& source, CodePage codePage)
     // can carry: it would put a malformed string into the document and an unparseable one into
     // any EnigmaXML written from it.
     return symbolBytesToUtf8(source);
+}
+
+static CodePage codePageForPackedCharset(std::uint16_t packed)
+{
+    constexpr auto valueMask = (std::uint16_t{1} << legacyCharsetValueBits) - 1;
+    const auto bank = (packed & (std::uint16_t{1} << legacyCharsetBankBit)) != 0
+        ? Bank::Windows : Bank::MacOS;
+    return codePageForCharset(bank, packed & valueMask);
 }
 
 std::string normalizeLineBreaks(std::string source)
@@ -464,15 +526,24 @@ std::string normalizeLineBreaks(std::string source)
     return result;
 }
 
-CodePage platformCodePage(SourcePlatform platform)
+static CodePage platformCodePage(SourcePlatform platform)
 {
     using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
     return codePageForCharset(
         platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
 }
 
-std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
+static CodePage documentCodePage(const musx::dom::DocumentPtr& document)
+{
+    const auto header = document->getHeader();
+    return platformCodePage(header
+            && header->textEncoding == musx::dom::header::TextEncoding::Windows
+        ? SourcePlatform::Windows : SourcePlatform::MacOS);
+}
+
+static std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont,
+    const SymbolFontNames* symbolFontNames)
 {
     if (fontId == 0) {
         return std::nullopt;
@@ -483,6 +554,20 @@ std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& do
         return unknownFont;
     }
     if (definition->calcIsSymbolFont()) {
+        return std::nullopt;
+    }
+    if (symbolFontNames && symbolFontNames->contains(
+            musx::dom::normalizeFontName(definition->name))) {
+        return std::nullopt;
+    }
+    const auto defaultMusic = document->getOthers()
+        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    if (defaultMusic && !definition->name.empty()
+        && musx::dom::normalizeFontName(definition->name)
+            == musx::dom::normalizeFontName(defaultMusic->name)) {
+        // Believed: a second definition naming the default music face has the same
+        // symbol-glyph semantics as comparator zero even when its stored character set says
+        // text. The format supplies no separate statement that proves the duplicate's role.
         return std::nullopt;
     }
     return codePageForCharset(definition->charsetBank, definition->charsetVal);
@@ -516,23 +601,13 @@ std::optional<char32_t> firstCodepoint(std::string_view utf8)
 
 } // namespace
 
-char32_t codepointFromByte(std::uint8_t stored, std::optional<CodePage> codePage)
+static char32_t firstCodepointOrByte(std::uint8_t stored, const std::string& converted)
 {
-    if (!codePage) {
-        return static_cast<char32_t>(stored);
-    }
-    // Converting the byte and then reading back the code point keeps one decoder rather than
-    // two: the byte-to-code-point tables and the platform converters both live behind
-    // @ref toUtf8, and only one of them is a table this file owns.
-    const auto converted = toUtf8(std::string(1, static_cast<char>(stored)), *codePage);
     const auto decoded = firstCodepoint(converted);
-    // toUtf8 always yields valid UTF-8, falling back to the symbol encoding when a converter
-    // rejects the byte, so this is unreachable rather than a policy; preserving the byte keeps
-    // it that way if a future converter ever returns something else.
     return decoded.value_or(static_cast<char32_t>(stored));
 }
 
-std::string symbolBytesToUtf8(std::string_view source)
+static std::string symbolBytesToUtf8(std::string_view source)
 {
     std::string out;
     out.reserve(source.size());
@@ -547,6 +622,43 @@ std::string symbolBytesToUtf8(std::string_view source)
         }
     }
     return out;
+}
+
+std::string toUtf8(std::string_view source, SourcePlatform platform)
+{
+    return toUtf8WithCodePage(std::string(source), platformCodePage(platform));
+}
+
+std::string toUtf8(std::string_view source, Bank bank, int charsetVal)
+{
+    return toUtf8WithCodePage(std::string(source), codePageForCharset(bank, charsetVal));
+}
+
+std::string toUtf8(std::string_view source, std::uint16_t packedCharset)
+{
+    return toUtf8WithCodePage(std::string(source), codePageForPackedCharset(packedCharset));
+}
+
+std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
+    const SymbolFontNames* symbolFontNames)
+{
+    const auto unresolved = unresolvedFontFallback == UnresolvedFontFallback::Text
+        ? std::optional<CodePage>(documentCodePage(document)) : std::nullopt;
+    if (const auto codePage = codePageForDocumentFont(
+            document, fontId, unresolved, symbolFontNames)) {
+        return toUtf8WithCodePage(std::string(source), *codePage);
+    }
+    return symbolBytesToUtf8(source);
+}
+
+char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
+    const SymbolFontNames* symbolFontNames)
+{
+    const std::string source(1, static_cast<char>(stored));
+    return firstCodepointOrByte(stored, toUtf8(source, document, fontId,
+        unresolvedFontFallback, symbolFontNames));
 }
 
 } // namespace text

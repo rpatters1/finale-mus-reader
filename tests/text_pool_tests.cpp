@@ -13,6 +13,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -20,6 +22,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
+#include "import/support/enigma_text.h"
 #include "import/support/legacy_mapping.h"
 #include "import/texts.h"
 #include "records/legacy_record_index.h"
@@ -114,6 +117,24 @@ musx::dom::DocumentPtr makeTextDocument()
     font->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
     font->charsetVal = 0;
     document->getOthers()->add(musx::dom::others::FontDefinition::XmlNodeName, font);
+
+    auto japaneseFont = std::make_shared<musx::dom::others::FontDefinition>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        musx::dom::Cmper(9));
+    japaneseFont->name = "ヒラギノ明朝 Pro W3";
+    japaneseFont->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
+    japaneseFont->charsetVal = 1;
+    document->getOthers()->add(
+        musx::dom::others::FontDefinition::XmlNodeName, japaneseFont);
+
+    auto unspellableFont = std::make_shared<musx::dom::others::FontDefinition>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        musx::dom::Cmper(10));
+    unspellableFont->name = "p^sharp(";
+    unspellableFont->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
+    unspellableFont->charsetVal = 0;
+    document->getOthers()->add(
+        musx::dom::others::FontDefinition::XmlNodeName, unspellableFont);
     return document;
 }
 
@@ -555,6 +576,23 @@ void testCodaBannerBlockTexts()
     expectText(textOf<BlockText>(shorter, 1) == "^font(Monaco)^size(12)^nfx(0)short",
         "A Coda block text was not recovered: " + textOf<BlockText>(shorter, 1));
 
+    // In the same controlled record, replace the opening three literal bytes with hashes.
+    // The pair is escaped content; the remaining lone hash still names the page insert.
+    const auto shortPath = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F100/F100-short-text.mus";
+    std::ifstream shortInput(shortPath, std::ios::binary);
+    auto shortBytes = std::vector<std::uint8_t>(
+        std::istreambuf_iterator<char>(shortInput), std::istreambuf_iterator<char>());
+    constexpr std::string_view originalText = "short";
+    const auto original = std::search(shortBytes.begin(), shortBytes.end(),
+        originalText.begin(), originalText.end());
+    expectText(original != shortBytes.end(), "The controlled Coda text bytes were not found");
+    std::fill_n(original, 3, static_cast<std::uint8_t>('#'));
+    const auto escapedInsert = Reader::read<TextPoolXmlDocument>(shortBytes);
+    expectText(textOf<BlockText>(escapedInsert, 1)
+            == "^font(Monaco)^size(12)^nfx(0)#^page(0)rt",
+        "A doubled Coda insert character was not preserved as literal text");
+
     // The same document with one string lengthened. The record is a fixed four incidences
     // either way, so the previous save's bytes remain after the terminator and must not be
     // read as text.
@@ -648,6 +686,31 @@ void testSyntheticStreamBoundaries()
     const auto namedCategory = importStream(fontStream('\xa5', '\x05'));
     expectText(textOf<BlockText>(namedCategory, 1) == "^fontMus(Times)a",
         "A defined comparator lost the marking category its command names");
+    const auto unspellableFont = importStream(fontStream('\x85', '\x0b'));
+    expectText(textOf<BlockText>(unspellableFont, 1) == "^fontid(10)a",
+        "A font name that cannot fit Enigma argument syntax produced an invalid command");
+
+    const auto spacedFontArgument = importStream(
+        "^block(1)^font (Times)^size(12)^efx(plain)Ped.^end");
+    expectText(textOf<BlockText>(spacedFontArgument, 1)
+            == "^font(Times)^size(12)^nfx(0)Ped.",
+        "Whitespace between a font command and its argument made the font name literal");
+
+    const std::string japaneseName("\x83\x71\x83\x89\x83\x4d\x83\x6d\x96\xbe\x92\xa9 Pro W3", 19);
+    const std::string japaneseText("\x95\x73\x94\x40\x8b\x41", 6);
+    const auto japanese = importStream(
+        "^block(1)^font(" + japaneseName + ",4097)" + japaneseText + "^end");
+    expectText(textOf<BlockText>(japanese, 1) == "^font(ヒラギノ明朝 Pro W3)不如帰",
+        "A font command did not use its packed character set for its name and literal text");
+
+    const auto droppedEffects = importStream(
+        "^block(1)^font(Times)^size(48)^efx(plain)^efx(outline)^efx(shadow)^efx(bold)a^end");
+    expectText(textOf<BlockText>(droppedEffects, 1) == "^font(Times)^size(48)^nfx(1)a",
+        "Unsupported outline and shadow effects were not dropped from an effect run");
+    const auto droppedRawEffects = importStream(
+        "^block(1)^font(Times)^size(48)^nfx(89)a^end");
+    expectText(textOf<BlockText>(droppedRawEffects, 1) == "^font(Times)^size(48)^nfx(65)a",
+        "Unsupported outline and shadow bits were not dropped from a raw nfx mask");
 
     // A keyword this reader does not import is named rather than silently skipped, which is
     // how an unobserved spelling would be found.
@@ -702,6 +765,36 @@ void testSyntheticStreamBoundaries()
         "An empty text pool was not silent");
 }
 
+void testNestedParenthesesInInitialFontName()
+{
+    const auto document = makeTextDocument();
+    musx::dom::FontInfo defaultFont(document);
+    defaultFont.fontSize = 14;
+    defaultFont.setEnigmaStyles(2);
+    bool fontSynthesized = false;
+    bool sizeSynthesized = false;
+    bool effectsSynthesized = false;
+    constexpr std::string_view value
+        = "^font(Missing Font (1))^size(12)^nfx(2)Gliss.";
+
+    const auto initialized = finale_mus_reader::text::initializeEnigmaTextFontState(
+        std::string(value), defaultFont, &fontSynthesized, &sizeSynthesized,
+        &effectsSynthesized);
+    expectText(initialized == value,
+        "A parenthesis in a font name caused initial font state to be inserted inside it");
+    expectText(!fontSynthesized && !sizeSynthesized && !effectsSynthesized,
+        "A complete initial state with a parenthesized font name was reported as synthesized");
+
+    musx::dom::FontInfo unspellableDefault(document);
+    unspellableDefault.fontId = 10;
+    unspellableDefault.fontSize = 12;
+    unspellableDefault.setEnigmaStyles(0);
+    const auto completed = finale_mus_reader::text::initializeEnigmaTextFontState(
+        "text", unspellableDefault);
+    expectText(completed == "^fontid(10)^size(12)^nfx(0)text",
+        "An unspellable default font name produced an invalid synthesized command");
+}
+
 } // namespace
 
 TEST_CASE("Uncompressed text pool", "[texts]") { testUncompressedTextPool(); }
@@ -724,3 +817,7 @@ TEST_CASE("Bookmark text", "[texts]") { testBookmarkText(); }
 TEST_CASE("Coda banner block texts", "[texts]") { testCodaBannerBlockTexts(); }
 TEST_CASE("Coda banner lyric texts", "[texts]") { testCodaBannerLyricTexts(); }
 TEST_CASE("Text pool stream boundaries", "[texts]") { testSyntheticStreamBoundaries(); }
+TEST_CASE("Parentheses in initial font name", "[texts]")
+{
+    testNestedParenthesesInInitialFontName();
+}

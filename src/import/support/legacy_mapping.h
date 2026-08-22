@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "finale_mus_reader/reader.h"
+#include "import/support/text_encoding.h"
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
 #include "musx/factory/ConstructionContext.h"
@@ -268,6 +269,7 @@ struct SourceProfile
     std::optional<SourceVersion> version;
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform platform = SourcePlatform::Unknown;
+    const text::SymbolFontNames* symbolFontNames{};
 };
 
 /// @brief One numeric global's whole payload, in whichever encoding the source uses.

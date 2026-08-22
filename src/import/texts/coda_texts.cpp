@@ -113,8 +113,16 @@ std::string spellCodaBlock(
         insert = '^' + std::string(codaInsertCommands[selector]) + '('
             + std::to_string(style.words[codaStyleInsertArgumentSlot]) + ')';
     }
-    for (const auto character : characters) {
+    for (std::size_t at = 0; at < characters.size(); ++at) {
+        const auto character = characters[at];
         if (character == codaInsertCharacter) {
+            // A doubled insert character is escaped literal content and becomes one hash,
+            // parallel to Enigma's `^^` spelling for a literal caret.
+            if (at + 1 < characters.size() && characters[at + 1] == codaInsertCharacter) {
+                result.push_back(codaInsertCharacter);
+                ++at;
+                continue;
+            }
             // A selector with no command behind it leaves the character as it stands: the
             // block still says something, and inventing an insert would say the wrong thing.
             if (insert.empty()) {
@@ -305,7 +313,8 @@ void importCodaStoredTexts(const ImportContext& context)
     }
     // This era predates Unicode by a wide margin, so its bytes are always a code page.
     const text::EnigmaTextSource source{context.document, /*utf8*/ false,
-        text::platformCodePage(context.profile.platform)};
+        context.profile.platform, nullptr,
+        context.profile.symbolFontNames};
     importCodaBlockTexts(context, source);
     importCodaLyricTexts(context, source);
 }

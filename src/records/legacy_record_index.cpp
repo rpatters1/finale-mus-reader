@@ -16,7 +16,7 @@ constexpr std::size_t rowSize = 16;
 
 auto familyKey(const LegacyRow& row)
 {
-    return std::tie(row.tag, row.cmper1, row.cmper2);
+    return std::tie(row.tag, row.cmper1, row.cmper2, row.partId);
 }
 
 std::int16_t readWord(const std::uint8_t* data, ByteOrder byteOrder)
@@ -164,9 +164,10 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 }
 
 // The 2007 encoding replaces the fixed row with streams of self-describing records. Other
-// records in block 0x001a carry class, cmper1, incidence, and a 32-bit payload length. Detail
-// records in block 0x001b retain the pre-zlib second comparator between cmper1 and incidence;
-// the endian-specific length geometry is handled below.
+// records in block 0x001a carry class, cmper1, part id, and a 32-bit payload length. Detail
+// records in block 0x001b retain the pre-zlib second comparator between cmper1 and part id;
+// the endian-specific length geometry is handled below. Incidence arrays remain in each
+// class-specific payload rather than becoming a header dimension.
 // **Believed: that second comparator is the measure.** It holds the measure the assignment
 // belongs to, and the 20-word payload after it is the older mg tuple unchanged. Revise the
 // interpretation if contrary data appears, but do not discard the field by treating it as an
@@ -211,40 +212,39 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
 
             const auto primaryEnd = offset + headerSize + length;
             auto trailerOffset = primaryEnd;
-            // Some records carry a same-sized continuation segment. Its first two words
-            // repeat the byte count and zero. It has no independent class/key header, so
-            // the normalized row retains the primary payload and advances across the segment.
+            // Some records carry a same-sized continuation segment. Its first four bytes
+            // repeat the payload length in the file's byte order. It has no independent
+            // class/key header, so the normalized row retains the primary payload and
+            // advances across the segment.
             bool hasContinuation = false;
             if (length >= 4
-                && length <= (std::numeric_limits<std::uint16_t>::max)()
                 && length <= block.data.size() - primaryEnd
-                && readCmper(block.data.data() + primaryEnd, parsed.byteOrder) == length
-                && readCmper(block.data.data() + primaryEnd + 2, parsed.byteOrder) == 0) {
+                && readLong(block.data.data() + primaryEnd, parsed.byteOrder) == length) {
                 trailerOffset += length;
                 hasContinuation = true;
             }
-            if (trailerOffset + trailerSize > block.data.size()) {
-                break;
-            }
+            if (trailerOffset + trailerSize > block.data.size()) break;
             const auto trailerFirst = readWord(
                 block.data.data() + trailerOffset, parsed.byteOrder);
             const auto trailerSecond = readWord(
                 block.data.data() + trailerOffset + 2, parsed.byteOrder);
+            // Believed: a continued record repurposes the second trailer word as metadata.
+            // Observed values are not restricted to a single flag, whereas ordinary records
+            // retain the two-word zero trailer. The repeated length above states which form
+            // applies, so the metadata need not be interpreted to find the next record.
             if ((trailerFirst != 0 && !(hasContinuation && trailerFirst == -1))
-                || trailerSecond != 0) {
+                || (!hasContinuation && trailerSecond != 0)) {
                 break;
             }
-
             LegacyRow decoded;
             decoded.tag = classId;
             decoded.cmper1 = readCmper(header + 2, parsed.byteOrder);
             if (isDetail) {
                 decoded.cmper2 = readCmper(header + 4, parsed.byteOrder);
-                decoded.inci = readCmper(header + 6, parsed.byteOrder);
+                decoded.partId = readCmper(header + 6, parsed.byteOrder);
             } else {
-                decoded.inci = readCmper(header + 4, parsed.byteOrder);
+                decoded.partId = readCmper(header + 4, parsed.byteOrder);
             }
-            decoded.explicitIncidence = true;
             decoded.payloadOffset = static_cast<std::uint32_t>(payload.size());
             decoded.payloadSize = length;
             const auto* body = header + headerSize;
@@ -264,14 +264,15 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
 LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload)
 {
     // Sorting by family keeps each family contiguous, so a lookup is a binary search rather
-    // than a hashed allocation. Fixed rows have no incidence field and derive it from encounter
-    // order; variable records carry one explicitly and must retain it.
+    // than a hashed allocation. Fixed rows derive incidence from encounter order. A zlib class
+    // record normally holds the complete incidence array in its payload, so its row-level
+    // incidence is likewise zero unless several physical records share one complete identity.
     //
     // Incidence is defined by encounter order, so decode order is carried into the sort key
     // rather than left to the algorithm's stability. Relying on std::stable_sort would work
     // but would silently break if the comparator were ever reused with std::sort.
     for (std::size_t i = 0; i < rows.size(); ++i)
-        if (!rows[i].explicitIncidence) rows[i].inci = static_cast<std::uint32_t>(i);
+        rows[i].inci = static_cast<std::uint32_t>(i);
     std::sort(rows.begin(), rows.end(),
         [](const LegacyRow& left, const LegacyRow& right) {
             return std::tuple_cat(familyKey(left), std::tie(left.inci))
@@ -279,11 +280,9 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
         });
     std::uint32_t inci = 0;
     for (std::size_t i = 0; i < rows.size(); ++i) {
-        if (!rows[i].explicitIncidence) {
-            if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) ++inci;
-            else inci = 0;
-            rows[i].inci = inci;
-        }
+        if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) ++inci;
+        else inci = 0;
+        rows[i].inci = inci;
     }
 
     LegacyRowPool result;
@@ -293,9 +292,9 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
 }
 
 std::span<const LegacyRow> LegacyRowPool::getArray(
-    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2) const
+    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint16_t partId) const
 {
-    const auto key = std::tie(tag, cmper1, cmper2);
+    const auto key = std::tie(tag, cmper1, cmper2, partId);
     const auto range = std::equal_range(m_rows.begin(), m_rows.end(), key,
         [](const auto& left, const auto& right) {
             if constexpr (std::is_same_v<std::decay_t<decltype(left)>, LegacyRow>) {
@@ -310,19 +309,22 @@ std::span<const LegacyRow> LegacyRowPool::getArray(
 }
 
 const LegacyRow* LegacyRowPool::get(
-    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci) const
+    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci,
+    std::uint16_t partId) const
 {
-    const auto family = getArray(tag, cmper1, cmper2);
+    const auto family = getArray(tag, cmper1, cmper2, partId);
     const auto found = std::lower_bound(family.begin(), family.end(), inci,
         [](const LegacyRow& row, std::uint32_t value) { return row.inci < value; });
     return found != family.end() && found->inci == inci ? &*found : nullptr;
 }
 
-std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag) const
+std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(
+    LegacyTag tag, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
     for (const auto& row : m_rows) {
-        if (row.tag == tag && (result.empty() || result.back() != row.cmper1)) {
+        if (row.tag == tag && row.partId == partId
+            && (result.empty() || result.back() != row.cmper1)) {
             result.push_back(row.cmper1);
         }
     }
@@ -330,11 +332,11 @@ std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag) const
 }
 
 std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(
-    LegacyTag tag, std::uint16_t cmper1) const
+    LegacyTag tag, std::uint16_t cmper1, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
     for (const auto& row : m_rows) {
-        if (row.tag == tag && row.cmper1 == cmper1
+        if (row.tag == tag && row.partId == partId && row.cmper1 == cmper1
             && (result.empty() || result.back() != row.cmper2)) {
             result.push_back(row.cmper2);
         }

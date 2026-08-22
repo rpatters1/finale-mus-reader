@@ -613,20 +613,19 @@ are variable-length and self-describing:
 |---|---|---|
 | class id | 2 | numeric identifier standing in for what EnigmaXML names as an element |
 | cmper1 | 2 | primary comparator, as in every earlier era |
-| incidence | 2 | incidence, as in every earlier era |
+| part id | 2 | source part owning the record; zero denotes the score |
 | length | 4 | payload size |
 | payload | length | per class |
 | padding | 4 | zero in every observed record |
 
-Detail records in block `0x001b` add a 2-byte `cmper2` between `cmper1` and incidence. The
+Detail records in block `0x001b` add a 2-byte `cmper2` between `cmper1` and part id. The
 big-endian form then carries a 16-bit payload length; the little-endian transition form carries
-the length across the next two words and begins its payload two bytes later. This is **strong**:
-class `0x041d` supplies six
-`MeasureGraphicAssign` records in two distinct Finale 2008 documents; its second header
-comparator exactly supplies the companion measure numbers, while the primary comparator supplies
-staff IDs and the payload is the same 20-word tuple stored by pre-zlib `mg` details. It is also
-the same relative placement used by the fixed detail row. The reader treats this as the zlib
-detail invariant, subject to revision if a contrary detail class is found.
+the length across the next two words and begins its payload two bytes later. This is
+**confirmed** for class `0x041d`: each of two Finale 2008 documents supplies nine score records
+with part id 0 and three records with part id 17. Their companions contain the same three
+part-owned `MeasureGraphicAssign` nodes as `part="17" shared="true"`, while `cmper1`, `cmper2`,
+and the 20-word payload correspond to the score nodes' staff, measure, and values. Structural
+incidences remain the ordered tuples inside the payload, as they do in the fixed-row encoding.
 
 The logical model is therefore unchanged. What moved is the physical encoding: the
 two-character tag became a numeric class id, and the fixed six-word payload became a
@@ -1219,15 +1218,15 @@ In the big-endian `0x001a` ordinary variant, the first five words behave as:
 
 1. numeric record type;
 2. primary key/`cmper` or `0xfffe` option sentinel;
-3. secondary key/`inci`/part dimension candidate;
-4. additional key/flags/part dimension candidate;
-5. payload byte count.
+3. part id;
+4–5. payload byte count.
 
-Fields 2–4 are not fully named. For ordinary “other” records, field 2 tracks the `cmper` sequence and fields 3–4 are often zero. The `0xfffe` records at the front of `0x001a` are singletons with codes beginning at `0x000f` and are strongly interpreted as options. This shows that options are not wholly free-form in 2007+, although their code-to-option and field mappings remain open.
+The `0xfffe` records at the front of `0x001a` are singletons with codes beginning at `0x000f` and are strongly interpreted as options. This shows that options are not wholly free-form in 2007+, although their code-to-option and field mappings remain open.
 
-For `0x001b` details, the corresponding fields are numeric type, `cmper1`, `cmper2`, incidence,
+For `0x001b` details, the corresponding fields are numeric type, `cmper1`, `cmper2`, part id,
 and payload byte count. Class `0x041d` establishes `cmper1` as staff and `cmper2` as measure for
-`MeasureGraphicAssign`; part and sharing scope remain open.
+`MeasureGraphicAssign`. The current importer deliberately consumes only part id 0. Nonzero
+part records and the distinction between partial and absent sharing remain outside its scope.
 
 See [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md) for all observed identifiers. Examples of exact corpus-wide matches include:
 
@@ -1863,9 +1862,10 @@ Two locations are era-scoped rather than universal, in the same way the clef sca
   carries neither selector. The reader excludes that era by epoch, which needs no version test and
   so cannot fail on the Coda-banner Windows documents that state no version.
 
-Finale 27's own conversion of a Coda document invents a stem thickness that is in neither the
-source nor the pinned baseline — 224 for the Finale 1.0.0 fixture, 128 for the Finale 2.6.3 one —
-which is why those two fields are left at the baseline rather than matched to the companion.
+Finale's own conversion of a Coda document invents a stem thickness that is in neither the source
+nor the pinned baseline. The full three-corpus snapshot observes 224 for Finale 1.0.0, 128 for
+Finale 2.6, and 118, 123, or 128 for the Windows `PC 1.0+` banner. Those varying synthesized
+values are why stem width and offset are left at the baseline rather than matched to a companion.
 
 The zlib era reaches the same eight through `numericGlobalClass` and byte offsets. The stem offset
 is the field that proved four-byte class-record values are **not** a plain four-byte read: they
@@ -2186,7 +2186,7 @@ one boundary:
 | `30` | `0x002c` | **every era, including the Coda banner** | `wordExtHorzOffset`, the dialog's "Push" |
 | `34` | `0x0030` | present in every era; word 5 usable from Finale 2004 | `useSmartWordExtensions` |
 | `35` | `0x0031` | present in every era; word 5 usable from Finale 2004 | `useSmartHyphens` |
-| `55` | `0x0045` | Finale 2004 | the nine word-extension connection styles |
+| `55` | `0x0045` | Finale 2004 | eight, later nine, word-extension connection styles |
 | `57` | `0x0047` | Finale 2004 | `smartHyphenStart`, `wordExtNeedUnderscore`, `wordExtMinLength`, `wordExtOffsetToNotehead` |
 | `58` | `0x0048` | Finale 2011, and the record grows to say so | the three `showAutoNumbersOn…` flags and `lyricAutoNumType` |
 | `67` | `0x0051` | Finale 3.x | `wordExtLineWidth` |
@@ -2202,9 +2202,11 @@ the baseline would be right once by accident and wrong everywhere else.
 
 #### Two collections, and the two orders that do not match musxdom
 
-The **word-extension connection table** at selector `55` is nine three-word elements — connection point, then the
-horizontal and vertical offsets — laid out in musxdom's own `WordExtConnectStyleType` order. The payload is five
-fixed rows, thirty words, of which the last three are padding.
+The **word-extension connection table** at selector `55` begins as eight three-word elements — connection point,
+then the horizontal and vertical offsets — laid out in the first eight positions of musxdom's own
+`WordExtConnectStyleType` order. Its Finale 2004 payload is four fixed rows and has no `zeroOffset` element. A later
+layout adds `zeroOffset` as the ninth element and grows to five fixed rows, thirty words, of which the last three
+are padding. Payload length therefore selects the layout without a version gate.
 
 Its connection point is numbered on a scale this class does not own. The values run `0x10` to `0x15`, continuing a
 wider entry-connection numbering that begins at note and stem attachments, and their order is
@@ -2787,7 +2789,13 @@ the `FN` record's own header holds: the high nibble is the bank, 1 for Mac and 2
 and the low twelve bits are the character set value. `4096` is `0x1000`, Mac with no character
 set, and `8194` is `0x2002`, the Windows symbol character set — and both agree exactly with
 the `FN` header of the font they name in `F2006-embedded-tiff.mus`. The value is therefore
-redundant with the font definition, and the reader does not carry it forward.
+redundant with the font definition, and the reader does not carry it forward. It is not
+redundant while reading the command itself, however: `mus-f2884c8c17e584a9` stores
+`ヒラギノ明朝 Pro W3` as Shift-JIS bytes and gives the command the packed value `4097`
+(`0x1001`, Mac Japanese). Decoding that name as the document's Mac Roman default produces
+mojibake and prevents it from resolving to the correctly decoded font definition. The
+parenthetical therefore decodes the stored font name before resolution; the document platform
+is only the fallback for a command that omits it.
 
 A font referenced by id is spelled `Font` followed by the id, with a character set of `0`:
 `^font(Font0,0)`. musxdom reads that spelling natively.
@@ -2834,6 +2842,15 @@ page at all and preserve the byte as the code point of the same value:
   Finale 97 records Mac Roman for its own `Pmusic`, yet Finale 27 converts the same document's
   expression characters byte for byte and rewrites the font as a symbol font. The character
   set fields did not start carrying the symbol marker until the compressed eras.
+
+**Believed, not confirmed:** the same rule extends to a nonzero definition with the same
+normalized name as font 0.
+`mus-bb73336c4c45f509` defines `Pmusic` at both 0 and 23 with Mac Roman character sets, and
+four expression records explicitly select comparator 23 before bytes `0x82` or `0x8d`.
+Finale 27 rewrites those runs under `Font0` and preserves the byte values, but that conversion
+also had `Pmusic` in the machine's user-editable `MacSymbolFonts.txt`. The observation is
+consistent with typeface identity deciding the runs; it cannot distinguish that rule from the
+machine-local override.
 
 Legacy line breaks are carriage returns and become line feeds: Finale 27 writes `\n` where
 `F97-fileinfo-short.mus` has `\r`, and emits no `&#xD;` anywhere.
@@ -2942,12 +2959,21 @@ and 2 and 3 in the Finale 2012 one.
 
 ### The Coda-banner epoch
 
-**Open, and deliberately uncovered.** Its two length-prefixed text chunks are empty in every
-fixture. Its block text is instead in the `HT` others family, as a stream that alternates
-NUL-terminated strings with binary layout data across incidences — `F263-baseline.mus` holds
-ten block texts that way, and Finale 27 recovers all ten. Its own binary commands use a
-shorter argument form than the later epochs (`^\x82\x40\x81`), so the digit rule above does
-not apply to it. None of this is decoded.
+Its two length-prefixed text chunks are empty in every fixture. Its block text is instead in
+the `HT` others family, paired with style and insert information in `HS`. Its own binary
+commands use a shorter argument form than the later epochs (`^\x82\x40\x81`), so the digit
+rule above does not apply to it.
+
+**Open relationship required before importing Coda TextBlocks.** `HT` does not carry the
+global `BlockText` number found in a modern companion. The reader currently allocates numbers
+by walking the `HT` arrays, while Finale's upgrade may place text recovered from other legacy
+families before those arrays and consequently assign different numbers. A Coda TextBlock must
+therefore not retain a raw or independently inferred text number. Text recovery and TextBlock
+recovery must share one mapping from the legacy structural identity — believed to be the `HT`
+comparator plus the text's ordinal within that comparator — to the allocated musxdom text
+number. The exact legacy TextBlock reference and its correspondence to that structural identity
+remain to be decoded. Companion comparison must likewise treat generated text numbers as
+unstable and match these texts semantically.
 
 The pool walk that reaches all this is now correct, which it was not. It stopped at the first
 pool with zero pages, so a Finale 1.0.0 document — whose details pool is empty — reported one

@@ -109,6 +109,14 @@ property was added, what it replaced, or which investigation prompted it. A read
 the published API has none of that context. The same rule applies to Doxygen written in
 musxdom.
 
+The rule also applies across the recovery-coverage pair:
+`tools/coverage/recovery_coverage_probe.cpp` and its dependencies capture the observations, and
+`scripts/recovery_coverage_report.py` classifies and aggregates them. They are
+one analysis pipeline, not independent probes. A field name, path convention,
+classification rule, transformation, or aggregate must have one authoritative
+implementation; if the report needs information from the probe, add it to the
+probe's structured output rather than re-deriving it from incidental fields.
+
 This applies to `src/`, `include/`, `tests/evidence/` fixtures, and
 `tools/coverage/`. It does not apply to the rest of `tools/`, `scripts/`, or
 test code, which may repeat themselves as freely as makes sense — a probe is

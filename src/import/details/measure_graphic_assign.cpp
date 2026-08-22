@@ -51,9 +51,8 @@ void importMeasureGraphicFamily(const ImportContext& context,
             }
             for (std::size_t at = 0; at + measureGraphicAssignWordCount <= words.size();
                     at += measureGraphicAssignWordCount) {
-                const auto rowIndex = classRecords ? at / measureGraphicAssignWordCount : 0;
-                const auto inci = classRecords ? rows[rowIndex].inci
-                    : static_cast<musx::dom::Inci>(at / measureGraphicAssignWordCount);
+                const auto inci = static_cast<musx::dom::Inci>(
+                    at / measureGraphicAssignWordCount);
                 auto target = std::make_shared<MeasureGraphicTarget>(context.document,
                     musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
                     staffId, meas, inci);
@@ -68,7 +67,7 @@ void importMeasureGraphicFamily(const ImportContext& context,
                     "origHeight", "graphicCmper"};
                 for (std::size_t index = 0; index < std::size(slots); ++index) {
                     const auto slot = slots[index];
-                    const auto& sourceRow = rows[classRecords ? rowIndex
+                    const auto& sourceRow = rows[classRecords ? 0
                         : (at + slot) / records::detailWordCount];
                     reportMeasureGraphicValue(
                         context, prefix, names[index], tuple[slot], sourceRow);

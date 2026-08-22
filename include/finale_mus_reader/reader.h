@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -205,27 +206,39 @@ struct ImportResult
     ImportReport report;
 };
 
+/// @brief Optional resources supplied by the application for one import.
+struct ReaderOptions
+{
+    /// @brief Contents of Finale's `MacSymbolFonts.txt`, if available.
+    /// @details The reader parses the bytes during the call and does not retain the span.
+    /// Each nonblank line names a font whose stored character values are glyph numbers.
+    std::span<const std::uint8_t> macSymbolFonts;
+};
+
 class Reader
 {
 public:
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::filesystem::path& path)
+    [[nodiscard]] static ImportResult read(const std::filesystem::path& path,
+        const ReaderOptions& options = {})
     {
         return readWithParser(
-            path, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+            path, options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data)
+    [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data,
+        const ReaderOptions& options = {})
     {
-        return readWithParser(data.data(), data.size(),
+        return readWithParser(data.data(), data.size(), options,
             &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size)
+    [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size,
+        const ReaderOptions& options = {})
     {
-        return readWithParser(data, size,
+        return readWithParser(data, size, options,
             &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
@@ -248,9 +261,11 @@ private:
     }
 
     static ImportResult readWithParser(const std::filesystem::path& path,
+        const ReaderOptions& options,
         XmlParser parseXml, DocumentParser parseDocument);
     static ImportResult readWithParser(
         const std::uint8_t* data, std::size_t size,
+        const ReaderOptions& options,
         XmlParser parseXml, DocumentParser parseDocument);
 };
 

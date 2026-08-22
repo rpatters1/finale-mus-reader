@@ -163,54 +163,75 @@ finale_mus_reader::container::ParsedContainer makeClassContainer(
 
 void testClassRecordContinuationSegment()
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::ZlibLegacy;
-    parsed.byteOrder = ByteOrder::LittleEndian;
+    const auto verify = [](ByteOrder byteOrder) {
+        finale_mus_reader::container::ParsedContainer parsed;
+        parsed.formatEpoch = FormatEpoch::ZlibLegacy;
+        parsed.byteOrder = byteOrder;
 
-    finale_mus_reader::container::DecodedBlock block;
-    block.info.type = 0x001a;
-    const auto push16 = [&](std::uint16_t value) {
-        block.data.push_back(static_cast<std::uint8_t>(value));
-        block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+        finale_mus_reader::container::DecodedBlock block;
+        block.info.type = 0x001a;
+        const auto push16 = [&](std::uint16_t value) {
+            if (byteOrder == ByteOrder::BigEndian) {
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+                block.data.push_back(static_cast<std::uint8_t>(value));
+            } else {
+                block.data.push_back(static_cast<std::uint8_t>(value));
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+            }
+        };
+        const auto push32 = [&](std::uint32_t value) {
+            if (byteOrder == ByteOrder::BigEndian) {
+                push16(static_cast<std::uint16_t>(value >> 16U));
+                push16(static_cast<std::uint16_t>(value));
+            } else {
+                push16(static_cast<std::uint16_t>(value));
+                push16(static_cast<std::uint16_t>(value >> 16U));
+            }
+        };
+        const auto appendHeader = [&](std::uint16_t classId, std::uint16_t cmper,
+                                      std::uint16_t partId, std::uint32_t length) {
+            push16(classId);
+            push16(cmper);
+            push16(partId);
+            push32(length);
+        };
+
+        appendHeader(0x00b1, 1, 1, 12);
+        block.data.insert(block.data.end(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+        // The continuation occupies the declared byte count including its repeated-size
+        // prefix. It is framing, not another searchable incidence.
+        push32(12);
+        block.data.insert(block.data.end(), {21, 22, 23, 24, 25, 26, 27, 28});
+        push16(0);
+        push16(0x1234);
+
+        appendHeader(0x00d6, 3, 0, 4);
+        block.data.insert(block.data.end(), {31, 32, 33, 34});
+        block.data.insert(block.data.end(), 4, 0);
+        block.info.decodedSize = block.data.size();
+        parsed.blocks.push_back(std::move(block));
+
+        const auto index = LegacyRecordIndex::build(parsed);
+        expectMapping(index.getClassOthers().cmpersForTag(0x00b1).empty()
+                && index.getClassOthers().cmpersForTag(0x00b1, 1)
+                    == std::vector<std::uint16_t>{1},
+            "A part-owned class record leaked into the score comparator list");
+        const auto first = index.getClassOthers().get(0x00b1, 1, 0, 0, 1);
+        const auto firstPayload = first
+            ? index.getClassOthers().payloadOf(*first) : std::span<const std::uint8_t>{};
+        expectMapping(firstPayload.size() == 12 && firstPayload.front() == 1
+                && firstPayload.back() == 12,
+            "A class-record continuation replaced the primary payload");
+        const auto following = index.getClassOthers().get(0x00d6, 3, 0, 0);
+        const auto followingPayload = following
+            ? index.getClassOthers().payloadOf(*following) : std::span<const std::uint8_t>{};
+        expectMapping(followingPayload.size() == 4 && followingPayload.front() == 31
+                && followingPayload.back() == 34,
+            "A class-record continuation stopped the remaining pool");
     };
-    const auto appendHeader = [&](std::uint16_t classId, std::uint16_t cmper,
-                                  std::uint16_t incidence, std::uint32_t length) {
-        push16(classId);
-        push16(cmper);
-        push16(incidence);
-        push16(static_cast<std::uint16_t>(length));
-        push16(static_cast<std::uint16_t>(length >> 16U));
-    };
 
-    appendHeader(0x00b1, 1, 1, 12);
-    block.data.insert(block.data.end(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
-    // The continuation occupies the declared byte count including its repeated-size
-    // prefix. It is framing, not another searchable incidence.
-    push16(12);
-    push16(0);
-    block.data.insert(block.data.end(), {21, 22, 23, 24, 25, 26, 27, 28});
-    push16(0xffff);
-    push16(0);
-
-    appendHeader(0x00d6, 3, 0, 4);
-    block.data.insert(block.data.end(), {31, 32, 33, 34});
-    block.data.insert(block.data.end(), 4, 0);
-    block.info.decodedSize = block.data.size();
-    parsed.blocks.push_back(std::move(block));
-
-    const auto index = LegacyRecordIndex::build(parsed);
-    const auto first = index.getClassOthers().get(0x00b1, 1, 0, 1);
-    const auto firstPayload = first
-        ? index.getClassOthers().payloadOf(*first) : std::span<const std::uint8_t>{};
-    expectMapping(firstPayload.size() == 12 && firstPayload.front() == 1
-            && firstPayload.back() == 12,
-        "A class-record continuation replaced the primary payload");
-    const auto following = index.getClassOthers().get(0x00d6, 3, 0, 0);
-    const auto followingPayload = following
-        ? index.getClassOthers().payloadOf(*following) : std::span<const std::uint8_t>{};
-    expectMapping(followingPayload.size() == 4 && followingPayload.front() == 31
-            && followingPayload.back() == 34,
-        "A class-record continuation stopped the remaining pool");
+    verify(ByteOrder::BigEndian);
+    verify(ByteOrder::LittleEndian);
 }
 
 finale_mus_reader::container::ParsedContainer makeDetailContainer(
@@ -239,7 +260,7 @@ finale_mus_reader::container::ParsedContainer makeDetailContainer(
 }
 
 finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
-    std::uint16_t staffId, std::uint16_t meas, std::uint16_t inci,
+    std::uint16_t staffId, std::uint16_t meas, std::uint16_t partId,
     const std::vector<std::int16_t>& words, ByteOrder byteOrder)
 {
     auto parsed = makeClassContainer(0x041d, {}, byteOrder, staffId);
@@ -258,7 +279,7 @@ finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
     push16(0x041d);
     push16(staffId);
     push16(meas);
-    push16(inci);
+    push16(partId);
     const auto length = static_cast<std::uint32_t>(words.size() * 2);
     if (byteOrder == ByteOrder::BigEndian) {
         push16(static_cast<std::uint16_t>(length));
@@ -1129,8 +1150,60 @@ musx::dom::DocumentPtr makeLyricDocument()
         style->on = true;
         options->syllablePosStyles[type] = std::move(style);
     }
+    auto zeroOffset = std::make_shared<Lyrics::WordExtConnectStyle>();
+    zeroOffset->connectIndex = Lyrics::WordExtConnectIndex::SystemRight;
+    zeroOffset->xOffset = 91;
+    zeroOffset->yOffset = 92;
+    options->wordExtConnectStyles[Lyrics::WordExtConnectStyleType::ZeroOffset] =
+        std::move(zeroOffset);
     document->getOptions()->add(Lyrics::XmlNodeName, options);
     return std::move(session).finish();
+}
+
+void testLyricWordExtConnectionLayouts()
+{
+    using Lyrics = musx::dom::options::LyricOptions;
+    using ConnectType = Lyrics::WordExtConnectStyleType;
+    const auto runImport = [](std::vector<SyntheticRow> rows) {
+        const auto document = makeLyricDocument();
+        const auto reference = makeLyricDocument();
+        auto profile = profileFor(9);
+        profile.epoch = FormatEpoch::DclLegacy;
+        ImportReport report;
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            LegacyRecordIndex::build(makeContainer(rows, FormatEpoch::DclLegacy)), profile,
+            noSource, document, reference, report, pending, construction};
+        finale_mus_reader::options::importLyricOptions(context);
+        return document->getOptions()->get<Lyrics>();
+    };
+
+    const std::vector<SyntheticRow> earlyRows{
+        {GLOBALS_CMPER, "55", {16, 4, 1, 17, 0, 0}},
+        {GLOBALS_CMPER, "55", {19, 0, 0, 20, 0, 0}},
+        {GLOBALS_CMPER, "55", {17, 8, 0, 18, -8, 0}},
+        {GLOBALS_CMPER, "55", {16, 42, 0, 0, 0, 0}},
+    };
+    const auto early = runImport(earlyRows);
+    expectMapping(early->wordExtConnectStyles.at(ConnectType::SystemStart)->connectIndex
+            == Lyrics::WordExtConnectIndex::DurationLyrBaseline,
+        "The eight-style word-extension table did not retain its third element");
+    expectMapping(early->wordExtConnectStyles.at(ConnectType::DottedEnd)->xOffset == 8
+            && early->wordExtConnectStyles.at(ConnectType::DurationEnd)->xOffset == -8,
+        "The eight-style word-extension table was shifted into the later layout");
+    expectMapping(early->wordExtConnectStyles.at(ConnectType::ZeroOffset)->xOffset == 91
+            && early->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 92,
+        "The absent ninth word-extension style overwrote the seeded value");
+
+    auto laterRows = earlyRows;
+    laterRows.push_back({GLOBALS_CMPER, "55", {17, 7, 8, 0, 0, 0}});
+    const auto later = runImport(std::move(laterRows));
+    expectMapping(later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->connectIndex
+            == Lyrics::WordExtConnectIndex::HeadRightLyrBaseline
+            && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->xOffset == 7
+            && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 8,
+        "The ninth word-extension style was not read from the longer layout");
 }
 
 // "Ignore Syllable Edge Punctuation" arrives with Finale 2012 and is the one lyric field whose
@@ -2002,13 +2075,31 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
     }
     const auto bigEndian = makeDetailClassContainer(7, 12, 2, tuple, ByteOrder::BigEndian);
     const auto bigEndianIndex = LegacyRecordIndex::build(bigEndian);
-    const auto bigEndianRows = bigEndianIndex.getClassDetails().getArray(0x041d, 7, 12);
-    expectMapping(bigEndianRows.size() == 1 && bigEndianRows.front().inci == 2
+    const auto bigEndianRows = bigEndianIndex.getClassDetails().getArray(0x041d, 7, 12, 2);
+    expectMapping(bigEndianRows.size() == 1 && bigEndianRows.front().partId == 2
+            && bigEndianRows.front().inci == 0
             && bigEndianIndex.getClassDetails().get(0x041d, 7, 12, 0) == nullptr
-            && bigEndianIndex.getClassDetails().get(0x041d, 7, 12, 2)
+            && bigEndianIndex.getClassDetails().get(0x041d, 7, 12, 0, 2)
                 == &bigEndianRows.front()
             && bigEndianIndex.getClassDetails().payloadOf(bigEndianRows.front()).size() == 40,
-        "A big-endian zlib detail did not preserve cmper2, incidence, and payload length");
+        "A big-endian zlib detail did not preserve cmper2, part id, and payload length");
+
+    auto partSession = musx::factory::DocumentFactory::begin();
+    const auto partDocument = partSession.getDocument();
+    auto partReferenceSession = musx::factory::DocumentFactory::begin();
+    const auto partReference = std::move(partReferenceSession).finish();
+    ImportReport partReport;
+    finale_mus_reader::PendingReferences partPending;
+    SourceProfile partProfile;
+    partProfile.epoch = FormatEpoch::ZlibLegacy;
+    partProfile.byteOrder = ByteOrder::BigEndian;
+    musx::factory::ConstructionContext partConstruction;
+    const finale_mus_reader::ImportContext partContext{bigEndianIndex, partProfile, noSource,
+        partDocument, partReference, partReport, partPending, partConstruction};
+    finale_mus_reader::details::importMeasureGraphicAssignments(partContext);
+    expectMapping(!partDocument->getDetails()->get<Target>(
+            musx::dom::SCORE_PARTID, 7, 12, musx::dom::Inci(0)),
+        "A part-owned zlib detail was imported into the score pool");
 }
 
 } // namespace
@@ -2395,6 +2486,10 @@ void testTextOptionsSymbolInserts()
 TEST_CASE("Lyric punctuation tail encoding gate", "[mapping]")
 {
     testLyricPunctuationTailEncodingGate();
+}
+TEST_CASE("Lyric word extension connection layouts", "[mapping]")
+{
+    testLyricWordExtConnectionLayouts();
 }
 TEST_CASE("Lyric edge punctuation version gate", "[mapping]")
 {

@@ -104,7 +104,6 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         return;
     }
     const auto limit = readBodyOffset(context.source, context.profile.byteOrder);
-    const auto codePage = text::platformCodePage(context.profile.platform);
     const auto defaultFont = musx::dom::options::FontOptions::getFontInfoOrNull(
         context.document, musx::dom::options::FontOptions::FontType::TextBlock);
 
@@ -125,7 +124,8 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         // in this class as meaningless, so nothing is translated: only the bytes change.
         auto instance = std::make_shared<FileInfoTarget>(
             context.document, static_cast<musx::dom::Cmper>(field.type));
-        instance->text = text::normalizeLineBreaks(text::toUtf8(raw, codePage));
+        instance->text = text::normalizeLineBreaks(
+            text::toUtf8(raw, context.profile.platform));
         bool fontWasSynthesized = false;
         bool sizeWasSynthesized = false;
         bool effectsWereSynthesized = false;

@@ -673,7 +673,8 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         insert->symChar = block.layout == InsertLayout::WideChar
             ? storedChar
             : text::codepointFromByte(static_cast<std::uint8_t>(storedChar),
-                text::codePageForDocumentFont(document, fontId, std::nullopt));
+                document, fontId, text::UnresolvedFontFallback::Symbol,
+                profile.symbolFontNames);
 
         target->symbolInserts[insertOrder[ordinal]] = std::move(insert);
 
