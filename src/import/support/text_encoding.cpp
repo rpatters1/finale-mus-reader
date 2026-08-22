@@ -225,7 +225,7 @@ const char16_t* macTableFor(CodePage codePage)
 /// @brief Decodes a single-byte encoding through an embedded table, emitting UTF-8.
 /// @details Cannot fail: every one of the 256 inputs has a defined code point, which is
 /// what makes these tables preferable to a converter that may or may not be installed.
-std::string convertWithTable(const char16_t* table, const std::string& source)
+std::string convertWithTable(const char16_t* table, std::string_view source)
 {
     std::string out;
     out.reserve(source.size());
@@ -283,7 +283,7 @@ const char* iconvNameFor(CodePage codePage)
 }
 
 /// @brief Converts with iconv, growing the output buffer until the input is consumed.
-std::optional<std::string> convertWithIconv(const char* fromEncoding, const std::string& source)
+std::optional<std::string> convertWithIconv(const char* fromEncoding, std::string_view source)
 {
     const iconv_t converter = iconv_open("UTF-8", fromEncoding);
     if (converter == reinterpret_cast<iconv_t>(-1)) {
@@ -293,10 +293,9 @@ std::optional<std::string> convertWithIconv(const char* fromEncoding, const std:
     // UTF-8 needs at most four bytes per input byte for any encoding handled here, so this
     // is sized once and only grown if a converter proves otherwise.
     std::vector<char> output(source.size() * 4 + 4);
-    // iconv takes a non-const input pointer even though it does not write through it.
-    std::string input = source;
-    char* inputCursor = input.data();
-    std::size_t inputLeft = input.size();
+    // POSIX iconv takes a non-const input pointer but advances it without writing through it.
+    char* inputCursor = const_cast<char*>(source.data());
+    std::size_t inputLeft = source.size();
     char* outputCursor = output.data();
     std::size_t outputLeft = output.size();
 
@@ -337,7 +336,7 @@ std::optional<std::string> convertWithIconv(const char* fromEncoding, const std:
 /// CoreFoundation is used rather than Foundation or Cocoa deliberately: it is pure C, so it
 /// compiles in this translation unit with no Objective-C toolchain, and `NSString` would add
 /// nothing here.
-std::optional<std::string> convert(CodePage codePage, const std::string& source)
+std::optional<std::string> convert(CodePage codePage, std::string_view source)
 {
     if (source.empty()) {
         return std::string{};
@@ -484,7 +483,7 @@ static CodePage codePageForCharset(Bank bank, int charsetVal)
 
 static std::string symbolBytesToUtf8(std::string_view source);
 
-static std::string toUtf8WithCodePage(const std::string& source, CodePage codePage)
+static std::string toUtf8WithCodePage(std::string_view source, CodePage codePage)
 {
     if (auto converted = convert(codePage, source)) {
         return *converted;
@@ -511,19 +510,19 @@ static CodePage codePageForPackedCharset(std::uint16_t packed)
 
 std::string normalizeLineBreaks(std::string source)
 {
-    std::string result;
-    result.reserve(source.size());
-    for (std::size_t at = 0; at < source.size(); ++at) {
-        if (source[at] != '\r') {
-            result.push_back(source[at]);
+    std::size_t write = 0;
+    for (std::size_t read = 0; read < source.size(); ++read) {
+        if (source[read] != '\r') {
+            source[write++] = source[read];
             continue;
         }
-        result.push_back('\n');
-        if (at + 1 < source.size() && source[at + 1] == '\n') {
-            ++at;
+        source[write++] = '\n';
+        if (read + 1 < source.size() && source[read + 1] == '\n') {
+            ++read;
         }
     }
-    return result;
+    source.resize(write);
+    return source;
 }
 
 static CodePage platformCodePage(SourcePlatform platform)
@@ -626,17 +625,17 @@ static std::string symbolBytesToUtf8(std::string_view source)
 
 std::string toUtf8(std::string_view source, SourcePlatform platform)
 {
-    return toUtf8WithCodePage(std::string(source), platformCodePage(platform));
+    return toUtf8WithCodePage(source, platformCodePage(platform));
 }
 
 std::string toUtf8(std::string_view source, Bank bank, int charsetVal)
 {
-    return toUtf8WithCodePage(std::string(source), codePageForCharset(bank, charsetVal));
+    return toUtf8WithCodePage(source, codePageForCharset(bank, charsetVal));
 }
 
 std::string toUtf8(std::string_view source, std::uint16_t packedCharset)
 {
-    return toUtf8WithCodePage(std::string(source), codePageForPackedCharset(packedCharset));
+    return toUtf8WithCodePage(source, codePageForPackedCharset(packedCharset));
 }
 
 std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
@@ -647,7 +646,7 @@ std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& docume
         ? std::optional<CodePage>(documentCodePage(document)) : std::nullopt;
     if (const auto codePage = codePageForDocumentFont(
             document, fontId, unresolved, symbolFontNames)) {
-        return toUtf8WithCodePage(std::string(source), *codePage);
+        return toUtf8WithCodePage(source, *codePage);
     }
     return symbolBytesToUtf8(source);
 }

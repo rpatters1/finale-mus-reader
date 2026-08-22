@@ -863,25 +863,29 @@ std::string initializeEnigmaTextFontState(
         at = *commandEnd;
     }
 
-    std::string completed;
+    if (hasFont && hasSize && hasEffects) {
+        return value;
+    }
+
+    std::string completedInitial;
     if (!hasFont) {
         if (fontWasSynthesized) *fontWasSynthesized = true;
         // A name survives document-local comparator renumbering. A name that cannot fit the
         // command argument syntax retains its already-resolved comparator instead.
-        completed = spellResolvedEnigmaFontCommand(
+        completedInitial = spellResolvedEnigmaFontCommand(
             "font", defaultFont.fontId, defaultFont.getName());
     }
-    completed.append(value, 0, at);
+    completedInitial.append(value, 0, at);
     if (!hasSize) {
         if (sizeWasSynthesized) *sizeWasSynthesized = true;
-        completed += "^size(" + std::to_string(defaultFont.fontSize) + ')';
+        completedInitial += "^size(" + std::to_string(defaultFont.fontSize) + ')';
     }
     if (!hasEffects) {
         if (effectsWereSynthesized) *effectsWereSynthesized = true;
-        completed += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
+        completedInitial += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
     }
-    completed.append(value, at, std::string::npos);
-    return completed;
+    value.replace(0, at, completedInitial);
+    return value;
 }
 
 ConvertedEnigmaText toModernEnigmaText(
