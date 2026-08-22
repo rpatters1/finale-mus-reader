@@ -45,6 +45,8 @@ std::string_view phaseName(Phase phase)
     case Phase::TextLiteralEncoding: return "text_literal_encoding";
     case Phase::TextFontState: return "text_font_state";
     case Phase::TextObjectConstruction: return "text_object_construction";
+    case Phase::TextReportConstruction: return "text_report_construction";
+    case Phase::TextDomInsertion: return "text_dom_insertion";
     case Phase::TextHeaderFileInfo: return "text_header_file_info";
     case Phase::TextCodaStored: return "text_coda_stored";
     case Phase::DeferredReferences: return "deferred_references";
@@ -73,6 +75,8 @@ std::string_view counterName(Counter counter)
     case Counter::TextCacheAvoidedBytes: return "text_cache_avoided_bytes";
     case Counter::TextFontResolutionCacheHits: return "text_font_resolution_cache_hits";
     case Counter::TextFontResolutionCacheMisses: return "text_font_resolution_cache_misses";
+    case Counter::TextInitialFontCacheHits: return "text_initial_font_cache_hits";
+    case Counter::TextInitialFontCacheMisses: return "text_initial_font_cache_misses";
     case Counter::Count: break;
     }
     throw std::logic_error("invalid reader timing counter");

@@ -48,6 +48,8 @@ enum class Phase : std::size_t
     TextLiteralEncoding,
     TextFontState,
     TextObjectConstruction,
+    TextReportConstruction,
+    TextDomInsertion,
     TextHeaderFileInfo,
     TextCodaStored,
     DeferredReferences,
@@ -68,6 +70,8 @@ enum class Counter : std::size_t
     TextCacheAvoidedBytes,
     TextFontResolutionCacheHits,
     TextFontResolutionCacheMisses,
+    TextInitialFontCacheHits,
+    TextInitialFontCacheMisses,
     Count
 };
 

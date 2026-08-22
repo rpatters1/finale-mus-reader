@@ -58,7 +58,8 @@ using TextFontType = musx::dom::options::FontOptions::FontType;
 struct TextKeyword
 {
     std::string_view keyword;
-    void (*create)(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text);
+    void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
+        Cmper number, std::string&& text);
     std::string_view nodeName;
     TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
@@ -69,12 +70,13 @@ struct TextKeyword
 };
 
 template <typename Target>
-void createText(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text)
+void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
+    Cmper number, std::string&& text)
 {
     auto instance = std::make_shared<Target>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(text);
-    document->getTexts()->add(Target::XmlNodeName, instance);
+    pool.add(Target::XmlNodeName, instance);
 }
 
 template <typename Target>
@@ -334,6 +336,9 @@ void importLaterTextPool(const ImportContext& context)
     // key: document, encoding, platform and default font stay fixed for the cache's lifetime.
     std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>,
         std::size(textKeywords)> convertedByKeyword;
+    std::array<std::shared_ptr<const musx::dom::FontInfo>, std::size(textKeywords)> initialFonts;
+    std::array<bool, std::size(textKeywords)> initialFontsCached{};
+    auto& textPool = *context.document->getTexts();
     std::size_t at = 0;
     while (at < stream.size()) {
         if (const auto marker = sectionMarkerAt(stream, at)) {
@@ -370,9 +375,17 @@ void importLaterTextPool(const ImportContext& context)
             continue;
         }
 
+        const auto keywordIndex = static_cast<std::size_t>(found - std::begin(textKeywords));
+        if (!initialFontsCached[keywordIndex]) {
+            FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheMisses, 1);
+            initialFonts[keywordIndex] = musx::dom::options::FontOptions::getFontInfoOrNull(
+                context.document, found->defaultFontType);
+            initialFontsCached[keywordIndex] = true;
+        } else {
+            FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheHits, 1);
+        }
         auto recordSource = source;
-        recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
-            context.document, found->defaultFontType);
+        recordSource.initialFont = initialFonts[keywordIndex];
         recordSource.fontResolutionCache = &fontResolutionCache;
         FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
         FINALE_MUS_READER_TIMING_INCREMENT(
@@ -382,8 +395,7 @@ void importLaterTextPool(const ImportContext& context)
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextConversion);
             const std::string_view sourceText(
                 reinterpret_cast<const char*>(record->body.data()), record->body.size());
-            auto& cache = convertedByKeyword[
-                static_cast<std::size_t>(found - std::begin(textKeywords))];
+            auto& cache = convertedByKeyword[keywordIndex];
             if (const auto cached = cache.find(sourceText); cached != cache.end()) {
                 FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheHits, 1);
                 FINALE_MUS_READER_TIMING_INCREMENT(
@@ -406,16 +418,23 @@ void importLaterTextPool(const ImportContext& context)
 
 
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
-        FieldInfo info;
-        info.target = "texts." + std::string(found->nodeName) + '['
-            + std::to_string(record->number) + "].text";
-        info.origin = ValueOrigin::LegacyMus;
-        info.decodedOffset = record->start;
-        info.rawValue = static_cast<std::int64_t>(converted.text.size());
-        recordTextFieldInfo(context.report, info.target, converted);
-        context.report.fields.push_back(std::move(info));
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextReportConstruction);
+            FieldInfo info;
+            info.target = "texts." + std::string(found->nodeName) + '['
+                + std::to_string(record->number) + "].text";
+            info.origin = ValueOrigin::LegacyMus;
+            info.decodedOffset = record->start;
+            info.rawValue = static_cast<std::int64_t>(converted.text.size());
+            recordTextFieldInfo(context.report, info.target, converted);
+            context.report.fields.push_back(std::move(info));
+        }
 
-        found->create(context.document, record->number, std::move(converted.text));
+        {
+            FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextDomInsertion);
+            found->create(
+                context.document, textPool, record->number, std::move(converted.text));
+        }
     }
 
     reportUnread(context.report, unknownCodes, unknownEffects, unknownKeywords);
