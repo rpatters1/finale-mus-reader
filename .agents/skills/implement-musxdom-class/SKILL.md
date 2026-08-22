@@ -263,6 +263,16 @@ copying reference objects, is a separate phase after the importers rather than a
 importer's responsibility. Tables and helpers that only the importer uses should be
 file-local; expose a stage separately only where a test needs to drive it alone.
 
+**Give every new reader class importer minimum timing instrumentation in the same change.**
+Add one aggregate `timing::Phase` for the importer to `src/reader/timing.h`, give that phase
+its stable structured-output name in `src/reader/timing.cpp`, and use it on the importer's
+single `FINALE_MUS_READER_IMPORTER` registry row. The registry owns the timed scope, so do not
+also time the whole importer inside its class translation unit. This class-level total is the
+minimum: add nested phases or counters only when the implementation has a meaningful internal
+stage or repeated operation that a later performance investigation may need to distinguish.
+Use the existing timing macros for those additions so a configuration without
+`FINALE_MUS_READER_ENABLE_TIMING` excludes their storage and measurement code completely.
+
 **`<pool>.h` declares importers and nothing else.** A stage a test drives on its own goes in
 `<pool>/test_access.h`, which no library code may include; a stage no test drives is
 file-local, in the class's own anonymous namespace. Do not export a stage for symmetry with a

@@ -164,7 +164,7 @@ void importPageFamily(const ImportContext& context)
                 reportAssignmentValue(context, prefix + names[slot], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
-            context.document->getOthers()->add(PageTarget::XmlNodeName, target);
+            context.document->getOthers()->add(PageTarget::XmlNodeName, std::move(target));
         }
     }
 }
@@ -200,7 +200,7 @@ void importShapeFamily(const ImportContext& context)
                 reportAssignmentValue(context, prefix + names[index], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
-            context.document->getOthers()->add(ShapeTarget::XmlNodeName, target);
+            context.document->getOthers()->add(ShapeTarget::XmlNodeName, std::move(target));
         }
     }
 }

@@ -76,7 +76,7 @@ void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& po
     auto instance = std::make_shared<Target>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(text);
-    pool.add(Target::XmlNodeName, instance);
+    pool.add(Target::XmlNodeName, std::move(instance));
 }
 
 template <typename Target>

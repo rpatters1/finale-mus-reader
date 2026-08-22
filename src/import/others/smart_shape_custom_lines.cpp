@@ -208,7 +208,7 @@ void* createSmartShapeCustomLine(const musx::dom::DocumentPtr& document, std::ui
     instance->solidParams = std::make_shared<CustomLine::SolidParams>(instance);
     instance->dashedParams = std::make_shared<CustomLine::DashedParams>(instance);
     auto* raw = instance.get();
-    document->getOthers()->add(CustomLine::XmlNodeName, instance);
+    document->getOthers()->add(CustomLine::XmlNodeName, std::move(instance));
     return raw;
 }
 

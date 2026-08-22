@@ -35,7 +35,7 @@ from typing import Any, Callable, Iterable, Iterator, Optional
 # both the per-class breakdown and the recursive companion diff.
 METADATA_KEYS = {
     "corpus_id", "status", "epoch", "saving_product", "source_version", "header",
-    "warning_count", "diagnostics", "duration_ms", "companion", "finder_type", "error",
+    "warning_count", "diagnostics", "duration_ms", "timings", "companion", "finder_type", "error",
 }
 
 # Surveyors retained in the JSONL for recovery exploration but not mature enough for

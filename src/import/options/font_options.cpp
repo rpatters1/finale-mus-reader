@@ -489,7 +489,6 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
 {
     auto target = std::make_shared<FontOptionsTarget>(document);
-    document->getOptions()->add(FontOptionsTarget::XmlNodeName, target);
 
     // The epoch alone, with no version test. The range this used to carry, 1.0 through 2.ff,
     // is simply a restatement of the Coda-banner era, so it could never exclude a Mac document
@@ -549,6 +548,7 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
     repairMissingRecoveredFontDefinitions(
         document, referenceDocument, target, report);
     completeFromReference(document, referenceDocument, target, report);
+    document->getOptions()->add(FontOptionsTarget::XmlNodeName, std::move(target));
 }
 
 /// @brief Registers the font comparator every FontOptions type finally holds.

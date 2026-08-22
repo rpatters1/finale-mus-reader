@@ -222,7 +222,7 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
                 + std::to_string(cmper) + "].values[" + std::to_string(index) + "]",
                 values[index], row);
         }
-        context.document->getOthers()->add(ShapeDataTarget::XmlNodeName, target);
+        context.document->getOthers()->add(ShapeDataTarget::XmlNodeName, std::move(target));
     }
 }
 
@@ -274,7 +274,8 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
                         + records::tagText(tag) + " revision " + std::to_string(revision) + "."});
             }
         }
-        context.document->getOthers()->add(ShapeInstructionTarget::XmlNodeName, target);
+        context.document->getOthers()->add(
+            ShapeInstructionTarget::XmlNodeName, std::move(target));
     }
 }
 
@@ -332,7 +333,7 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
             reportShapeValue(context.report, "others.shapeDef[" + std::to_string(cmper)
                 + "].shapeType", static_cast<int>(target->shapeType), rows.front());
         }
-        context.document->getOthers()->add(ShapeDefTarget::XmlNodeName, target);
+        context.document->getOthers()->add(ShapeDefTarget::XmlNodeName, std::move(target));
     }
 }
 

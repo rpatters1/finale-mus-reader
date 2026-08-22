@@ -159,7 +159,7 @@ void addCodaText(const ImportContext& context, const text::EnigmaTextSource& sou
     auto instance = std::make_shared<Target>(
         context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(converted.text);
-    context.document->getTexts()->add(Target::XmlNodeName, instance);
+    context.document->getTexts()->add(Target::XmlNodeName, std::move(instance));
 
     FieldInfo info;
     info.target = "texts." + std::string(Target::XmlNodeName) + '[' + std::to_string(number) + ']';
