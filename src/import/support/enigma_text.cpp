@@ -734,12 +734,31 @@ private:
         if (const auto byId = fontIdFromSpelling(spelled)) {
             return byId;
         }
+        const auto name = convertCommandText(spelled, packedCharset);
+        if (m_source.fontResolutionCache) {
+            auto& resolved = m_source.fontResolutionCache->fontIdsByName;
+            if (const auto cached = resolved.find(name); cached != resolved.end()) {
+                FINALE_MUS_READER_TIMING_INCREMENT(
+                    timing::Counter::TextFontResolutionCacheHits, 1);
+                return cached->second;
+            }
+            FINALE_MUS_READER_TIMING_INCREMENT(
+                timing::Counter::TextFontResolutionCacheMisses, 1);
+            const auto font = resolveFontName(name);
+            resolved.emplace(name, font);
+            return font;
+        }
+        return resolveFontName(name);
+    }
+
+    std::optional<Cmper> resolveFontName(const std::string& name) const
+    {
         // musxdom owns the rule that matches a name to a definition, so it is asked rather
         // than reimplemented. It reports absence by throwing, which is the only reason this
         // is written as a caught exception rather than a test.
         musx::dom::FontInfo info(m_source.document);
         try {
-            info.setFontIdByName(convertCommandText(spelled, packedCharset));
+            info.setFontIdByName(name);
         } catch (const std::invalid_argument&) {
             return std::nullopt;
         }

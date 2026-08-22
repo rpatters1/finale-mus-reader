@@ -5,8 +5,10 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "musx/dom/CommonClasses.h"
@@ -48,6 +50,12 @@ struct ConvertedEnigmaText
     bool effectsWereSynthesized{};
 };
 
+/// @brief Document-local results of resolving Enigma font names to font comparators.
+struct EnigmaFontResolutionCache
+{
+    std::unordered_map<std::string, std::optional<musx::dom::Cmper>> fontIdsByName;
+};
+
 /// @brief What a record needs in order to be read: a document to resolve fonts against, and
 /// how its bytes are encoded.
 struct EnigmaTextSource
@@ -68,6 +76,8 @@ struct EnigmaTextSource
     std::shared_ptr<const musx::dom::FontInfo> initialFont;
     /// @brief Optional names whose character values are symbol glyph numbers.
     const SymbolFontNames* symbolFontNames{};
+    /// @brief Optional cache shared by records whose font definitions cannot change.
+    EnigmaFontResolutionCache* fontResolutionCache{};
 };
 
 /// @brief Converts one legacy Enigma text record body to the modern, UTF-8 spelling.

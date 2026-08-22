@@ -66,6 +66,8 @@ enum class Counter : std::size_t
     TextCacheHits,
     TextCacheMisses,
     TextCacheAvoidedBytes,
+    TextFontResolutionCacheHits,
+    TextFontResolutionCacheMisses,
     Count
 };
 

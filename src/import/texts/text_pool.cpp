@@ -329,6 +329,7 @@ void importLaterTextPool(const ImportContext& context)
     std::vector<std::uint8_t> unknownCodes;
     std::vector<std::string> unknownEffects;
     std::vector<std::string> unknownKeywords;
+    text::EnigmaFontResolutionCache fontResolutionCache;
     // Each cache has one initial-font context. The source bytes are therefore the complete
     // key: document, encoding, platform and default font stay fixed for the cache's lifetime.
     std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>,
@@ -372,6 +373,7 @@ void importLaterTextPool(const ImportContext& context)
         auto recordSource = source;
         recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
             context.document, found->defaultFontType);
+        recordSource.fontResolutionCache = &fontResolutionCache;
         FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
         FINALE_MUS_READER_TIMING_INCREMENT(
             timing::Counter::TextRecordBytes, record->body.size());
