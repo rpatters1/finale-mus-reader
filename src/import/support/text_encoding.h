@@ -3,10 +3,13 @@
 
 #pragma once
 
+#include <cctype>
+#include <concepts>
 #include <cstdint>
-#include <optional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 
 #include "finale_mus_reader/reader.h"
 #include "musx/musx.h"
@@ -14,102 +17,76 @@
 namespace finale_mus_reader {
 namespace text {
 
-/// @brief Windows code page numbers, used as the portable name for an encoding.
-/// @details The numbers are Windows code pages even on platforms that have no concept of
-/// one, because that is the only identifier all three platforms can be driven from:
-/// Windows consumes them directly through `MultiByteToWideChar`, and elsewhere they select
-/// an iconv encoding name.
-///
-/// musxdom has no equivalent and needs none. EnigmaXML is always UTF-8, so the document
-/// model never sees legacy bytes. Converting them is this library's job.
-///
-/// **Design goal: the best result obtainable on the machine that is running.** Legacy text
-/// conversion is not required to be bit-identical across platforms, and pursuing that would
-/// mean discarding real accuracy. Windows can name encodings that iconv cannot, so it is
-/// given the more faithful code page rather than held back to a common subset; the other
-/// platforms fall back to the nearest converter they have. Where the fallback is known to
-/// be adequate, that is recorded next to it.
-enum class CodePage : int
+using SymbolFontNames = std::unordered_set<std::string>;
+
+/// @brief Parses the contents of Finale's `MacSymbolFonts.txt`.
+/// @details Each nonblank line is one font name. Names are stored in musxdom's normalized
+/// form so every later lookup uses the same typeface comparison.
+SymbolFontNames parseMacSymbolFonts(std::span<const std::uint8_t> contents);
+
+inline constexpr std::uint8_t legacyCharsetBankBit = 13;
+inline constexpr std::uint8_t legacyCharsetValueBits = 12;
+
+/// @brief What bytes using a font absent from the document are known to represent.
+enum class UnresolvedFontFallback
 {
-    /// @brief No encoding named; the platform's own default applies.
-    /// @details Zero is what Windows calls `CP_ACP`, the machine's active code page, so the
-    /// Windows path resolves this natively. Nothing else can: a code page that means
-    /// "whatever this machine is set to" cannot be given a fixed iconv name, and a file
-    /// that decoded differently on two machines would not be reproducible anyway. Reading
-    /// legacy MUS therefore never selects this; it exists so the enum can express what a
-    /// Windows charset field is actually saying.
-    Platform = 0,
-    Utf8 = 65001,         ///< Already UTF-8; nothing to convert.
-
-    /// @name Windows code pages
-    /// @{
-    Windows1250 = 1250,   ///< Central European.
-    Windows1251 = 1251,   ///< Cyrillic.
-    Windows1252 = 1252,   ///< Western European, the "ANSI" code page.
-    Windows1253 = 1253,   ///< Greek.
-    Windows1254 = 1254,   ///< Turkish.
-    Windows1255 = 1255,   ///< Hebrew.
-    Windows1256 = 1256,   ///< Arabic.
-    Windows1257 = 1257,   ///< Baltic.
-    Thai874 = 874,        ///< Thai.
-    ShiftJis = 932,       ///< Japanese.
-    Gb2312 = 936,         ///< Simplified Chinese.
-    Korean = 949,         ///< Korean.
-    Big5 = 950,           ///< Traditional Chinese.
-    /// @}
-
-    /// @name Classic Mac encodings
-    /// @details Numbered as Windows numbers them: 10000 plus the Mac script code.
-    ///
-    /// Windows resolves every one of these natively and exactly. iconv has no Mac-specific
-    /// name for the CJK four, so there they fall back to Shift-JIS, Big5, EUC-KR and
-    /// GB2312, which decode Mac-stored CJK font names correctly. That
-    /// asymmetry is intended: Windows gets the more faithful answer rather than being held
-    /// to what iconv can express.
-    /// @{
-    MacRoman = 10000,
-    MacJapanese = 10001,
-    MacTradChinese = 10002,
-    MacKorean = 10003,
-    MacArabic = 10004,
-    MacHebrew = 10005,
-    MacGreek = 10006,
-    MacCyrillic = 10007,
-    MacSimpChinese = 10008,
-    MacThai = 10021,
-    MacCentralEurope = 10029,
-    MacTurkish = 10081,
-    /// @}
+    Text,
+    Symbol,
 };
 
-/// @brief The code page a font's text is stored in, from the font's own charset fields.
+/// @brief Converts legacy text through a font's character-set fields.
 /// @details Legacy MUS stores text in whatever encoding the saving machine used and does
 /// not record that encoding globally. What it does record is per font: `charsetBank` names
 /// the platform whose charset numbering applies, and `charsetVal` selects within it. That
 /// is enough to decode, and it is why conversion is driven from the font rather than from
 /// the document's platform — a Mac font can appear in a document saved on Windows.
 ///
-/// A concrete code page is always returned. Where `charsetVal` names no script — a symbol
+/// Where `charsetVal` names no script — a symbol
 /// font, Windows `DEFAULT` or `OEM`, or a value not yet seen — the bank's own
 /// default applies: Mac Roman for the Mac bank, Windows-1252 for the Windows bank. That is
-/// a starting position rather than a discovery, and it is meant to be revised the moment a
-/// file contradicts it.
+/// a starting position to revise if a file contradicts it.
 ///
 /// Symbol fonts are not special-cased. `calcIsSymbolFont` describes how character codes in
 /// text *set in* that font map to glyphs; the font's own name is ordinary platform text.
-CodePage codePageForCharset(
+std::string toUtf8(std::string_view source,
     musx::dom::others::FontDefinition::CharacterSetBank bank, int charsetVal);
 
-/// @brief Converts legacy bytes to UTF-8, or returns them unchanged when it cannot.
+/// @brief Converts legacy text through a packed font character set.
+/// @details The high nibble names the bank and the low twelve bits name its character set.
+/// This is the representation stored by a FontDefinition and repeated as the optional second
+/// argument of a compressed-era Enigma font command.
+std::string toUtf8(std::string_view source, std::uint16_t packedCharset);
+
+/// @brief Converts fontless legacy text through the source platform's encoding.
 /// @details Every name goes through a converter, including a name that is entirely 7-bit.
 /// Skipping ASCII would give the same answer for every encoding here, since all of them
 /// agree with ASCII below 0x80, but it would also mean the conversion path went untested
 /// against the overwhelming majority of real input.
 ///
-/// A failed conversion returns @p source unchanged. Mojibake that preserves the original
-/// bytes is recoverable by a later, better-informed pass; a thrown exception in the middle
-/// of importing a document is not, and an empty string silently destroys evidence.
-std::string toUtf8(const std::string& source, CodePage codePage);
+/// A failed conversion preserves each source byte as the code point of the same value. The
+/// result remains valid UTF-8 and retains enough information for a better-informed pass.
+std::string toUtf8(std::string_view source, SourcePlatform platform);
+
+/// @brief Converts legacy text using the named document font.
+/// @details A resolved font determines whether its bytes are text or glyph numbers. If the
+/// font is absent, @p unresolvedFontFallback supplies that fact. Text uses the source
+/// platform's default encoding; symbol bytes retain their numeric glyph values.
+std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
+    const SymbolFontNames* symbolFontNames = nullptr);
+
+/// @brief Whether a byte is ASCII whitespace, for whichever integral or character type it
+/// arrives as (`char`, `unsigned char`, `std::uint8_t`, and so on).
+/// @details `std::isspace` is only well-defined for a value representable as `unsigned char`
+/// or `EOF`, and is locale-dependent beyond ASCII; casting to `unsigned char` and rejecting
+/// anything at or above 0x80 avoids both, and keeps a UTF-8 continuation byte -- always 0x80
+/// or above -- from ever being misread as whitespace while trimming multibyte text.
+template <std::integral T>
+bool isSpace(T ch)
+{
+    const auto byte = static_cast<unsigned char>(ch);
+    return byte < 0x80 && std::isspace(byte) != 0;
+}
 
 /// @brief Restates legacy line breaks in the convention EnigmaXML uses.
 /// @details Legacy MUS separates the lines of a text block with a carriage return, which is
@@ -122,55 +99,10 @@ std::string toUtf8(const std::string& source, CodePage codePage);
 /// double-spaced text.
 std::string normalizeLineBreaks(std::string source);
 
-/// @brief The code page for legacy text that no font names an encoding for.
-/// @details Some text belongs to the document rather than to a font: the File Info strings in
-/// the header, and the name inside a font command. Nothing records a character set for those,
-/// so the document's own platform decides. Resolved through @ref codePageForCharset with no
-/// character set value, so the platform default is stated in exactly one place: Mac Roman for
-/// the Mac bank, Windows-1252 for the Windows bank.
-///
-/// An unclassified platform is treated as Mac, matching what the font importer does with a
-/// pre-Finale-3.2 document that records no bank of its own.
-CodePage platformCodePage(SourcePlatform platform);
-
-/// @brief The encoding of legacy text set in one of the document's fonts, or nothing when its
-/// bytes are glyph numbers rather than characters.
-/// @details A legacy character belongs to the font that draws it rather than to the document,
-/// so the font's own charset fields decide -- and a symbol font decides that the byte is a
-/// glyph number with no character meaning at all.
-///
-/// Font id zero is the document's default music font. Nothing else in Finale occupies that
-/// comparator, and text set in it is glyph numbers whatever character set the record claims.
-/// The fixed-row eras record an ordinary text charset for their own music font, because the
-/// charset fields did not carry a symbol marker until the compressed eras; the id is the only
-/// statement those files make, so it is the one to read.
-///
-/// @param unknownFont What a font the document does not define means for the caller's own
-/// material. A run of text takes the document platform's code page, because that is the best
-/// guess available for something that is certainly text; a single stored character takes
-/// nothing, preserving the byte rather than naming a letter on the strength of a font that
-/// is not there.
-std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont);
-
-/// @brief The code point one legacy character byte names in a given encoding.
-/// @details The single-character counterpart of @ref toUtf8, for the records that store a
-/// character as a number rather than as text. A disengaged @p codePage is the symbol case
-/// @ref symbolBytesToUtf8 describes, where the byte is a glyph number and is therefore its own
-/// code point.
-char32_t codepointFromByte(std::uint8_t stored, std::optional<CodePage> codePage);
-
-/// @brief Widens every byte to the code point of the same value and encodes that as UTF-8.
-/// @details The conversion for text set in a symbol font, where a byte is a glyph number
-/// rather than a character. Decoding such a byte through a code page would name a letter the
-/// document never contained and, worse, would pick a different glyph: Mac Roman reads `0xb0`
-/// as an infinity sign, so a metronome mark set in a music font would come out as one.
-/// Preserving the number is what keeps the glyph, and it is what Finale's own conversion does
-/// with a font whose character set it cannot name.
-///
-/// Cannot fail and needs no converter, which is why it is spelled out here rather than added
-/// to @ref CodePage as Latin-1: every input byte has exactly one answer.
-std::string symbolBytesToUtf8(std::string_view source);
+/// @brief Converts one legacy font character to the code point musxdom stores.
+char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
+    const SymbolFontNames* symbolFontNames = nullptr);
 
 } // namespace text
 } // namespace finale_mus_reader

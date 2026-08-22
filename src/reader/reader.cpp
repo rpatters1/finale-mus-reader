@@ -20,6 +20,7 @@ namespace {
 
 ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     if (!data || size == 0) {
@@ -27,8 +28,13 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     const auto parsed = container::parse(data, size);
-    if (parsed.formatEpoch == FormatEpoch::Unknown && !hasBanner(data, size)) {
-        throw std::invalid_argument("Input is not a recognized legacy Finale MUS file");
+    if (parsed.formatEpoch == FormatEpoch::Unknown) {
+        // A document whose body framing cannot be classified has nothing dependable to
+        // recover fallbacks against, so this exits before attempting framing, options, or
+        // clef recovery rather than after producing a document built entirely from Finale 27
+        // defaults. Whether a banner was found narrows why internally but is not surfaced:
+        // either way this input is not something the caller can treat as a document.
+        throw std::invalid_argument("This file does not appear to be a Finale MUS document.");
     }
 
     ImportResult result;
@@ -46,24 +52,8 @@ ImportResult readImpl(const std::uint8_t* data, std::size_t size,
     }
 
     result.document = createDocument(
-        parsed, data, size, sourcePath, parseXml, parseDocument, result.report);
+        parsed, data, size, sourcePath, options, parseXml, parseDocument, result.report);
 
-    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
-        // A warning because this era yields no score content at all, only options.
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "Coda-banner pool directories are unresolved; supported fallback options "
-            "remain at Finale 27 defaults."});
-    } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
-        // Info, not a warning: this describes how far recovery currently reaches and fires
-        // for every zlib document ever read. Raising it to a user would report normal
-        // operation as a fault on every single file.
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-            "Only supported later variable logical records are overlaid; other options "
-            "remain at Finale 27 defaults."});
-    } else if (parsed.formatEpoch == FormatEpoch::Unknown) {
-        result.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "The banner header was recovered, but the body framing was not recognized."});
-    }
     // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
     // made a routine fallback indistinguishable from an unreadable document.
     for (const auto& diagnostic : result.report.diagnostics) {
@@ -109,6 +99,7 @@ ImportResult runGuarded(Body&& body)
 
 ImportResult Reader::readWithParser(
     const std::filesystem::path& path,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     return runGuarded([&] {
@@ -132,16 +123,17 @@ ImportResult Reader::readWithParser(
     if (!input) {
         throw std::runtime_error("Unable to read complete MUS input: " + path.string());
     }
-    return readImpl(data.data(), data.size(), path, parseXml, parseDocument);
+    return readImpl(data.data(), data.size(), path, options, parseXml, parseDocument);
     });
 }
 
 ImportResult Reader::readWithParser(
     const std::uint8_t* data, std::size_t size,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     return runGuarded(
-        [&] { return readImpl(data, size, std::nullopt, parseXml, parseDocument); });
+        [&] { return readImpl(data, size, std::nullopt, options, parseXml, parseDocument); });
 }
 
 } // namespace finale_mus_reader

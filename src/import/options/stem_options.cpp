@@ -99,7 +99,8 @@ void reportConnectionField(ImportReport& report, std::size_t index, const char* 
 void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<StemOptionsTarget>& target,
     const PhysicalConnection& stored, bool adjustmentsAreEvpu,
-    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report)
+    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report,
+    const text::SymbolFontNames* symbolFontNames)
 {
     const auto index = target->stemConnections.size();
     const auto toEfix = [adjustmentsAreEvpu](std::int16_t stored) {
@@ -111,7 +112,8 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     connection->symbol = stored.symbolIsCodepoint
         ? static_cast<char32_t>(stored.symbol)
         : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol),
-            text::codePageForDocumentFont(document, connection->fontId, std::nullopt));
+            document, connection->fontId, text::UnresolvedFontFallback::Symbol,
+            symbolFontNames);
     connection->upStemVert = toEfix(stored.upStemVert);
     connection->downStemVert = toEfix(stored.downStemVert);
     connection->upStemHorz = toEfix(stored.upStemHorz);
@@ -435,21 +437,28 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
             // sees in such a document; recovering the old table instead would assert a
             // layout this era does not use. The offending element is reported raw so the
             // case stays visible rather than looking like a document with no connections.
-            report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                "The stem-connection table holds symbol " + std::to_string(stored.symbol)
-                + " at index " + std::to_string(target->stemConnections.size())
-                + ", which is not a Unicode codepoint; no further stem connections were "
-                  "recovered from the source."});
+            //
+            // Info, not a warning: the out-of-range symbol is the format's own leftover
+            // default-table bytes, not content the user entered, and the connections found
+            // before it are already kept. Warning would report a fully usable document as
+            // though something in it were broken.
+            const auto recoveredCount = target->stemConnections.size();
+            report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                "Stem connections stopped at index " + std::to_string(recoveredCount)
+                + ": symbol " + std::to_string(stored.symbol) + " is not a Unicode codepoint "
+                  "(stale default-table bytes); " + std::to_string(recoveredCount)
+                + " kept."});
             reportConnectionField(report, target->stemConnections.size(), "symbol",
                 static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
             break;
         }
         insertRecoveredConnection(document, target, stored,
-            statesPreFinale35Units(index, profile), blockOffset, decodedOffset, report);
+            statesPreFinale35Units(index, profile), blockOffset, decodedOffset, report,
+            profile.symbolFontNames);
     }
 }
 
-void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
+void validateStemOptions(const musx::dom::DocumentPtr& document,
     musx::factory::ConstructionContext& construction)
 {
     const auto target = document->getOptions()->get<StemOptionsTarget>();
@@ -464,20 +473,10 @@ void validateStemOptions(const musx::dom::DocumentPtr& document, ImportReport& r
     //
     // Registering is what keeps "preserved as stored" from meaning "unusable". The comparator
     // stays exactly as the source wrote it, and musxdom mints a placeholder definition for it
-    // at the end of construction so that reading the font's name yields `Missing Font (n)`
-    // rather than throwing. Nothing later in this import rewrites a connection's font id, so
-    // the value registered here is the one the finished document holds.
-    for (std::size_t index = 0; index < target->stemConnections.size(); ++index) {
-        const auto& connection = target->stemConnections[index];
+    // at the end of construction, logging the substitution itself -- captured into this same
+    // report -- so nothing here needs to duplicate that check.
+    for (const auto& connection : target->stemConnections) {
         construction.registerFontId(connection->fontId);
-        if (!document->getOthers()->get<musx::dom::others::FontDefinition>(
-                musx::dom::SCORE_PARTID, connection->fontId)) {
-            report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                "Stem connection " + std::to_string(index) + " names font definition "
-                + std::to_string(connection->fontId)
-                + ", which this document does not define; the comparator is kept as stored"
-                  " and reads as a missing font."});
-        }
     }
 }
 
@@ -493,7 +492,7 @@ void importStemOptions(const ImportContext& context)
                            &loneStemFlagTable(), &packedStemFlagTable(),
                            &classStemScalarsTable()},
         context.index, context.profile, context.document, context.report);
-    validateStemOptions(context.document, context.report, context.construction);
+    validateStemOptions(context.document, context.construction);
 }
 
 } // namespace options

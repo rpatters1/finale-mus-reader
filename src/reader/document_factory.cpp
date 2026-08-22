@@ -11,6 +11,7 @@
 #include "import/support/embedded_graphics.h"
 #include "import/header.h"
 #include "import/support/legacy_mapping.h"
+#include "import/support/text_encoding.h"
 #include "records/legacy_record_index.h"
 #include "musx/factory/DocumentFactory.h"
 #include "musx/factory/PoolFactory.h"
@@ -63,6 +64,7 @@ musx::dom::DocumentPtr createDocument(
     const std::uint8_t* data,
     std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
+    const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report)
 {
@@ -80,11 +82,13 @@ musx::dom::DocumentPtr createDocument(
     seedPinnedDefaults(document, pinned, report, session.getConstructionContext());
     document->getHeader() = header::recover(data, size, report);
 
+    const auto macSymbolFonts = text::parseMacSymbolFonts(options.macSymbolFonts);
     SourceProfile profile;
     profile.epoch = report.formatEpoch;
     profile.version = report.sourceVersion;
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;
+    profile.symbolFontNames = &macSymbolFonts;
     applyLegacyMappings(
         records::LegacyRecordIndex::build(parsed), profile,
         std::span<const std::uint8_t>(data, size),

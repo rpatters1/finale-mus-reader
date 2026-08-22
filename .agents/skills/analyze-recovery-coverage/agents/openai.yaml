@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analyze Recovery Coverage"
+  short_description: "Capture and analyze recovery coverage"
+  default_prompt: "Use $analyze-recovery-coverage to run or iteratively analyze recovery_coverage_probe across inventoried corpora."

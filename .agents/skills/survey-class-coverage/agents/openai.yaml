@@ -1,4 +1,0 @@
-interface:
-  display_name: "Survey Class Coverage"
-  short_description: "Survey classes across selected fixture cohorts"
-  default_prompt: "Use $survey-class-coverage to test FontOptions coverage across all, loose, ETF-backed, or Finale-27-backed fixtures."

@@ -8,8 +8,10 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include "musx/dom/Document.h"
@@ -129,6 +131,19 @@ struct FieldInfo
     std::int64_t rawValue{};
 };
 
+/// @brief Provenance for formatting commands completed on one imported text field.
+/// @details Each flag is independent: a legacy string can omit any subset of the font, size,
+/// and effects commands from its initial formatting run.
+struct TextFieldInfo
+{
+    /// @brief The reader supplied the initial font command from the text class default.
+    bool fontWasSynthesized{};
+    /// @brief The reader supplied the initial size command from the text class default.
+    bool sizeWasSynthesized{};
+    /// @brief The reader supplied the initial effects command from the text class default.
+    bool effectsWereSynthesized{};
+};
+
 /// @brief One message about the import, with the level that decides where it surfaces.
 /// @details The level is musxdom's own @c Logger::LogLevel rather than a parallel enum, so a
 /// host can forward a diagnostic straight to its logging callback without translating.
@@ -170,6 +185,8 @@ struct ImportReport
     std::string savingProduct;
     std::vector<BlockInfo> blocks;
     std::vector<FieldInfo> fields;
+    /// @brief Text conversion provenance keyed by the corresponding field target.
+    std::unordered_map<std::string, TextFieldInfo> textFields;
     std::vector<Diagnostic> diagnostics;
 };
 
@@ -189,27 +206,39 @@ struct ImportResult
     ImportReport report;
 };
 
+/// @brief Optional resources supplied by the application for one import.
+struct ReaderOptions
+{
+    /// @brief Contents of Finale's `MacSymbolFonts.txt`, if available.
+    /// @details The reader parses the bytes during the call and does not retain the span.
+    /// Each nonblank line names a font whose stored character values are glyph numbers.
+    std::span<const std::uint8_t> macSymbolFonts;
+};
+
 class Reader
 {
 public:
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::filesystem::path& path)
+    [[nodiscard]] static ImportResult read(const std::filesystem::path& path,
+        const ReaderOptions& options = {})
     {
         return readWithParser(
-            path, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+            path, options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data)
+    [[nodiscard]] static ImportResult read(const std::vector<std::uint8_t>& data,
+        const ReaderOptions& options = {})
     {
-        return readWithParser(data.data(), data.size(),
+        return readWithParser(data.data(), data.size(), options,
             &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size)
+    [[nodiscard]] static ImportResult read(const std::uint8_t* data, std::size_t size,
+        const ReaderOptions& options = {})
     {
-        return readWithParser(data, size,
+        return readWithParser(data, size, options,
             &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
@@ -232,9 +261,11 @@ private:
     }
 
     static ImportResult readWithParser(const std::filesystem::path& path,
+        const ReaderOptions& options,
         XmlParser parseXml, DocumentParser parseDocument);
     static ImportResult readWithParser(
         const std::uint8_t* data, std::size_t size,
+        const ReaderOptions& options,
         XmlParser parseXml, DocumentParser parseDocument);
 };
 

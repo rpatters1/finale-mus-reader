@@ -26,20 +26,19 @@ Task-specific procedures live in `.agents/skills/<name>/SKILL.md`, kept
 tool-neutral so any agent can use them. Read the relevant one before starting
 that task rather than reconstructing the procedure:
 
-- `.agents/skills/survey-a-corpus/`: inventory a local `.mus` corpus and publish
-  the results. Read this before running anything in `scripts/` against a corpus.
-  It covers the conventions you must ask the user for, how survey results are
-  namespaced per corpus, and the checks that keep local paths out of published
-  files.
-- `.agents/skills/survey-class-coverage/`: compare one class or related set of
-  classes across a selected cohort of already-inventoried fixtures, optionally
-  using ETF or Finale 27 companions. Read this for targeted decoder-coverage and
-  upgrade-behavior studies; it keeps per-fixture observations private and
-  publishes only aggregate results.
+- `.agents/skills/inventory-a-corpus/`: discover or rediscover what a local
+  corpus contains and regenerate its private inventories, mappings, caches, and
+  sanitized public aggregates. Read this before inventorying a corpus or
+  refreshing `private/generated/<survey_id>/`; it does not run reader coverage.
+- `.agents/skills/analyze-recovery-coverage/`: run
+  `recovery_coverage_probe` over already-inventoried corpora and analyze its
+  JSONL snapshot, including repeated class, field, regression, and Finale-upgrade
+  studies that should not rerun the probe.
 - `.agents/skills/implement-musxdom-class/`: research, draft, test, and refine
   recovery of one musxdom DOM class from legacy MUS records. Read this when the
   user asks to implement a class; it moves from small epoch samples to a narrow
-  implementation and then hands broad validation to `survey-class-coverage`.
+  implementation and then hands broad validation to
+  `analyze-recovery-coverage`.
 
 ## Repository map
 
@@ -110,11 +109,23 @@ property was added, what it replaced, or which investigation prompted it. A read
 the published API has none of that context. The same rule applies to Doxygen written in
 musxdom.
 
-This applies to `src/`, `include/`, and `tests/evidence/` fixtures. It does not
-apply to `scripts/`, `tools/`, or test code, which may repeat themselves as
-freely as makes sense — a probe is meant to be written quickly while a question
-is live, and a test that spells out its own expectations is clearer than one that
-shares a helper with the code under test.
+The rule also applies across the recovery-coverage pair:
+`tools/coverage/recovery_coverage_probe.cpp` and its dependencies capture the observations, and
+`scripts/recovery_coverage_report.py` classifies and aggregates them. They are
+one analysis pipeline, not independent probes. A field name, path convention,
+classification rule, transformation, or aggregate must have one authoritative
+implementation; if the report needs information from the probe, add it to the
+probe's structured output rather than re-deriving it from incidental fields.
+
+This applies to `src/`, `include/`, `tests/evidence/` fixtures, and
+`tools/coverage/`. It does not apply to the rest of `tools/`, `scripts/`, or
+test code, which may repeat themselves as freely as makes sense — a probe is
+meant to be written quickly while a question is live, and a test that spells
+out its own expectations is clearer than one that shares a helper with the
+code under test. `tools/coverage/` is the exception within `tools/`: it is
+the one probe meant to stay comprehensible and regression-safe over time
+rather than rewritten on demand, so its comments follow production discipline
+even though its code may still repeat itself as freely as any other probe.
 
 ## Format and decoder rules
 

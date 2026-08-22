@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/texts.h"
+#include "import/texts/internal.h"
 
 #include <algorithm>
 #include <format>
@@ -17,9 +18,25 @@
 
 namespace finale_mus_reader {
 namespace texts {
+
+void recordTextFieldInfo(ImportReport& report, std::string target,
+    bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized)
+{
+    report.textFields.emplace(std::move(target), TextFieldInfo{
+        fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
+}
+
+void recordTextFieldInfo(ImportReport& report, std::string target,
+    const text::ConvertedEnigmaText& converted)
+{
+    recordTextFieldInfo(report, std::move(target), converted.fontWasSynthesized,
+        converted.sizeWasSynthesized, converted.effectsWereSynthesized);
+}
+
 namespace {
 
 using musx::dom::Cmper;
+using TextFontType = musx::dom::options::FontOptions::FontType;
 
 // The text pool is the one pre-2007 pool that is not made of records, and the one place the
 // legacy format describes itself in words. It holds `^keyword(n) ... ^end` chunks end to end,
@@ -40,6 +57,7 @@ struct TextKeyword
     std::string_view keyword;
     void (*create)(const musx::dom::DocumentPtr& document, Cmper number, std::string&& text);
     std::string_view nodeName;
+    TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
     /// @details `texts::FileInfoText` throws on a number outside its own enumeration, so a
     /// malformed chunk would abort the import rather than being skipped. Nothing else in the
@@ -57,9 +75,11 @@ void createText(const musx::dom::DocumentPtr& document, Cmper number, std::strin
 }
 
 template <typename Target>
-constexpr TextKeyword textKeyword(std::string_view keyword, bool (*accepts)(Cmper) = nullptr)
+constexpr TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
+    bool (*accepts)(Cmper) = nullptr)
 {
-    return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, accepts};
+    return TextKeyword{
+        keyword, &createText<Target>, Target::XmlNodeName, defaultFontType, accepts};
 }
 
 bool isFileInfoType(Cmper number)
@@ -77,22 +97,23 @@ bool isFileInfoType(Cmper number)
 // silently: an unrecognized keyword is reported by name below, which is how the right one
 // would be found.
 constexpr TextKeyword textKeywords[] = {
-    textKeyword<musx::dom::texts::BlockText>("block"),
-    textKeyword<musx::dom::texts::LyricsVerse>("verse"),
-    textKeyword<musx::dom::texts::LyricsChorus>("chorus"),
-    textKeyword<musx::dom::texts::LyricsSection>("section"),
-    textKeyword<musx::dom::texts::SmartShapeText>("smartshape"),
+    textKeyword<musx::dom::texts::BlockText>("block", TextFontType::TextBlock),
+    textKeyword<musx::dom::texts::LyricsVerse>("verse", TextFontType::LyricVerse),
+    textKeyword<musx::dom::texts::LyricsChorus>("chorus", TextFontType::LyricChorus),
+    textKeyword<musx::dom::texts::LyricsSection>("section", TextFontType::LyricSection),
+    textKeyword<musx::dom::texts::SmartShapeText>("smartshape", TextFontType::TextBlock),
     // A bookmark's text carries no style commands of its own, and musxdom documents any Enigma
     // insert appearing in one as meaningless. It is read through the same converter regardless:
     // the record still needs its bytes decoded through a code page, and a caret still has to
     // survive as an escaped one.
-    textKeyword<musx::dom::texts::BookmarkText>("bookmark"),
-    textKeyword<musx::dom::texts::ExpressionText>("expression"),
+    textKeyword<musx::dom::texts::BookmarkText>("bookmark", TextFontType::TextBlock),
+    textKeyword<musx::dom::texts::ExpressionText>("expression", TextFontType::Expression),
     // File Info starts out in the header and becomes ordinary pool records in a later era.
     // Where in between the move happens does not matter here: the header pass fills in only
     // the types the pool did not supply, so each document states for itself which way it
     // stores them. The number is musxdom's own `FileInfoText::TextType`.
-    textKeyword<musx::dom::texts::FileInfoText>("fileInfo", &isFileInfoType),
+    textKeyword<musx::dom::texts::FileInfoText>(
+        "fileInfo", TextFontType::TextBlock, &isFileInfoType),
 };
 
 constexpr std::string_view recordTerminator = "^end";
@@ -118,8 +139,13 @@ struct RawRecord
 /// @brief The length of a section marker at @p at, or zero when there is none.
 /// @details The earliest streams divide themselves into sections with a bare `^text` and
 /// `^lyrics`, a keyword carrying no comparator. Finale 97 drops them, each record naming its
-/// own kind. They say nothing a record does not, so they are skipped rather than read; what
-/// they are needed for is telling the two framings apart.
+/// own kind. Some documents spell the same marker with an empty argument list instead,
+/// `^text()` and `^lyrics()`, which is accepted here too -- but only for those two keywords:
+/// an empty list is also how an ordinary inline command with no argument reads (`^composer()`,
+/// `^date()`, and the like), and those must stay in the body rather than being mistaken for a
+/// section boundary. A nonempty list is a numbered record and is left to fail there rather
+/// than be consumed as a marker. Markers say nothing a record does not, so they are skipped
+/// rather than read; what they are needed for is telling the two framings apart.
 std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at)
 {
     if (at >= stream.size() || stream[at] != '^') {
@@ -129,7 +155,17 @@ std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at
     while (cursor < stream.size() && isLetter(stream[cursor])) {
         ++cursor;
     }
-    if (cursor == at + 1 || (cursor < stream.size() && stream[cursor] == '(')) {
+    if (cursor == at + 1) {
+        return 0;
+    }
+    if (cursor < stream.size() && stream[cursor] == '(') {
+        if (cursor + 1 < stream.size() && stream[cursor + 1] == ')') {
+            const std::string_view keyword(
+                reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
+            if (keyword == "text" || keyword == "lyrics") {
+                return cursor + 2 - at;
+            }
+        }
         return 0;
     }
     return cursor - at;
@@ -231,11 +267,15 @@ void reportUnread(ImportReport& report, const std::vector<std::uint8_t>& codes,
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, message + "."});
     }
     if (!effects.empty()) {
+        // Warning, not info: argumentsAt() already trims stray whitespace before an argument
+        // reaches this table, which was the one known source of a real effect name failing to
+        // match. What's left is a name this reader's vocabulary genuinely does not cover, and
+        // the styling it names is silently dropped from the recovered text.
         std::string message = "Legacy text effects with no known bit were ignored:";
         for (const auto& effect : effects) {
             message += ' ' + effect;
         }
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, message + "."});
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning, message + "."});
     }
     if (!keywords.empty()) {
         std::string message = "The text pool named record kinds this reader does not import:";
@@ -255,7 +295,7 @@ void rememberTextPoolName(std::vector<std::string>& list, std::string_view value
 
 } // namespace
 
-void importTextPool(const ImportContext& context)
+void importLaterTextPool(const ImportContext& context)
 {
     // The Coda-banner epoch's text stream is length-prefixed chunks rather than
     // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
@@ -273,7 +313,8 @@ void importTextPool(const ImportContext& context)
     // how the file stores characters, so it is asked for once rather than named again here.
     const text::EnigmaTextSource source{context.document,
         versions::storesUnicodeCodepoints(context.profile.version),
-        text::platformCodePage(context.profile.platform)};
+        context.profile.platform, nullptr,
+        context.profile.symbolFontNames};
 
     // The stream states which of the two framings it uses. The earliest one opens with a
     // `^text` section marker and terminates a record with the start of the next; Finale 97
@@ -316,7 +357,10 @@ void importTextPool(const ImportContext& context)
             continue;
         }
 
-        auto converted = text::toModernEnigmaText(record->body, source);
+        auto recordSource = source;
+        recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
+            context.document, found->defaultFontType);
+        auto converted = text::toModernEnigmaText(record->body, recordSource);
         for (const auto code : converted.unreadCommandCodes) {
             if (std::find(unknownCodes.begin(), unknownCodes.end(), code) == unknownCodes.end()) {
                 unknownCodes.push_back(code);
@@ -333,12 +377,23 @@ void importTextPool(const ImportContext& context)
         info.origin = ValueOrigin::LegacyMus;
         info.decodedOffset = record->start;
         info.rawValue = static_cast<std::int64_t>(converted.text.size());
+        recordTextFieldInfo(context.report, info.target, converted);
         context.report.fields.push_back(std::move(info));
 
         found->create(context.document, record->number, std::move(converted.text));
     }
 
     reportUnread(context.report, unknownCodes, unknownEffects, unknownKeywords);
+}
+
+void importTexts(const ImportContext& context)
+{
+    // The physical readers are ordered so a text-pool FileInfoText wins over its older
+    // header spelling; the header pass fills only types the pool did not provide. The Coda
+    // pass is disjoint by epoch and leaves both later stores untouched.
+    importLaterTextPool(context);
+    importHeaderFileInfoTexts(context);
+    importCodaStoredTexts(context);
 }
 
 } // namespace texts

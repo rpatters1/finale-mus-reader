@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
+#include "musx/dom/Fundamentals.h"
 #include "records/legacy_others.h"
 
 namespace finale_mus_reader {
@@ -55,12 +56,14 @@ using LegacyTag = std::uint16_t;
 struct LegacyRow
 {
     LegacyTag tag{};
+    /// @brief Source part that owns the record; zero is the score.
+    /// @details Variable zlib records carry this in their header. Earlier normalized pools
+    /// currently contain score records only and therefore leave it zero.
+    std::uint16_t partId{};
     std::uint16_t cmper1{};
     /// @brief Always zero for an others row.
     std::uint16_t cmper2{};
     std::uint32_t inci{};
-    /// @brief Whether @ref inci was explicitly carried by the variable record header.
-    bool explicitIncidence{};
     /// @brief Payload words in source order, six for an other and five for a detail.
     /// @details Numeric fields are byte-order corrected, so these are logical values.
     std::array<std::int16_t, 6> words{};
@@ -99,19 +102,25 @@ public:
     }
 
     /// @brief Returns every row of a family, in incidence order.
+    // TODO: Import part-owned records and their sharing modes; current importers deliberately
+    // select only SCORE_PARTID through this default.
     [[nodiscard]] std::span<const LegacyRow> getArray(
-        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0) const;
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0,
+        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     /// @brief Returns one incidence of a family, or nullptr when it is absent.
     [[nodiscard]] const LegacyRow* get(
-        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci) const;
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci,
+        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
-    /// @brief Returns every distinct first comparator carried by a tag, in ascending order.
-    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(LegacyTag tag) const;
+    /// @brief Returns every distinct first comparator carried by a tag and part.
+    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(
+        LegacyTag tag, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
-    /// @brief Returns every distinct second comparator for a tag and first comparator.
+    /// @brief Returns every distinct second comparator for a tag, part, and first comparator.
     [[nodiscard]] std::vector<std::uint16_t> secondCmpersForTag(
-        LegacyTag tag, std::uint16_t cmper1) const;
+        LegacyTag tag, std::uint16_t cmper1,
+        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     [[nodiscard]] bool empty() const { return m_rows.empty(); }
     [[nodiscard]] std::size_t size() const { return m_rows.size(); }
@@ -144,9 +153,9 @@ public:
     [[nodiscard]] const LegacyRowPool& getDetails() const { return m_details; }
     /// @brief Class-identified variable-length others records, for Finale 2007 and later.
     /// @details A separate pathway on purpose. The 2007 encoding shares the logical model of
-    /// class, comparator, and incidence, but nothing of the physical one: records are
-    /// length-governed byte payloads rather than six fixed words, so a mapping table
-    /// addresses them by byte offset and must say which encoding it targets.
+    /// class, comparator, part, and an incidence stream, but nothing of the physical one:
+    /// records are length-governed byte payloads rather than six fixed words, so a mapping
+    /// table addresses them by byte offset and must say which encoding it targets.
     [[nodiscard]] const LegacyRowPool& getClassOthers() const { return m_classOthers; }
     /// @brief Class-identified variable-length detail records, for Finale 2007 and later.
     /// @details Finale reuses numeric class ids between physical pools, so details must not

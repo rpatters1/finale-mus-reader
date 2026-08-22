@@ -191,27 +191,7 @@ constexpr const char* wordExtConnectNames[] = {"defaultStart", "defaultEnd", "sy
 // Each connection style is three words: the connection point, then the two offsets.
 constexpr std::size_t wordExtConnectWords = 3;
 constexpr std::size_t wordExtConnectCount = std::size(wordExtConnectOrder);
-
-/// @brief Whether this source stores the word-extension connection table.
-/// @details Selectors 55 and 57 arrive together with Finale 2004, inside the DCL epoch. Their
-/// presence is what decides, rather than a version range, so a document whose version cannot be
-/// recovered is read from what it actually carries.
-///
-/// The Coda-banner epoch is excluded outright, and it has to be: those documents carry a
-/// selector 55 of their own, holding a different option that reuses the number. Reading it as
-/// this table would fabricate nine connection styles out of another option's bytes. The word
-/// count is a second, independent guard: that record is one six-word incidence where this
-/// table needs twenty-seven words.
-bool storesWordExtConnectTable(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    if (profile.epoch == FormatEpoch::CodaBanner) {
-        return false;
-    }
-    const auto family = readGlobalWords(index, profile, wordExtConnectSelector);
-    return family.present
-        && family.words.size() >= wordExtConnectCount * wordExtConnectWords;
-}
+constexpr std::size_t earlyWordExtConnectCount = wordExtConnectCount - 1;
 
 /// @brief Whether this source stores the Finale 2004 generation of smart-lyric settings.
 /// @details Selector 57 is the marker for the whole group, including the two switches that live
@@ -573,12 +553,22 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         }
     }
 
-    // Selector 55: nine word-extension connection styles, three words each, spread over five
-    // fixed rows whose last three words are padding. The gate is the record itself; see
-    // @ref storesWordExtConnectTable for why the Coda-banner epoch is excluded from it.
-    if (storesWordExtConnectTable(index, profile)) {
-        const auto connect = readGlobalWords(index, profile, wordExtConnectSelector);
-        for (std::size_t element = 0; element < wordExtConnectCount; ++element) {
+    // Selector 55 begins as eight three-word styles in four fixed rows. The later layout adds
+    // ZeroOffset as a ninth style in a fifth row, whose final three words are padding. The
+    // payload length states which layout is present.
+    //
+    // Coda-banner documents are excluded outright: they reuse selector 55 for an unrelated
+    // six-word option. The minimum eight-style length keeps those bytes from being mistaken for
+    // this table even if the epoch were ever misclassified.
+    const auto connect = readGlobalWords(index, profile, wordExtConnectSelector);
+    const bool hasWordExtConnectTable = profile.epoch != FormatEpoch::CodaBanner
+        && connect.present
+        && connect.words.size() >= earlyWordExtConnectCount * wordExtConnectWords;
+    if (hasWordExtConnectTable) {
+        const auto elementCount = connect.words.size() >= wordExtConnectCount * wordExtConnectWords
+            ? wordExtConnectCount
+            : earlyWordExtConnectCount;
+        for (std::size_t element = 0; element < elementCount; ++element) {
             const auto type = wordExtConnectOrder[element];
             const auto style = connectStyleFor(target, type);
             const auto first = element * wordExtConnectWords;
@@ -623,7 +613,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // well, in selector 55's first element, and the two always agree. Before selector 55 exists
     // there is no connection table to read, so the starting element takes the dialog's values,
     // which is the era's own behavior.
-    if (!storesWordExtConnectTable(index, profile) && (lift.present || push.present)) {
+    if (!hasWordExtConnectTable && (lift.present || push.present)) {
         const auto starting = connectStyleFor(target, LyricConnectType::DefaultStart);
         starting->xOffset = target->wordExtHorzOffset;
         starting->yOffset = target->wordExtVertOffset;
@@ -711,8 +701,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
             units = stored.size();
             if (!stored.empty()) {
                 // No font names an encoding for this string, so the document's own platform
-                // decides. @ref text::platformCodePage is where that fallback lives.
-                ignored = text::toUtf8(stored, text::platformCodePage(profile.platform));
+                // decides. The platform overload of @ref text::toUtf8 owns that fallback.
+                ignored = text::toUtf8(stored, profile.platform);
             }
         }
         if (!ignored.empty()) {

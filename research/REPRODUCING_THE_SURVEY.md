@@ -11,7 +11,7 @@ Which survey a deliverable came from is therefore a separate dimension, never pa
 publishes under `research/corpora/<survey_id>/`, where `survey_id` is `<github-user>-<corpus-slug>`, and registers a
 row in [`data/surveys.csv`](data/surveys.csv). The reference corpus is `rpatters1-main`, so its manifest is
 [`corpora/rpatters1-main/data/corpus_manifest.csv`](corpora/rpatters1-main/data/corpus_manifest.csv).
-Agents should read `.agents/skills/survey-a-corpus/SKILL.md`, which covers registration and the pre-publication
+Agents should read `.agents/skills/inventory-a-corpus/SKILL.md`, which covers registration and the pre-publication
 checks.
 
 The original path mapping is deliberately not tracked. If the corpus is available locally, create
@@ -158,4 +158,3 @@ written by `render_corpus_inventory.py` in the last step is the publishable one.
 The scripts are read-only with respect to the evidence corpus. `musx_semantics.py` uses the public symmetric
 `score.dat` recoding algorithm documented in the MIT-licensed sibling denigma project and keeps decoded XML in
 memory.
-

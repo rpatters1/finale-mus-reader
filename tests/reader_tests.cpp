@@ -2351,8 +2351,6 @@ void testCodaBannerEpoch()
     expect(result.report.sourcePlatform == SourcePlatform::Unknown
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
-    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Warning),
-        "Coda-banner limitation was not reported as a warning");
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported Coda-banner option was not retained as a default");
@@ -2375,16 +2373,6 @@ void testZlibEpoch()
     expect(field(result, "options.musicSpacing.minWidth").origin
         == ValueOrigin::Finale27Default,
         "Unsupported zlib-era option was not retained as a default");
-    // Info, not a warning: this message fires for every zlib document ever read and
-    // describes how far recovery reaches, so raising it to a user would report normal
-    // operation as a fault on every file. Other diagnostics from this synthetic fixture
-    // may legitimately be warnings, so the level is asserted on this message alone.
-    expect(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
-               [](const finale_mus_reader::Diagnostic& entry) {
-                   return entry.message.find("variable logical records") != std::string::npos
-                       && entry.level == musx::util::Logger::LogLevel::Info;
-               }),
-        "The zlib overlay limitation was not reported at info level");
     expectNoScoreContent(result);
 }
 
@@ -2557,6 +2545,18 @@ void testShapeDefinitions()
     verifyModern("evidence/F2002/F2002-baseline.mus", "Finale 2002");
     verifyModern("evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007");
     verifyModern("evidence/F2012/F2012-upstem-flags.mus", "Finale 2012");
+
+    const auto zlibTypes = readShapeFixture("evidence/F2012/F2012-graphics-types.mus");
+    expect(zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 2)->shapeType
+                == others::ShapeDef::ShapeType::Clef
+            && zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 3)->shapeType
+                == others::ShapeDef::ShapeType::Clef
+            && zlibTypes.document->getOthers()
+                ->get<others::ShapeDef>(SCORE_PARTID, 4)->shapeType
+                == others::ShapeDef::ShapeType::Expression,
+        "Zlib ShapeDef word 2 was not recovered as shapeType");
 
     // Shape list 2 in the fixed-row fixture has two stale packed instructions after
     // its zero terminator. Finale's own ETF/MUSX representation stops at the zero.

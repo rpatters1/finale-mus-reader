@@ -243,7 +243,8 @@ void ssLineFinalize(void* instance, const SourceProfile& profile,
     // actually holds and stays recoverable.
     line->charParams->lineChar = text::codepointFromByte(
         static_cast<std::uint8_t>(line->charParams->lineChar),
-        text::codePageForDocumentFont(document, line->charParams->font->fontId, std::nullopt));
+        document, line->charParams->font->fontId, text::UnresolvedFontFallback::Symbol,
+        profile.symbolFontNames);
 }
 
 // The layout is one fact stated in three addressings, so the row list is written once here

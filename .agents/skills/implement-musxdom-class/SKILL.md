@@ -1,6 +1,6 @@
 ---
 name: implement-musxdom-class
-description: Research, draft, test, and iteratively refine legacy Finale MUS recovery for a specified musxdom DOM class. Use when the user says they want to implement, recover, decode, or map a musxdom class or a tightly related set of classes from legacy .mus files, especially when they provide preliminary selectors, record identifiers, sample edits, structure hints, or epoch-specific evidence. This is an interactive implementation workflow; use survey-class-coverage afterward for broad corpus validation, not as a substitute for the initial evidence-driven draft.
+description: Research, draft, test, and iteratively refine legacy Finale MUS recovery for a specified musxdom DOM class. Use when the user says they want to implement, recover, decode, or map a musxdom class or a tightly related set of classes from legacy .mus files, especially when they provide preliminary selectors, record identifiers, sample edits, structure hints, or epoch-specific evidence. This is an interactive implementation workflow; use analyze-recovery-coverage afterward for broad corpus validation, not as a substitute for the initial evidence-driven draft.
 ---
 
 # Implement a musxdom class
@@ -302,6 +302,23 @@ allocate the next sequential target cmper and preserve the reference object's or
 spelling and data. Define cmper-zero semantics explicitly rather than assuming zero is
 an ordinary pooled object.
 
+**Write this class's surveyor in the same pass, not afterward.** Add a
+`void write<Class>(std::ostream&, const SurveyContext&)` function to
+`tools/coverage/surveyors/<pool>/<class>.cpp` -- one file per pool directory, matching
+`src/import/`'s layout one for one -- and register it with `COVERAGE_SURVEYOR` at
+namespace scope (see `tools/coverage/registry.h`). Emit the fields a comparison can
+classify, and name a contained object rather than flattening it: flattening a variant
+block loses which variant the record chose. `recovery_coverage_probe` is registry-driven
+and self-registering, so nothing else has to change for the new class to appear in every
+future corpus run -- but nothing makes the surveyor itself appear automatically either. A
+class implemented without one is silently untested across every corpus and every
+companion comparison, however thoroughly its own fixtures and unit tests pass, and Step 7
+has nothing to run it against. Treat the importer and its surveyor as one unit of work: a
+change is not finished until both land together, and a later change that adds, renames,
+or reinterprets a field on the importer side updates the surveyor in the same commit --
+the two are two views of the same document, and they drift the moment only one of them is
+told about a change.
+
 ## Step 6 — Prove the draft on controlled evidence
 
 Add focused tests for:
@@ -324,13 +341,15 @@ Run the focused test, the full test suite, generated-resource checks when releva
 
 ## Step 7 — Refine with class coverage
 
-Once the narrow implementation passes controlled fixtures, read and use
-`../survey-class-coverage/SKILL.md`. **Do not run a corpus survey before that point.**
-A survey answers questions about an implementation -- which fields it recovers, which
-epochs it fails, where companions disagree with it -- and none of those questions has a
-meaning yet if the class exists only as notes. A survey run early is not a head start;
-it is Step 7 performed on nothing, and it has to be run again afterwards anyway. Define the cohort with the user: all fixtures,
-loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
+Once the narrow implementation and its surveyor (Step 5) both exist and pass controlled
+fixtures, read and use `../analyze-recovery-coverage/SKILL.md`. **Do not run recovery coverage
+before that point.** A survey answers questions about an implementation -- which fields
+it recovers, which epochs it fails, where companions disagree with it -- and none of
+those questions has a meaning yet if the class exists only as notes, or if it has an
+importer but no surveyor to report what the importer did. A survey run early is not a
+head start; it is Step 7 performed on nothing, and it has to be run again afterwards
+anyway. Define the cohort with the user: all fixtures, loose only, ETF-backed,
+Finale-27-backed, or an explicit union or intersection.
 
 **Name the surveys as well as the cohort, and say what each one can and cannot answer.**
 Every registered survey in `research/data/surveys.csv` is in scope, and they are not
@@ -342,6 +361,20 @@ The tracked fixtures are tiny and must never be read as a percentage, but every 
 companion and they hold the controlled one-variable pairs. A claim about a release absent
 from the survey you ran is not a finding; check whether another survey has it before calling
 an era covered.
+
+Run `tools/coverage/recovery_coverage_probe` over the chosen cohort, on a corpus TSV that
+declares a `#companion:` convention for it (see `recovery_coverage_probe.cpp`'s
+`readCorpusRows()`) so every row also surveys its Finale 27 companion, through the same
+surveyor written in Step 5. Summarize the JSONL with `scripts/recovery_coverage_report.py`.
+This needs **no per-class code on the Python side**: source and companion are surveyed through the
+identical `runAllSurveyors()` harness into the identical JSON shape, so the report's
+recursive diff already covers a new class the moment its surveyor exists -- there is one
+source of truth for the JSON, not two hand-kept in sync. The only thing to maintain by hand
+is `EXPECTED_DIFFERENCES` in `scripts/recovery_coverage_report.py`: record there any difference this class's own
+comparison shows to be intended rather than a regression -- Finale's upgrade synthesizing an
+object the source never stored is the common case -- so it reads as a known difference to
+whoever next sees an unexpected-diff row naming this class, not something to re-investigate
+from scratch.
 
 Make the targeted survey answer at least:
 
@@ -355,8 +388,18 @@ Make the targeted survey answer at least:
 
 Show contradictions and representative private fixture names/paths to the user only in
 the local console as allowed by survey policy. Keep tracked findings aggregate and
-sanitized. Revise code, tests, and confidence labels together, then rerun the smallest
-cohort that exercises the change before rerunning the broader survey.
+sanitized. Revise code, tests, confidence labels, and the surveyor together -- the same
+"one unit of work" rule from Step 5 applies to every later revision, not only the first
+draft -- then rerun the smallest cohort that exercises the change before rerunning the
+broader survey.
+
+**Before calling the work complete, re-run the regression over every registered survey**,
+not only the cohort the class was developed against, and present the per-survey import
+table from `recovery_coverage_report.py`'s output with the results. The regression is
+only as wide as its surveyor list, and a class recovering correctly for its own fixtures
+can still break another class for every document in a corpus -- a shared decoder touched
+along the way (the text encoding, a font lookup, the record index) is exactly what a
+full-survey run catches and what per-class tests cannot.
 
 ## Transferable lessons from FontOptions
 
@@ -374,34 +417,6 @@ Apply these as questions, not universal rules:
 - A complete modern options collection can legitimately combine source-recovered values
   with explicitly reported reference defaults.
 
-## Step 8 — Widen the full regression to the new class
-
-**The full regression is only as wide as its class list, and it does not discover a new class
-by itself.** `tools/options_coverage_probe` emits one observation per document and
-`scripts/options_coverage_report.py` compares each against its Finale 27 companion; between
-them they cover every class the reader recovers, matching the importer registry in
-`src/import/support/legacy_mapping.cpp` one for one. A class absent from that pair is silently
-untested across every corpus, however thoroughly its own fixtures and unit tests pass.
-
-Do this before reporting the class complete:
-
-1. Add an emitter to `tools/options_coverage_probe.cpp` and call it from the dispatch. Emit
-   the fields a comparison can classify, and name a contained object rather than flattening it
-   -- flattening a variant block loses which variant the record chose.
-2. Add the companion extractor and a `compare_*` function to
-   `scripts/options_coverage_report.py`, dispatch it from `compare_companion`, and update the
-   class list in that file's docstring, including its count.
-3. Record any difference that is intended rather than a regression in that same docstring,
-   beside the ones already there. Finale's upgrade synthesizing an object the source never
-   stored is the common case, and it will otherwise be re-investigated by whoever next reads a
-   `companion-only` row.
-4. Re-run the regression over **every registered survey**, not only the cohort the class was
-   developed against, and present the per-survey import table with the results.
-
-A class that recovers correctly for its own fixtures can still break another class for every
-document in a corpus: a shared decoder touched along the way -- the text encoding, a font
-lookup, the record index -- is exactly what this step catches and what per-class tests cannot.
-
 ## Completion standard
 
 After the user has approved the completed work and its pull request, identify the exact transient analysis artifacts that are unlikely to help with the next musxdom class, prompt for explicit approval, and clean up only the approved artifacts. Preserve reusable corpus inventories, path and companion mappings, and expensive archive caches.
@@ -409,7 +424,7 @@ After the user has approved the completed work and its pull request, identify th
 Finish with a concise account of the implemented class and fields, supported epochs and
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, remaining open layouts, and the next smallest evidence request.
-**Include the full-regression import table from Step 8, per survey.** A completion report
+**Include the full-regression import table from Step 7, per survey.** A completion report
 without it is not a completion report: nothing else in this procedure would notice that the
 work broke a class it never mentions.
 Call the result partial whenever any epoch or field remains unsupported.

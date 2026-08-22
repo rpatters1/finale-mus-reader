@@ -13,6 +13,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -20,6 +22,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
+#include "import/support/enigma_text.h"
 #include "import/support/legacy_mapping.h"
 #include "import/texts.h"
 #include "records/legacy_record_index.h"
@@ -114,6 +117,24 @@ musx::dom::DocumentPtr makeTextDocument()
     font->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
     font->charsetVal = 0;
     document->getOthers()->add(musx::dom::others::FontDefinition::XmlNodeName, font);
+
+    auto japaneseFont = std::make_shared<musx::dom::others::FontDefinition>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        musx::dom::Cmper(9));
+    japaneseFont->name = "ヒラギノ明朝 Pro W3";
+    japaneseFont->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
+    japaneseFont->charsetVal = 1;
+    document->getOthers()->add(
+        musx::dom::others::FontDefinition::XmlNodeName, japaneseFont);
+
+    auto unspellableFont = std::make_shared<musx::dom::others::FontDefinition>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        musx::dom::Cmper(10));
+    unspellableFont->name = "p^sharp(";
+    unspellableFont->charsetBank = musx::dom::others::FontDefinition::CharacterSetBank::MacOS;
+    unspellableFont->charsetVal = 0;
+    document->getOthers()->add(
+        musx::dom::others::FontDefinition::XmlNodeName, unspellableFont);
     return document;
 }
 
@@ -146,7 +167,7 @@ SyntheticImport importStream(std::string_view stream)
     const finale_mus_reader::ImportContext context{index, profile,
         std::span<const std::uint8_t>{}, result.document, reference, result.report, pending,
         construction};
-    finale_mus_reader::texts::importTextPool(context);
+    finale_mus_reader::texts::importTexts(context);
     return result;
 }
 
@@ -202,15 +223,16 @@ void testFileInfoText()
     using musx::dom::texts::FileInfoText;
     const auto shortInfo = readTextFixture("evidence/F97/F97-fileinfo-short.mus");
     const auto longInfo = readTextFixture("evidence/F97/F97-fileinfo-long.mus");
+    constexpr std::string_view initial = "^font(Times)^size(14)^nfx(2)";
 
     expectText(textOf<FileInfoText>(shortInfo, musx::dom::Cmper(FileInfoText::TextType::Title))
-            == "File Info Short", "The header title was not recovered");
+            == std::string(initial) + "File Info Short", "The header title was not recovered");
     expectText(textOf<FileInfoText>(shortInfo, musx::dom::Cmper(FileInfoText::TextType::Composer))
-            == "Robert Patterson", "The header composer was not recovered");
+            == std::string(initial) + "Robert Patterson", "The header composer was not recovered");
     expectText(textOf<FileInfoText>(shortInfo, musx::dom::Cmper(FileInfoText::TextType::Copyright))
-            == "2002", "The header copyright was not recovered");
+            == std::string(initial) + "2002", "The header copyright was not recovered");
     expectText(textOf<FileInfoText>(shortInfo, musx::dom::Cmper(FileInfoText::TextType::Description))
-            == "This is the end of the description.",
+            == std::string(initial) + "This is the end of the description.",
         "The header description was not recovered");
     expectText(countOf<FileInfoText>(shortInfo) == 4,
         "Only the four located File Info fields should produce objects");
@@ -223,7 +245,7 @@ void testFileInfoText()
             == longDescription.size() - std::string_view("This is the end of the file info").size(),
         "The long description did not run to its own terminator");
     expectText(textOf<FileInfoText>(longInfo, musx::dom::Cmper(FileInfoText::TextType::Title))
-            == "File Info Long", "The long variant's title was not recovered");
+            == std::string(initial) + "File Info Long", "The long variant's title was not recovered");
 
     // A document that filled nothing in should produce no objects at all, which is also what
     // Finale 27 writes for the same file.
@@ -375,9 +397,14 @@ void testFinale2008Inserts()
     // All seven File Info types, from the pool rather than the header, keyed by musxdom's own
     // enumeration. The header offsets are empty in this file, so nothing here can have come
     // from them.
-    const char* expectedInfo[] = {"File Info Title", "File Info Composer", "File Info Copyright",
-        "File Info Description", "File Info Lyricist", "File Info Arranger",
-        "File Info Subtitle"};
+    const char* expectedInfo[] = {
+        "^font(Times)^size(12)^nfx(0)File Info Title",
+        "^font(Times)^size(12)^nfx(0)File Info Composer",
+        "^font(Times)^size(12)^nfx(0)File Info Copyright",
+        "^font(Times)^size(12)^nfx(0)File Info Description",
+        "^font(Times)^size(12)^nfx(0)File Info Lyricist",
+        "^font(Times)^size(12)^nfx(0)File Info Arranger",
+        "^font(Times)^size(12)^nfx(0)File Info Subtitle"};
     for (musx::dom::Cmper type = 1; type <= 7; ++type) {
         expectText(textOf<FileInfoText>(result, type) == expectedInfo[type - 1],
             "File Info type " + std::to_string(type) + " read as \""
@@ -399,10 +426,11 @@ void testFinale2008Inserts()
                 == "^font(Times)^size(12)^nfx(0)^time(1) Time with seconds",
         "The one-digit time argument was not read");
 
-    // A block with no style commands at all stays that way. Finale 27 supplies a font, size
-    // and style the document never stated; recovering what the file says is the point here.
-    expectText(textOf<BlockText>(result, 1) == "FULL SCORE",
-        "A block text with no style commands did not survive unchanged");
+    // A block with no style commands receives the document's TextBlock default so that its
+    // first literal begins under a complete Enigma formatting state.
+    expectText(textOf<BlockText>(result, 1)
+            == "^font(Times)^size(12)^nfx(0)FULL SCORE",
+        "A block text with no style commands did not receive its default state");
 
     expectText(result.report.diagnostics.end()
             == std::find_if(result.report.diagnostics.begin(), result.report.diagnostics.end(),
@@ -487,8 +515,11 @@ void testEarlyTextPoolFraming()
         "A repeated style run was not preserved: " + textOf<LyricsSection>(result, 2));
 
     // File Info is in the header at this release, which is the earliest whose dialog offers it.
-    const char* expected[] = {"File Info Title", "File Info Composer", "File Info Copyright",
-        "File Info Description"};
+    const char* expected[] = {
+        "^font(Times)^size(12)^nfx(0)File Info Title",
+        "^font(Times)^size(12)^nfx(0)File Info Composer",
+        "^font(Times)^size(12)^nfx(0)File Info Copyright",
+        "^font(Times)^size(12)^nfx(0)File Info Description"};
     for (musx::dom::Cmper type = 1; type <= 4; ++type) {
         expectText(textOf<FileInfoText>(result, type) == expected[type - 1],
             "File Info type " + std::to_string(type) + " read as \""
@@ -516,8 +547,10 @@ void testBookmarkText()
     // Finale 2012 pools it, `^end`-terminated like every other record of that era, and the
     // text is UTF-8: the guillemets and the u-umlaut are two bytes each in the source.
     const auto pooled = readTextFixture("evidence/F2012/F2012-bookmarks.mus");
-    expectText(textOf<BookmarkText>(pooled, 2) == "Page \u00fcber"
-            && textOf<BookmarkText>(pooled, 3) == "Scroll \u00ab\u00bb Bookmark",
+    expectText(textOf<BookmarkText>(pooled, 2)
+                == "^font(Times)^size(12)^nfx(0)Page \u00fcber"
+            && textOf<BookmarkText>(pooled, 3)
+                == "^font(Times)^size(12)^nfx(0)Scroll \u00ab\u00bb Bookmark",
         "A pooled bookmark was not recovered: " + textOf<BookmarkText>(pooled, 2));
     expectText(countOf<BookmarkText>(pooled) == 2,
         "The two bookmarks of the fixture were not both recovered");
@@ -542,6 +575,23 @@ void testCodaBannerBlockTexts()
         "The Coda block-text fixture was not classified as a Coda-banner file");
     expectText(textOf<BlockText>(shorter, 1) == "^font(Monaco)^size(12)^nfx(0)short",
         "A Coda block text was not recovered: " + textOf<BlockText>(shorter, 1));
+
+    // In the same controlled record, replace the opening three literal bytes with hashes.
+    // The pair is escaped content; the remaining lone hash still names the page insert.
+    const auto shortPath = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F100/F100-short-text.mus";
+    std::ifstream shortInput(shortPath, std::ios::binary);
+    auto shortBytes = std::vector<std::uint8_t>(
+        std::istreambuf_iterator<char>(shortInput), std::istreambuf_iterator<char>());
+    constexpr std::string_view originalText = "short";
+    const auto original = std::search(shortBytes.begin(), shortBytes.end(),
+        originalText.begin(), originalText.end());
+    expectText(original != shortBytes.end(), "The controlled Coda text bytes were not found");
+    std::fill_n(original, 3, static_cast<std::uint8_t>('#'));
+    const auto escapedInsert = Reader::read<TextPoolXmlDocument>(shortBytes);
+    expectText(textOf<BlockText>(escapedInsert, 1)
+            == "^font(Monaco)^size(12)^nfx(0)#^page(0)rt",
+        "A doubled Coda insert character was not preserved as literal text");
 
     // The same document with one string lengthened. The record is a fixed four incidences
     // either way, so the previous save's bytes remain after the terminator and must not be
@@ -581,18 +631,21 @@ void testCodaBannerLyricTexts()
     using namespace musx::dom::texts;
     const auto result = readTextFixture("evidence/F100/F100-lyric-text.mus");
 
-    // The style commands are the document's own. Finale 27 additionally synthesizes a
-    // `^size(12)^nfx(0)` prefix for each of these, which the source does not state.
-    expectText(textOf<LyricsVerse>(result, 1) == "^font(New York) ly-ric verse ",
+    // Each partial initial run is completed from its lyric class's own default before the
+    // first literal space. Explicit face, size, and effect commands remain untouched.
+    expectText(textOf<LyricsVerse>(result, 1)
+            == "^font(New York)^size(12)^nfx(0) ly-ric verse ",
         "A Coda lyric verse was not recovered: " + textOf<LyricsVerse>(result, 1));
 
     // An `^efx` run separated by spaces is still one run and still one `^nfx`. The spaces are
     // literal text and belong before the command, which is where Finale 27 puts them too.
-    expectText(textOf<LyricsChorus>(result, 1) == "^font(Geneva)  ^nfx(1) chor-us text ",
+    expectText(textOf<LyricsChorus>(result, 1)
+            == "^font(Geneva)^size(12)^nfx(0)  ^nfx(1) chor-us text ",
         "A spaced effect run was not folded into one command: "
             + textOf<LyricsChorus>(result, 1));
     expectText(
-        textOf<LyricsSection>(result, 1) == "^font(Palatino) ^size(13)  ^nfx(2) sec-tion text",
+        textOf<LyricsSection>(result, 1)
+            == "^font(Palatino)^size(12)^nfx(0) ^size(13)  ^nfx(2) sec-tion text",
         "A Coda lyric section was not recovered: " + textOf<LyricsSection>(result, 1));
 
     // A document with no lyrics must produce none rather than an empty record per keyword.
@@ -633,6 +686,31 @@ void testSyntheticStreamBoundaries()
     const auto namedCategory = importStream(fontStream('\xa5', '\x05'));
     expectText(textOf<BlockText>(namedCategory, 1) == "^fontMus(Times)a",
         "A defined comparator lost the marking category its command names");
+    const auto unspellableFont = importStream(fontStream('\x85', '\x0b'));
+    expectText(textOf<BlockText>(unspellableFont, 1) == "^fontid(10)a",
+        "A font name that cannot fit Enigma argument syntax produced an invalid command");
+
+    const auto spacedFontArgument = importStream(
+        "^block(1)^font (Times)^size(12)^efx(plain)Ped.^end");
+    expectText(textOf<BlockText>(spacedFontArgument, 1)
+            == "^font(Times)^size(12)^nfx(0)Ped.",
+        "Whitespace between a font command and its argument made the font name literal");
+
+    const std::string japaneseName("\x83\x71\x83\x89\x83\x4d\x83\x6d\x96\xbe\x92\xa9 Pro W3", 19);
+    const std::string japaneseText("\x95\x73\x94\x40\x8b\x41", 6);
+    const auto japanese = importStream(
+        "^block(1)^font(" + japaneseName + ",4097)" + japaneseText + "^end");
+    expectText(textOf<BlockText>(japanese, 1) == "^font(ヒラギノ明朝 Pro W3)不如帰",
+        "A font command did not use its packed character set for its name and literal text");
+
+    const auto droppedEffects = importStream(
+        "^block(1)^font(Times)^size(48)^efx(plain)^efx(outline)^efx(shadow)^efx(bold)a^end");
+    expectText(textOf<BlockText>(droppedEffects, 1) == "^font(Times)^size(48)^nfx(1)a",
+        "Unsupported outline and shadow effects were not dropped from an effect run");
+    const auto droppedRawEffects = importStream(
+        "^block(1)^font(Times)^size(48)^nfx(89)a^end");
+    expectText(textOf<BlockText>(droppedRawEffects, 1) == "^font(Times)^size(48)^nfx(65)a",
+        "Unsupported outline and shadow bits were not dropped from a raw nfx mask");
 
     // A keyword this reader does not import is named rather than silently skipped, which is
     // how an unobserved spelling would be found.
@@ -687,6 +765,36 @@ void testSyntheticStreamBoundaries()
         "An empty text pool was not silent");
 }
 
+void testNestedParenthesesInInitialFontName()
+{
+    const auto document = makeTextDocument();
+    musx::dom::FontInfo defaultFont(document);
+    defaultFont.fontSize = 14;
+    defaultFont.setEnigmaStyles(2);
+    bool fontSynthesized = false;
+    bool sizeSynthesized = false;
+    bool effectsSynthesized = false;
+    constexpr std::string_view value
+        = "^font(Missing Font (1))^size(12)^nfx(2)Gliss.";
+
+    const auto initialized = finale_mus_reader::text::initializeEnigmaTextFontState(
+        std::string(value), defaultFont, &fontSynthesized, &sizeSynthesized,
+        &effectsSynthesized);
+    expectText(initialized == value,
+        "A parenthesis in a font name caused initial font state to be inserted inside it");
+    expectText(!fontSynthesized && !sizeSynthesized && !effectsSynthesized,
+        "A complete initial state with a parenthesized font name was reported as synthesized");
+
+    musx::dom::FontInfo unspellableDefault(document);
+    unspellableDefault.fontId = 10;
+    unspellableDefault.fontSize = 12;
+    unspellableDefault.setEnigmaStyles(0);
+    const auto completed = finale_mus_reader::text::initializeEnigmaTextFontState(
+        "text", unspellableDefault);
+    expectText(completed == "^fontid(10)^size(12)^nfx(0)text",
+        "An unspellable default font name produced an invalid synthesized command");
+}
+
 } // namespace
 
 TEST_CASE("Uncompressed text pool", "[texts]") { testUncompressedTextPool(); }
@@ -709,3 +817,7 @@ TEST_CASE("Bookmark text", "[texts]") { testBookmarkText(); }
 TEST_CASE("Coda banner block texts", "[texts]") { testCodaBannerBlockTexts(); }
 TEST_CASE("Coda banner lyric texts", "[texts]") { testCodaBannerLyricTexts(); }
 TEST_CASE("Text pool stream boundaries", "[texts]") { testSyntheticStreamBoundaries(); }
+TEST_CASE("Parentheses in initial font name", "[texts]")
+{
+    testNestedParenthesesInInitialFontName();
+}
