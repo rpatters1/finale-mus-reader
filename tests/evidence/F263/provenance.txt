@@ -3,7 +3,11 @@ Finale 2.6.3, classic Mac OS.
     2004. The exact application build is not recorded.
 
 F263-baseline.mus
-    12,848 bytes. The unedited document the other F263 fixtures derive from.
+    12,848 bytes. The unedited document the other F263 fixtures derive from. Its
+    nine ordered `HS`/`HT` pairs produce nine source TextBlocks. `HS` word 5 low
+    values 0, 1, and 2 correspond to left, right, and center justification in the
+    Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
+    upgrade, but semantic text plus layout identifies all nine source blocks.
 
 F263-music-font.mus
     12,848 bytes. Changes the default music font. See ../../../research/FORMAT_NOTES.md.

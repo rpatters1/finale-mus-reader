@@ -153,6 +153,15 @@ struct GlobalSelectorWords
 /// big-endian case should say so rather than rely on that absence.
 [[nodiscard]] std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high);
 
+/// @brief Converts Finale's first/opposite/center ordering to musxdom's
+/// first/center/opposite ordering.
+[[nodiscard]] constexpr std::int64_t legacyCenterOppositeOrder(std::int64_t value)
+{
+    if (value == 1) return 2;
+    if (value == 2) return 1;
+    return value;
+}
+
 /// @brief One end of a version gate, ordered by major then minor.
 /// @details Minor participates because the major version alone does not order Finale's
 /// whole history: Finale 97 and the Finale 3.x line both appear to carry major 3, so an

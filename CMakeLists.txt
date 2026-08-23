@@ -127,7 +127,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 6938074e8d4b2c0cd0011a38d9f3ea576ce9f13d
+            GIT_TAG 97b4bc30ea292cc4156b4c54e01fbbe80bef9695
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -178,6 +178,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/layer_attributes.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
+    src/import/others/text_blocks.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp
     src/import/support/legacy_mapping.cpp
@@ -197,9 +198,6 @@ add_library(finale_mus_reader_timing_config INTERFACE)
 if(FINALE_MUS_READER_TIMING STREQUAL "ON")
     target_compile_definitions(finale_mus_reader_timing_config INTERFACE
         FINALE_MUS_READER_ENABLE_TIMING=1)
-elseif(FINALE_MUS_READER_TIMING STREQUAL "AUTO")
-    target_compile_definitions(finale_mus_reader_timing_config INTERFACE
-        $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:FINALE_MUS_READER_ENABLE_TIMING=1>)
 endif()
 
 target_include_directories(finale_mus_reader

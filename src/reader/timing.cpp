@@ -39,6 +39,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";
     case Phase::ImportTexts: return "texts";
+    case Phase::ImportTextBlocks: return "text_blocks";
     case Phase::TextLaterPool: return "text_later_pool";
     case Phase::TextPoolFraming: return "text_pool_framing";
     case Phase::TextConversion: return "text_conversion";

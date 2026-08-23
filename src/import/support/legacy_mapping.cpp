@@ -74,6 +74,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         // entries (none recovered yet)
         // texts
         FINALE_MUS_READER_IMPORTER(ImportTexts, &texts::importTexts),
+        FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
     };
     // clang-format on
     return result;
