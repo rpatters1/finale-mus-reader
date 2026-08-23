@@ -290,6 +290,12 @@ void testCompressedTextPool()
         "Finale 2006 fixture was not classified as DCL");
     expectText(textOf<BlockText>(dcl, 1) == "^font(Times)^size(12)^nfx(0)TEST",
         "Binary font, size and style commands were not spelled out");
+    const auto titleBlock = dcl.document->getOthers()->get<musx::dom::others::TextBlock>(
+        musx::dom::SCORE_PARTID, 1);
+    expectText(titleBlock
+            && titleBlock->textType == musx::dom::others::TextBlock::TextType::Block
+            && textField(dcl, "others.textBlock[1].textType").rawValue == 2004,
+        "The Finale 2006 block-text discriminator was not recovered");
 
     const auto mixed = readTextFixture("evidence/F2006/F2006-embedded-tiff.mus");
     expectText(countOf<SmartShapeText>(mixed) == 60,
@@ -304,6 +310,13 @@ void testCompressedTextPool()
         "A block text written entirely in binary commands was not recovered exactly");
     expectText(textOf<SmartShapeText>(mixed, 3) == "^font(Maestro)^size(24)^nfx(0)¡",
         "A symbol-font smart shape character was decoded as text");
+    const auto expressionBlock = mixed.document->getOthers()
+        ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 52);
+    expectText(expressionBlock && expressionBlock->textId == 35
+            && expressionBlock->textType
+                == musx::dom::others::TextBlock::TextType::Expression
+            && textField(mixed, "others.textBlock[52].textType").rawValue == 2006,
+        "The Finale 2006 expression-text discriminator was not recovered");
 
     // Every binary command code this reader knows, one per record, against the document
     // written to establish them. The strings are what its ETF and its Finale 27 companion
@@ -381,6 +394,14 @@ void testCompressedTextPool()
     const auto unicode = readTextFixture("evidence/F2012/F2012-baseline.mus");
     expectText(textOf<BlockText>(unicode, 1) == "^font(Times New Roman)^size(12)^nfx(0)Score",
         "A UTF-8 era binary command was not recognized");
+    const auto unicodeBlock = unicode.document->getOthers()
+        ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 1);
+    expectText(unicodeBlock && !unicodeBlock->roundCorners && unicodeBlock->cornerRadius == 0
+            && textField(unicode, "others.textBlock[1].roundCorners").origin
+                == ValueOrigin::LegacyBehavior
+            && textField(unicode, "others.textBlock[1].cornerRadius").origin
+                == ValueOrigin::LegacyBehavior,
+        "The final legacy MUS era did not retain square-corner TextBlock behavior");
 }
 
 // Finale 2008 is where the text pool takes over File Info, where four inserts are appended
@@ -412,6 +433,12 @@ void testFinale2008Inserts()
     }
     expectText(countOf<FileInfoText>(result) == 7,
         "The pool should have supplied exactly seven File Info objects");
+    const auto firstBlock = result.document->getOthers()->get<musx::dom::others::TextBlock>(
+        musx::dom::SCORE_PARTID, 1);
+    expectText(firstBlock
+            && firstBlock->textType == musx::dom::others::TextBlock::TextType::Block
+            && textField(result, "others.textBlock[1].textType").rawValue == 2004,
+        "The zlib TextBlock family discriminator was not recovered");
 
     // The four appended inserts, each confirmed by the companion.
     expectText(textOf<BlockText>(result, 2) == "^font(Times)^size(12)^nfx(0)^subtitle() Subtitle"
@@ -575,6 +602,15 @@ void testCodaBannerBlockTexts()
         "The Coda block-text fixture was not classified as a Coda-banner file");
     expectText(textOf<BlockText>(shorter, 1) == "^font(Monaco)^size(12)^nfx(0)short",
         "A Coda block text was not recovered: " + textOf<BlockText>(shorter, 1));
+    const auto shortBlock = shorter.document->getOthers()
+        ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 1);
+    expectText(shortBlock && shortBlock->textId == 1
+            && shortBlock->lineSpacingPercentage == 100
+            && shortBlock->justify == musx::dom::others::TextBlock::TextJustify::Left
+            && !shortBlock->newPos36 && shortBlock->shapeId == 0
+            && !shortBlock->showShape && shortBlock->wordWrap
+            && !shortBlock->noExpandSingleWord,
+        "The Finale 1.0 block's TextBlock attributes were not assembled from HS");
 
     // In the same controlled record, replace the opening three literal bytes with hashes.
     // The pair is escaped content; the remaining lone hash still names the page insert.
@@ -622,6 +658,18 @@ void testCodaBannerBlockTexts()
         "A Finale 2.6.3 block text was not recovered");
     expectText(countOf<BlockText>(later) == 9,
         "The Finale 2.6.3 fixture should carry exactly nine block texts");
+    const auto blocks = later.document->getOthers()
+        ->getArray<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID);
+    const auto centered = later.document->getOthers()
+        ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 3);
+    const auto right = later.document->getOthers()
+        ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 2);
+    expectText(blocks.size() == 9 && centered && centered->textId == 3
+            && centered->justify == musx::dom::others::TextBlock::TextJustify::Center
+            && !centered->noExpandSingleWord && right && right->textId == 2
+            && right->justify == musx::dom::others::TextBlock::TextJustify::Right
+            && !right->noExpandSingleWord,
+        "The Finale 2.6.3 TextBlocks did not retain HS ordering and justification");
 }
 
 // Lyric text is the one class this era keeps in its text region, spelled out rather than in

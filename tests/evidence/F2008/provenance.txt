@@ -43,6 +43,10 @@ F2008-BE-text-inserts.musx
     the move happened is open, and the reader does not need to know: it fills from
     the header only what the pool did not supply.
 
+    All seven TextBlock class records carry decimal 2004 at word 12 and refer to
+    block text, confirming that the Finale 2006 text-family discriminator persists
+    in the zlib class-record form.
+
     Two companion differences are intended. Its first block is the bare text
     `FULL SCORE` with no style commands at all, and Finale 27 writes
     `^fontid(1)^size(12)^nfx(0)FULL SCORE`; the reader keeps what the file says

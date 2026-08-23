@@ -10,7 +10,7 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**17 done, 7 partial, 166 to do, 190 total.** Verified class for class against the registry on
+**18 done, 7 partial, 165 to do, 190 total.** Verified class for class against the registry on
 2026-08-18: every registered type appears here and nothing here is unregistered.
 
 ## options  (6 done, 1 partial, 21 to do, 28 total)
@@ -44,7 +44,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TimeSignatureOptions
     [ ] TupletOptions
 
-## others  (5 done, 3 partial, 85 to do, 93 total)
+## others  (6 done, 3 partial, 84 to do, 93 total)
 
     [ ] AcciAmountFlats
     [ ] AcciAmountSharps
@@ -127,7 +127,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] StaffUsed
     [ ] SystemLock
     [ ] TempoChange
-    [ ] TextBlock
+    [x] TextBlock                              text_blocks.cpp
     [ ] TextExpressionDef
     [ ] TextExpressionEnclosure
     [ ] TextRepeatAssign

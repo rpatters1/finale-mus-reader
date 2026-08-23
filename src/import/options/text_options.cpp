@@ -35,23 +35,6 @@ constexpr std::uint16_t alignSelector = 83;
 constexpr std::uint32_t lineSpacingValueSlot = 0;
 constexpr std::uint32_t lineSpacingIsPercentSlot = 1;
 
-/// @brief Finale orders its alignment lists first, opposite, centre.
-/// @details musxdom's `TextJustify` and `VerticalAlignment` both put centre second instead,
-/// so the two spellings agree everywhere except at 1 and 2, which are exchanged. Only these
-/// two need it: `AlignJustify`, which `textHorzAlign` uses, already carries Finale's order and
-/// passes through unchanged. `textJustify` and `textVertAlign` do not: each stores 2 where
-/// musxdom's order puts `center` at 1, and 1 where musxdom puts the opposite value at 2.
-[[nodiscard]] constexpr std::int64_t exchangeCenterAndOpposite(std::int64_t value)
-{
-    if (value == 1) {
-        return 2;
-    }
-    if (value == 2) {
-        return 1;
-    }
-    return value;
-}
-
 /// @brief Whether this source stores selector 82 at all.
 /// @details Selectors 81, 82 and 83 arrive together with Finale 97, which is the same boundary
 /// the multimeasure-rest defaults find for selector 83.
@@ -117,13 +100,13 @@ const FieldMapping textLayoutFields[] = {
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, textPageOffset),
     MUS_BITS_AS(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4,
         /*firstBit*/ 0, /*bitCount*/ 0, textJustify,
-        static_cast<TextTarget::TextJustify>(exchangeCenterAndOpposite(value))),
+        static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
         textExpandSingleWord),
     MUS_WORD(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, textHorzAlign),
     MUS_BITS_AS(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1,
         /*firstBit*/ 0, /*bitCount*/ 0, textVertAlign,
-        static_cast<TextTarget::VerticalAlignment>(exchangeCenterAndOpposite(value))),
+        static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
     MUS_WORD(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, textIsEdgeAligned),
 };
 
@@ -154,14 +137,14 @@ const FieldMapping classTextLayoutFields[] = {
         classWordOffset(3), textPageOffset),
     MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
         classWordOffset(4), /*firstBit*/ 0, /*bitCount*/ 0, textJustify,
-        static_cast<TextTarget::TextJustify>(exchangeCenterAndOpposite(value))),
+        static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
     MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
         classWordOffset(5), textExpandSingleWord),
     MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
         classWordOffset(0), textHorzAlign),
     MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
         classWordOffset(1), /*firstBit*/ 0, /*bitCount*/ 0, textVertAlign,
-        static_cast<TextTarget::VerticalAlignment>(exchangeCenterAndOpposite(value))),
+        static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
     MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
         classWordOffset(3), textIsEdgeAligned),
 };

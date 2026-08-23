@@ -42,6 +42,7 @@ enum class Phase : std::size_t
     ImportSmartShapeCustomLines,
     ImportMeasureGraphicAssignments,
     ImportTexts,
+    ImportTextBlocks,
     TextLaterPool,
     TextPoolFraming,
     TextConversion,

@@ -31,5 +31,8 @@ void importShapeDefinitions(const ImportContext& context);
 /// @brief Recovers SmartShapeCustomLine objects.
 void importSmartShapeCustomLines(const ImportContext& context);
 
+/// @brief Recovers TextBlock objects and Coda-banner block-text structure.
+void importTextBlocks(const ImportContext& context);
+
 } // namespace others
 } // namespace finale_mus_reader

@@ -67,6 +67,9 @@ F2006-embedded-tif.etf
 F2006-embedded-tif.musx
     sha256 e8d02d1ea8e13352841dacdd732c6a0b5e3653336f437deb7e6fd70ecc79b0a9
     One page-assigned TIFF embedded from a source carrying the .tif extension.
+    Its TX records also distinguish their referenced text pools at word 12:
+    decimal 2004 on all 17 block-text records and 2006 on all 41 expression-text
+    records, agreeing with every companion TextBlock textType.
 
 F2006-embedded-tiff.mus
     sha256 4a1b5812b77c79dcbe6651ae324bb2e376f2f65fe33520ea8203e6dd04ed02da

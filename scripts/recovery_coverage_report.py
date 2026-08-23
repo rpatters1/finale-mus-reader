@@ -14,8 +14,8 @@ found. Two things are summarized:
 
 The companion comparison walks every leaf under each surveyor's output (skipping
 `origin_*` annotations, which exist only on the source side and would differ on every row
-by construction) and classifies each non-matching leaf through EXPECTED_DIFFERENCES below.
-That table starts small and is meant to grow: an "unexpected" count is not necessarily a
+by construction) and classifies each non-match through EXPECTED_DIFFERENCES below. That
+table starts small and is meant to grow: an "unexpected" count is not necessarily a
 regression, it is the next entry to characterize and, if it is a real known difference, add
 a rule for. This script is the maintained home for those exceptions.
 """
@@ -50,6 +50,8 @@ COMPARISON_EXCLUDED_CLASSES = {
     "text_metadata",
 }
 
+TEXT_BLOCKS_SURVEYOR = "text_blocks"
+
 # The probe's surveyor directories define pool ownership; keep the same names here so the
 # report presents separate DOM pools rather than one alphabetized but semantically mixed
 # list. New surveyors intentionally fall into `unclassified` until their pool is stated --
@@ -78,8 +80,15 @@ SURVEY_CLASS_POOLS = {
     "spacing_options": "options",
     "ss_line_styles": "others",
     "stem_options": "options",
+    TEXT_BLOCKS_SURVEYOR: "others",
     "text_options": "options",
 }
+
+# Enigma-text comparison belongs exclusively to the texts pool. TextBlocks expose their text
+# referent as text_id and are compared independently by their own cmpers.
+ENIGMA_TEXT_SURVEYORS = frozenset(
+    class_name for class_name, pool in SURVEY_CLASS_POOLS.items() if pool == "texts"
+)
 
 # Legacy Finale music-font names documented in Finale's public font table:
 # https://usermanuals.finalemusic.com/FinaleWin/Content/Finale/ht-fonts.htm
@@ -179,7 +188,8 @@ TEXT_PATH = re.compile(r"^(?P<class>[^[]+)\[number=(?P<number>\d+)\]\.text$")
 LEGACY_TEXT_WHITESPACE_CONTROLS = str.maketrans({"\x01": None, "\x06": None})
 
 
-def normalize_font_name(value: Any) -> Any:
+@cache
+def normalize_font_name(value: str | None) -> str | None:
     """Returns the report's cross-locale identity for a normalized font name."""
     if not isinstance(value, str):
         return value
@@ -1142,6 +1152,19 @@ def is_coda_synthesized_stem_offset(_path: str, source_value: Any,
         and companion_value == 128)
 
 
+def is_coda_text_block_upgrade(path: str, source_value: Any,
+        companion_value: Any, _source_leaves: dict[str, tuple[Any, Optional[str]]],
+        _companion_leaves: dict[str, tuple[Any, Optional[str]]],
+        source_row: dict[str, Any]) -> bool:
+    """Finale enables modern TextBlock positioning or shape state during a Coda upgrade."""
+    if source_row.get("epoch") != "coda-banner":
+        return False
+    if path.endswith(".shape_id"):
+        return (type(source_value) is int and source_value == 0
+            and type(companion_value) is int and companion_value != 0)
+    return source_value is False and companion_value is True
+
+
 def is_baseline_font_definition(path: str, _source_value: Any,
         _companion_value: Any, _source_leaves: dict[str, tuple[Any, Optional[str]]],
         _companion_leaves: dict[str, tuple[Any, Optional[str]]],
@@ -1240,6 +1263,10 @@ EXPECTED_DIFFERENCES: list[tuple[
         is_coda_synthesized_stem_offset,
         "coda-stem-offset — the Coda source stores no stem-offset option: this reader retains the pinned "
         "baseline's 256 while Finale's upgrader synthesizes 128"),
+    (r"^text_blocks\[cmper=[^\]]+\]\.(?:shape_id|show_shape|new_pos_36|no_expand_single_word)$",
+        {"differs"}, None, is_coda_text_block_upgrade,
+        "coda-text-block-upgrade — Finale enabled modern TextBlock positioning or shape state "
+        "while upgrading a Coda-era document"),
     (r"^shape_defs\[cmper=[^\]]+\]\.shape_type$", {"differs"}, {"legacy-mus"},
         is_shape_reclassified_as_other,
         "shape-reclassified-other — Finale reclassified a specifically typed legacy shape as Other"),
@@ -1908,6 +1935,98 @@ def record_expected_difference(stats: ClassStats, transformations: Counter[str],
     transformations[f"Expected diff: {label}"] += 1
 
 
+FINALE_TEXT_BLOCK_RENUMBERING = (
+    "finale-text-block-renumbering — Finale reused or renumbered a TextBlock comparator")
+TRANSIENT_TEXT_BLOCK = (
+    "transient-text-block — Finale uses TextBlock comparators above 65000 for transient records")
+LEGACY_PAGE_PARITY_TEXT = (
+    "legacy-page-parity-text — Finale replaced opposing-page TextBlocks with modern page-number positioning")
+NONMATCHING_TEXT_BLOCK_TEXT_DIFFERENCES = frozenset({"other", "missing run"})
+
+
+def enigma_text_is_page_insert_only(value: Any, row: dict[str, Any]) -> bool:
+    """Whether formatting commands surround exactly one page-number insert and no other text."""
+    chunks = parse_enigma_chunks(value, row)
+    return (chunks is not None
+        and re.fullmatch(r"\^page\([^)]*\)", "".join(chunk.text for chunk in chunks)) is not None)
+
+
+def text_block_referent_comparisons(source_row: dict[str, Any],
+        companion_row: dict[str, Any]) -> dict[str, str]:
+    """Classifies raw-text referents for differing same-cmper TextBlocks.
+
+    A `matching` result means the existing Enigma comparison found neither an unclassified
+    text difference nor a missing run. A `renumbered` result means it found `other` or
+    `missing run`, either of which means the referenced content is not semantically equal.
+    An unresolved referent normally has no result. When Finale also changes the text family
+    and text id, the combined change identifies reclassification and renumbering even though
+    one side's old-family referent cannot be compared.
+    """
+    source_blocks = {item.get("cmper"): item for item in source_row.get("text_blocks") or []}
+    companion_blocks = {
+        item.get("cmper"): item for item in companion_row.get("text_blocks") or []}
+    raw_texts: dict[tuple[int, str], tuple[dict[int, Any],
+        dict[str, tuple[Any, str | None]]]] = {}
+
+    def raw_text(row: dict[str, Any], side: int, block: dict[str, Any]) -> tuple[
+            str, str, Any, dict[str, tuple[Any, str | None]]] | None:
+        pool = {0: "block_texts", 1: "expression_texts"}.get(block.get("text_type"))
+        text_id = block.get("text_id")
+        if pool is None or not isinstance(text_id, int):
+            return None
+        cache_key = (side, pool)
+        if cache_key not in raw_texts:
+            values = {item.get("number"): item.get("text")
+                for item in row.get(pool) or [] if isinstance(item.get("number"), int)}
+            leaves = {path: (value, origin) for path, value, origin in leaf_paths(
+                row.get(pool), pool, include_origins=False)}
+            raw_texts[cache_key] = (values, leaves)
+        values, leaves = raw_texts[cache_key]
+        if text_id not in values:
+            return None
+        return pool, f"{pool}[number={text_id}].text", values[text_id], leaves
+
+    results: dict[str, str] = {}
+    for cmper in source_blocks.keys() & companion_blocks.keys():
+        source_block = source_blocks[cmper]
+        companion_block = companion_blocks[cmper]
+        fields = ((set(source_block) | set(companion_block))
+            - {key for key in set(source_block) | set(companion_block)
+                if key.startswith("origin_")})
+        if all(source_block.get(field) == companion_block.get(field) for field in fields):
+            continue
+        source_text = raw_text(source_row, 0, source_block)
+        companion_text = raw_text(companion_row, 1, companion_block)
+        if source_text is None or companion_text is None:
+            prefix = f"{TEXT_BLOCKS_SURVEYOR}[cmper={cmper}]"
+            source_zero_without_text = source_block.get("text_id") == 0 and source_text is None
+            companion_zero_without_text = (
+                companion_block.get("text_id") == 0 and companion_text is None)
+            if ((source_zero_without_text and companion_text is not None)
+                    or (companion_zero_without_text and source_text is not None)):
+                results[prefix] = "renumbered"
+            elif (source_block.get("text_id") != companion_block.get("text_id")
+                    and source_block.get("text_type") != companion_block.get("text_type")
+                    and (source_text is not None or companion_text is not None)):
+                results[prefix] = "renumbered"
+            continue
+        source_pool, source_path, source_value, source_leaves = source_text
+        companion_pool, _companion_path, companion_value, companion_leaves = companion_text
+        comparison = compare_enigma_text(source_path,
+            source_pool if source_pool == companion_pool else TEXT_BLOCKS_SURVEYOR,
+            source_value, companion_value, source_leaves, companion_leaves,
+            source_row, companion_row)
+        prefix = f"{TEXT_BLOCKS_SURVEYOR}[cmper={cmper}]"
+        if NONMATCHING_TEXT_BLOCK_TEXT_DIFFERENCES & comparison.differences:
+            results[prefix] = "renumbered"
+        elif (enigma_text_is_page_insert_only(source_value, source_row)
+                and enigma_text_is_page_insert_only(companion_value, companion_row)):
+            results[prefix] = "matching-page-only"
+        else:
+            results[prefix] = "matching"
+    return results
+
+
 def compare_row(source: dict, companion: dict) -> tuple[
         dict[str, ClassStats], list[tuple[str, str, Category, Any, Any]],
         list[tuple[str, str, str]], list[tuple[str, str, Category, Any, Any, str]], Counter[str]]:
@@ -1926,6 +2045,9 @@ def compare_row(source: dict, companion: dict) -> tuple[
     unexpected: list[tuple[str, str, Category, Any, Any]] = []
     substitutions: list[tuple[str, str, str]] = []
     textual: list[tuple[str, str, Category, Any, Any, str]] = []
+    # TextBlock referents use the original raw-text ids. Capture their comparison before
+    # Coda block-text alignment replaces the text pool with report-keyed residual records.
+    text_block_comparisons = text_block_referent_comparisons(source, companion)
     coda_block_text_matches = realign_coda_block_texts(source, companion)
     # Must run before shape_set_font_paths(source) is used below and before any
     # leaf_paths() call over companion's shape_defs/shape_instruction_lists/shape_data:
@@ -1951,14 +2073,27 @@ def compare_row(source: dict, companion: dict) -> tuple[
         companion_leaves = {path: (value, origin)
             for path, value, origin in leaf_paths(
                 companion.get(class_name), class_name, include_origins=False)}
-        for full_path in set(source_leaves) | set(companion_leaves):
+        source_paths = set(source_leaves)
+        companion_paths = set(companion_leaves)
+        referent_comparisons = (text_block_comparisons
+            if class_name == TEXT_BLOCKS_SURVEYOR else {})
+        recorded_renumberings: set[str] = set()
+        for full_path in source_paths | companion_paths:
+            first_list_end = full_path.find("]")
+            object_prefix = full_path[:first_list_end + 1] if first_list_end >= 0 else ""
             in_source = full_path in source_leaves
             in_companion = full_path in companion_leaves
             if in_source and in_companion:
                 if source_leaves[full_path][0] == companion_leaves[full_path][0]:
                     class_stats.same += 1
                     continue
-                if SURVEY_CLASS_POOLS.get(class_name) == "texts" and full_path.endswith(".text"):
+                if (full_path == object_prefix + ".text_id"
+                        and referent_comparisons.get(object_prefix)
+                            in {"matching", "matching-page-only"}):
+                    class_stats.same += 1
+                    transformations["Equivalent TextBlock raw-text referent"] += 1
+                    continue
+                if class_name in ENIGMA_TEXT_SURVEYORS and full_path.endswith(".text"):
                     source_value = source_leaves[full_path][0]
                     companion_value = companion_leaves[full_path][0]
                     comparison = compare_enigma_text(full_path, class_name,
@@ -2017,6 +2152,29 @@ def compare_row(source: dict, companion: dict) -> tuple[
             if label is not None:
                 record_expected_difference(class_stats, transformations, label)
                 continue
+
+            if (category == "differs" and full_path == object_prefix + ".justify"
+                    and referent_comparisons.get(object_prefix) == "matching-page-only"
+                    and {source_value, companion_value} == {0, 2}):
+                record_expected_difference(class_stats, transformations,
+                    LEGACY_PAGE_PARITY_TEXT)
+                continue
+
+            if (category == "differs"
+                    and referent_comparisons.get(object_prefix) == "renumbered"):
+                class_stats.expected_diff += 1
+                if object_prefix not in recorded_renumberings:
+                    transformations[f"Expected diff: {FINALE_TEXT_BLOCK_RENUMBERING}"] += 1
+                    recorded_renumberings.add(object_prefix)
+                continue
+
+            if class_name == TEXT_BLOCKS_SURVEYOR and object_prefix:
+                cmper_text = object_prefix.removeprefix(
+                    f"{TEXT_BLOCKS_SURVEYOR}[cmper=").removesuffix("]")
+                if cmper_text.isdigit() and int(cmper_text) > 65000:
+                    record_expected_difference(class_stats, transformations,
+                        TRANSIENT_TEXT_BLOCK)
+                    continue
 
             # This is deliberately the final differing-value comparison. Resolving every
             # font run and proving a whole-string legacy-code-page conversion is expensive;
@@ -2112,7 +2270,7 @@ def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
     unexpected_diff_count = 0
     unexpected_diff_examples: list[tuple[str, str, str, Any, Any]] = []
     textual_counts: Counter[tuple[str, str]] = Counter()
-    textual_classes: set[str] = set()
+    textual_classes: set[str] = set(ENIGMA_TEXT_SURVEYORS)
     missing_run_count = 0
     missing_run_examples: list[tuple[str, str, str, Any, Any, str]] = []
     other_text_count = 0
@@ -2228,12 +2386,13 @@ def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
     shared_pool_widths[1] = max(shared_pool_widths[1], 10)
 
     printed_pool = False
+    print("\nAll companion-comparison columns count leaves.")
     for pool in pool_order:
         if not pool_rows[pool]:
             continue
         if printed_pool:
             print("\n" + "-" * 80)
-        print_table(f"{pool} pool companion comparison (leaves)",
+        print_table(f"{pool} pool companion comparison",
             pool_headers, pool_rows[pool], shared_pool_widths)
         printed_pool = True
 
@@ -2260,7 +2419,7 @@ def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
             for index in range(1, len(textual_kinds) + 2)],
     ])
     print_table("Enigma-text difference findings (one text may contribute more than one)",
-        ["raw text type", "encoding", "whitespace", "font", "size", "effects",
+        ["text type", "encoding", "whitespace", "font", "size", "effects",
             "added font info", "empty part-name", "missing run", "other", "total"],
         textual_rows)
     if missing_run_count:
@@ -2279,7 +2438,7 @@ def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
     if other_text_count:
         shown = other_text_examples
         print_table(
-            f"Other Enigma-text differences (first {len(shown)} of "
+            f"Unclassified Enigma-text differences (first {len(shown)} of "
             f"{other_text_count})",
             ["kind", "corpus_id", "path", "source", "companion"],
             ([kind, corpus_id, full_path,
@@ -2293,7 +2452,8 @@ def report_recovery_coverage(rows: Iterable[dict], max_unexpected: int) -> bool:
     if unexpected_diff_count:
         shown = unexpected_diff_examples
         print_table(
-            f"Unexpected differences (first {len(shown)} of {unexpected_diff_count})",
+            f"Non-text unexpected differences (first {len(shown)} of "
+            f"{unexpected_diff_count})",
             ["corpus_id", "path", "source", "companion"],
             ([corpus_id, full_path,
                 truncate_display(json.dumps(source_value, ensure_ascii=False),

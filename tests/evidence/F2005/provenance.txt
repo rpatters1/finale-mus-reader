@@ -60,3 +60,36 @@ F2005-linespace-to-evpu.mus
     <textExpandSingleWord/>. Word 1 selects which of the two musxdom members word 0
     populates. Finale 27 has no boolean for that mode -- it writes one element or the other --
     so only a save that moves the units alone can fix the word.
+
+F2005-staffname-lineperc88.mus
+    sha256 f66e08212a22ff3869a4ee4e6d00615cacc45002f824c4f9d3c8c8969cf8c062
+F2005-staffname-lineperc88.etf
+    sha256 bbb72bf8d9a11bdc4988e7b5a918dd5ed4951110f128f6b225f790f9ca9213bf
+F2005/-finale27/F2005-staffname-lineperc88.musx
+    sha256 e09c384e75eca29eb0082355bab6a96ad955dc664acf398a30c4c7f916ca8523
+    The staff-name TextBlock uses 88-percent line spacing. Its TX word 4 is 88 and flag
+    0x1000 is set. The Finale 27 companion writes <lineSpacingPercent>88</>.
+
+F2005-staffname-lineevpu0.mus
+    sha256 7bbdd85bae6572cb850c6f3f5aa0f6d13d212f4565d759ecca5e460f82aca68d
+F2005-staffname-lineevpu0.etf
+    sha256 643bad58598e101f156ed92f28dec089f54f4b0f1f07eff94cdb516b7ccd0143
+F2005/-finale27/F2005-staffname-lineevpu0.musx
+    sha256 a764175ae97c11a3a3d2183818c5ab93b99ba7d53b3b6598ab65469e91bec5dd
+    The same TextBlock uses absolute zero-EVPU line spacing. Its TX word 4 is zero and flag
+    0x1000 is clear. Finale 27 continues to show zero EVPU, while its EnigmaXML omits both
+    line-spacing elements. That omission must not be treated as evidence that Finale changed
+    the stored setting to 100 percent.
+
+F2005-staffname-lineperc0.mus
+    sha256 d005026360ef966393ab82b1b8f9f102a667abced2299725a5f5a1fd46a092e6
+F2005-staffname-lineperc0.etf
+    sha256 936f31f226234cafaf2bf1a1eb66f8739c5207dd0dcba19f899592f33be676da
+F2005/-finale27/F2005-staffname-lineperc0.musx
+    sha256 b5ce47588d09ea76d3de8f75c524ec0c7d8992e3585d8e66532151004b3d0982
+    The same TextBlock uses zero-percent line spacing. Its TX word 4 is zero and flag 0x1000
+    is set, distinguishing it from the zero-EVPU source. Finale 27 nevertheless writes the
+    same TextBlock XML for both upgrades: neither line-spacing element is present. The upgrade
+    therefore loses the source unit selector when the value is zero. Reopening the upgraded
+    package in Finale 27 shows zero EVPU: percentage zero is converted to zero EVPU, while
+    absolute zero remains zero EVPU.

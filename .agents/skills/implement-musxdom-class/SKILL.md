@@ -7,8 +7,8 @@ description: Research, draft, test, and iteratively refine legacy Finale MUS rec
 
 Drive one class from a user-supplied lead to a narrow working implementation,
 then refine it against the corpus. Keep physical discovery, semantic interpretation,
-implementation, and validation distinct so that later evidence can revise one layer
-without destabilizing the others.
+implementation, report integration, and validation distinct so that later evidence can
+revise one layer without destabilizing the others.
 
 ## Hard rules
 
@@ -89,7 +89,7 @@ reconfirm the implementation request.
 **Write the provisional implementation as soon as one epoch's mapping is supported by
 bytes, before anything else.** Not after the other epochs are located, not after the
 open fields are closed, not after the research notes are written, and above all not
-after a corpus survey -- Step 7 exists to refine an implementation and cannot be run
+after a corpus survey -- Step 8 exists to refine an implementation and cannot be run
 before there is one. A class that has been studied for hours with nothing in `src/` is
 the failure this workflow is shaped to prevent, and it does not announce itself: every
 individual step looks like diligence.
@@ -129,7 +129,7 @@ It is also where the earliest evidence lives: the private corpora begin at Final
 every Finale 1.0.0 document with a companion is a tracked fixture. A fixture left out of the
 index is invisible to every coverage survey and to every count published from one, which is
 exactly how an era comes to look unrepresented when it is not. Keep the fixture cohort in the
-scope you agree with the user at Step 7 whenever the class reaches an era the private corpora
+scope you agree with the user at Step 8 whenever the class reaches an era the private corpora
 cover thinly or not at all.
 
 Nothing about that tree is private, so its conventions still live in
@@ -322,7 +322,7 @@ block loses which variant the record chose. `recovery_coverage_probe` is registr
 and self-registering, so nothing else has to change for the new class to appear in every
 future corpus run -- but nothing makes the surveyor itself appear automatically either. A
 class implemented without one is silently untested across every corpus and every
-companion comparison, however thoroughly its own fixtures and unit tests pass, and Step 7
+companion comparison, however thoroughly its own fixtures and unit tests pass, and Step 8
 has nothing to run it against. Treat the importer and its surveyor as one unit of work: a
 change is not finished until both land together, and a later change that adds, renames,
 or reinterprets a field on the importer side updates the surveyor in the same commit --
@@ -349,7 +349,38 @@ comparison alone cannot prove that the original bytes were decoded correctly.
 Run the focused test, the full test suite, generated-resource checks when relevant,
 `git diff --check`, and `git status --short`. Do not disturb unrelated worktree changes.
 
-## Step 7 — Refine with class coverage
+## Step 7 — Integrate the class into the maintained coverage report
+
+The registry makes a surveyor appear in `recovery_coverage_probe`; it does not make the
+class semantically complete in `scripts/recovery_coverage_report.py`. Integrate the class
+there before treating corpus comparison as validation:
+
+1. Add the surveyor key to `SURVEY_CLASS_POOLS` under its musxdom pool. A class left under
+   `unclassified` is visible but not integrated.
+2. Inspect how the report keys every emitted collection. The generic musx identity is enough
+   only when that identity survives a Finale upgrade. If cmpers, incidences, numbering, or
+   order can change, align the two sides semantically before recursive leaf comparison,
+   resolving each side's referents within its own document. Reuse an existing report
+   normalization or referent pairing when it answers the same question; do not create a
+   second spelling, text, font, or object-equivalence implementation.
+3. If correct alignment needs information the probe does not emit, add an explicit structured
+   field to the class surveyor or a cross-pool relationship surveyor. Do not re-derive the fact
+   in Python from incidental fields merely because they happen to correlate in current samples.
+4. Add `EXPECTED_DIFFERENCES` only after characterizing a companion transformation. Scope each
+   rule by class path, category, origin, and value condition narrowly enough that it cannot hide
+   a recovered-value disagreement.
+5. Exercise the maintained report with controlled source/companion observations covering every
+   applicable outcome: preserved plus any remapped, normalized, substituted, synthesized,
+   removed, or unresolved cases the class is known to have. Add a focused deterministic report
+   test when matching or classification code changes; at minimum, run the script on a small
+   synthetic or controlled JSONL and inspect the class table and transformation totals.
+
+Run `python3 -m py_compile scripts/recovery_coverage_report.py`. Report integration is complete
+only when the class appears under the correct pool and its differences describe semantic recovery
+and upgrade behavior rather than raw identifier churn. A disposable analysis script may explore
+a hypothesis, but it does not satisfy this step; move the settled rule into the maintained report.
+
+## Step 8 — Refine with class coverage
 
 Once the narrow implementation and its surveyor (Step 5) both exist and pass controlled
 fixtures, read and use `../analyze-recovery-coverage/SKILL.md`. **Do not run recovery coverage
@@ -357,7 +388,7 @@ before that point.** A survey answers questions about an implementation -- which
 it recovers, which epochs it fails, where companions disagree with it -- and none of
 those questions has a meaning yet if the class exists only as notes, or if it has an
 importer but no surveyor to report what the importer did. A survey run early is not a
-head start; it is Step 7 performed on nothing, and it has to be run again afterwards
+head start; it is Step 8 performed on nothing, and it has to be run again afterwards
 anyway. Define the cohort with the user: all fixtures, loose only, ETF-backed,
 Finale-27-backed, or an explicit union or intersection.
 
@@ -376,15 +407,11 @@ Run `tools/coverage/recovery_coverage_probe` over the chosen cohort, on a corpus
 declares a `#companion:` convention for it (see `recovery_coverage_probe.cpp`'s
 `readCorpusRows()`) so every row also surveys its Finale 27 companion, through the same
 surveyor written in Step 5. Summarize the JSONL with `scripts/recovery_coverage_report.py`.
-This needs **no per-class code on the Python side**: source and companion are surveyed through the
-identical `runAllSurveyors()` harness into the identical JSON shape, so the report's
-recursive diff already covers a new class the moment its surveyor exists -- there is one
-source of truth for the JSON, not two hand-kept in sync. The only thing to maintain by hand
-is `EXPECTED_DIFFERENCES` in `scripts/recovery_coverage_report.py`: record there any difference this class's own
-comparison shows to be intended rather than a regression -- Finale's upgrade synthesizing an
-object the source never stored is the common case -- so it reads as a known difference to
-whoever next sees an unexpected-diff row naming this class, not something to re-investigate
-from scratch.
+Step 7 must already have placed the class in the correct report pool and established any
+semantic alignment its identities require. Source and companion still come from the identical
+`runAllSurveyors()` JSON shape, so ordinary leaf comparison remains generic; class-aware report
+code is reserved for identity alignment, cross-pool equivalence, and characterized upgrade
+transformations that the generic comparison cannot express correctly.
 
 Make the targeted survey answer at least:
 
@@ -429,12 +456,17 @@ Apply these as questions, not universal rules:
 
 ## Completion standard
 
+Before calling the implementation complete, update `research/MUSXDOM_CLASS_COVERAGE.md`:
+mark the class `[x]` when complete or `[~]` when partial, name its importer file, and adjust both
+the pool heading and whole-file totals. Keep explanation out of the checklist; its own preamble
+defines the terse format and routes findings to the research notes.
+
 After the user has approved the completed work and its pull request, identify the exact transient analysis artifacts that are unlikely to help with the next musxdom class, prompt for explicit approval, and clean up only the approved artifacts. Preserve reusable corpus inventories, path and companion mappings, and expensive archive caches.
 
 Finish with a concise account of the implemented class and fields, supported epochs and
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, remaining open layouts, and the next smallest evidence request.
-**Include the full-regression import table from Step 7, per survey.** A completion report
+**Include the full-regression import table from Step 8, per survey.** A completion report
 without it is not a completion report: nothing else in this procedure would notice that the
 work broke a class it never mentions.
 Call the result partial whenever any epoch or field remains unsupported.

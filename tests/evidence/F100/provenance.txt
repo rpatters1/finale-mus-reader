@@ -179,6 +179,11 @@ F100-long-text-w-insert.musx
     `HS` word 4 moves from 0 to 2, which is exactly the `^page(2)` the companion
     writes, and that is what identifies the word as the insert's argument.
 
+    This pair also confirms the Coda TextBlock synthesis. There is no `TX` record
+    in either MUS or ETF. The ordered `HS`/`HT` pair produces TextBlock 1 pointing
+    to BlockText 1; `HS` word 5 low bits select left justification, and the Finale
+    27 companion agrees on the complete resulting layout.
+
 F100-text-other-inserts.mus
     sha256 331e8a3d353b8edd48b57b31e5367204c07276b016a6fb94c2864627b0351cb7
 F100-text-other-inserts.etf
