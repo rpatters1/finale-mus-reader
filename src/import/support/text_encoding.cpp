@@ -16,7 +16,7 @@
 #include <cstring>
 #include <iconv.h>
 #include <vector>
-#endif
+#endif // defined(_WIN32)
 
 namespace finale_mus_reader {
 namespace text {
@@ -414,7 +414,7 @@ std::optional<std::string> convert(CodePage codePage, std::string_view source)
         return std::nullopt;
     }
     return convertWithIconv(fromEncoding, source);
-#endif
+#endif // defined(_WIN32)
 }
 
 } // namespace

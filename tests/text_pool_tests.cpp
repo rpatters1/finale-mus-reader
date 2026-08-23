@@ -34,12 +34,12 @@
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
 #define FINALE_MUS_READER_TEXT_POOL_UNDEFINE_PUGIXML
-#endif
+#endif // !defined(MUSX_USE_PUGIXML)
 #include "musx/xml/PugiXmlImpl.h"
 #ifdef FINALE_MUS_READER_TEXT_POOL_UNDEFINE_PUGIXML
 #undef MUSX_USE_PUGIXML
 #undef FINALE_MUS_READER_TEXT_POOL_UNDEFINE_PUGIXML
-#endif
+#endif // defined(FINALE_MUS_READER_TEXT_POOL_UNDEFINE_PUGIXML)
 
 namespace {
 
@@ -63,7 +63,7 @@ void expectText(bool condition, const std::string& message)
 
 ImportResult readTextFixture(const char* relative)
 {
-    return Reader::read<TextPoolXmlDocument>(
+    return Reader::readWithReport<TextPoolXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
 }
 
@@ -82,12 +82,13 @@ std::size_t countOf(const ImportResult& result)
 
 const finale_mus_reader::FieldInfo& textField(const ImportResult& result, std::string_view target)
 {
-    const auto found = std::find_if(result.report.fields.begin(), result.report.fields.end(),
-        [&](const finale_mus_reader::FieldInfo& info) { return info.target == target; });
-    if (found == result.report.fields.end()) {
-        throw std::runtime_error("no report entry for " + std::string(target));
+    for (const auto& [instance, fields] : result.report.fields) {
+        (void)instance;
+        for (const auto& [member, info] : fields) {
+            if (target.ends_with(member)) return info;
+        }
     }
-    return *found;
+    throw std::runtime_error("no report entry for " + std::string(target));
 }
 
 // -- synthetic stream support ------------------------------------------------------------
@@ -624,7 +625,7 @@ void testCodaBannerBlockTexts()
         originalText.begin(), originalText.end());
     expectText(original != shortBytes.end(), "The controlled Coda text bytes were not found");
     std::fill_n(original, 3, static_cast<std::uint8_t>('#'));
-    const auto escapedInsert = Reader::read<TextPoolXmlDocument>(shortBytes);
+    const auto escapedInsert = Reader::readWithReport<TextPoolXmlDocument>(shortBytes);
     expectText(textOf<BlockText>(escapedInsert, 1)
             == "^font(Monaco)^size(12)^nfx(0)#^page(0)rt",
         "A doubled Coda insert character was not preserved as literal text");

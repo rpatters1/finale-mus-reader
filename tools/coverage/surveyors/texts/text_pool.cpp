@@ -36,8 +36,8 @@ void writeTextClass(std::ostream& out, const SurveyContext& ctx)
 void writeTextMetadata(std::ostream& out, const SurveyContext& ctx)
 {
     std::vector<std::string> targets;
-    targets.reserve(ctx.report.textFields.size());
-    for (const auto& entry : ctx.report.textFields) {
+    targets.reserve(ctx.fields.textFields().size());
+    for (const auto& entry : ctx.fields.textFields()) {
         targets.push_back(entry.first);
     }
     std::sort(targets.begin(), targets.end());
@@ -45,7 +45,7 @@ void writeTextMetadata(std::ostream& out, const SurveyContext& ctx)
     out << '{';
     bool first = true;
     for (const auto& target : targets) {
-        const auto& info = ctx.report.textFields.at(target);
+        const auto& info = ctx.fields.textFields().at(target);
         if (!first) out << ',';
         first = false;
         out << jsonString(target) << ":{\"font_synthesized\":"

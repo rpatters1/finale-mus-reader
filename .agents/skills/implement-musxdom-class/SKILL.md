@@ -271,7 +271,7 @@ also time the whole importer inside its class translation unit. This class-level
 minimum: add nested phases or counters only when the implementation has a meaningful internal
 stage or repeated operation that a later performance investigation may need to distinguish.
 Use the existing timing macros for those additions so a configuration without
-`FINALE_MUS_READER_ENABLE_TIMING` excludes their storage and measurement code completely.
+`FINALE_MUS_READER_ENABLE_INSTRUMENTATION` excludes their storage and measurement code completely.
 
 **`<pool>.h` declares importers and nothing else.** A stage a test drives on its own goes in
 `<pool>/test_access.h`, which no library code may include; a stage no test drives is

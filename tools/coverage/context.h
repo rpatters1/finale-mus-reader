@@ -22,6 +22,10 @@ public:
     /// @brief "legacy-mus" / "legacy-behavior" / "finale27-default" / "absent".
     const char* originOf(const std::string& target) const;
     const TextFieldInfo* textInfoOf(const std::string& target) const;
+    const std::unordered_map<std::string, TextFieldInfo>& textFields() const
+    {
+        return textByTarget_;
+    }
 
 private:
     std::unordered_map<std::string, FieldInfo> byTarget_;

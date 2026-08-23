@@ -77,18 +77,17 @@ PhysicalConnection decodeElement(
     return result;
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportConnectionField(ImportReport& report, std::size_t index, const char* member,
     std::int64_t rawValue, std::size_t blockOffset, std::size_t decodedOffset)
 {
-    FieldInfo info;
-    info.target = "options.stemOptions.stemConnections[" + std::to_string(index) + "]."
-        + member;
-    info.origin = ValueOrigin::LegacyMus;
-    info.blockOffset = blockOffset;
-    info.decodedOffset = decodedOffset;
-    info.rawValue = rawValue;
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<StemOptionsTarget>(),
+        "stemConnections[" + std::to_string(index) + "]." + member,
+        {ValueOrigin::LegacyMus, blockOffset, decodedOffset, rawValue});
 }
+#else
+#define reportConnectionField(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Turns one stored connection into a musxdom StemConnection and reports its values.
 /// @details Before Finale 2012 the symbol is a byte in the encoding of the font the connection
@@ -497,3 +496,7 @@ void importStemOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportConnectionField
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

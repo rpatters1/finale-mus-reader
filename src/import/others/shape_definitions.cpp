@@ -124,12 +124,19 @@ std::vector<std::int32_t> shapeLongs(const ShapeSourceFamily& source,
     return fixedLongs(rows, context.profile.platform);
 }
 
-void reportShapeValue(ImportReport& report, std::string target, std::int64_t value,
-    const records::LegacyRow& row)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+template <typename Target>
+void reportShapeValue(ImportReport& report, musx::dom::Cmper cmper, std::string member,
+    std::int64_t value, const records::LegacyRow& row)
 {
-    report.fields.push_back({std::move(target), ValueOrigin::LegacyMus,
-        row.blockOffset, row.decodedOffset, value});
+    FINALE_MUS_READER_REPORT_FIELD(report,
+        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper), std::move(member),
+        {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, value});
 }
+#define REPORT_SHAPE_VALUE(Target, ...) reportShapeValue<Target>(__VA_ARGS__)
+#else
+#define REPORT_SHAPE_VALUE(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 ShapeInstructionType instructionType(records::LegacyTag tag, bool early)
 {
@@ -218,9 +225,10 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
             target->values.push_back(value);
             const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy
                 ? 0 : (index / 3)];
-            reportShapeValue(context.report, "others.shapeData["
-                + std::to_string(cmper) + "].values[" + std::to_string(index) + "]",
-                values[index], row);
+            FINALE_MUS_READER_REPORT_FIELD(context.report,
+                instanceKey<ShapeDataTarget>(musx::dom::SCORE_PARTID, cmper),
+                "values[" + std::to_string(index) + "]",
+                {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, values[index]});
         }
         context.document->getOthers()->add(ShapeDataTarget::XmlNodeName, std::move(target));
     }
@@ -261,12 +269,16 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
             target->instructions.push_back(instruction);
             const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy
                 ? 0 : (index / 3)];
-            const auto prefix = "others.shapeList[" + std::to_string(cmper)
-                + "].instructions[" + std::to_string(target->instructions.size() - 1) + "].";
-            reportShapeValue(context.report, prefix + "numData", numData, row);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            const auto reportPrefix = "instructions["
+                + std::to_string(target->instructions.size() - 1) + "].";
+            REPORT_SHAPE_VALUE(ShapeInstructionTarget,
+                context.report, cmper, reportPrefix + "numData", numData, row);
             // The destination is an enum, but the report's raw value preserves the
             // two-byte source tag that selected it.
-            reportShapeValue(context.report, prefix + "type", tag, row);
+            REPORT_SHAPE_VALUE(ShapeInstructionTarget,
+                context.report, cmper, reportPrefix + "type", tag, row);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
             if (instruction->type == ShapeInstructionType::Undocumented || revision > 2) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
@@ -318,20 +330,20 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
                 && words[2] <= static_cast<int>(ShapeDefTarget::ShapeType::Clef)) {
             target->shapeType = static_cast<ShapeDefTarget::ShapeType>(words[2]);
         }
-        const auto prefix = "others.shapeDef[" + std::to_string(cmper) + "].";
-        reportShapeValue(context.report, prefix + "instructionList",
+        REPORT_SHAPE_VALUE(ShapeDefTarget, context.report, cmper, "instructionList",
             target->instructionList, rows.front());
-        reportShapeValue(context.report, prefix + "dataList", target->dataList, rows.front());
+        REPORT_SHAPE_VALUE(ShapeDefTarget,
+            context.report, cmper, "dataList", target->dataList, rows.front());
         if (!hasStoredShapeType) {
             // This layout carries a bounding rectangle in this position. `Other` is
             // the behavior represented by an absent modern type, not a recovered value.
-            context.report.fields.push_back({"others.shapeDef[" + std::to_string(cmper)
-                    + "].shapeType",
-                ValueOrigin::LegacyBehavior, 0, 0,
-                static_cast<int>(target->shapeType)});
+            FINALE_MUS_READER_REPORT_FIELD(context.report,
+                instanceKey<ShapeDefTarget>(musx::dom::SCORE_PARTID, cmper),
+                "shapeType", {ValueOrigin::LegacyBehavior, 0, 0,
+                    static_cast<int>(target->shapeType)});
         } else {
-            reportShapeValue(context.report, "others.shapeDef[" + std::to_string(cmper)
-                + "].shapeType", static_cast<int>(target->shapeType), rows.front());
+            REPORT_SHAPE_VALUE(ShapeDefTarget, context.report, cmper, "shapeType",
+                static_cast<int>(target->shapeType), rows.front());
         }
         context.document->getOthers()->add(ShapeDefTarget::XmlNodeName, std::move(target));
     }
@@ -410,3 +422,5 @@ void importShapeDefinitions(const ImportContext& context)
 
 } // namespace others
 } // namespace finale_mus_reader
+
+#undef REPORT_SHAPE_VALUE

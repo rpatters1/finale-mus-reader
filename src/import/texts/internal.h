@@ -13,10 +13,14 @@ void importLaterTextPool(const ImportContext& context);
 void importHeaderFileInfoTexts(const ImportContext& context);
 void importCodaStoredTexts(const ImportContext& context);
 
-void recordTextFieldInfo(ImportReport& report, std::string target,
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
     const text::ConvertedEnigmaText& converted);
-void recordTextFieldInfo(ImportReport& report, std::string target,
+void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
     bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized);
+#else
+#define recordTextFieldInfo(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace texts
 } // namespace finale_mus_reader

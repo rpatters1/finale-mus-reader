@@ -53,7 +53,7 @@
 
 #if defined(__APPLE__)
 #include <sys/xattr.h>
-#endif
+#endif // defined(__APPLE__)
 
 #include "coverage/context.h"
 #include "coverage/json.h"
@@ -63,7 +63,7 @@
 #include "musx/musx.h"
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
-#endif
+#endif // !defined(MUSX_USE_PUGIXML)
 #include "musx/factory/DocumentFactory.h"
 #include "musx/xml/PugiXmlImpl.h"
 #include "musx_companion.h"
@@ -524,7 +524,7 @@ std::optional<std::string> macFinderFileType(const std::string& path)
 #else
     static_cast<void>(path);
     return std::nullopt;
-#endif
+#endif // defined(__APPLE__)
 }
 
 // Writes every diagnostic the reader collected for one document as its own JSON value,
@@ -747,7 +747,7 @@ int main(int argc, char** argv)
         try {
             const auto readerStarted = std::chrono::steady_clock::now();
             timing::Session readerTimingSession;
-            const auto result = Reader::read<musx::xml::pugi::Document>(
+            const auto result = Reader::readWithReport<musx::xml::pugi::Document>(
                 std::filesystem::path(path), readerOptions);
             const std::chrono::duration<double, std::milli> readerElapsed =
                 std::chrono::steady_clock::now() - readerStarted;

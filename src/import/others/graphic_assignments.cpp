@@ -61,12 +61,21 @@ const records::LegacyRow& sourceRow(const AssignmentSource& source,
     return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
 }
 
-void reportAssignmentValue(const ImportContext& context, std::string target,
-    std::int64_t value, const records::LegacyRow& row)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+template <typename Target>
+void reportAssignmentValue(const ImportContext& context, musx::dom::Cmper cmper,
+    musx::dom::Inci inci, std::string member, std::int64_t value,
+    const records::LegacyRow& row)
 {
-    context.report.fields.push_back({std::move(target), ValueOrigin::LegacyMus,
+    FINALE_MUS_READER_REPORT_FIELD(context.report,
+        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper, inci),
+        std::move(member), {ValueOrigin::LegacyMus,
         row.blockOffset, row.decodedOffset, value});
 }
+#define REPORT_ASSIGNMENT_VALUE(Target, ...) reportAssignmentValue<Target>(__VA_ARGS__)
+#else
+#define REPORT_ASSIGNMENT_VALUE(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 template <typename Target>
 void populatePosition(Target& target, std::uint16_t packed)
@@ -154,14 +163,12 @@ void importPageFamily(const ImportContext& context)
             target->rightPgLeft = tuple[14];
             target->rightPgBottom = tuple[15];
             populatePagePosition(*target, static_cast<std::uint16_t>(tuple[16]), true);
-            const auto prefix = "others.pageGraphicAssign[" + std::to_string(cmper)
-                + "][" + std::to_string(inci) + "].";
             constexpr const char* names[] = {"version", "left", "bottom", "width", "height",
                 "fDescId", "hidden", "displayType", "position", "startPage", "endPage",
                 "savedRecord", "origWidth", "origHeight", "rightPgLeft", "rightPgBottom",
                 "rightPgPosition", "graphicCmper"};
             for (std::size_t slot = 0; slot < graphicAssignmentWordCount; ++slot) {
-                reportAssignmentValue(context, prefix + names[slot], tuple[slot],
+                REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, names[slot], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
             context.document->getOthers()->add(PageTarget::XmlNodeName, std::move(target));
@@ -189,15 +196,13 @@ void importShapeFamily(const ImportContext& context)
                 words.data() + at, graphicAssignmentWordCount);
             populateGraphicAssignmentCommon(*target, tuple);
             populatePosition(*target, static_cast<std::uint16_t>(tuple[8]));
-            const auto prefix = "others.shapeGraphicAssign[" + std::to_string(cmper)
-                + "][" + std::to_string(inci) + "].";
             constexpr std::size_t importedSlots[] = {0, 1, 2, 3, 4, 5, 6, 8, 11, 12, 13, 17};
             constexpr const char* names[] = {"version", "left", "bottom", "width", "height",
                 "fDescId", "hidden", "position", "savedRecord", "origWidth", "origHeight",
                 "graphicCmper"};
             for (std::size_t index = 0; index < std::size(importedSlots); ++index) {
                 const auto slot = importedSlots[index];
-                reportAssignmentValue(context, prefix + names[index], tuple[slot],
+                REPORT_ASSIGNMENT_VALUE(ShapeTarget, context, cmper, inci, names[index], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
             context.document->getOthers()->add(ShapeTarget::XmlNodeName, std::move(target));
@@ -219,3 +224,5 @@ void importShapeGraphicAssignments(const ImportContext& context)
 
 } // namespace others
 } // namespace finale_mus_reader
+
+#undef REPORT_ASSIGNMENT_VALUE

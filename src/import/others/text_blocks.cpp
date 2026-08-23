@@ -88,20 +88,26 @@ const records::LegacyRow& textBlockRow(const TextBlockSource& source,
     return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportValue(const ImportContext& context, musx::dom::Cmper cmper, const char* field,
                  std::int64_t rawValue, const records::LegacyRow& row)
 {
-    context.report.fields.push_back({"others.textBlock[" + std::to_string(cmper) + "]." + field,
-                                     ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset,
-                                     rawValue});
+    FINALE_MUS_READER_REPORT_FIELD(context.report,
+        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper), field,
+        {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, rawValue});
 }
 
 void reportBehavior(const ImportContext& context, musx::dom::Cmper cmper, const char* field,
                     std::int64_t value)
 {
-    context.report.fields.push_back({"others.textBlock[" + std::to_string(cmper) + "]." + field,
-                                     ValueOrigin::LegacyBehavior, 0, 0, value});
+    FINALE_MUS_READER_REPORT_FIELD(context.report,
+        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper), field,
+        {ValueOrigin::LegacyBehavior, 0, 0, value});
 }
+#else
+#define reportValue(...) ((void)0)
+#define reportBehavior(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void applyLegacyTextBlockCorners(
     const ImportContext& context, musx::dom::Cmper cmper, Target& target)
@@ -247,3 +253,8 @@ void importTextBlocks(const ImportContext& context)
 
 } // namespace others
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportValue
+#undef reportBehavior
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

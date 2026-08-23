@@ -36,17 +36,17 @@ namespace {
 /// archive cannot discard an importer nothing else references.
 struct RegisteredImporter
 {
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     timing::Phase phase;
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     ClassImporter importer;
 };
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #define FINALE_MUS_READER_IMPORTER(phase, importer) {timing::Phase::phase, importer}
 #else
 #define FINALE_MUS_READER_IMPORTER(phase, importer) {importer}
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 const std::vector<RegisteredImporter>& registeredImporters()
 {
@@ -293,15 +293,9 @@ std::vector<EffectiveTable> buildEffectiveTables(
     return result;
 }
 
-std::string reportTarget(const MappingTable& table, const MappingTarget& target,
-    const FieldMapping& field)
+std::string reportMember(const FieldMapping& field)
 {
-    std::string result = table.reportPrefix;
-    if (table.targetKind == TargetKind::OthersByCmper
-            || table.targetKind == TargetKind::OthersFromRecords) {
-        result += '[' + std::to_string(target.cmper) + ']';
-    }
-    result += '.';
+    std::string result;
     // A row names its destination once, as the C++ path that reaches it, so a field inside a
     // contained object arrives here spelled with `->`. Every report target names a document
     // path instead, whose separator is a dot, which is also how the capture passes spell the
@@ -463,12 +457,11 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
             continue;
         }
         request.assign(resolved);
-        for (auto& info : report.fields) {
-            if (info.target == request.reportTarget) {
-                info.rawValue = resolved;
-                break;
-            }
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        if (auto* info = report.findField(request.reportInstance, request.reportMember)) {
+            info->rawValue = resolved;
         }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     }
     if (!pending.empty()) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
@@ -522,7 +515,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 ? index.getClassOthers() : index.getOthers();
             if (effective.applicable) {
                 for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
-                    targets.push_back({cmper, table.createTarget(document, cmper)});
+                    targets.push_back(table.createTarget(document, cmper));
                 }
             }
         } else {
@@ -541,16 +534,20 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     && !field.reporting->targetApplies(target.instance)) {
                     continue;
                 }
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                const InstanceKey reportInstance{target.classType, musx::dom::SCORE_PARTID,
+                    table.targetKind == TargetKind::OptionsSingleton
+                        ? std::optional<musx::dom::Cmper>{}
+                        : std::optional<musx::dom::Cmper>{target.cmper},
+                    std::nullopt, std::nullopt};
+                const auto member = reportMember(*field.reporting);
                 FieldInfo info;
-                info.target = reportTarget(table, target, *field.reporting);
                 info.origin = ValueOrigin::Finale27Default;
                 // A capture pass runs before the tables and may already have established
                 // this field, most often as era behavior that no record stores. Claiming it
                 // as a synthesized default afterwards would both duplicate the entry and
                 // downgrade what is known about it, so the earlier claim stands.
-                if (!field.readable
-                    && std::any_of(report.fields.begin(), report.fields.end(),
-                        [&](const FieldInfo& existing) { return existing.target == info.target; })) {
+                if (!field.readable && report.findField(reportInstance, member)) {
                     continue;
                 }
                 // A text field has no numeric default to report, and an object created from
@@ -558,6 +555,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 if (field.reporting->read) {
                     info.rawValue = field.reporting->read(target.instance);
                 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
                 if (field.readable) {
                     const auto selector =
@@ -570,23 +568,29 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                             : readText(index, selector, field.readable->source);
                         if (text) {
                             field.readable->applyText(target.instance, *text);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                             info.origin = ValueOrigin::LegacyMus;
                             info.rawValue = static_cast<std::int64_t>(text->size());
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                         }
-                        report.fields.push_back(std::move(info));
+                        FINALE_MUS_READER_REPORT_FIELD(
+                            report, reportInstance, member, std::move(info));
                         continue;
                     }
                     const auto resolved = readSourceValue(index, table.encoding, selector,
                         field.readable->source, profile.byteOrder);
                     if (resolved) {
                         field.readable->apply(target.instance, resolved->value);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                         info.origin = ValueOrigin::LegacyMus;
                         info.blockOffset = resolved->blockOffset;
                         info.decodedOffset = resolved->decodedOffset;
                         info.rawValue = resolved->value;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                     }
                 }
-                report.fields.push_back(std::move(info));
+                FINALE_MUS_READER_REPORT_FIELD(
+                    report, reportInstance, member, std::move(info));
             }
             if (table.finalizeTarget) {
                 table.finalizeTarget(target.instance, profile, document);

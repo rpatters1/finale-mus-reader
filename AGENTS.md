@@ -326,6 +326,10 @@ The build uses CMake. Keep these properties intact when extending it:
   Preserve original copyright and license notices in third-party sources.
 - Use explicit nested namespace blocks rather than concatenated namespace
   declarations.
+- End every preprocessor conditional with a comment naming the condition, such
+  as `#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)`. For
+  `#ifdef` and `#ifndef`, spell the comment as the corresponding positive or
+  negated condition.
 - Do not require `NOMINMAX`. Protect standard-library `min` and `max` tokens
   from the Windows macros with parentheses, such as `(std::min)(a, b)` and
   `(std::numeric_limits<T>::max)()`.

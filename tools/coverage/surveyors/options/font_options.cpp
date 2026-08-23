@@ -26,15 +26,18 @@ struct Tuple
 
 std::map<std::size_t, Tuple> collectTuples(const finale_mus_reader::ImportReport& report)
 {
-    constexpr std::string_view prefix = "options.fontOptions[";
     std::map<std::size_t, Tuple> result;
-    for (const auto& field : report.fields) {
-        if (!std::string_view(field.target).starts_with(prefix)) continue;
-        const auto close = field.target.find(']', prefix.size());
-        if (close == std::string::npos || close + 2 > field.target.size()) continue;
+    const auto foundInstance = report.fields.find(
+        finale_mus_reader::instanceKey<musx::dom::options::FontOptions>());
+    if (foundInstance == report.fields.end()) return result;
+    constexpr std::string_view prefix = "fonts[";
+    for (const auto& [name, field] : foundInstance->second) {
+        if (!std::string_view(name).starts_with(prefix)) continue;
+        const auto close = name.find(']', prefix.size());
+        if (close == std::string::npos || close + 2 > name.size()) continue;
         const auto ordinal = static_cast<std::size_t>(
-            std::stoul(field.target.substr(prefix.size(), close - prefix.size())));
-        const auto member = std::string_view(field.target).substr(close + 2);
+            std::stoul(name.substr(prefix.size(), close - prefix.size())));
+        const auto member = std::string_view(name).substr(close + 2);
         auto& tuple = result[ordinal];
         if (member == "fontId") tuple.fontId = field;
         else if (member == "fontSize") tuple.fontSize = field;
