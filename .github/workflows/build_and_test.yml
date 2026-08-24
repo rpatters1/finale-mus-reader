@@ -78,6 +78,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER=${{ matrix.cCompiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
+          -DFINALE_MUS_READER_INSTRUMENTATION=ON
 
       - name: Configure CMake on Windows
         if: runner.os == 'Windows'
@@ -86,9 +87,35 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_C_COMPILER=${{ matrix.cCompiler }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
+          -DFINALE_MUS_READER_INSTRUMENTATION=ON
 
       - name: Build
         run: cmake --build build --parallel 2
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
+
+  non-instrumented-build:
+    name: Non-instrumented library / GCC
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y g++ ninja-build
+
+      - name: Configure CMake
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=gcc
+          -DCMAKE_CXX_COMPILER=g++
+          -DFINALE_MUS_READER_BUILD_TESTING=OFF
+          -DFINALE_MUS_READER_BUILD_TOOLS=OFF
+          -DFINALE_MUS_READER_INSTRUMENTATION=OFF
+
+      - name: Build library
+        run: cmake --build build --target finale_mus_reader --parallel 2
