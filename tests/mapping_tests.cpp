@@ -30,14 +30,14 @@
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
 #define FINALE_MUS_READER_MAPPING_UNDEFINE_MUSX_USE_PUGIXML
-#endif
+#endif // !defined(MUSX_USE_PUGIXML)
 
 #include "musx/xml/PugiXmlImpl.h"
 
 #ifdef FINALE_MUS_READER_MAPPING_UNDEFINE_MUSX_USE_PUGIXML
 #undef MUSX_USE_PUGIXML
 #undef FINALE_MUS_READER_MAPPING_UNDEFINE_MUSX_USE_PUGIXML
-#endif
+#endif // defined(FINALE_MUS_READER_MAPPING_UNDEFINE_MUSX_USE_PUGIXML)
 
 namespace {
 
@@ -412,24 +412,82 @@ void testMissingRecoveredFontDefinitionFallback()
 // does not create a temporary bound to a reference parameter. GCC cannot prove the returned
 // reference does not alias such a temporary and rejects the binding under
 // -Wdangling-reference.
+struct ExpectedReportField
+{
+    std::string member;
+    std::optional<musx::dom::Cmper> cmper;
+};
+
+ExpectedReportField expectedReportField(std::string_view target)
+{
+    ExpectedReportField result{std::string(target), std::nullopt};
+    if (target.starts_with("options.fontOptions[")) {
+        result.member = "fonts["
+            + std::string(target.substr(std::string_view("options.fontOptions[").size()));
+    } else if (target.starts_with("options.fontOptionsPhysical[")) {
+        result.member = "physical[" + std::string(
+            target.substr(std::string_view("options.fontOptionsPhysical[").size()));
+    } else if (target.starts_with("options.")) {
+        const auto dot = target.find('.', std::string_view("options.").size());
+        if (dot != std::string_view::npos) result.member = target.substr(dot + 1);
+    } else if (const auto open = target.find('['); open != std::string_view::npos) {
+        const auto close = target.find(']', open);
+        const auto dot = close == std::string_view::npos ? close : target.find('.', close);
+        if (close != std::string_view::npos && dot != std::string_view::npos) {
+            result.cmper = static_cast<musx::dom::Cmper>(std::stoul(
+                std::string(target.substr(open + 1, close - open - 1))));
+            result.member = target.substr(dot + 1);
+        }
+    }
+    return result;
+}
+
 const finale_mus_reader::FieldInfo& field(const ImportReport& report, std::string_view target)
 {
-    const auto found = std::find_if(report.fields.begin(), report.fields.end(),
-        [&](const finale_mus_reader::FieldInfo& info) {
-            return std::string_view(info.target) == target;
-        });
-    expectMapping(found != report.fields.end(),
-        std::string("Missing mapping report for ").append(target));
-    return *found;
+    const auto expected = expectedReportField(target);
+    for (const auto& [instance, fields] : report.fields) {
+        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        for (const auto& [member, info] : fields) {
+            if (member == expected.member) return info;
+        }
+    }
+    throw std::runtime_error(std::string("Missing mapping report for ").append(target));
 }
 
 /// @brief Whether the report names a target at all, for a field a record is not expected to have.
 bool fieldPresent(const ImportReport& report, std::string_view target)
 {
-    return std::any_of(report.fields.begin(), report.fields.end(),
-        [&](const finale_mus_reader::FieldInfo& info) {
-            return std::string_view(info.target) == target;
-        });
+    const auto expected = expectedReportField(target);
+    for (const auto& [instance, fields] : report.fields) {
+        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        for (const auto& [member, info] : fields) {
+            (void)info;
+            if (member == expected.member) return true;
+        }
+    }
+    return false;
+}
+
+template <typename Predicate>
+bool anyReportedField(const ImportReport& report, Predicate predicate)
+{
+    for (const auto& [instance, fields] : report.fields) {
+        (void)instance;
+        for (const auto& [member, info] : fields) {
+            if (predicate(member, info)) return true;
+        }
+    }
+    return false;
+}
+
+std::size_t reportedFieldCount(const ImportReport& report)
+{
+    std::size_t result = 0;
+    for (const auto& [instance, fields] : report.fields) {
+        (void)instance;
+        result += fields.size();
+    }
+    return result;
 }
 
 MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size_t count,
@@ -746,11 +804,12 @@ void testClefTupleDecoding()
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeContainer(dclRows)), profile, document,
             makeClefReferenceDocument(), report, pending);
-        const auto recovered = std::count_if(report.fields.begin(), report.fields.end(),
-            [](const finale_mus_reader::FieldInfo& f) {
-                return f.origin == ValueOrigin::LegacyMus
-                    && f.target.find("clefDefs") != std::string::npos;
-            });
+        std::size_t recovered = 0;
+        anyReportedField(report, [&](const auto& member, const auto& info) {
+            if (info.origin == ValueOrigin::LegacyMus
+                    && member.find("clefDefs") != std::string::npos) ++recovered;
+            return false;
+        });
         expectMapping(recovered == 0,
             "A DCL file with no clef table read the pre-2001 selectors as clefs");
         expectMapping(document->getOptions()->get<ClefOptions>()->clefDefs.size() == 18,
@@ -1356,10 +1415,9 @@ void testLyricPostFormatAssertions()
     // musxdom populates altHyphenFont only from an <altHyphenFont> element and synthesizes one
     // in integrityCheck, so a null pointer during the import means the baseline omitted it.
     // The reader must not invent a value for it, nor report one.
-    expectMapping(std::none_of(report.fields.begin(), report.fields.end(),
-                      [](const finale_mus_reader::FieldInfo& info) {
-                          return info.target.find("altHyphenFont.") != std::string::npos;
-                      }),
+    expectMapping(!anyReportedField(report, [](const auto& member, const auto&) {
+                      return member.find("altHyphenFont.") != std::string::npos;
+                  }),
         "The alternate hyphen font was reported although nothing states it");
 
     // The three assertions that do contradict the seed, for contrast: without any of the six
@@ -1517,11 +1575,10 @@ void testStemStaleUnicodeRecord()
                               != std::string::npos;
                       }),
         "The stale stem-connection record produced no diagnostic");
-    expectMapping(std::any_of(report.fields.begin(), report.fields.end(),
-                      [](const finale_mus_reader::FieldInfo& value) {
-                          return value.target == "options.stemOptions.stemConnections[0].symbol"
-                              && value.rawValue == 0x030000c0;
-                      }),
+    expectMapping(anyReportedField(report, [](const auto& member, const auto& value) {
+                      return member == "stemConnections[0].symbol"
+                          && value.rawValue == 0x030000c0;
+                  }),
         "The out-of-range symbol was not reported as raw evidence");
 
     // The same words in a pre-Unicode file are the table they always were.
@@ -1680,7 +1737,7 @@ void testGraphicAssignmentsAcrossEpochs()
                 && assignment->rightPgFixedPerc && assignment->graphicCmper == 2,
             "A PageGraphicAssign field failed in epoch "
                 + std::to_string(static_cast<int>(epoch)));
-        expectMapping(report.fields.size() == 18,
+        expectMapping(reportedFieldCount(report) == 18,
             "A PageGraphicAssign did not report all source words");
     }
 }
@@ -1918,7 +1975,7 @@ void testSmartShapeCustomLinesAcrossEpochs()
             expectMapping(lines.empty(),
                 "A Coda-banner source built custom line styles from a record that era never"
                 " wrote" + era);
-            expectMapping(report.fields.empty(),
+            expectMapping(reportedFieldCount(report) == 0,
                 "A Coda-banner source reported custom line style fields it cannot have" + era);
             continue;
         }
@@ -2070,7 +2127,7 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
                 && assignment->origHeight == 168 && assignment->graphicCmper == 1,
             "A MeasureGraphicAssign field or comparator failed in epoch "
                 + std::to_string(static_cast<int>(epoch)));
-        expectMapping(report.fields.size() == 11,
+        expectMapping(reportedFieldCount(report) == 11,
             "A MeasureGraphicAssign did not report every imported field");
     }
     const auto bigEndian = makeDetailClassContainer(7, 12, 2, tuple, ByteOrder::BigEndian);
@@ -2299,7 +2356,8 @@ void testCodaTextBlockSynthesis()
             && !first->roundCorners && first->cornerRadius == 0,
         "Coda TextBlock behavior was not synthesized");
     expectMapping(field(report, "others.textBlock[1].textId").origin == ValueOrigin::LegacyMus
-            && !fieldPresent(report, "others.textBlock[1].newPos36")
+            && field(report, "others.textBlock[1].newPos36").origin
+                == ValueOrigin::LegacyBehavior
             && field(report, "others.textBlock[1].shapeId").origin
                 == ValueOrigin::LegacyBehavior
             && field(report, "others.textBlock[1].showShape").origin

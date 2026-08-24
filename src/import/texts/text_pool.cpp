@@ -22,19 +22,21 @@
 namespace finale_mus_reader {
 namespace texts {
 
-void recordTextFieldInfo(ImportReport& report, std::string target,
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
     bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized)
 {
-    report.textFields.emplace(std::move(target), TextFieldInfo{
+    FINALE_MUS_READER_REPORT_TEXT_FIELD(report, instance, std::move(member), TextFieldInfo{
         fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
 }
 
-void recordTextFieldInfo(ImportReport& report, std::string target,
+void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
     const text::ConvertedEnigmaText& converted)
 {
-    recordTextFieldInfo(report, std::move(target), converted.fontWasSynthesized,
+    recordTextFieldInfo(report, instance, std::move(member), converted.fontWasSynthesized,
         converted.sizeWasSynthesized, converted.effectsWereSynthesized);
 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 namespace {
 
@@ -61,6 +63,9 @@ struct TextKeyword
     void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
         Cmper number, std::string&& text);
     std::string_view nodeName;
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    std::type_index classType;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
     /// @details `texts::FileInfoText` throws on a number outside its own enumeration, so a
@@ -80,11 +85,15 @@ void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& po
 }
 
 template <typename Target>
-constexpr TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
+TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
     bool (*accepts)(Cmper) = nullptr)
 {
     return TextKeyword{
-        keyword, &createText<Target>, Target::XmlNodeName, defaultFontType, accepts};
+        keyword, &createText<Target>, Target::XmlNodeName,
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        typeid(Target),
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        defaultFontType, accepts};
 }
 
 bool isFileInfoType(Cmper number)
@@ -101,7 +110,7 @@ bool isFileInfoType(Cmper number)
 // chorus and section, and so does the ETF lyrics section. A wrong spelling costs nothing
 // silently: an unrecognized keyword is reported by name below, which is how the right one
 // would be found.
-constexpr TextKeyword textKeywords[] = {
+const TextKeyword textKeywords[] = {
     textKeyword<musx::dom::texts::BlockText>("block", TextFontType::TextBlock),
     textKeyword<musx::dom::texts::LyricsVerse>("verse", TextFontType::LyricVerse),
     textKeyword<musx::dom::texts::LyricsChorus>("chorus", TextFontType::LyricChorus),
@@ -420,14 +429,14 @@ void importLaterTextPool(const ImportContext& context)
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextReportConstruction);
-            FieldInfo info;
-            info.target = "texts." + std::string(found->nodeName) + '['
-                + std::to_string(record->number) + "].text";
-            info.origin = ValueOrigin::LegacyMus;
-            info.decodedOffset = record->start;
-            info.rawValue = static_cast<std::int64_t>(converted.text.size());
-            recordTextFieldInfo(context.report, info.target, converted);
-            context.report.fields.push_back(std::move(info));
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            const InstanceKey instance{found->classType, musx::dom::SCORE_PARTID,
+                record->number, std::nullopt, std::nullopt};
+            FINALE_MUS_READER_REPORT_FIELD(context.report, instance, "text",
+                {ValueOrigin::LegacyMus, 0,
+                record->start, static_cast<std::int64_t>(converted.text.size())});
+            recordTextFieldInfo(context.report, instance, "text", converted);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
         }
 
         {

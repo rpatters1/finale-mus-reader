@@ -571,19 +571,21 @@ InsertBlock readInsertBlock(
     return static_cast<char32_t>((high << 16U) | low);
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportInsertField(ImportReport& report, const char* insertName, const char* member,
     ValueOrigin origin, std::int64_t rawValue, const InsertBlock& block)
 {
-    FieldInfo info;
-    info.target = std::string(textReportPrefix) + ".symbolInserts[" + insertName + "]." + member;
-    info.origin = origin;
-    info.rawValue = rawValue;
+    FieldInfo info{origin, 0, 0, rawValue};
     if (origin == ValueOrigin::LegacyMus) {
         info.blockOffset = block.blockOffset;
         info.decodedOffset = block.decodedOffset;
     }
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<TextTarget>(),
+        "symbolInserts[" + std::string(insertName) + "]." + member, std::move(info));
 }
+#else
+#define reportInsertField(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Rebuilds the five accidental inserts from the source's own block.
 /// @details Every element is replaced rather than overlaid, because the block states all five
@@ -801,3 +803,7 @@ void importTextOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportInsertField
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

@@ -206,30 +206,22 @@ std::optional<ResolvedValue> readEarlyTupleField(const records::LegacyRecordInde
         source, byteOrder);
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportField(ImportReport& report, FontType type, const char* member,
     ValueOrigin origin, std::int64_t rawValue,
     std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
 {
-    FieldInfo info;
-    info.target = "options.fontOptions["
-        + std::to_string(static_cast<std::size_t>(type)) + "]." + member;
-    info.origin = origin;
-    info.blockOffset = blockOffset;
-    info.decodedOffset = decodedOffset;
-    info.rawValue = rawValue;
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<FontOptionsTarget>(),
+        "fonts[" + std::to_string(static_cast<std::size_t>(type)) + "]." + member,
+        {origin, blockOffset, decodedOffset, rawValue});
 }
 
 void reportPhysicalField(ImportReport& report, std::size_t ordinal, const char* member,
     const ResolvedValue& source, std::int64_t rawValue)
 {
-    FieldInfo info;
-    info.target = "options.fontOptionsPhysical[" + std::to_string(ordinal) + "]." + member;
-    info.origin = ValueOrigin::LegacyMus;
-    info.blockOffset = source.blockOffset;
-    info.decodedOffset = source.decodedOffset;
-    info.rawValue = rawValue;
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<FontOptionsTarget>(),
+        "physical[" + std::to_string(ordinal) + "]." + member,
+        {ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset, rawValue});
 }
 
 void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
@@ -242,6 +234,10 @@ void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
     reportPhysicalField(report, ordinal, "effects", effects,
         static_cast<std::uint16_t>(effects.value));
 }
+#else
+#define reportField(...) ((void)0)
+#define reportPhysicalTuple(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief First major version whose physical font ordinals match the modern enum.
 /// @details Finale 2012 renumbered the tail of the array: through Finale 2011 physical 13 is
@@ -319,8 +315,11 @@ bool isStructuralTupleFill(std::size_t tupleCount, std::size_t physicalOrdinal,
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<FontOptionsTarget>& target, FontType type,
     const ResolvedValue& fontId, const ResolvedValue& size,
-    const ResolvedValue& effects, ImportReport& report,
-    ValueOrigin origin = ValueOrigin::LegacyMus)
+    const ResolvedValue& effects, ImportReport& report
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    , ValueOrigin origin = ValueOrigin::LegacyMus
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    )
 {
     auto font = std::make_shared<FontInfo>(document);
     font->fontId = musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value));
@@ -366,23 +365,23 @@ musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
 /// When the substitution below replaces one, that report becomes untrue, so the existing
 /// entry is rewritten in place rather than appended to: a second entry for the same target
 /// would leave the diagnostics claiming both origins at once.
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void retargetReportedOrigin(ImportReport& report, FontType type,
     const char* member, std::int64_t rawValue)
 {
-    const auto target = "options.fontOptions["
-        + std::to_string(static_cast<std::size_t>(type)) + "]." + member;
-    for (auto& info : report.fields) {
-        if (info.target != target) {
-            continue;
-        }
-        info.origin = ValueOrigin::Finale27Default;
-        info.rawValue = rawValue;
+    const auto target = "fonts[" + std::to_string(static_cast<std::size_t>(type))
+        + "]." + member;
+    if (auto* info = report.findField(instanceKey<FontOptionsTarget>(), target)) {
+        info->origin = ValueOrigin::Finale27Default;
+        info->rawValue = rawValue;
         // The value no longer comes from anywhere in the source file.
-        info.blockOffset = 0;
-        info.decodedOffset = 0;
-        return;
+        info->blockOffset = 0;
+        info->decodedOffset = 0;
     }
 }
+#else
+#define retargetReportedOrigin(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
@@ -508,8 +507,11 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
                 if (tuple.type == FontType::StaffNames) {
                     for (const auto companion : codaNameCompanionTypes) {
                         insertRecoveredTuple(document, target, companion,
-                            *fontId, *size, *effects, report,
-                            ValueOrigin::LegacyBehavior);
+                            *fontId, *size, *effects, report
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                            , ValueOrigin::LegacyBehavior
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                        );
                     }
                 }
             }
@@ -588,3 +590,9 @@ void importFontOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportField
+#undef reportPhysicalTuple
+#undef retargetReportedOrigin
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

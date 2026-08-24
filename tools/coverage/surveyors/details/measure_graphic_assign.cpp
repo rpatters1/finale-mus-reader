@@ -4,38 +4,32 @@
 // The measure graphic assignments, which are details rather than others and so carry a second
 // comparator. The fields are the ones both sides spell as plain numbers.
 
-#include <ostream>
-
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeMeasureGraphicAssignments(std::ostream& out, const SurveyContext& ctx)
+Value observeMeasureGraphicAssignments(const SurveyContext& ctx)
 {
-    out << '[';
-    bool first = true;
+    using Target = musx::dom::details::MeasureGraphicAssign;
+    Value::Array result;
     for (const auto& assign : ctx.document->getDetails()
-            ->getArray<musx::dom::details::MeasureGraphicAssign>(musx::dom::SCORE_PARTID)) {
-        if (!first) out << ',';
-        first = false;
-        out << "{\"cmper1\":" << assign->getCmper1()
-            << ",\"cmper2\":" << assign->getCmper2()
-            << ",\"inci\":" << assign->getInci().value_or(0)
-            << ",\"left\":" << assign->left
-            << ",\"bottom\":" << assign->bottom
-            << ",\"width\":" << assign->width
-            << ",\"height\":" << assign->height
-            << ",\"f_desc_id\":" << assign->fDescId
-            << ",\"orig_width\":" << assign->origWidth
-            << ",\"orig_height\":" << assign->origHeight
-            << '}';
+            ->getArray<Target>(musx::dom::SCORE_PARTID)) {
+        result.push_back(observe(*assign, ctx,
+            field("cmper1", [](const Target& value) { return value.getCmper1(); }),
+            field("cmper2", [](const Target& value) { return value.getCmper2(); }),
+            field("inci", [](const Target& value) { return value.getInci().value_or(0); }),
+            field("left", &Target::left), field("bottom", &Target::bottom),
+            field("width", &Target::width), field("height", &Target::height),
+            field("f_desc_id", &Target::fDescId), field("orig_width", &Target::origWidth),
+            field("orig_height", &Target::origHeight)));
     }
-    out << ']';
+    return Value(std::move(result));
 }
 
-COVERAGE_SURVEYOR("meas_graphic_assigns", writeMeasureGraphicAssignments);
+COVERAGE_SURVEYOR("meas_graphic_assigns", observeMeasureGraphicAssignments);
 
 } // namespace

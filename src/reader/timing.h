@@ -8,9 +8,9 @@
 #include <string_view>
 #include <vector>
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #include <chrono>
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 namespace finale_mus_reader {
 namespace timing {
@@ -137,7 +137,7 @@ public:
     [[nodiscard]] std::vector<ContainerAttemptMeasurement> containerAttempts() const;
 
 private:
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     friend class Scope;
     friend class ContainerAttempt;
     friend void increment(Counter counter, std::size_t amount);
@@ -149,10 +149,10 @@ private:
     std::array<double, static_cast<std::size_t>(Phase::Count)> durations_{};
     std::array<std::size_t, static_cast<std::size_t>(Counter::Count)> counters_{};
     std::vector<ContainerAttemptMeasurement> containerAttempts_;
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 class Scope
 {
@@ -191,7 +191,7 @@ private:
 
 void increment(Counter counter, std::size_t amount = 1);
 
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace timing
 } // namespace finale_mus_reader
@@ -199,7 +199,7 @@ void increment(Counter counter, std::size_t amount = 1);
 #define FINALE_MUS_READER_TIMING_JOIN_IMPL(a, b) a##b
 #define FINALE_MUS_READER_TIMING_JOIN(a, b) FINALE_MUS_READER_TIMING_JOIN_IMPL(a, b)
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #define FINALE_MUS_READER_TIMED_SCOPE(phase) \
     const ::finale_mus_reader::timing::Scope \
         FINALE_MUS_READER_TIMING_JOIN(finaleMusReaderTimingScope_, __LINE__)(phase)
@@ -219,4 +219,4 @@ void increment(Counter counter, std::size_t amount = 1);
 #define FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(name, bytes) static_cast<void>(0)
 #define FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(name, result) static_cast<void>(0)
 #define FINALE_MUS_READER_TIMING_INCREMENT(counter, amount) static_cast<void>(0)
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

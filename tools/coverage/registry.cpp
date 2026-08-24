@@ -4,16 +4,13 @@
 #include "coverage/registry.h"
 
 #include <chrono>
-#include <ostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "coverage/json.h"
-
-namespace finale_mus_reader::coverage {
+namespace finale_mus_reader {
+namespace coverage {
 
 namespace {
 
@@ -38,28 +35,27 @@ void registerSurveyor(std::string_view key, SurveyorFn fn)
     registry().emplace_back(std::string(key), fn);
 }
 
-SurveyTimings runAllSurveyors(std::ostream& out, const SurveyContext& ctx)
+SurveyResult runAllSurveyors(const SurveyContext& ctx)
 {
-    SurveyTimings timings;
+    SurveyResult result;
     const auto allStarted = std::chrono::steady_clock::now();
     for (const auto& [key, fn] : registry()) {
         const auto surveyorStarted = std::chrono::steady_clock::now();
-        out << ",\"" << key << "\":";
-        std::ostringstream value;
         try {
-            fn(value, ctx);
-            out << value.str();
+            result.snapshot.insert_or_assign(key, fn(ctx));
         } catch (const std::exception& error) {
-            out << "null,\"" << key << "_error\":" << jsonString(error.what());
+            result.snapshot.insert_or_assign(key, Value{});
+            result.errors.emplace(key, error.what());
         }
         const std::chrono::duration<double, std::milli> elapsed =
             std::chrono::steady_clock::now() - surveyorStarted;
-        timings.surveyors.emplace_back(key, elapsed.count());
+        result.timings.surveyors.emplace_back(key, elapsed.count());
     }
     const std::chrono::duration<double, std::milli> elapsed =
         std::chrono::steady_clock::now() - allStarted;
-    timings.durationMs = elapsed.count();
-    return timings;
+    result.timings.durationMs = elapsed.count();
+    return result;
 }
 
-} // namespace finale_mus_reader::coverage
+} // namespace coverage
+} // namespace finale_mus_reader

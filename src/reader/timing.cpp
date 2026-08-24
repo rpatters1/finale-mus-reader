@@ -3,16 +3,16 @@
 
 #include "reader/timing.h"
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #include <stdexcept>
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 namespace finale_mus_reader {
 namespace timing {
 
 std::string_view phaseName(Phase phase)
 {
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     switch (phase) {
     case Phase::FileIo: return "file_io";
     case Phase::ContainerParse: return "container_parse";
@@ -59,12 +59,12 @@ std::string_view phaseName(Phase phase)
 #else
     static_cast<void>(phase);
     return {};
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 std::string_view counterName(Counter counter)
 {
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     switch (counter) {
     case Counter::TextRecords: return "text_records";
     case Counter::TextRecordBytes: return "text_record_bytes";
@@ -84,12 +84,12 @@ std::string_view counterName(Counter counter)
 #else
     static_cast<void>(counter);
     return {};
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 std::string_view containerCandidateName(ContainerCandidate candidate)
 {
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     switch (candidate) {
     case ContainerCandidate::Uncompressed: return "uncompressed";
     case ContainerCandidate::Dcl: return "dcl";
@@ -99,12 +99,12 @@ std::string_view containerCandidateName(ContainerCandidate candidate)
 #else
     static_cast<void>(candidate);
     return {};
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 std::string_view containerAttemptResultName(ContainerAttemptResult result)
 {
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     switch (result) {
     case ContainerAttemptResult::Accepted: return "accepted";
     case ContainerAttemptResult::InputBounds: return "input_bounds";
@@ -118,10 +118,10 @@ std::string_view containerAttemptResultName(ContainerAttemptResult result)
 #else
     static_cast<void>(result);
     return {};
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_TIMING)
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 namespace {
 
@@ -262,7 +262,7 @@ void increment(Counter, std::size_t)
 {
 }
 
-#endif
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace timing
 } // namespace finale_mus_reader

@@ -8,9 +8,11 @@ file(GLOB_RECURSE COVERAGE_SURVEYOR_SOURCES CONFIGURE_DEPENDS
 
 add_executable(recovery_coverage_probe
     recovery_coverage_probe.cpp
+    comparison.cpp
     registry.cpp
     context.cpp
     json.cpp
+    value.cpp
     support/musx_companion.cpp
     support/relationships.cpp
     ${COVERAGE_SURVEYOR_SOURCES}
@@ -18,16 +20,13 @@ add_executable(recovery_coverage_probe
 
 # The coverage probe measures the reader as well as surveying it. The timing scopes are compiled
 # into the reader target that the probe exercises; ordinary clients get them only by selecting ON.
-if(FINALE_MUS_READER_TIMING STREQUAL "AUTO")
-    target_compile_definitions(finale_mus_reader PRIVATE
-        FINALE_MUS_READER_ENABLE_TIMING=1)
-    target_compile_definitions(recovery_coverage_probe PRIVATE
-        FINALE_MUS_READER_ENABLE_TIMING=1)
+if(FINALE_MUS_READER_INSTRUMENTATION STREQUAL "OFF")
+    message(FATAL_ERROR
+        "recovery_coverage_probe requires FINALE_MUS_READER_INSTRUMENTATION=AUTO or ON")
 endif()
 
 target_link_libraries(recovery_coverage_probe PRIVATE
     finale_mus_reader::finale_mus_reader
-    finale_mus_reader_timing_config
     ${FINALE_MUS_READER_PUGIXML_TARGET}
     ${FINALE_MUS_READER_ZLIB_TARGET}
 )

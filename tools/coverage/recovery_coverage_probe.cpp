@@ -22,14 +22,11 @@
 // corpus declares a companion-naming convention (see the `#companion:` line
 // readCorpusRows() reads) and the row's source imported successfully, it also surveys the
 // matching Finale-27-written `.musx` companion -- loaded directly through musxdom's own
-// DocumentFactory, not this reader -- and nests that under a `"companion"` object using
-// the exact same surveyor output shape. Comparing the two is left to a separate script,
-// deliberately: this probe's job is producing both sides from the same JSON Lines row, not
-// classifying their differences. Coverage is what makes it useful for regression detection
-// on either side: because every class goes through the same coverage::runAllSurveyors()
-// harness (see registry.h), two runs' JSON Lines -- before and after a change -- diff
-// cleanly, and a class can never silently drop out of that diff the way a hand-maintained
-// list of writer calls could forget one.
+// DocumentFactory, not this reader. Both documents pass through the same registered
+// surveyors, after which the probe aligns instances, compares leaves, classifies expected
+// differences, and emits compact schema-2 counts and examples. Keeping those operations
+// here gives semantic comparison access to both musxdom documents and its Enigma parser;
+// the Python report only aggregates and renders the resulting classifications.
 //
 // On macOS, a failed row also carries a best-effort `finder_type` when the source file's
 // classic Mac file type is still readable from its Finder Info (see macFinderFileType()):
@@ -53,9 +50,10 @@
 
 #if defined(__APPLE__)
 #include <sys/xattr.h>
-#endif
+#endif // defined(__APPLE__)
 
 #include "coverage/context.h"
+#include "coverage/comparison.h"
 #include "coverage/json.h"
 #include "coverage/registry.h"
 #include "finale_mus_reader/reader.h"
@@ -63,7 +61,7 @@
 #include "musx/musx.h"
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
-#endif
+#endif // !defined(MUSX_USE_PUGIXML)
 #include "musx/factory/DocumentFactory.h"
 #include "musx/xml/PugiXmlImpl.h"
 #include "musx_companion.h"
@@ -81,6 +79,7 @@ struct Options
     // flag means every diagnostic still prints, exactly as before this option existed.
     LogLevel minDiagnosticLevel = LogLevel::Verbose;
     bool showProgress = false;
+    bool includeTimings = false;
 };
 
 // Printed every this many documents rather than a multiple of five or ten, so the printed
@@ -138,6 +137,20 @@ void writeReaderCounters(std::ostream& out,
     out << '}';
 }
 
+void writeSurveyErrors(std::ostream& out,
+    const std::map<std::string, std::string>& errors)
+{
+    if (errors.empty()) return;
+    out << ",\"survey_errors\":{";
+    bool first = true;
+    for (const auto& [surveyor, message] : errors) {
+        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(surveyor)
+            << ':' << finale_mus_reader::coverage::jsonString(message);
+        first = false;
+    }
+    out << '}';
+}
+
 void writeContainerAttempts(std::ostream& out,
     const std::vector<finale_mus_reader::timing::ContainerAttemptMeasurement>& attempts)
 {
@@ -187,7 +200,7 @@ void printUsage()
         "usage: recovery_coverage_probe [-h|--help] "
         "[--min-diagnostic-level=verbose|info|warning|error] "
         "[--mac-symbol-fonts=path] "
-        "[--progress] <corpus-tsv> <output-jsonl>\n");
+        "[--include-timings] [--progress] <corpus-tsv> <output-jsonl>\n");
 }
 
 // Keep this in sync with Options and parseOptions(): every flag accepted there must be
@@ -227,6 +240,9 @@ void printHelp()
         "  --mac-symbol-fonts=path\n"
         "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
         "                  contents to the reader for symbol-glyph decoding.\n"
+        "  --include-timings\n"
+        "                  Include detailed reader, container, and surveyor timings in\n"
+        "                  each JSON row. They are omitted by default.\n"
         "  --progress      Print \"Processed X of T\" to stdout, updated in place, as\n"
         "                  documents are read.\n"
         "  -h, --help      Print this help and exit.\n");
@@ -250,6 +266,8 @@ std::optional<Options> parseOptions(int argc, char** argv)
         constexpr std::string_view symbolFontsFlag = "--mac-symbol-fonts=";
         if (arg == "--progress") {
             options.showProgress = true;
+        } else if (arg == "--include-timings") {
+            options.includeTimings = true;
         } else if (arg.substr(0, levelFlag.size()) == levelFlag) {
             const auto value = arg.substr(levelFlag.size());
             if (value == "verbose") options.minDiagnosticLevel = LogLevel::Verbose;
@@ -524,27 +542,7 @@ std::optional<std::string> macFinderFileType(const std::string& path)
 #else
     static_cast<void>(path);
     return std::nullopt;
-#endif
-}
-
-// Writes every diagnostic the reader collected for one document as its own JSON value,
-// level and message both, alongside (not instead of) warning_count. Finding which documents
-// produced a given diagnostic is then one query over the output this probe already writes --
-// `jq 'select(.diagnostics[]?.message | contains("..."))'` -- rather than a second run
-// capturing stderr separately, or a second output format this probe would have to keep in
-// sync with the first.
-void writeDiagnostics(std::ostream& out, const std::vector<finale_mus_reader::Diagnostic>& diagnostics)
-{
-    using finale_mus_reader::coverage::diagnosticLevelName;
-    using finale_mus_reader::coverage::jsonString;
-    out << ",\"diagnostics\":[";
-    bool first = true;
-    for (const auto& diagnostic : diagnostics) {
-        out << (first ? "" : ",") << "{\"level\":" << jsonString(diagnosticLevelName(diagnostic.level))
-            << ",\"message\":" << jsonString(diagnostic.message) << '}';
-        first = false;
-    }
-    out << ']';
+#endif // defined(__APPLE__)
 }
 
 // Prints a corpus's final tally as a real, newline-terminated diagnostic line: the actual
@@ -617,6 +615,7 @@ int main(int argc, char** argv)
         }
     }
     const finale_mus_reader::ReaderOptions readerOptions{macSymbolFonts};
+    const auto symbolFontNames = finale_mus_reader::text::parseMacSymbolFonts(macSymbolFonts);
 
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
@@ -644,6 +643,7 @@ int main(int argc, char** argv)
 
     std::cout << "Options:\n"
         << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
+        << "  include timings: " << (options->includeTimings ? "yes" : "no") << '\n'
         << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
         << "  MacSymbolFonts: ";
     if (options->macSymbolFontsPath.empty()) {
@@ -730,7 +730,7 @@ int main(int argc, char** argv)
         ++processedInSegment;
 
         std::ostringstream out;
-        out << '{' << "\"corpus_id\":" << jsonString(corpusId);
+        out << '{' << "\"schema\":2,\"corpus_id\":" << jsonString(corpusId);
         // Wall-clock time for exactly the work this row does -- reading and importing the
         // source plus running every surveyor -- not the line's JSON assembly around it, so a
         // slow surveyor and a slow import are both visible in the same field. Measured only
@@ -744,10 +744,14 @@ int main(int argc, char** argv)
         std::vector<timing::CounterMeasurement> readerCounters;
         std::vector<timing::ContainerAttemptMeasurement> containerAttemptTimings;
         std::optional<SurveyTimings> sourceSurveyTimings;
+        std::optional<SurveySnapshot> sourceSnapshot;
+        musx::dom::DocumentPtr sourceDocument;
+        FormatEpoch sourceEpoch = FormatEpoch::Unknown;
+        std::optional<SourceVersion> sourceVersion;
         try {
             const auto readerStarted = std::chrono::steady_clock::now();
             timing::Session readerTimingSession;
-            const auto result = Reader::read<musx::xml::pugi::Document>(
+            const auto result = Reader::readWithReport<musx::xml::pugi::Document>(
                 std::filesystem::path(path), readerOptions);
             const std::chrono::duration<double, std::milli> readerElapsed =
                 std::chrono::steady_clock::now() - readerStarted;
@@ -759,14 +763,19 @@ int main(int argc, char** argv)
                 throw std::runtime_error(importError(result.report));
             }
             const FieldIndex fields(result.report);
+            sourceDocument = result.document;
+            sourceEpoch = result.report.formatEpoch;
+            sourceVersion = result.report.sourceVersion;
             out << ",\"status\":\"ok\""
                 << ",\"epoch\":" << jsonString(epochName(result.report.formatEpoch))
                 << ",\"saving_product\":" << jsonString(result.report.savingProduct)
                 << ",\"source_version\":" << jsonString(versionName(result.report))
                 << ",\"warning_count\":" << loggerCaptured.size();
-            writeDiagnostics(out, loggerCaptured);
-            sourceSurveyTimings =
-                runAllSurveyors(out, SurveyContext{result.document, result.report, fields});
+            auto survey = runAllSurveyors(
+                SurveyContext{result.document, result.report, fields});
+            sourceSurveyTimings = std::move(survey.timings);
+            sourceSnapshot = std::move(survey.snapshot);
+            writeSurveyErrors(out, survey.errors);
             sourceOk = true;
         } catch (const std::exception& error) {
             if (!readerDurationMs) {
@@ -800,31 +809,32 @@ int main(int argc, char** argv)
             if (finderType) {
                 out << ",\"finder_type\":" << jsonString(*finderType);
             }
-            writeDiagnostics(out, loggerCaptured);
         }
         const std::chrono::duration<double, std::milli> elapsed =
             std::chrono::steady_clock::now() - started;
-        out << ",\"duration_ms\":";
-        writeTimingValue(out, elapsed.count());
-        out << ",\"timings\":{\"reader_ms\":";
-        writeTimingValue(out, *readerDurationMs);
-        if (!readerPhaseTimings.empty()) {
-            out << ',';
-            writeReaderPhaseTimings(out, readerPhaseTimings);
+        if (options->includeTimings) {
+            out << ",\"duration_ms\":";
+            writeTimingValue(out, elapsed.count());
+            out << ",\"timings\":{\"reader_ms\":";
+            writeTimingValue(out, *readerDurationMs);
+            if (!readerPhaseTimings.empty()) {
+                out << ',';
+                writeReaderPhaseTimings(out, readerPhaseTimings);
+            }
+            if (!readerCounters.empty()) {
+                out << ',';
+                writeReaderCounters(out, readerCounters);
+            }
+            if (!containerAttemptTimings.empty()) {
+                out << ',';
+                writeContainerAttempts(out, containerAttemptTimings);
+            }
+            if (sourceSurveyTimings) {
+                out << ',';
+                writeSurveyTimings(out, *sourceSurveyTimings);
+            }
+            out << '}';
         }
-        if (!readerCounters.empty()) {
-            out << ',';
-            writeReaderCounters(out, readerCounters);
-        }
-        if (!containerAttemptTimings.empty()) {
-            out << ',';
-            writeContainerAttempts(out, containerAttemptTimings);
-        }
-        if (sourceSurveyTimings) {
-            out << ',';
-            writeSurveyTimings(out, *sourceSurveyTimings);
-        }
-        out << '}';
 
         // A companion is only worth loading when there is a source result to compare it
         // against, and only attempted at all when this row's corpus declared a convention
@@ -841,6 +851,8 @@ int main(int argc, char** argv)
                 std::optional<double> archiveDurationMs;
                 std::optional<double> documentFactoryDurationMs;
                 std::optional<SurveyTimings> companionSurveyTimings;
+                std::optional<SurveySnapshot> companionSnapshot;
+                musx::dom::DocumentPtr companionDocument;
                 try {
                     const auto documentLoadStarted = std::chrono::steady_clock::now();
                     const auto archiveStarted = std::chrono::steady_clock::now();
@@ -856,7 +868,7 @@ int main(int argc, char** argv)
                     musx::factory::DocumentFactory::CreateOptions createOptions(*companionPath,
                         archive.notationMetadata.value_or(std::vector<char>{}),
                         std::move(graphicFiles));
-                    const auto companionDocument =
+                    companionDocument =
                         musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
                             archive.enigmaXml, std::move(createOptions));
                     const std::chrono::duration<double, std::milli> documentFactoryElapsed =
@@ -869,41 +881,52 @@ int main(int argc, char** argv)
                     const FieldIndex emptyFields(emptyReport);
                     companionOut << "\"status\":\"ok\""
                         << ",\"warning_count\":" << loggerCaptured.size();
-                    writeDiagnostics(companionOut, loggerCaptured);
-                    companionSurveyTimings = runAllSurveyors(companionOut,
+                    auto survey = runAllSurveyors(
                         SurveyContext{companionDocument, emptyReport, emptyFields});
+                    companionSurveyTimings = std::move(survey.timings);
+                    companionSnapshot = std::move(survey.snapshot);
+                    writeSurveyErrors(companionOut, survey.errors);
                 } catch (const std::exception& error) {
                     companionOut << "\"status\":\"error\""
                         << ",\"error\":" << jsonString(error.what());
-                    writeDiagnostics(companionOut, loggerCaptured);
                 }
                 const std::chrono::duration<double, std::milli> companionElapsed =
                     std::chrono::steady_clock::now() - companionStarted;
-                companionOut << ",\"duration_ms\":";
-                writeTimingValue(companionOut, companionElapsed.count());
-                companionOut << ",\"timings\":{";
-                bool firstTiming = true;
-                if (documentLoadDurationMs) {
-                    companionOut << "\"document_load_ms\":";
-                    writeTimingValue(companionOut, *documentLoadDurationMs);
-                    firstTiming = false;
+                if (options->includeTimings) {
+                    companionOut << ",\"duration_ms\":";
+                    writeTimingValue(companionOut, companionElapsed.count());
+                    companionOut << ",\"timings\":{";
+                    bool firstTiming = true;
+                    if (documentLoadDurationMs) {
+                        companionOut << "\"document_load_ms\":";
+                        writeTimingValue(companionOut, *documentLoadDurationMs);
+                        firstTiming = false;
+                    }
+                    if (archiveDurationMs) {
+                        companionOut << (firstTiming ? "" : ",") << "\"archive_ms\":";
+                        writeTimingValue(companionOut, *archiveDurationMs);
+                        firstTiming = false;
+                    }
+                    if (documentFactoryDurationMs) {
+                        companionOut << (firstTiming ? "" : ",") << "\"document_factory_ms\":";
+                        writeTimingValue(companionOut, *documentFactoryDurationMs);
+                        firstTiming = false;
+                    }
+                    if (companionSurveyTimings) {
+                        companionOut << (firstTiming ? "" : ",");
+                        writeSurveyTimings(companionOut, *companionSurveyTimings);
+                    }
+                    companionOut << '}';
                 }
-                if (archiveDurationMs) {
-                    companionOut << (firstTiming ? "" : ",") << "\"archive_ms\":";
-                    writeTimingValue(companionOut, *archiveDurationMs);
-                    firstTiming = false;
-                }
-                if (documentFactoryDurationMs) {
-                    companionOut << (firstTiming ? "" : ",") << "\"document_factory_ms\":";
-                    writeTimingValue(companionOut, *documentFactoryDurationMs);
-                    firstTiming = false;
-                }
-                if (companionSurveyTimings) {
-                    companionOut << (firstTiming ? "" : ",");
-                    writeSurveyTimings(companionOut, *companionSurveyTimings);
-                }
-                companionOut << '}';
                 out << ",\"companion\":{" << companionOut.str() << "}";
+                if (sourceSnapshot && companionSnapshot) {
+                    out << ",\"comparison\":{";
+                    const auto comparison = compareSnapshots(*sourceSnapshot, *companionSnapshot,
+                        sourceDocument, companionDocument, sourceEpoch,
+                        sourceVersion ? &*sourceVersion : nullptr, &symbolFontNames);
+                    writeCompactComparison(out, comparison);
+                    out << '}';
+                }
             }
         }
 

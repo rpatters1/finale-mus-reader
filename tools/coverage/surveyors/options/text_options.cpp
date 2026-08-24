@@ -7,71 +7,49 @@
 // pool and the companion, so only the name is comparable across the two.
 
 #include <cstdint>
-#include <ostream>
 #include <string>
 #include <utility>
 
-#include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeTextOptions(std::ostream& out, const SurveyContext& ctx)
+Value observeTextOptions(const SurveyContext& ctx)
 {
-    const auto options = ctx.document->getOptions()->get<musx::dom::options::TextOptions>();
-    if (!options) {
-        out << "null";
-        return;
-    }
-    out << '{';
-    if (options->textLineSpacingPercent) {
-        out << "\"line_spacing_percent\":" << *options->textLineSpacingPercent;
-    } else {
-        out << "\"line_spacing_percent\":null";
-    }
-    if (options->textLineSpacingEvpu) {
-        out << ",\"line_spacing_evpu\":" << *options->textLineSpacingEvpu;
-    } else {
-        out << ",\"line_spacing_evpu\":null";
-    }
-    out << ",\"show_time_seconds\":" << jsonBool(options->showTimeSeconds)
-        << ",\"date_format\":" << static_cast<int>(options->dateFormat)
-        << ",\"tab_spaces\":" << options->tabSpaces
-        << ",\"text_tracking\":" << options->textTracking
-        << ",\"text_baseline_shift\":" << options->textBaselineShift
-        << ",\"text_superscript\":" << options->textSuperscript
-        << ",\"text_word_wrap\":" << jsonBool(options->textWordWrap)
-        << ",\"text_page_offset\":" << options->textPageOffset
-        << ",\"text_justify\":" << static_cast<int>(options->textJustify)
-        << ",\"text_expand_single_word\":" << jsonBool(options->textExpandSingleWord)
-        << ",\"text_horz_align\":" << static_cast<int>(options->textHorzAlign)
-        << ",\"text_vert_align\":" << static_cast<int>(options->textVertAlign)
-        << ",\"text_is_edge_aligned\":" << jsonBool(options->textIsEdgeAligned);
-
-    for (const auto* member : {"textLineSpacingPercent", "textLineSpacingEvpu",
-             "showTimeSeconds", "dateFormat", "tabSpaces", "textTracking",
-             "textBaselineShift", "textSuperscript", "textWordWrap", "textPageOffset",
-             "textJustify", "textExpandSingleWord", "textHorzAlign", "textVertAlign",
-             "textIsEdgeAligned"}) {
-        out << ",\"origin_" << member << "\":"
-            << jsonString(ctx.fields.originOf(std::string("options.textOptions.") + member));
+    using Target = musx::dom::options::TextOptions;
+    const auto options = ctx.document->getOptions()->get<Target>();
+    if (!options) return {};
+    auto result = observe(*options, ctx,
+        field("line_spacing_percent", &Target::textLineSpacingPercent), field("line_spacing_evpu", &Target::textLineSpacingEvpu),
+        field("show_time_seconds", &Target::showTimeSeconds), field("date_format", &Target::dateFormat),
+        field("tab_spaces", &Target::tabSpaces), field("text_tracking", &Target::textTracking),
+        field("text_baseline_shift", &Target::textBaselineShift), field("text_superscript", &Target::textSuperscript),
+        field("text_word_wrap", &Target::textWordWrap), field("text_page_offset", &Target::textPageOffset),
+        field("text_justify", &Target::textJustify), field("text_expand_single_word", &Target::textExpandSingleWord),
+        field("text_horz_align", &Target::textHorzAlign), field("text_vert_align", &Target::textVertAlign),
+        field("text_is_edge_aligned", &Target::textIsEdgeAligned));
+    for (const auto* member : {"textLineSpacingPercent", "textLineSpacingEvpu", "showTimeSeconds", "dateFormat",
+             "tabSpaces", "textTracking", "textBaselineShift", "textSuperscript", "textWordWrap", "textPageOffset",
+             "textJustify", "textExpandSingleWord", "textHorzAlign", "textVertAlign", "textIsEdgeAligned"}) {
+        result.asObject().emplace(std::string("origin_") + member,
+            std::string(ctx.fields.originOf(std::string("options.textOptions.") + member)));
     }
 
     using Insert = musx::dom::options::AccidentalInsertSymbolType;
     static const std::pair<Insert, const char*> insertOrder[] = {
         {Insert::Sharp, "sharp"}, {Insert::Flat, "flat"}, {Insert::Natural, "natural"},
         {Insert::DblSharp, "dblSharp"}, {Insert::DblFlat, "dblFlat"}};
-    out << ",\"inserts\":[";
-    bool first = true;
+    Value::Array inserts;
     for (const auto& [type, name] : insertOrder) {
         const auto found = options->symbolInserts.find(type);
-        out << (first ? "" : ",") << "{\"type\":" << jsonString(name);
-        first = false;
+        Value::Object observed{{"type", name}};
         if (found == options->symbolInserts.end() || !found->second) {
-            out << ",\"present\":false}";
+            observed.emplace("present", false);
+            inserts.emplace_back(std::move(observed));
             continue;
         }
         const auto& insert = *found->second;
@@ -86,30 +64,26 @@ void writeTextOptions(std::ostream& out, const SurveyContext& ctx)
                 dangling = insert.symFont->fontId != 0;
             }
         }
-        out << ",\"present\":true"
-            << ",\"tracking_before\":" << insert.trackingBefore
-            << ",\"tracking_after\":" << insert.trackingAfter
-            << ",\"baseline_shift_perc\":" << insert.baselineShiftPerc
-            << ",\"sym_char\":" << static_cast<std::uint32_t>(insert.symChar)
-            << ",\"has_font\":" << jsonBool(bool(insert.symFont))
-            << ",\"font_id\":" << (insert.symFont ? int(insert.symFont->fontId) : 0)
-            << ",\"font_size\":" << (insert.symFont ? insert.symFont->fontSize : 0)
-            << ",\"font_effects\":"
-            << (insert.symFont ? int(insert.symFont->getEnigmaStyles()) : 0)
-            << ",\"font_name\":" << jsonString(fontName)
-            << ",\"normalized_font_name\":" << jsonString(musx::dom::normalizeFontName(fontName))
-            << ",\"dangling_font\":" << jsonBool(dangling);
+        observed.insert({{"present", true}, {"tracking_before", insert.trackingBefore},
+            {"tracking_after", insert.trackingAfter}, {"baseline_shift_perc", insert.baselineShiftPerc},
+            {"sym_char", static_cast<std::uint32_t>(insert.symChar)}, {"has_font", bool(insert.symFont)},
+            {"font_id", insert.symFont ? int(insert.symFont->fontId) : 0},
+            {"font_size", insert.symFont ? insert.symFont->fontSize : 0},
+            {"font_effects", insert.symFont ? int(insert.symFont->getEnigmaStyles()) : 0},
+            {"font_name", fontName}, {"normalized_font_name", musx::dom::normalizeFontName(fontName)},
+            {"dangling_font", dangling}});
         const auto prefix = std::string("options.textOptions.symbolInserts[") + name + "].";
         for (const auto* member : {"trackingBefore", "trackingAfter", "baselineShiftPerc",
                  "symChar", "symFont.fontId", "symFont.fontSize", "symFont.effects"}) {
-            out << ",\"origin_" << member << "\":"
-                << jsonString(ctx.fields.originOf(prefix + member));
+            observed.emplace(std::string("origin_") + member,
+                std::string(ctx.fields.originOf(prefix + member)));
         }
-        out << '}';
+        inserts.emplace_back(std::move(observed));
     }
-    out << "]}";
+    result.asObject().emplace("inserts", std::move(inserts));
+    return result;
 }
 
-COVERAGE_SURVEYOR("text_options", writeTextOptions);
+COVERAGE_SURVEYOR("text_options", observeTextOptions);
 
 } // namespace

@@ -148,12 +148,12 @@ pugixml and instantiate the reader with its musxdom adapter.
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.
 
-Reader phase timing is controlled by `FINALE_MUS_READER_TIMING`, whose values
-are `AUTO`, `ON`, and `OFF`. `AUTO` instruments the reader when it is built for
-the recovery coverage probe and compiles timing out for ordinary clients in every
-configuration. Clients can select `ON` explicitly when they need instrumentation;
-`OFF` disables it everywhere. The probe activates the collector and writes the
-measurements; the library's public API is unchanged.
+Reader diagnostics and phase timing are controlled together by
+`FINALE_MUS_READER_INSTRUMENTATION`, whose values are `AUTO`, `ON`, and `OFF`.
+`AUTO` instruments the reader only when the recovery coverage probe is built and
+compiles instrumentation out for ordinary clients in every configuration. Clients
+can select `ON` explicitly when they need instrumentation; `OFF` disables it
+everywhere.
 Along with reader phases, the probe reports each speculative container candidate,
 its rejection stage and duration, decompression calls and byte counts, and whether
 successfully decoded blocks were retained or discarded.
@@ -164,9 +164,12 @@ successfully decoded blocks were retained or discarded.
 #include <finale_mus_reader/reader.h>
 
 // XmlDocument must derive from musx::xml::IXmlDocument.
-auto result = finale_mus_reader::Reader::read<XmlDocument>("legacy_score.mus");
-auto document = result.document;
+auto document = finale_mus_reader::Reader::read<XmlDocument>("legacy_score.mus");
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+auto result = finale_mus_reader::Reader::readWithReport<XmlDocument>("legacy_score.mus");
 const auto& report = result.report;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 ```
 
 `ImportReport` identifies the selected epoch, byte order, source platform,

@@ -13,112 +13,90 @@
 
 #include <cstddef>
 #include <map>
-#include <ostream>
 #include <string>
 
-#include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeShapeDefs(std::ostream& out, const SurveyContext& ctx)
+Value observeShapeDefs(const SurveyContext& ctx)
 {
-    out << '[';
-    bool first = true;
+    using Target = musx::dom::others::ShapeDef;
+    Value::Array result;
     for (const auto& definition : ctx.document->getOthers()
-            ->getArray<musx::dom::others::ShapeDef>(musx::dom::SCORE_PARTID)) {
+            ->getArray<Target>(musx::dom::SCORE_PARTID)) {
         const auto prefix = "others.shapeDef[" + std::to_string(definition->getCmper()) + "].";
-        out << (first ? "" : ",") << '{'
-            << "\"cmper\":" << definition->getCmper()
-            << ",\"instruction_list\":" << definition->instructionList
-            << ",\"data_list\":" << definition->dataList
-            << ",\"shape_type\":" << static_cast<int>(definition->shapeType)
-            << ",\"origin_instructionList\":"
-            << jsonString(ctx.fields.originOf(prefix + "instructionList"))
-            << ",\"origin_dataList\":" << jsonString(ctx.fields.originOf(prefix + "dataList"))
-            << ",\"origin_shapeType\":" << jsonString(ctx.fields.originOf(prefix + "shapeType"))
-            << '}';
-        first = false;
+        result.emplace_back(observe(*definition, ctx,
+            field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("instruction_list", &Target::instructionList), field("data_list", &Target::dataList),
+            field("shape_type", &Target::shapeType),
+            field("origin_instructionList", [&ctx, &prefix](const Target&) { return ctx.fields.originOf(prefix + "instructionList"); }),
+            field("origin_dataList", [&ctx, &prefix](const Target&) { return ctx.fields.originOf(prefix + "dataList"); }),
+            field("origin_shapeType", [&ctx, &prefix](const Target&) { return ctx.fields.originOf(prefix + "shapeType"); })));
     }
-    out << ']';
+    return result;
 }
 
-void writeShapeInstructionLists(std::ostream& out, const SurveyContext& ctx)
+Value observeShapeInstructionLists(const SurveyContext& ctx)
 {
     std::map<int, std::size_t> instructionTypes;
     std::size_t externalGraphicCount = 0;
     std::size_t undocumentedCount = 0;
     std::size_t instructionCount = 0;
 
-    out << "{\"lists\":[";
-    bool first = true;
+    Value::Array lists;
     for (const auto& list : ctx.document->getOthers()
             ->getArray<musx::dom::others::ShapeInstructionList>(musx::dom::SCORE_PARTID)) {
         const auto prefix = "others.shapeList[" + std::to_string(list->getCmper()) + "].instructions[";
-        out << (first ? "" : ",") << '{'
-            << "\"cmper\":" << list->getCmper()
-            << ",\"instructions\":[";
+        Value::Array instructions;
         for (std::size_t index = 0; index < list->instructions.size(); ++index) {
             const auto& instruction = *list->instructions[index];
             const auto fieldPrefix = prefix + std::to_string(index) + "].";
-            out << (index ? "," : "") << '{'
-                << "\"index\":" << index
-                << ",\"num_data\":" << instruction.numData
-                << ",\"type\":" << static_cast<int>(instruction.type)
-                << ",\"origin_numData\":" << jsonString(ctx.fields.originOf(fieldPrefix + "numData"))
-                << ",\"origin_type\":" << jsonString(ctx.fields.originOf(fieldPrefix + "type"))
-                << '}';
+            instructions.emplace_back(Value::Object{{"index", index}, {"num_data", instruction.numData},
+                {"type", static_cast<std::int64_t>(instruction.type)},
+                {"origin_numData", std::string(ctx.fields.originOf(fieldPrefix + "numData"))},
+                {"origin_type", std::string(ctx.fields.originOf(fieldPrefix + "type"))}});
             ++instructionTypes[static_cast<int>(instruction.type)];
             ++instructionCount;
             if (instruction.type == musx::dom::ShapeDefInstructionType::ExternalGraphic) ++externalGraphicCount;
             if (instruction.type == musx::dom::ShapeDefInstructionType::Undocumented) ++undocumentedCount;
         }
-        out << "]}";
-        first = false;
+        lists.emplace_back(Value::Object{{"cmper", list->getCmper()}, {"instructions", std::move(instructions)}});
     }
-    out << "],\"instruction_count\":" << instructionCount
-        << ",\"external_graphic_count\":" << externalGraphicCount
-        << ",\"undocumented_instruction_count\":" << undocumentedCount
-        << ",\"instruction_types\":{";
-    bool comma = false;
+    Value::Object typeValues;
     for (const auto& [type, count] : instructionTypes) {
-        out << (comma ? "," : "") << jsonString(std::to_string(type)) << ':' << count;
-        comma = true;
+        typeValues.emplace(std::to_string(type), count);
     }
-    out << "}}";
+    return Value::Object{{"lists", std::move(lists)}, {"instruction_count", instructionCount},
+        {"external_graphic_count", externalGraphicCount},
+        {"undocumented_instruction_count", undocumentedCount},
+        {"instruction_types", std::move(typeValues)}};
 }
 
-void writeShapeData(std::ostream& out, const SurveyContext& ctx)
+Value observeShapeData(const SurveyContext& ctx)
 {
     std::size_t valueCount = 0;
-    out << "{\"buffers\":[";
-    bool first = true;
+    Value::Array buffers;
     for (const auto& data : ctx.document->getOthers()
             ->getArray<musx::dom::others::ShapeData>(musx::dom::SCORE_PARTID)) {
         const auto prefix = "others.shapeData[" + std::to_string(data->getCmper()) + "].values[";
-        out << (first ? "" : ",") << '{'
-            << "\"cmper\":" << data->getCmper()
-            << ",\"values\":[";
+        Value::Array values;
         for (std::size_t index = 0; index < data->values.size(); ++index) {
-            out << (index ? "," : "") << '{'
-                << "\"index\":" << index
-                << ",\"value\":" << data->values[index]
-                << ",\"origin\":"
-                << jsonString(ctx.fields.originOf(prefix + std::to_string(index) + "]"))
-                << '}';
+            values.emplace_back(Value::Object{{"index", index}, {"value", data->values[index]},
+                {"origin", std::string(ctx.fields.originOf(prefix + std::to_string(index) + "]"))}});
             ++valueCount;
         }
-        out << "]}";
-        first = false;
+        buffers.emplace_back(Value::Object{{"cmper", data->getCmper()}, {"values", std::move(values)}});
     }
-    out << "],\"value_count\":" << valueCount << '}';
+    return Value::Object{{"buffers", std::move(buffers)}, {"value_count", valueCount}};
 }
 
-COVERAGE_SURVEYOR("shape_defs", writeShapeDefs);
-COVERAGE_SURVEYOR("shape_instruction_lists", writeShapeInstructionLists);
-COVERAGE_SURVEYOR("shape_data", writeShapeData);
+COVERAGE_SURVEYOR("shape_defs", observeShapeDefs);
+COVERAGE_SURVEYOR("shape_instruction_lists", observeShapeInstructionLists);
+COVERAGE_SURVEYOR("shape_data", observeShapeData);
 
 } // namespace

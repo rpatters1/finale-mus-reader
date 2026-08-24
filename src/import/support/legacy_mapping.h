@@ -14,6 +14,16 @@
 #include <vector>
 
 #include "finale_mus_reader/reader.h"
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#define FINALE_MUS_READER_REPORT_FIELD(report, instance, member, ...) \
+    (report).setField((instance), (member), __VA_ARGS__)
+#define FINALE_MUS_READER_REPORT_TEXT_FIELD(report, instance, member, ...) \
+    (report).setTextField((instance), (member), __VA_ARGS__)
+#else
+#define FINALE_MUS_READER_REPORT_FIELD(...) ((void)0)
+#define FINALE_MUS_READER_REPORT_TEXT_FIELD(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #include "import/support/text_encoding.h"
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
@@ -398,7 +408,20 @@ struct MappingTarget
 {
     std::uint16_t cmper{};
     void* instance{};
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    std::type_index classType{typeid(void)};
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
+
+template <typename T>
+[[nodiscard]] MappingTarget makeMappingTarget(std::uint16_t cmper, T* instance)
+{
+    return {cmper, instance
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        , typeid(T)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    };
+}
 
 /// @brief A mapping table: one musxdom class, one applicability gate, a set of fields.
 /// @details Several tables may target the same class. Every table whose gate matches is
@@ -426,7 +449,8 @@ struct MappingTable
     /// TargetKind::OthersFromRecords.
     records::LegacyTag recordIdentity{};
     /// @brief Creates and pools one object, for @ref TargetKind::OthersFromRecords.
-    void* (*createTarget)(const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
+    MappingTarget (*createTarget)(
+        const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
     const FieldMapping* fields{};
     std::size_t fieldCount{};
     /// @brief Optional pass over one target after every field of this table has been applied.
@@ -448,14 +472,14 @@ struct MappingTable
 
 /// @brief Creates one others object of type T and adds it to the document pool.
 template <typename T>
-[[nodiscard]] void* createOthersTarget(
+[[nodiscard]] MappingTarget createOthersTarget(
     const musx::dom::DocumentPtr& document, std::uint16_t cmper)
 {
     auto instance = std::make_shared<T>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
     auto* raw = instance.get();
     document->getOthers()->add(T::XmlNodeName, std::move(instance));
-    return raw;
+    return makeMappingTarget(cmper, raw);
 }
 
 /// @brief Enumerates the single instance of an options class, if it was seeded.
@@ -467,7 +491,7 @@ template <typename T>
     if (const auto instance = document->getOptions()->template get<T>()) {
         // Pool instances are handed out const. Overlaying legacy values is the one
         // reason this library writes to them, so the cast is confined to here.
-        result.push_back({0, const_cast<T*>(instance.get())});
+        result.push_back(makeMappingTarget(0, const_cast<T*>(instance.get())));
     }
     return result;
 }
@@ -482,7 +506,8 @@ template <typename T>
 {
     std::vector<MappingTarget> result;
     for (const auto& instance : document->getOthers()->template getArray<T>(musx::dom::SCORE_PARTID)) {
-        result.push_back({instance->getCmper(), const_cast<T*>(instance.get())});
+        result.push_back(makeMappingTarget(
+            instance->getCmper(), const_cast<T*>(instance.get())));
     }
     return result;
 }
@@ -510,8 +535,11 @@ struct PendingShapeReference
     musx::dom::Cmper referenceShapeId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-    /// @brief The @ref FieldInfo::target whose reported value the resolution updates.
-    std::string reportTarget;
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    /// @brief The structured report instance and member whose value resolution updates.
+    InstanceKey reportInstance;
+    std::string reportMember;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
 
 /// @brief Requests accumulated during capture, drained by @ref resolveDeferredReferences.

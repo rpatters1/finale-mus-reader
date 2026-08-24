@@ -186,18 +186,18 @@ std::optional<std::size_t> classTupleWords(
     return versions::storesUnicodeCodepoints(version) ? wideTupleWords : narrowTupleWords;
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportClefField(ImportReport& report, std::size_t index, const char* member,
     ValueOrigin origin, std::int64_t rawValue,
     std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
 {
-    FieldInfo info;
-    info.target = "options.clefOptions.clefDefs[" + std::to_string(index) + "]." + member;
-    info.origin = origin;
-    info.blockOffset = blockOffset;
-    info.decodedOffset = decodedOffset;
-    info.rawValue = rawValue;
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<ClefOptionsTarget>(),
+        "clefDefs[" + std::to_string(index) + "]." + member,
+        {origin, blockOffset, decodedOffset, rawValue});
 }
+#else
+#define reportClefField(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Turns one stored clef into a musxdom ClefDef and records where each value came from.
 /// @details Before Finale 2012 the character is a byte in the encoding of the font that draws
@@ -381,10 +381,14 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
         // the field stays zero until then: a blank clef is honest, a foreign comparator is not.
         def->shapeId = 0;
         if (source->isShape && source->shapeId != 0) {
-            const auto target = "options.clefOptions.clefDefs[" + std::to_string(index)
-                + "].shapeId";
             pending.push_back({source->shapeId,
-                [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }, target});
+                [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                ,
+                instanceKey<ClefOptionsTarget>(),
+                "clefDefs[" + std::to_string(index) + "].shapeId"
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            });
         }
         // Neither pinned baseline gives a clef its own font, so there is no baseline font
         // comparator to remap here. Should one ever appear, it would need the same
@@ -553,11 +557,9 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     // later locations there would report a font size as a spacing value.
     if (profile.epoch == FormatEpoch::CodaBanner) {
         target->cautionaryClefChanges = true;
-        FieldInfo courtesy;
-        courtesy.target = "options.clefOptions.cautionaryClefChanges";
-        courtesy.origin = ValueOrigin::LegacyBehavior;
-        courtesy.rawValue = 1;
-        report.fields.push_back(std::move(courtesy));
+        FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<ClefOptionsTarget>(),
+            "cautionaryClefChanges",
+            {ValueOrigin::LegacyBehavior, 0, 0, 1});
     }
 
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
@@ -642,3 +644,7 @@ void importClefOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportClefField
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

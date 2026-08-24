@@ -465,17 +465,16 @@ const MappingTable& classSmartLyricTable()
     return table;
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportLyricField(ImportReport& report, const std::string& member, ValueOrigin origin,
     std::int64_t rawValue, std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
 {
-    FieldInfo info;
-    info.target = std::string(lyricReportPrefix) + '.' + member;
-    info.origin = origin;
-    info.blockOffset = blockOffset;
-    info.decodedOffset = decodedOffset;
-    info.rawValue = rawValue;
-    report.fields.push_back(std::move(info));
+    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<LyricTarget>(), member,
+        {origin, blockOffset, decodedOffset, rawValue});
 }
+#else
+#define reportLyricField(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief The seeded style for one syllable position, created if the baseline lacked it.
 std::shared_ptr<LyricSyllableStyle> syllableStyleFor(
@@ -815,3 +814,7 @@ void importLyricOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
+
+#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#undef reportLyricField
+#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

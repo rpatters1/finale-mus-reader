@@ -25,14 +25,14 @@
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
 #define FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
-#endif
+#endif // !defined(MUSX_USE_PUGIXML)
 
 #include "musx/xml/PugiXmlImpl.h"
 
 #ifdef FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
 #undef MUSX_USE_PUGIXML
 #undef FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML
-#endif
+#endif // defined(FINALE_MUS_READER_TEST_UNDEFINE_MUSX_USE_PUGIXML)
 
 namespace {
 
@@ -308,11 +308,44 @@ std::vector<std::uint8_t> makeZlibMusWithGraphic(
 // mapping_tests.cpp about -Wdangling-reference.
 const FieldInfo& field(const ImportResult& result, std::string_view target)
 {
-    const auto found = std::find_if(result.report.fields.begin(), result.report.fields.end(),
-        [&](const FieldInfo& value) { return std::string_view(value.target) == target; });
-    expect(found != result.report.fields.end(),
-        std::string("Missing field report for ").append(target));
-    return *found;
+    std::string desiredMember(target);
+    std::optional<musx::dom::Cmper> cmper;
+    if (target.starts_with("options.fontOptions[")) {
+        desiredMember = "fonts[" + std::string(target.substr(std::string_view("options.fontOptions[").size()));
+    } else if (target.starts_with("options.fontOptionsPhysical[")) {
+        desiredMember = "physical[" + std::string(
+            target.substr(std::string_view("options.fontOptionsPhysical[").size()));
+    } else if (target.starts_with("options.")) {
+        const auto dot = target.find('.', std::string_view("options.").size());
+        if (dot != std::string_view::npos) desiredMember = target.substr(dot + 1);
+    } else if (const auto open = target.find('['); open != std::string_view::npos) {
+        const auto close = target.find(']', open);
+        const auto dot = close == std::string_view::npos ? close : target.find('.', close);
+        if (close != std::string_view::npos && dot != std::string_view::npos) {
+            cmper = static_cast<musx::dom::Cmper>(std::stoul(
+                std::string(target.substr(open + 1, close - open - 1))));
+            desiredMember = target.substr(dot + 1);
+        }
+    }
+    for (const auto& [instance, fields] : result.report.fields) {
+        if (cmper && instance.cmper1 != cmper) continue;
+        for (const auto& [member, value] : fields) {
+            if (member == desiredMember) return value;
+        }
+    }
+    throw std::runtime_error(std::string("Missing field report for ").append(target));
+}
+
+template <typename Predicate>
+bool anyReportedField(const finale_mus_reader::ImportReport& report, Predicate predicate)
+{
+    for (const auto& [instance, fields] : report.fields) {
+        (void)instance;
+        for (const auto& [member, info] : fields) {
+            if (predicate(member, info)) return true;
+        }
+    }
+    return false;
 }
 
 // Whether the report carries any diagnostic at the given level. Tests assert the level a
@@ -401,12 +434,9 @@ void expectNoScoreContent(const ImportResult& result)
         }
         for (const auto& shape : result.document->getOthers()
                 ->getArray<others::ShapeDef>(SCORE_PARTID)) {
-            const auto target = "others.shapeDef[" + std::to_string(shape->getCmper())
-                + "].instructionList";
-            const auto recovered = std::any_of(result.report.fields.begin(),
-                result.report.fields.end(), [&](const FieldInfo& info) {
-                    return info.target == target && info.origin == ValueOrigin::LegacyMus;
-                });
+            const auto* shapeField = result.report.findField<others::ShapeDef>(
+                "instructionList", SCORE_PARTID, shape->getCmper());
+            const auto recovered = shapeField && shapeField->origin == ValueOrigin::LegacyMus;
             expect(recovered || referencedShapes.count(shape->getCmper()) != 0,
                 "Output contains a baseline shape no clef definition references");
         }
@@ -425,7 +455,7 @@ void testControlledDclFile()
 {
     const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
         / "evidence/F2002/F2002-baseline.mus";
-    const auto result = Reader::read<TestXmlDocument>(path);
+    const auto result = Reader::readWithReport<TestXmlDocument>(path);
     expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
         "F2002 fixture was not classified as DCL");
     expect(result.report.byteOrder == ByteOrder::BigEndian,
@@ -467,8 +497,8 @@ void testIndependentImportedDocuments()
     // fallback document can remain the owner of options placed in an imported document.
     const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
         / "evidence/F2002/F2002-baseline.mus";
-    const auto first = Reader::read<TestXmlDocument>(path);
-    const auto second = Reader::read<TestXmlDocument>(path);
+    const auto first = Reader::readWithReport<TestXmlDocument>(path);
+    const auto second = Reader::readWithReport<TestXmlDocument>(path);
     expect(first.document != second.document, "Both reads returned the same document");
 
     const auto firstSpacing = first.document->getOptions()
@@ -496,7 +526,7 @@ void testFontDefinitions()
 {
     const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
         / "evidence/F2002/F2002-baseline.mus";
-    const auto result = Reader::read<TestXmlDocument>(path);
+    const auto result = Reader::readWithReport<TestXmlDocument>(path);
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
@@ -539,7 +569,7 @@ void testFontOptionsCapture()
     using FontOptions = musx::dom::options::FontOptions;
     using FontType = FontOptions::FontType;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
 
@@ -779,7 +809,7 @@ void testClefOptionsCapture()
 {
     using ClefOptions = musx::dom::options::ClefOptions;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     const auto clefs = [](const ImportResult& result) {
@@ -992,11 +1022,9 @@ void testClefOptionsCapture()
             std::string("A Coda document did not always show a courtesy clef: ") + path);
         // Neither read from the file nor a baseline default: the era had no option, so the
         // behavior determines it. Reported once, and as behavior.
-        const auto entries = std::count_if(coda.report.fields.begin(), coda.report.fields.end(),
-            [](const FieldInfo& value) {
-                return value.target == "options.clefOptions.cautionaryClefChanges";
-            });
-        expect(entries == 1,
+        const auto* courtesy = coda.report.findField<musx::dom::options::ClefOptions>(
+            "cautionaryClefChanges");
+        expect(courtesy != nullptr,
             std::string("cautionaryClefChanges was reported more than once from ") + path);
         expect(field(coda, "options.clefOptions.cautionaryClefChanges").origin
                 == ValueOrigin::LegacyBehavior,
@@ -1039,7 +1067,7 @@ void testStemConnectionCapture()
 {
     using StemOptions = musx::dom::options::StemOptions;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     const auto stems = [](const ImportResult& result) {
@@ -1127,11 +1155,10 @@ void testStemConnectionCapture()
         expect(result->document->getOptions()->get<StemOptions>()->stemConnections.size() == 1,
             "A single-connection document did not keep exactly its own connection");
     }
-    expect(std::none_of(f100.report.fields.begin(), f100.report.fields.end(),
-               [](const FieldInfo& value) {
-                   return value.target.find("stemConnections") != std::string::npos
-                       && value.origin != ValueOrigin::LegacyMus;
-               }),
+    expect(!anyReportedField(f100.report, [](const auto& member, const FieldInfo& value) {
+               return member.find("stemConnections") != std::string::npos
+                   && value.origin != ValueOrigin::LegacyMus;
+           }),
         "A stem connection was reported as anything other than recovered");
 }
 
@@ -1142,7 +1169,7 @@ void testStemScalarRecovery()
 {
     using StemOptions = musx::dom::options::StemOptions;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     struct Expected
@@ -1309,7 +1336,7 @@ void testMultimeasureRestRecovery()
 {
     using MmRest = musx::dom::options::MultimeasureRestOptions;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     struct Expected
@@ -1435,7 +1462,7 @@ void testLyricOptionsRecovery()
     using ConnectIndex = Lyrics::WordExtConnectIndex;
     using AlignJustify = musx::dom::AlignJustify;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
 
@@ -1563,10 +1590,9 @@ void testLyricOptionsRecovery()
         // which has run by the time a caller sees the document.
         expect(static_cast<bool>(lyrics->altHyphenFont),
             wrong("alternate hyphen font, which musxdom should have synthesized"));
-        expect(std::none_of(result.report.fields.begin(), result.report.fields.end(),
-                   [](const finale_mus_reader::FieldInfo& info) {
-                       return info.target.find("altHyphenFont.") != std::string::npos;
-                   }),
+        expect(!anyReportedField(result.report, [](const auto& member, const auto&) {
+                   return member.find("altHyphenFont.") != std::string::npos;
+               }),
             wrong("alternate hyphen font, which the reader reported without importing"));
     }
 
@@ -1873,10 +1899,9 @@ void testLyricOptionsRecovery()
             && f100Start->second->connectIndex == ConnectIndex::LyricRightBottom
             && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 4,
         "The Coda-era selector 55 was read as the word extension connection table");
-    expect(std::none_of(f100.report.fields.begin(), f100.report.fields.end(),
-               [](const finale_mus_reader::FieldInfo& info) {
-                   return info.target.find("wordExtConnectStyles") != std::string::npos;
-               }),
+    expect(!anyReportedField(f100.report, [](const auto& member, const auto&) {
+               return member.find("wordExtConnectStyles") != std::string::npos;
+           }),
         "A Coda-era document reported a word extension connection it never stored");
 
     // Finale 2003 is the last release before the smart-lyric group. All three of its switches
@@ -1917,7 +1942,7 @@ void testUncompressedFontOptions()
     using FontOptions = musx::dom::options::FontOptions;
     using FontType = FontOptions::FontType;
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     // Finale 3.7.2, Finale 97 and Finale 2000 span the epoch. All three store the same
@@ -1948,7 +1973,7 @@ void testUncompressedFontOptions()
 
     // The epoch alone must carry the semantic layout, because three real Finale 3.0
     // documents recover a major version far outside the era's own range.
-    const auto synthetic = Reader::read<TestXmlDocument>(makeUncompressedMusWithFontOptions());
+    const auto synthetic = Reader::readWithReport<TestXmlDocument>(makeUncompressedMusWithFontOptions());
     const auto options = synthetic.document->getOptions()->get<FontOptions>();
     expect(options->getFontInfo(FontType::Music)->fontSize == 28
             && options->getFontInfo(FontType::Key)->fontSize == 26
@@ -1965,7 +1990,7 @@ void testUncompressedFontOptions()
 void testUncompressedFixtures()
 {
     const auto read = [](const char* relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     using musx::dom::others::FontDefinition;
@@ -2011,7 +2036,7 @@ void testUncompressedFixtures()
 // than fixed 16-byte rows. Nothing else in the suite exercises it.
 void testClassRecordEra()
 {
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-upstem-flags.mus");
     expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
@@ -2037,7 +2062,7 @@ void testClassRecordEra()
 // encoding follows that byte order, including the payload length in the record header.
 void testBigEndianClassRecords()
 {
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2007/F2007-lyric-hyphens.mus");
     expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
@@ -2064,7 +2089,7 @@ void testBigEndianClassRecords()
 // class-identified records into its blocks: the fixed-row model is unchanged.
 void testFinale2006RemainsFixedRow()
 {
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2006/F2006-single-title.mus");
     expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
@@ -2085,10 +2110,10 @@ void testFinale2006EmbeddedTiff()
 {
     const auto evidence = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
         / "evidence/F2006";
-    const auto linked = Reader::read<TestXmlDocument>(evidence / "F2006-linked-tiff.mus");
-    const auto embeddedTif = Reader::read<TestXmlDocument>(evidence / "F2006-embedded-tif.mus");
-    const auto embeddedTiff = Reader::read<TestXmlDocument>(evidence / "F2006-embedded-tiff.mus");
-    const auto epsThenTiff = Reader::read<TestXmlDocument>(evidence / "F2006-eps-then-tiff.mus");
+    const auto linked = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-linked-tiff.mus");
+    const auto embeddedTif = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-embedded-tif.mus");
+    const auto embeddedTiff = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-embedded-tiff.mus");
+    const auto epsThenTiff = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-eps-then-tiff.mus");
 
     expect(linked.document->getEmbeddedGraphics().empty(),
         "A linked Finale 2006 TIFF was mistaken for an embedded file");
@@ -2128,7 +2153,7 @@ void testFinale2006EmbeddedTiff()
 
 void testFinale372MeasureGraphic()
 {
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F372/F372-measure-graphic.mus");
     const auto assignment = result.document->getDetails()
@@ -2148,7 +2173,7 @@ void testFinale372MeasureGraphic()
 void testFinale372PageGraphic()
 {
     using PageGraphicAssign = musx::dom::others::PageGraphicAssign;
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F372/F372-page-graphic.mus");
     const auto assignment = result.document->getOthers()
@@ -2172,7 +2197,7 @@ void testFinale372PageGraphic()
 
 void testFinale2012GraphicTypes()
 {
-    const auto result = Reader::read<TestXmlDocument>(
+    const auto result = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-graphics-types.mus");
     const auto& graphics = result.document->getEmbeddedGraphics();
@@ -2236,7 +2261,7 @@ void testControlledDclVersions()
     for (const auto& [version, savingProduct, major, minor, maint, build] : versions) {
         const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence" / version / (std::string(version) + "-baseline.mus");
-        const auto result = Reader::read<TestXmlDocument>(path);
+        const auto result = Reader::readWithReport<TestXmlDocument>(path);
         expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
             std::string(version) + " fixture was not classified as DCL");
         expect(result.report.byteOrder == ByteOrder::BigEndian,
@@ -2259,7 +2284,7 @@ void testControlledDclVersions()
 
 void testUncompressedEpochAndOverlays()
 {
-    const auto result = Reader::read<TestXmlDocument>(makeUncompressedMus());
+    const auto result = Reader::readWithReport<TestXmlDocument>(makeUncompressedMus());
     expect(result.report.formatEpoch == FormatEpoch::UncompressedLegacy,
         "Synthetic Finale 2000 file was not classified as uncompressed legacy");
     expect(result.report.byteOrder == ByteOrder::LittleEndian,
@@ -2328,7 +2353,7 @@ std::vector<std::uint8_t> makeCodaBannerMus()
 
 void testCodaBannerEpoch()
 {
-    const auto result = Reader::read<TestXmlDocument>(makeCodaBannerMus());
+    const auto result = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus());
     expect(result.report.formatEpoch == FormatEpoch::CodaBanner,
         "Synthetic Coda-banner file was not classified");
     expect(result.report.savingProduct == "2.6",
@@ -2364,7 +2389,7 @@ void testCodaBannerEpoch()
 
 void testZlibEpoch()
 {
-    const auto result = Reader::read<TestXmlDocument>(makeZlibMus());
+    const auto result = Reader::readWithReport<TestXmlDocument>(makeZlibMus());
     expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
         "Synthetic Finale 2012 file was not classified as zlib legacy");
     expect(result.report.blocks.size() == 5, "Synthetic zlib block count is incorrect");
@@ -2388,7 +2413,7 @@ void testEmbeddedGraphics()
               "\x89PNG\r\n\x1a\n padding"},
           std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x001d),
               "%!PS-Adobe-3.0 EPSF-3.0"}}) {
-        const auto result = Reader::read<TestXmlDocument>(
+        const auto result = Reader::readWithReport<TestXmlDocument>(
             makeZlibMusWithGraphic(terminalType, graphic));
         expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
             "A file with an embedded graphic was not classified as zlib legacy");
@@ -2442,7 +2467,7 @@ void testCodaBannerByteOrder()
         {ByteOrder::BigEndian, "2.6", SourcePlatform::Unknown, SourcePlatform::MacOS}}};
 
     for (const auto& testCase : cases) {
-        const auto result = Reader::read<TestXmlDocument>(
+        const auto result = Reader::readWithReport<TestXmlDocument>(
             makeCodaBannerMus(testCase.byteOrder, testCase.product));
         const std::string what = std::string("Coda-banner ") + testCase.product;
         expect(result.report.formatEpoch == FormatEpoch::CodaBanner,
@@ -2490,13 +2515,13 @@ void testMalformedInput()
     // Failure is returned, not thrown: a null document is the signal, and the reason
     // arrives as an Error diagnostic in the same report every other message uses. A caller
     // sweeping a corpus can therefore skip a bad file without wrapping each call.
-    const auto result = Reader::read<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4});
+    const auto result = Reader::readWithReport<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4});
     expect(result.document == nullptr, "Arbitrary input was accepted as a MUS file");
     expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Error),
         "A failed import did not report why at error level");
     // Error is the one level with an absolute meaning, so it must not appear when a
     // document was produced. Every other level accompanies a usable result.
-    const auto good = Reader::read<TestXmlDocument>(
+    const auto good = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-upstem-flags.mus");
     expect(good.document != nullptr, "A known-good fixture failed to import");
@@ -2508,7 +2533,7 @@ void testShapeDefinitions()
 {
     using namespace musx::dom;
     const auto readShapeFixture = [](std::string_view relative) {
-        return Reader::read<TestXmlDocument>(
+        return Reader::readWithReport<TestXmlDocument>(
             std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
 
@@ -2591,7 +2616,7 @@ void testShapeDefinitions()
     expect(field(early, "others.shapeData[1].values[0]").rawValue == 400,
         "The converted Finale 2.6 line width did not retain its source value in the report");
 
-    const auto blank = Reader::read<TestXmlDocument>(makeCodaBannerMus(
+    const auto blank = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus(
         ByteOrder::LittleEndian, "PC 1.0+", true));
     const auto blankShape = blank.document->getOthers()
         ->get<others::ShapeDef>(SCORE_PARTID, 19);
@@ -2612,7 +2637,7 @@ void testSmartShapeCustomLines()
 
     // Fixed-row Finale 2000: cmper 1 is a Char line ('~', size 24, baseline -88 EMs), cmper
     // 2 a bare Solid line (width 118 Efix). Confirmed against the tracked ETF/MUSX companion.
-    const auto fixedRow = Reader::read<TestXmlDocument>(
+    const auto fixedRow = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2000/F2000-baseline.mus");
     const auto charLine = fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 1);
@@ -2644,7 +2669,7 @@ void testSmartShapeCustomLines()
     // they pair with rather than being grouped, and the line adjustments follow in musxdom's
     // own declaration order. Confirmed against the Finale 27 companion, which names all
     // fifteen.
-    const auto offsets = Reader::read<TestXmlDocument>(
+    const auto offsets = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2000/F2000-ssline-offsets.mus");
     const auto positioned = offsets.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3);
@@ -2714,10 +2739,10 @@ void testSmartShapeCustomLines()
 
     // Confirmed absent, not merely unread: no `ls` row occurs anywhere in a genuinely
     // pre-2000 uncompressed source, and none at all in CodaBanner.
-    const auto pre2000 = Reader::read<TestXmlDocument>(
+    const auto pre2000 = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F97/Fin97-baseline.mus");
     CHECK(pre2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
-    const auto coda = Reader::read<TestXmlDocument>(
+    const auto coda = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F263/F263-baseline.mus");
     CHECK(coda.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
 
@@ -2725,7 +2750,7 @@ void testSmartShapeCustomLines()
     // every later field shifts by one word to keep the record 36 words long. cmper 2 here
     // is a bare Solid line (width 224); cmper 3 adds an ArrowheadPreset end cap, which
     // depends on the post-shift cap-type and cap-arrow slots being read correctly.
-    const auto zlib = Reader::read<TestXmlDocument>(
+    const auto zlib = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-baseline.mus");
     const auto zlibChar = zlib.document->getOthers()->get<LineTarget>(SCORE_PARTID, 1);
@@ -2738,7 +2763,7 @@ void testSmartShapeCustomLines()
     // The same six line styles back-saved to Finale 2012. Only the Char parameter block moves
     // with the widened character: a Dashed record keeps its dash lengths where every earlier
     // layout put them, while everything after the parameter block shifts for all three styles.
-    const auto wide = Reader::read<TestXmlDocument>(
+    const auto wide = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-ssline-offsets.mus");
     const auto wideDashed = wide.document->getOthers()->get<LineTarget>(SCORE_PARTID, 4);
@@ -2785,7 +2810,7 @@ void testLegacyCharacterFonts()
 {
     using namespace musx::dom;
 
-    const auto source = Reader::read<TestXmlDocument>(
+    const auto source = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2002/F2002-clef-stem-font.mus");
 
@@ -2841,7 +2866,7 @@ void testLegacyCharacterFonts()
     CHECK(natural->second->symChar == 110);
 
     // Its parent, which differs only by the three edits under test, has neither.
-    const auto parent = Reader::read<TestXmlDocument>(
+    const auto parent = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2002/F2002-empty.mus");
     const auto parentStems = parent.document->getOptions()->get<options::StemOptions>();

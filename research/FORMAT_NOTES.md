@@ -3040,8 +3040,8 @@ recovery and takes that `BlockText`'s allocated number, so the structural relati
 implementation and cannot drift. `HS` word 5 low values 0, 1, and 2 select left, right, and
 center justification. The reader supplies 100-percent line spacing and `wordWrap`. Because the
 Coda era has neither text shapes nor the later single-word expansion option, it reports
-`shapeId` zero, `showShape` false, and `noExpandSingleWord` false as legacy behavior. It leaves
-`newPos36` at the musxdom default because the Coda record supplies no corresponding value. The structural association and
+`shapeId` zero, `newPos36` false, `showShape` false, and `noExpandSingleWord` false as legacy
+behavior because the Coda record supplies no corresponding values. The structural association and
 justification are source-derived; the allocated cmper is not. The invariant settings are
 reported separately as legacy behavior.
 
