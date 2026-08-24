@@ -24,7 +24,7 @@
 // matching Finale-27-written `.musx` companion -- loaded directly through musxdom's own
 // DocumentFactory, not this reader. Both documents pass through the same registered
 // surveyors, after which the probe aligns instances, compares leaves, classifies expected
-// differences, and emits compact schema-2 counts and examples. Keeping those operations
+// differences, and emits compact schema-3 counts and examples. Keeping those operations
 // here gives semantic comparison access to both musxdom documents and its Enigma parser;
 // the Python report only aggregates and renders the resulting classifications.
 //
@@ -730,7 +730,7 @@ int main(int argc, char** argv)
         ++processedInSegment;
 
         std::ostringstream out;
-        out << '{' << "\"schema\":2,\"corpus_id\":" << jsonString(corpusId);
+        out << '{' << "\"schema\":3,\"corpus_id\":" << jsonString(corpusId);
         // Wall-clock time for exactly the work this row does -- reading and importing the
         // source plus running every surveyor -- not the line's JSON assembly around it, so a
         // slow surveyor and a slow import are both visible in the same field. Measured only
@@ -762,7 +762,6 @@ int main(int argc, char** argv)
             if (!result.document) {
                 throw std::runtime_error(importError(result.report));
             }
-            const FieldIndex fields(result.report);
             sourceDocument = result.document;
             sourceEpoch = result.report.formatEpoch;
             sourceVersion = result.report.sourceVersion;
@@ -772,7 +771,7 @@ int main(int argc, char** argv)
                 << ",\"source_version\":" << jsonString(versionName(result.report))
                 << ",\"warning_count\":" << loggerCaptured.size();
             auto survey = runAllSurveyors(
-                SurveyContext{result.document, result.report, fields});
+                SurveyContext{result.document, result.report});
             sourceSurveyTimings = std::move(survey.timings);
             sourceSnapshot = std::move(survey.snapshot);
             writeSurveyErrors(out, survey.errors);
@@ -878,11 +877,10 @@ int main(int argc, char** argv)
                         std::chrono::steady_clock::now() - documentLoadStarted;
                     documentLoadDurationMs = documentLoadElapsed.count();
                     const ImportReport emptyReport;
-                    const FieldIndex emptyFields(emptyReport);
                     companionOut << "\"status\":\"ok\""
                         << ",\"warning_count\":" << loggerCaptured.size();
                     auto survey = runAllSurveyors(
-                        SurveyContext{companionDocument, emptyReport, emptyFields});
+                        SurveyContext{companionDocument, emptyReport});
                     companionSurveyTimings = std::move(survey.timings);
                     companionSnapshot = std::move(survey.snapshot);
                     writeSurveyErrors(companionOut, survey.errors);

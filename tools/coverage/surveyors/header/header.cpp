@@ -51,6 +51,6 @@ Value observeHeader(const SurveyContext& ctx)
         {"modified", observeFileInfo(header->modified, ctx)}};
 }
 
-COVERAGE_SURVEYOR("header", observeHeader);
+COVERAGE_SURVEYOR("metadata", "header", observeHeader);
 
 } // namespace

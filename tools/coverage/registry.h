@@ -7,10 +7,10 @@
 //
 // To add coverage for a class: write a `Value observeX(const SurveyContext&)`
 // in the surveyors/<pool>/ file for that class's pool (options, others, details, texts),
-// matching the layout of src/import/, and register it with COVERAGE_SURVEYOR at namespace
-// scope. Nothing else changes: registry.h, runAllSurveyors, and the probe's main() are not
-// touched, and CMake picks the new file up on its own (see the surveyors/ glob in
-// CMakeLists.txt).
+// matching the layout of src/import/, and register its pool and key with COVERAGE_SURVEYOR
+// at namespace scope. Nothing else changes: registry.h, runAllSurveyors, and the probe's
+// main() are not touched, and CMake picks the new file up on its own (see the surveyors/
+// glob in CMakeLists.txt).
 
 #pragma once
 
@@ -43,9 +43,12 @@ struct SurveyResult
     std::map<std::string, std::string> errors;
 };
 
-/// @brief Registers `fn` to run under observation member name `key`. Called only by
+/// @brief Registers `fn` to run under observation member name `key` in `pool`. Called only by
 /// @ref COVERAGE_SURVEYOR; a duplicate key throws at static-init time.
-void registerSurveyor(std::string_view key, SurveyorFn fn);
+void registerSurveyor(std::string_view pool, std::string_view key, SurveyorFn fn);
+
+/// @brief Returns the registered musxdom pool for an observation member.
+std::string_view surveyorPool(std::string_view key);
 
 /// @brief Runs every registered surveyor over one imported document in registration order.
 /// @details A surveyor that throws does not stop the others: its snapshot value is null and
@@ -58,8 +61,8 @@ SurveyResult runAllSurveyors(const SurveyContext& ctx);
 
 /// @brief Registers `fn` under `key` when this translation unit's static initializers
 /// run. Put exactly one of these at namespace scope per surveyor a file defines.
-#define COVERAGE_SURVEYOR(key, fn) \
+#define COVERAGE_SURVEYOR(pool, key, fn) \
     namespace { \
     const int registration_##fn = \
-        (::finale_mus_reader::coverage::registerSurveyor(key, fn), 0); \
+        (::finale_mus_reader::coverage::registerSurveyor(pool, key, fn), 0); \
     }

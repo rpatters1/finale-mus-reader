@@ -61,6 +61,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
+        FINALE_MUS_READER_IMPORTER(ImportRepeatOptions, &options::importRepeatOptions),
         FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others

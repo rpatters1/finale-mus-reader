@@ -23,6 +23,17 @@ namespace finale_mus_reader {
 namespace coverage {
 namespace {
 
+ClassComparison& classComparison(ComparisonResult& result, std::string_view className)
+{
+    return result.classes[std::string(surveyorPool(className))][std::string(className)];
+}
+
+std::string_view surveyorClass(std::string_view path)
+{
+    const auto separator = path.find_first_of(".[");
+    return path.substr(0, separator);
+}
+
 using Leaves = std::map<std::string, std::pair<Value, std::string>>;
 constexpr std::size_t maximumExamplesPerRow = 20;
 
@@ -32,11 +43,7 @@ const std::unordered_set<std::string> metadataKeys = {
     "error"};
 
 const std::unordered_set<std::string> excludedClasses = {
-    "header", "layer_atts", "relationships", "spacing_options", "text_metadata"};
-
-const std::unordered_set<std::string> textClasses = {
-    "block_texts", "bookmark_texts", "expression_texts", "file_info_texts",
-    "lyrics_choruses", "lyrics_sections", "lyrics_verses", "smart_shape_texts"};
+    "header", "layer_atts", "relationships", "spacing_options"};
 
 bool startsWith(std::string_view value, std::string_view prefix)
 {
@@ -70,7 +77,8 @@ bool isNoncontentKey(std::string_view key)
 {
     static const std::unordered_set<std::string> exact = {
         "origin", "index", "cmper", "_report_match_key", "instruction_count",
-        "value_count", "external_graphic_count", "undocumented_instruction_count"};
+        "value_count", "external_graphic_count", "undocumented_instruction_count",
+        "effects_synthesized", "font_synthesized", "size_synthesized"};
     return exact.contains(std::string(key)) || startsWith(key, "origin_")
         || endsWith(key, "_origin") || endsWith(key, "_block_offset")
         || endsWith(key, "_decoded_field_offset");
@@ -136,7 +144,7 @@ std::optional<std::pair<std::string, std::string>> listKey(
             return std::pair{"normalized_name", canonicalFontName(name->asString())};
         }
     }
-    if (textClasses.contains(std::string(path)) && item.isObject()) {
+    if (surveyorPool(surveyorClass(path)) == "texts" && item.isObject()) {
         if (const auto* reportKey = item.find("_report_match_key"); reportKey && reportKey->isString()) {
             return std::pair{"semantic", reportKey->asString()};
         }
@@ -614,7 +622,7 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                 matchedSource.insert(sourceIndex);
                 matchedCompanion.insert(companionIndex);
                 ++result.transformations["Semantically paired Coda block text"];
-                ++result.classes["block_texts"].same;
+                ++classComparison(result, "block_texts").same;
                 break;
             }
         }
@@ -1194,25 +1202,51 @@ TextComparison compareText(const std::string& className, const std::string& sour
 bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className,
     const std::string& path)
 {
-    static const std::map<std::string, std::string> targets = {
-        {"block_texts", "blockText"}, {"bookmark_texts", "bookmarkText"},
-        {"expression_texts", "expression"}, {"file_info_texts", "fileInfo"},
-        {"lyrics_choruses", "lyricsChorus"}, {"lyrics_sections", "lyricsSection"},
-        {"lyrics_verses", "lyricsVerse"}, {"smart_shape_texts", "smartShapeText"}};
-    const auto target = targets.find(className);
-    if (target == targets.end()) return false;
     static const std::regex numberPattern(R"(\[number=(\d+)\]\.text$)");
     std::smatch match;
     if (!std::regex_search(path, match, numberPattern)) return false;
-    const auto metadataFound = source.find("text_metadata");
-    if (metadataFound == source.end()) return false;
-    const auto* metadata = metadataFound->second.find(
-        "texts." + target->second + '[' + match[1].str() + "].text");
-    if (!metadata || !metadata->isObject()) return false;
-    for (const auto field : {"font_synthesized", "size_synthesized", "effects_synthesized"}) {
-        if (const auto* value = metadata->find(field); value && value->isBool() && value->asBool()) {
-            return true;
+    const auto classFound = source.find(className);
+    if (classFound == source.end() || !classFound->second.isArray()) return false;
+    const auto number = std::stoll(match[1].str());
+    for (const auto& item : classFound->second.asArray()) {
+        const auto* itemNumber = item.find("number");
+        if (!itemNumber || !itemNumber->isInteger() || itemNumber->asInteger() != number) continue;
+        for (const auto field : {"font_synthesized", "size_synthesized", "effects_synthesized"}) {
+            if (const auto* value = item.find(field); value && value->isBool() && value->asBool()) {
+                return true;
+            }
         }
+        return false;
+    }
+    return false;
+}
+
+bool isDifferentDefault(const std::string& path, const std::string& category,
+    const std::string& origin, const Value& sourceValue, const Value& companionValue)
+{
+    if (category != "differs" || origin != "finale27-default") return false;
+    if (path == "repeat_options.bracket_height" && sourceValue.isInteger()
+            && sourceValue.asInteger() == 96 && companionValue.isInteger()
+            && std::set<std::int64_t>{72, 144}.contains(companionValue.asInteger())) {
+        return true;
+    }
+    return false;
+}
+
+bool isBaselineFontCharsetNormalization(const std::string& path,
+    const Value& sourceValue, const Value& companionValue)
+{
+    if (!sourceValue.isInteger() || !companionValue.isInteger()) return false;
+    const auto values = std::pair{sourceValue.asInteger(), companionValue.asInteger()};
+    if (endsWith(path, "].charset_bank")) {
+        static const std::set<std::pair<std::int64_t, std::int64_t>> bankValues{
+            {0, 1}, {1, 0}};
+        return bankValues.contains(values);
+    }
+    if (endsWith(path, "].charset_value")) {
+        static const std::set<std::pair<std::int64_t, std::int64_t>> charsetValues{
+            {0, 2}, {0, 4095}, {1, 2}, {1, 4095}, {2, 4095}, {6, 4095}};
+        return charsetValues.contains(values);
     }
     return false;
 }
@@ -1243,6 +1277,9 @@ std::optional<std::string> expectedDifference(const std::string& path,
             && companionValue.isInteger() && companionValue.asInteger() == 128) {
         return "coda-stem-offset";
     }
+    if (isDifferentDefault(path, category, origin, sourceValue, companionValue)) {
+        return "different_defaults";
+    }
     if (startsWith(path, "text_blocks[cmper=") && category == "differs"
             && (endsWith(path, ".new_pos_36") || endsWith(path, ".no_expand_single_word"))
             && origin == "legacy-behavior" && sourceValue.isBool() && companionValue.isBool()
@@ -1267,7 +1304,9 @@ std::optional<std::string> expectedDifference(const std::string& path,
         return "default-shape-id";
     }
     if (startsWith(path, "font_definitions.definitions[") && category == "differs"
-            && origin != "legacy-mus") return "baseline-font";
+            && (origin != "legacy-mus"
+                || isBaselineFontCharsetNormalization(
+                    path, sourceValue, companionValue))) return "baseline-font";
     if (startsWith(path, "lyric_options.") && category == "differs"
             && (endsWith(path, "use_smart_hyphens") || endsWith(path, "use_smart_word_extensions"))
             && origin == "legacy-behavior" && sourceValue.isBool() && companionValue.isBool()
@@ -1346,7 +1385,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         std::set<std::string> paths;
         for (const auto& [path, unused] : sourceLeaves) paths.insert(path);
         for (const auto& [path, unused] : companionLeaves) paths.insert(path);
-        auto& stats = result.classes[className];
+        auto& stats = classComparison(result, className);
         for (const auto& path : paths) {
             const auto sourceFound = sourceLeaves.find(path);
             const auto companionFound = companionLeaves.find(path);
@@ -1380,7 +1419,8 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 ++result.transformations["Equivalent TextBlock raw-text referent"];
                 continue;
             }
-            if (inSource && inCompanion && textClasses.contains(className) && endsWith(path, ".text")
+            if (inSource && inCompanion && surveyorPool(className) == "texts"
+                    && endsWith(path, ".text")
                     && sourceFound->second.first.isString() && companionFound->second.first.isString()) {
                 const auto comparison = compareText(className, sourceFound->second.first.asString(),
                     companionFound->second.first.asString(), sourceDocument, companionDocument,
@@ -1481,12 +1521,18 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison)
 {
     out << "\"classes\":{";
-    bool first = true;
-    for (const auto& [name, counts] : comparison.classes) {
-        out << (first ? "" : ",") << jsonString(name) << ":[" << counts.same << ','
-            << counts.expected << ',' << counts.unexpected << ',' << counts.sourceOnly << ','
-            << counts.companionOnly << ']';
-        first = false;
+    bool firstPool = true;
+    for (const auto& [pool, classes] : comparison.classes) {
+        out << (firstPool ? "" : ",") << jsonString(pool) << ":{";
+        bool firstClass = true;
+        for (const auto& [name, counts] : classes) {
+            out << (firstClass ? "" : ",") << jsonString(name) << ":[" << counts.same << ','
+                << counts.expected << ',' << counts.unexpected << ',' << counts.sourceOnly << ','
+                << counts.companionOnly << ']';
+            firstClass = false;
+        }
+        out << '}';
+        firstPool = false;
     }
     out << "},\"expected\":";
     writeCounts(out, comparison.expected);
@@ -1495,7 +1541,7 @@ void writeCompactComparison(std::ostream& out, const ComparisonResult& compariso
     out << ",\"font_substitutions\":";
     writeCounts(out, comparison.fontSubstitutions);
     out << ",\"text\":{";
-    first = true;
+    bool first = true;
     for (const auto& [className, counts] : comparison.textDifferences) {
         out << (first ? "" : ",") << jsonString(className) << ':';
         writeCounts(out, counts);

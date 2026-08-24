@@ -30,6 +30,6 @@ Value observeMeasureGraphicAssignments(const SurveyContext& ctx)
     return Value(std::move(result));
 }
 
-COVERAGE_SURVEYOR("meas_graphic_assigns", observeMeasureGraphicAssignments);
+COVERAGE_SURVEYOR("details", "meas_graphic_assigns", observeMeasureGraphicAssignments);
 
 } // namespace

@@ -6,10 +6,6 @@
 // equality. The number goes with it because a recovered record claims a comparator as much as
 // it claims characters, and musxdom keys the pool by it.
 
-#include <algorithm>
-#include <string>
-#include <vector>
-
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
@@ -23,40 +19,24 @@ Value observeTextClass(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& item : ctx.document->getTexts()->getArray<Target>()) {
-        result.push_back(observe(*item, ctx,
+        auto observed = observe(*item, ctx,
             field("number", [](const Target& value) { return value.getTextNumber(); }),
-            field("text", &Target::text)));
+            field("text", &Target::text));
+        if (const auto* info = textFieldInfo<Target>(ctx, "text", item->getTextNumber())) {
+            observed.asObject().emplace("effects_synthesized", info->effectsWereSynthesized);
+            observed.asObject().emplace("font_synthesized", info->fontWasSynthesized);
+            observed.asObject().emplace("size_synthesized", info->sizeWasSynthesized);
+        }
+        result.push_back(std::move(observed));
     }
     return Value(std::move(result));
 }
-
-Value observeTextMetadata(const SurveyContext& ctx)
-{
-    std::vector<std::string> targets;
-    targets.reserve(ctx.fields.textFields().size());
-    for (const auto& entry : ctx.fields.textFields()) {
-        targets.push_back(entry.first);
-    }
-    std::sort(targets.begin(), targets.end());
-
-    Value::Object result;
-    for (const auto& target : targets) {
-        const auto& info = ctx.fields.textFields().at(target);
-        result.emplace(target, Value::Object{
-            {"effects_synthesized", Value(info.effectsWereSynthesized)},
-            {"font_synthesized", Value(info.fontWasSynthesized)},
-            {"size_synthesized", Value(info.sizeWasSynthesized)}});
-    }
-    return Value(std::move(result));
-}
-
-COVERAGE_SURVEYOR("text_metadata", observeTextMetadata)
 
 #define TEXT_CLASS_SURVEYOR(key, Target) \
     Value observe_##Target(const SurveyContext& ctx) { \
         return observeTextClass<musx::dom::texts::Target>(ctx); \
     } \
-    COVERAGE_SURVEYOR(key, observe_##Target)
+    COVERAGE_SURVEYOR("texts", key, observe_##Target)
 
 TEXT_CLASS_SURVEYOR("block_texts", BlockText);
 TEXT_CLASS_SURVEYOR("bookmark_texts", BookmarkText);

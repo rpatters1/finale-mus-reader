@@ -42,9 +42,19 @@ an analysis directory under `private/generated/`. Build the existing coverage ta
 ```bash
 cmake --build build --target recovery_coverage_probe
 build/tools/coverage/recovery_coverage_probe --progress \
+  --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
   private/generated/corpus-rpatters1-installs.tsv \
   private/generated/recovery_coverage.next.jsonl
 ```
+
+**Every probe capture must supply Finale's `MacSymbolFonts.txt` with
+`--mac-symbol-fonts`.** On macOS, Finale 27 installs it at
+`~/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt`.
+Confirm the probe startup summary names the supplied `MacSymbolFonts` path; if the file is unavailable,
+stop and report the missing prerequisite rather than producing a coverage snapshot. Without the
+list, legacy symbol-font bytes can be decoded through the wrong text encoding and create spurious
+source/companion differences. Record the supplied file's path privately with the capture metadata,
+never in public aggregate results.
 
 Validate the completed `.next.jsonl` before replacing the prior snapshot; an interrupted probe must
 not destroy the last analyzable capture. The canonical full-regression snapshot is:
@@ -64,12 +74,12 @@ probe, especially one launched under LLDB or another debugger, as diagnostic onl
 standard-library, map, shared-pointer, and instrumentation overhead can swamp or distort the
 production-code differences being measured. Compare timings only between equivalent Release
 configurations, and record the build type and whether instrumentation was enabled with the result.
-Pass `--include-timings` for that capture; normal schema-2 output omits timing structures. Capture
+Pass `--include-timings` for that capture; normal schema-3 output omits timing structures. Capture
 stderr separately when diagnostic messages are needed because JSON rows retain only their counts.
 
 ### Rendering loop — repeat freely
 
-Do not rerun the probe merely because aggregation or presentation changed. Treat the schema-2
+Do not rerun the probe merely because aggregation or presentation changed. Treat the schema-3
 JSONL as an immutable set of classifications for the rendering pass and rerun
 `scripts/recovery_coverage_report.py` freely. Matching rules, semantic comparison, and expected-
 difference classification live in `tools/coverage/`; changing any of them requires a new capture.

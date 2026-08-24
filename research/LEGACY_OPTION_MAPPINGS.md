@@ -153,6 +153,11 @@ against non-default companions. Two — the half-stem length and the normal stem
 and exercised nowhere, because no companion in either corpus states anything but 18 and 84 for them, and the
 reverse-stemming bit is likewise never set. Those three remain **strong**.
 
+Twenty-two `RepeatOptions` scalars are likewise promoted from the seven `RepeatPrefs` numeric
+globals. Fixed-row and zlib-class layouts agree from Finale 3.7 onward; Coda-banner and Finale
+3.0–3.2 remain uncovered. The two document staff-display fields are not among the promoted rows.
+See [FORMAT_NOTES.md](FORMAT_NOTES.md#repeat-options-the-document-staff-list-reference).
+
 ## Options-pool font IDs
 
 Two of the five musxdom options fields containing font-definition cmpers have legacy locations identified by the

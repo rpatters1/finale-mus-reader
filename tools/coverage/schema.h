@@ -95,6 +95,19 @@ std::string fieldOrigin(const SurveyContext& context, std::string_view member,
 }
 
 template <typename Class>
+const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_view member,
+    musx::dom::Cmper cmper1 = 0)
+{
+    const auto instance = InstanceKey{typeid(Class), musx::dom::SCORE_PARTID,
+        cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt, std::nullopt,
+        std::nullopt};
+    const auto foundInstance = context.report.textFields.find(instance);
+    if (foundInstance == context.report.textFields.end()) return nullptr;
+    const auto foundField = foundInstance->second.find(std::string(member));
+    return foundField == foundInstance->second.end() ? nullptr : &foundField->second;
+}
+
+template <typename Class>
 constexpr auto originField(std::string_view name, std::string_view member)
 {
     return field(name, [member](const Class&, const SurveyContext& context) {

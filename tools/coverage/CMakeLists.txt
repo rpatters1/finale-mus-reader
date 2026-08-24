@@ -10,7 +10,6 @@ add_executable(recovery_coverage_probe
     recovery_coverage_probe.cpp
     comparison.cpp
     registry.cpp
-    context.cpp
     json.cpp
     value.cpp
     support/musx_companion.cpp

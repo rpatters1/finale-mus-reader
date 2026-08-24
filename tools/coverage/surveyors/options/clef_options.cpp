@@ -37,7 +37,7 @@ Value observeClefOptions(const SurveyContext& ctx)
     Value::Array definitions;
     for (std::size_t index = 0; index < options->clefDefs.size(); ++index) {
         const auto& def = options->clefDefs[index];
-        const auto prefix = "options.clefOptions.clefDefs[" + std::to_string(index) + "].";
+        const auto prefix = "clefDefs[" + std::to_string(index) + "].";
         std::string fontName;
         if (def->useOwnFont && def->font) {
             if (const auto font = ctx.document->getOthers()
@@ -58,16 +58,16 @@ Value observeClefOptions(const SurveyContext& ctx)
             {"scale_to_staff_height", def->scaleToStaffHeight}, {"use_own_font", def->useOwnFont},
             {"font_id", def->font ? def->font->fontId : 0}, {"font_size", def->font ? def->font->fontSize : 0},
             {"font_name", fontName}, {"dangling_shape", danglingShape},
-            {"origin_middleCPos", std::string(ctx.fields.originOf(prefix + "middleCPos"))},
-            {"origin_clefChar", std::string(ctx.fields.originOf(prefix + "clefChar"))},
-            {"origin_staffPosition", std::string(ctx.fields.originOf(prefix + "staffPosition"))},
-            {"origin_baselineAdjust", std::string(ctx.fields.originOf(prefix + "baselineAdjust"))},
-            {"origin_shapeId", std::string(ctx.fields.originOf(prefix + "shapeId"))}});
+            {"origin_middleCPos", fieldOrigin<Target>(ctx, prefix + "middleCPos")},
+            {"origin_clefChar", fieldOrigin<Target>(ctx, prefix + "clefChar")},
+            {"origin_staffPosition", fieldOrigin<Target>(ctx, prefix + "staffPosition")},
+            {"origin_baselineAdjust", fieldOrigin<Target>(ctx, prefix + "baselineAdjust")},
+            {"origin_shapeId", fieldOrigin<Target>(ctx, prefix + "shapeId")}});
     }
     result.asObject().emplace("clef_defs", std::move(definitions));
     return result;
 }
 
-COVERAGE_SURVEYOR("clef_options", observeClefOptions);
+COVERAGE_SURVEYOR("options", "clef_options", observeClefOptions);
 
 } // namespace

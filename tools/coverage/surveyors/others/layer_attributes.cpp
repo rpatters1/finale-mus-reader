@@ -25,6 +25,6 @@ Value observeLayerAttributes(const SurveyContext& ctx)
     return Value(std::move(result));
 }
 
-COVERAGE_SURVEYOR("layer_atts", observeLayerAttributes);
+COVERAGE_SURVEYOR("others", "layer_atts", observeLayerAttributes);
 
 } // namespace

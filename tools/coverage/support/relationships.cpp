@@ -38,6 +38,6 @@ Value observeRelationships(const SurveyContext& ctx)
         {"total_parts", score ? 1 : 0}, {"text_ids", std::move(textIds)}}}};
 }
 
-COVERAGE_SURVEYOR("relationships", observeRelationships)
+COVERAGE_SURVEYOR("metadata", "relationships", observeRelationships)
 
 } // namespace

@@ -138,6 +138,6 @@ Value observeFontOptions(const SurveyContext& ctx)
         {"dangling_nonzero_font_id_count", danglingNonzeroCount}, {"tuples", std::move(observedTuples)}};
 }
 
-COVERAGE_SURVEYOR("font_options", observeFontOptions);
+COVERAGE_SURVEYOR("options", "font_options", observeFontOptions);
 
 } // namespace

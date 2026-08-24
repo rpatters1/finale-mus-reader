@@ -313,9 +313,10 @@ spelling and data. Define cmper-zero semantics explicitly rather than assuming z
 an ordinary pooled object.
 
 **Write this class's surveyor in the same pass, not afterward.** Add a
-`void write<Class>(std::ostream&, const SurveyContext&)` function to
+`Value observe<Class>(const SurveyContext&)` function in
 `tools/coverage/surveyors/<pool>/<class>.cpp` -- one file per pool directory, matching
-`src/import/`'s layout one for one -- and register it with `COVERAGE_SURVEYOR` at
+`src/import/`'s layout one for one -- and register its pool, key, and observer together with
+`COVERAGE_SURVEYOR` at
 namespace scope (see `tools/coverage/registry.h`). Emit the fields a comparison can
 classify, and name a contained object rather than flattening it: flattening a variant
 block loses which variant the record chose. `recovery_coverage_probe` is registry-driven
@@ -355,8 +356,9 @@ The registry makes a surveyor appear in `recovery_coverage_probe`; it does not m
 class semantically complete in `scripts/recovery_coverage_report.py`. Integrate the class
 there before treating corpus comparison as validation:
 
-1. Add the surveyor key to `SURVEY_CLASS_POOLS` under its musxdom pool. A class left under
-   `unclassified` is visible but not integrated.
+1. Confirm the class's single `COVERAGE_SURVEYOR` registration names the correct musxdom pool.
+   The probe serializes class counts nested under that registered pool, and the Python report
+   renders that structure directly. Do not add a second class-to-pool table or registry anywhere.
 2. Inspect how the report keys every emitted collection. The generic musx identity is enough
    only when that identity survives a Finale upgrade. If cmpers, incidences, numbering, or
    order can change, align the two sides semantically before recursive leaf comparison,
@@ -366,9 +368,15 @@ there before treating corpus comparison as validation:
 3. If correct alignment needs information the probe does not emit, add an explicit structured
    field to the class surveyor or a cross-pool relationship surveyor. Do not re-derive the fact
    in Python from incidental fields merely because they happen to correlate in current samples.
-4. Add `EXPECTED_DIFFERENCES` only after characterizing a companion transformation. Scope each
-   rule by class path, category, origin, and value condition narrowly enough that it cannot hide
-   a recovered-value disagreement.
+4. Leave every newly observed difference unclassified until the user has reviewed and explicitly
+   approved the proposed interpretation. First present its counts, representative source and
+   companion values, origins, epochs, and any pattern that supports an explanation. Do not add or
+   broaden an expected-difference rule merely because the importer deliberately retains a default,
+   because Finale appears to normalize or synthesize the companion, or to make the report clean;
+   those are hypotheses the report exists to expose. After approval, scope the rule by class path,
+   category, origin, epoch, and value condition narrowly enough that it cannot hide a recovered-value
+   disagreement. Re-run the unmasked comparison whenever a probe metadata defect is fixed, so the
+   user reviews the actual differences rather than a classification inferred before the fix.
 5. Exercise the maintained report with controlled source/companion observations covering every
    applicable outcome: preserved plus any remapped, normalized, substituted, synthesized,
    removed, or unresolved cases the class is known to have. Add a focused deterministic report
@@ -429,6 +437,11 @@ sanitized. Revise code, tests, confidence labels, and the surveyor together -- t
 "one unit of work" rule from Step 5 applies to every later revision, not only the first
 draft -- then rerun the smallest cohort that exercises the change before rerunning the
 broader survey.
+
+Coverage review is an evidence boundary. Stop after presenting newly observed differences
+and wait for the user's interpretation before classifying any of them as expected. An existing
+approved rule may continue to classify the behavior it already describes, but a new class must
+not be fitted to those rules by analogy without review.
 
 **Before calling the work complete, re-run the regression over every registered survey**,
 not only the cohort the class was developed against, and present the per-survey import

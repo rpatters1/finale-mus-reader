@@ -38,7 +38,7 @@ Value observeShapeGraphicAssigns(const SurveyContext& ctx)
     return observeGraphicAssignments<musx::dom::others::ShapeGraphicAssign>(ctx);
 }
 
-COVERAGE_SURVEYOR("page_graphic_assigns", observePageGraphicAssigns);
-COVERAGE_SURVEYOR("shape_graphic_assigns", observeShapeGraphicAssigns);
+COVERAGE_SURVEYOR("others", "page_graphic_assigns", observePageGraphicAssigns);
+COVERAGE_SURVEYOR("others", "shape_graphic_assigns", observeShapeGraphicAssigns);
 
 } // namespace
