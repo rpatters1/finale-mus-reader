@@ -5,41 +5,39 @@
 // the pool surveyors because they describe how instances in different pools are connected,
 // not another property of either instance.
 
-#include <ostream>
 #include <set>
 
 #include "coverage/registry.h"
+#include "coverage/value.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeRelationships(std::ostream& out, const SurveyContext& ctx)
+Value observeRelationships(const SurveyContext& ctx)
 {
     using musx::dom::others::PartDefinition;
     using musx::dom::others::TextBlock;
 
-    const auto parts = ctx.document->getOthers()->getArray<PartDefinition>(musx::dom::SCORE_PARTID);
     std::set<musx::dom::Cmper> partNameTextIds;
-    for (const auto& part : parts) {
-        if (!part->nameId) continue;
+    const auto score = ctx.document->getOthers()->get<PartDefinition>(
+        musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
+    if (score && score->nameId) {
         if (const auto textBlock = ctx.document->getOthers()->get<TextBlock>(
-                part->getRequestedPartId(), part->nameId)) {
+                score->getRequestedPartId(), score->nameId)) {
             partNameTextIds.insert(textBlock->textId);
         }
     }
 
-    out << "{\"part_names\":{\"total_parts\":" << parts.size() << ",\"text_ids\":[";
-    bool first = true;
+    Value::Array textIds;
     for (const auto textId : partNameTextIds) {
-        if (!first) out << ',';
-        first = false;
-        out << textId;
+        textIds.emplace_back(textId);
     }
-    out << "]}}";
+    return Value::Object{{"part_names", Value::Object{
+        {"total_parts", score ? 1 : 0}, {"text_ids", std::move(textIds)}}}};
 }
 
-COVERAGE_SURVEYOR("relationships", writeRelationships)
+COVERAGE_SURVEYOR("relationships", observeRelationships)
 
 } // namespace

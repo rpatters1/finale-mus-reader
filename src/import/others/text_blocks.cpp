@@ -224,6 +224,7 @@ void importCodaTextBlocks(const ImportContext& context)
             target->justify =
                 static_cast<Target::TextJustify>(legacyCenterOppositeOrder(flags & 0x0003U));
             target->shapeId = 0;
+            target->newPos36 = false;
             target->showShape = false;
             target->noExpandSingleWord = false;
             target->wordWrap = true;
@@ -233,6 +234,7 @@ void importCodaTextBlocks(const ImportContext& context)
             reportValue(context, textId, "justify", flags & 0x0003U, row);
             reportBehavior(context, textId, "lineSpacingPercentage", 100);
             reportBehavior(context, textId, "shapeId", 0);
+            reportBehavior(context, textId, "newPos36", 0);
             reportBehavior(context, textId, "showShape", 0);
             reportBehavior(context, textId, "noExpandSingleWord", 0);
             reportBehavior(context, textId, "wordWrap", 1);

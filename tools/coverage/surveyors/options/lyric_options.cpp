@@ -7,45 +7,35 @@
 // legacy pool and the companion renumber font definitions independently.
 
 #include <exception>
-#include <ostream>
 #include <string>
 #include <utility>
 
-#include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeLyricOptions(std::ostream& out, const SurveyContext& ctx)
+Value observeLyricOptions(const SurveyContext& ctx)
 {
     using Lyrics = musx::dom::options::LyricOptions;
     const auto options = ctx.document->getOptions()->get<Lyrics>();
-    if (!options) {
-        out << "null";
-        return;
-    }
-    out << '{'
-        << "\"hyphen_char\":" << static_cast<std::uint32_t>(options->hyphenChar)
-        << ",\"max_hyphen_separation\":" << options->maxHyphenSeparation
-        << ",\"word_ext_vert_offset\":" << options->wordExtVertOffset
-        << ",\"word_ext_horz_offset\":" << options->wordExtHorzOffset
-        << ",\"word_ext_line_width\":" << options->wordExtLineWidth
-        << ",\"word_ext_min_length\":" << options->wordExtMinLength
-        << ",\"smart_hyphen_start\":" << static_cast<int>(options->smartHyphenStart)
-        << ",\"lyric_auto_num_type\":" << static_cast<int>(options->lyricAutoNumType)
-        << ",\"use_smart_word_extensions\":" << jsonBool(options->useSmartWordExtensions)
-        << ",\"use_smart_hyphens\":" << jsonBool(options->useSmartHyphens)
-        << ",\"use_alt_hyphen_font\":" << jsonBool(options->useAltHyphenFont)
-        << ",\"word_ext_need_underscore\":" << jsonBool(options->wordExtNeedUnderscore)
-        << ",\"word_ext_offset_to_notehead\":" << jsonBool(options->wordExtOffsetToNotehead)
-        << ",\"lyric_use_edge_punctuation\":" << jsonBool(options->lyricUseEdgePunctuation)
-        << ",\"show_auto_numbers_verses\":" << jsonBool(options->showAutoNumbersOnVerses)
-        << ",\"show_auto_numbers_choruses\":" << jsonBool(options->showAutoNumbersOnChoruses)
-        << ",\"show_auto_numbers_sections\":" << jsonBool(options->showAutoNumbersOnSections)
-        << ",\"punctuation_to_ignore\":" << jsonString(options->lyricPunctuationToIgnore);
+    if (!options) return {};
+    auto result = observe(*options, ctx,
+        field("hyphen_char", &Lyrics::hyphenChar), field("max_hyphen_separation", &Lyrics::maxHyphenSeparation),
+        field("word_ext_vert_offset", &Lyrics::wordExtVertOffset), field("word_ext_horz_offset", &Lyrics::wordExtHorzOffset),
+        field("word_ext_line_width", &Lyrics::wordExtLineWidth), field("word_ext_min_length", &Lyrics::wordExtMinLength),
+        field("smart_hyphen_start", &Lyrics::smartHyphenStart), field("lyric_auto_num_type", &Lyrics::lyricAutoNumType),
+        field("use_smart_word_extensions", &Lyrics::useSmartWordExtensions), field("use_smart_hyphens", &Lyrics::useSmartHyphens),
+        field("use_alt_hyphen_font", &Lyrics::useAltHyphenFont), field("word_ext_need_underscore", &Lyrics::wordExtNeedUnderscore),
+        field("word_ext_offset_to_notehead", &Lyrics::wordExtOffsetToNotehead),
+        field("lyric_use_edge_punctuation", &Lyrics::lyricUseEdgePunctuation),
+        field("show_auto_numbers_verses", &Lyrics::showAutoNumbersOnVerses),
+        field("show_auto_numbers_choruses", &Lyrics::showAutoNumbersOnChoruses),
+        field("show_auto_numbers_sections", &Lyrics::showAutoNumbersOnSections),
+        field("punctuation_to_ignore", &Lyrics::lyricPunctuationToIgnore));
 
     std::string altHyphenName;
     if (options->altHyphenFont) {
@@ -57,31 +47,25 @@ void writeLyricOptions(std::ostream& out, const SurveyContext& ctx)
             altHyphenName = "<unresolved>";
         }
     }
-    out << ",\"alt_hyphen_font_name\":" << jsonString(altHyphenName);
+    result.asObject().emplace("alt_hyphen_font_name", altHyphenName);
 
-    out << ",\"syllable_pos_styles\":{";
-    bool firstStyle = true;
+    Value::Object syllableStyles;
     for (const auto& [name, type] : {
              std::pair{"default", Lyrics::SyllablePosStyleType::Default},
              std::pair{"wordExt", Lyrics::SyllablePosStyleType::WordExt},
              std::pair{"first", Lyrics::SyllablePosStyleType::First},
              std::pair{"systemStart", Lyrics::SyllablePosStyleType::SystemStart}}) {
         const auto found = options->syllablePosStyles.find(type);
-        if (!firstStyle) out << ',';
-        firstStyle = false;
-        out << jsonString(name) << ':';
         if (found == options->syllablePosStyles.end() || !found->second) {
-            out << "null";
+            syllableStyles.emplace(name, Value{});
             continue;
         }
-        out << "{\"align\":" << static_cast<int>(found->second->align)
-            << ",\"justify\":" << static_cast<int>(found->second->justify)
-            << ",\"on\":" << jsonBool(found->second->on) << '}';
+        syllableStyles.emplace(name, Value::Object{{"align", static_cast<int>(found->second->align)},
+            {"justify", static_cast<int>(found->second->justify)}, {"on", found->second->on}});
     }
-    out << '}';
+    result.asObject().emplace("syllable_pos_styles", std::move(syllableStyles));
 
-    out << ",\"word_ext_connect_styles\":{";
-    bool firstConnect = true;
+    Value::Object connectStyles;
     for (const auto& [name, type] : {
              std::pair{"defaultStart", Lyrics::WordExtConnectStyleType::DefaultStart},
              std::pair{"defaultEnd", Lyrics::WordExtConnectStyleType::DefaultEnd},
@@ -93,18 +77,14 @@ void writeLyricOptions(std::ostream& out, const SurveyContext& ctx)
              std::pair{"zeroLengthEnd", Lyrics::WordExtConnectStyleType::ZeroLengthEnd},
              std::pair{"zeroOffset", Lyrics::WordExtConnectStyleType::ZeroOffset}}) {
         const auto found = options->wordExtConnectStyles.find(type);
-        if (!firstConnect) out << ',';
-        firstConnect = false;
-        out << jsonString(name) << ':';
         if (found == options->wordExtConnectStyles.end() || !found->second) {
-            out << "null";
+            connectStyles.emplace(name, Value{});
             continue;
         }
-        out << "{\"connect_index\":" << static_cast<int>(found->second->connectIndex)
-            << ",\"x\":" << found->second->xOffset
-            << ",\"y\":" << found->second->yOffset << '}';
+        connectStyles.emplace(name, Value::Object{{"connect_index", static_cast<int>(found->second->connectIndex)},
+            {"x", found->second->xOffset}, {"y", found->second->yOffset}});
     }
-    out << '}';
+    result.asObject().emplace("word_ext_connect_styles", std::move(connectStyles));
 
     for (const auto* member : {"maxHyphenSeparation", "wordExtVertOffset", "wordExtHorzOffset",
              "wordExtLineWidth", "wordExtMinLength", "smartHyphenStart", "lyricAutoNumType",
@@ -112,12 +92,12 @@ void writeLyricOptions(std::ostream& out, const SurveyContext& ctx)
              "wordExtNeedUnderscore", "wordExtOffsetToNotehead", "lyricUseEdgePunctuation",
              "showAutoNumbersOnVerses", "showAutoNumbersOnChoruses", "showAutoNumbersOnSections",
              "hyphenChar", "lyricPunctuationToIgnore"}) {
-        out << ",\"origin_" << member << "\":"
-            << jsonString(ctx.fields.originOf(std::string("options.lyricOptions.") + member));
+        result.asObject().emplace(std::string("origin_") + member,
+            std::string(ctx.fields.originOf(std::string("options.lyricOptions.") + member)));
     }
-    out << '}';
+    return result;
 }
 
-COVERAGE_SURVEYOR("lyric_options", writeLyricOptions);
+COVERAGE_SURVEYOR("lyric_options", observeLyricOptions);
 
 } // namespace

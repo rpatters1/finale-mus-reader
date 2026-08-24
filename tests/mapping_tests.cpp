@@ -2356,7 +2356,8 @@ void testCodaTextBlockSynthesis()
             && !first->roundCorners && first->cornerRadius == 0,
         "Coda TextBlock behavior was not synthesized");
     expectMapping(field(report, "others.textBlock[1].textId").origin == ValueOrigin::LegacyMus
-            && !fieldPresent(report, "others.textBlock[1].newPos36")
+            && field(report, "others.textBlock[1].newPos36").origin
+                == ValueOrigin::LegacyBehavior
             && field(report, "others.textBlock[1].shapeId").origin
                 == ValueOrigin::LegacyBehavior
             && field(report, "others.textBlock[1].showShape").origin

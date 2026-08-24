@@ -1,12 +1,12 @@
 ---
 name: analyze-recovery-coverage
-description: Run recovery_coverage_probe over already-inventoried Finale corpora and iteratively analyze its recovery_coverage.jsonl snapshot against modern companions. Use for reader regression, class or field coverage, upgrade transformations, unexpected differences, and repeated hypothesis analysis. Do not rediscover or rebuild a corpus inventory.
+description: Run recovery_coverage_probe over already-inventoried Finale corpora and analyze its compact recovery_coverage.jsonl classifications against modern companions. Use for reader regression, class or field coverage, upgrade transformations, and unexpected differences. Do not rediscover or rebuild a corpus inventory.
 ---
 
 # Analyze recovery coverage
 
-Use the registry-driven recovery probe to capture what the current reader constructs for legacy
-sources and independently parsed companions, then analyze that snapshot as many times as needed.
+Use the registry-driven recovery probe to compare what the current reader constructs for legacy
+sources with independently parsed companions, then aggregate its compact classifications.
 Corpus discovery is a separate operation owned by `inventory-a-corpus`.
 
 ## Two distinct loops
@@ -16,7 +16,7 @@ Corpus discovery is a separate operation owned by `inventory-a-corpus`.
 Rerun `recovery_coverage_probe` only when its observations may have changed, such as after:
 
 - source or companion membership/path mappings changed;
-- importer, surveyor, musxdom, or probe behavior changed;
+- importer, surveyor, musxdom, comparison, or classification behavior changed;
 - the selected corpus/cohort changed.
 
 Require current `private/generated/<survey_id>/corpus_locations.csv`, the public manifest, and the
@@ -64,14 +64,15 @@ probe, especially one launched under LLDB or another debugger, as diagnostic onl
 standard-library, map, shared-pointer, and instrumentation overhead can swamp or distort the
 production-code differences being measured. Compare timings only between equivalent Release
 configurations, and record the build type and whether instrumentation was enabled with the result.
+Pass `--include-timings` for that capture; normal schema-2 output omits timing structures. Capture
+stderr separately when diagnostic messages are needed because JSON rows retain only their counts.
 
-### Analysis loop — repeat freely
+### Rendering loop — repeat freely
 
-Do not rerun the probe merely because a hypothesis, aggregation, matching rule, or report changed.
-Treat the JSONL as an immutable snapshot for the analysis pass. Rerun
-`scripts/recovery_coverage_report.py` or use a disposable script under `/tmp` until the question is
-settled. Preserve a reusable, location-agnostic analyzer under `scripts/` only when the method will
-be repeated.
+Do not rerun the probe merely because aggregation or presentation changed. Treat the schema-2
+JSONL as an immutable set of classifications for the rendering pass and rerun
+`scripts/recovery_coverage_report.py` freely. Matching rules, semantic comparison, and expected-
+difference classification live in `tools/coverage/`; changing any of them requires a new capture.
 
 Always state which snapshot was analyzed, its row/status/companion counts, selected surveys, and
 whether counts are occurrences or distinct `corpus_id` values. Distinct content is the primary
@@ -91,9 +92,11 @@ statistical unit; occurrences describe corpus reach and duplication.
 - When testing a transformation, test its converse and search every represented version/epoch.
   Report unmatched populations separately; they may hide additional transformations but are not
   counterexamples.
-- `EXPECTED_DIFFERENCES` in `scripts/recovery_coverage_report.py` is executable interpretation.
+- Expected-difference rules in `tools/coverage/comparison.cpp` are executable interpretation.
   Add a rule only after the difference is characterized; scope it by path, category, and origin so
-  it cannot conceal a recovered-value disagreement.
+  it cannot conceal a recovered-value disagreement. Python must not reclassify a probe result.
+- Surveyors return structured `coverage::Value` observations. Use the C++20 field descriptors in
+  `tools/coverage/schema.h` for class leaves; do not serialize or parse an intermediate JSON value.
 
 ## Privacy and publication
 

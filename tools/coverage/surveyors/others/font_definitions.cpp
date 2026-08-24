@@ -3,19 +3,18 @@
 
 #include <cstddef>
 #include <map>
-#include <ostream>
 #include <string>
 #include <utility>
 
-#include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
 
 using namespace finale_mus_reader::coverage;
 
-void writeFontDefinitions(std::ostream& out, const SurveyContext& ctx)
+Value observeFontDefinitions(const SurveyContext& ctx)
 {
     const auto fonts = ctx.document->getOthers()
         ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID);
@@ -43,27 +42,24 @@ void writeFontDefinitions(std::ostream& out, const SurveyContext& ctx)
         if (counts.second != 0) ++introducedDuplicateCount;
     }
 
-    out << "{\"definitions\":[";
-    bool first = true;
+    Value::Array definitions;
     for (const auto& font : fonts) {
         const auto target = "others.fontName[" + std::to_string(font->getCmper()) + "].name";
-        out << (first ? "" : ",") << '{'
-            << "\"cmper\":" << font->getCmper()
-            << ",\"name\":" << jsonString(font->name)
-            << ",\"normalized_name\":" << jsonString(musx::dom::normalizeFontName(font->name))
-            << ",\"charset_bank\":" << static_cast<int>(font->charsetBank)
-            << ",\"charset_value\":" << font->charsetVal
-            << ",\"pitch\":" << font->pitch
-            << ",\"family\":" << font->family
-            << ",\"origin\":" << jsonString(ctx.fields.originOf(target))
-            << '}';
-        first = false;
+        definitions.emplace_back(observe(*font, ctx,
+            field("cmper", [](const auto& value) { return value.getCmper(); }),
+            field("name", &musx::dom::others::FontDefinition::name),
+            field("normalized_name", [](const auto& value) { return musx::dom::normalizeFontName(value.name); }),
+            field("charset_bank", &musx::dom::others::FontDefinition::charsetBank),
+            field("charset_value", &musx::dom::others::FontDefinition::charsetVal),
+            field("pitch", &musx::dom::others::FontDefinition::pitch),
+            field("family", &musx::dom::others::FontDefinition::family),
+            field("origin", [&ctx, &target](const auto&) { return ctx.fields.originOf(target); })));
     }
-    out << "],\"duplicate_nonzero_name_count\":" << duplicateCount
-        << ",\"introduced_duplicate_nonzero_name_count\":" << introducedDuplicateCount
-        << '}';
+    return Value::Object{{"definitions", std::move(definitions)},
+        {"duplicate_nonzero_name_count", duplicateCount},
+        {"introduced_duplicate_nonzero_name_count", introducedDuplicateCount}};
 }
 
-COVERAGE_SURVEYOR("font_definitions", writeFontDefinitions);
+COVERAGE_SURVEYOR("font_definitions", observeFontDefinitions);
 
 } // namespace

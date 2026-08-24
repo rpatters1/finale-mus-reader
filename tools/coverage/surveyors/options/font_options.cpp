@@ -4,11 +4,11 @@
 #include <cstddef>
 #include <map>
 #include <optional>
-#include <ostream>
 #include <string>
 
 #include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/value.h"
 #include "finale_mus_reader/reader.h"
 #include "musx/musx.h"
 
@@ -63,19 +63,19 @@ std::size_t decodedFieldOffset(const FieldInfo& field, finale_mus_reader::Format
     return offset;
 }
 
-void writeSourceField(std::ostream& out, std::string_view name, const FieldInfo& field,
+void addSourceField(Value::Object& result, std::string_view name, const FieldInfo& field,
     finale_mus_reader::FormatEpoch epoch, std::size_t ordinal, std::size_t fieldIndex)
 {
-    out << ",\"" << name << "\":" << field.rawValue
-        << ",\"" << name << "_block_offset\":" << field.blockOffset
-        << ",\"" << name << "_decoded_field_offset\":"
-        << decodedFieldOffset(field, epoch, ordinal, fieldIndex);
+    result.emplace(name, field.rawValue);
+    result.emplace(std::string(name) + "_block_offset", field.blockOffset);
+    result.emplace(std::string(name) + "_decoded_field_offset",
+        decodedFieldOffset(field, epoch, ordinal, fieldIndex));
 }
 
-void writeTuple(std::ostream& out, std::size_t ordinal, const Tuple& tuple,
+Value observeTuple(std::size_t ordinal, const Tuple& tuple,
     const SurveyContext& ctx)
 {
-    if (!tuple.fontId || !tuple.fontSize || !tuple.effects) return;
+    if (!tuple.fontId || !tuple.fontSize || !tuple.effects) return {};
 
     const auto options = ctx.document->getOptions()->get<musx::dom::options::FontOptions>();
     const auto actual = options->getFontInfo(
@@ -90,27 +90,21 @@ void writeTuple(std::ostream& out, std::size_t ordinal, const Tuple& tuple,
         fontName = font->name;
     }
 
-    out << "{\"ordinal\":" << ordinal;
-    writeSourceField(out, "source_font_id", *tuple.fontId, ctx.report.formatEpoch, ordinal, 0);
-    writeSourceField(out, "source_font_size", *tuple.fontSize, ctx.report.formatEpoch, ordinal, 1);
-    writeSourceField(out, "source_effects", *tuple.effects, ctx.report.formatEpoch, ordinal, 2);
-    out << ",\"font_id\":" << fontId
-        << ",\"font_size\":" << actual->fontSize
-        << ",\"effects\":" << actual->getEnigmaStyles()
-        << ",\"font_id_origin\":" << jsonString(originName(tuple.fontId->origin))
-        << ",\"font_status\":" << jsonString(fontStatus)
-        << ",\"font_name\":" << jsonString(fontName)
-        << ",\"normalized_font_name\":" << jsonString(musx::dom::normalizeFontName(fontName))
-        << '}';
+    Value::Object result{{"ordinal", ordinal}};
+    addSourceField(result, "source_font_id", *tuple.fontId, ctx.report.formatEpoch, ordinal, 0);
+    addSourceField(result, "source_font_size", *tuple.fontSize, ctx.report.formatEpoch, ordinal, 1);
+    addSourceField(result, "source_effects", *tuple.effects, ctx.report.formatEpoch, ordinal, 2);
+    result.insert({{"font_id", fontId}, {"font_size", actual->fontSize},
+        {"effects", actual->getEnigmaStyles()}, {"font_id_origin", std::string(originName(tuple.fontId->origin))},
+        {"font_status", fontStatus}, {"font_name", fontName},
+        {"normalized_font_name", musx::dom::normalizeFontName(fontName)}});
+    return result;
 }
 
-void writeFontOptions(std::ostream& out, const SurveyContext& ctx)
+Value observeFontOptions(const SurveyContext& ctx)
 {
     const auto options = ctx.document->getOptions()->get<musx::dom::options::FontOptions>();
-    if (!options) {
-        out << "null";
-        return;
-    }
+    if (!options) return {};
     const auto tuples = collectTuples(ctx.report);
 
     std::size_t danglingNonzeroCount = 0;
@@ -134,22 +128,16 @@ void writeFontOptions(std::ostream& out, const SurveyContext& ctx)
         }
     }
 
-    out << "{\"option_count\":" << options->fontOptions.size()
-        << ",\"recovered_count\":" << recoveredCount
-        << ",\"legacy_behavior_count\":" << behaviorCount
-        << ",\"default_count\":" << defaultCount
-        << ",\"dangling_nonzero_font_id_count\":" << danglingNonzeroCount
-        << ",\"tuples\":[";
-    bool first = true;
+    Value::Array observedTuples;
     for (const auto& [ordinal, tuple] : tuples) {
         if (!tuple.fontId || !tuple.fontSize || !tuple.effects) continue;
-        out << (first ? "" : ",");
-        writeTuple(out, ordinal, tuple, ctx);
-        first = false;
+        observedTuples.emplace_back(observeTuple(ordinal, tuple, ctx));
     }
-    out << "]}";
+    return Value::Object{{"option_count", options->fontOptions.size()}, {"recovered_count", recoveredCount},
+        {"legacy_behavior_count", behaviorCount}, {"default_count", defaultCount},
+        {"dangling_nonzero_font_id_count", danglingNonzeroCount}, {"tuples", std::move(observedTuples)}};
 }
 
-COVERAGE_SURVEYOR("font_options", writeFontOptions);
+COVERAGE_SURVEYOR("font_options", observeFontOptions);
 
 } // namespace

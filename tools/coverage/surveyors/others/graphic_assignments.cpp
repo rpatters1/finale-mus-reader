@@ -5,9 +5,8 @@
 // stores rather than a named field list. Both carry the same sixteen words plus the graphic
 // they name, so one template serves both -- registered as two surveyors, one per class.
 
-#include <ostream>
-
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "musx/musx.h"
 
 namespace {
@@ -15,36 +14,31 @@ namespace {
 using namespace finale_mus_reader::coverage;
 
 template <typename Target>
-void writeGraphicAssignments(std::ostream& out, const SurveyContext& ctx)
+Value observeGraphicAssignments(const SurveyContext& ctx)
 {
-    out << '[';
-    bool first = true;
+    Value::Array result;
     for (const auto& assign : ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
-        if (!first) out << ',';
-        first = false;
-        out << "{\"cmper\":" << assign->getCmper()
-            << ",\"inci\":" << assign->getInci().value_or(0)
-            << ",\"left\":" << assign->left
-            << ",\"bottom\":" << assign->bottom
-            << ",\"width\":" << assign->width
-            << ",\"height\":" << assign->height
-            << ",\"f_desc_id\":" << assign->fDescId
-            << '}';
+        result.push_back(observe(*assign, ctx,
+            field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("inci", [](const Target& value) { return value.getInci().value_or(0); }),
+            field("left", &Target::left), field("bottom", &Target::bottom),
+            field("width", &Target::width), field("height", &Target::height),
+            field("f_desc_id", &Target::fDescId)));
     }
-    out << ']';
+    return Value(std::move(result));
 }
 
-void writePageGraphicAssigns(std::ostream& out, const SurveyContext& ctx)
+Value observePageGraphicAssigns(const SurveyContext& ctx)
 {
-    writeGraphicAssignments<musx::dom::others::PageGraphicAssign>(out, ctx);
+    return observeGraphicAssignments<musx::dom::others::PageGraphicAssign>(ctx);
 }
 
-void writeShapeGraphicAssigns(std::ostream& out, const SurveyContext& ctx)
+Value observeShapeGraphicAssigns(const SurveyContext& ctx)
 {
-    writeGraphicAssignments<musx::dom::others::ShapeGraphicAssign>(out, ctx);
+    return observeGraphicAssignments<musx::dom::others::ShapeGraphicAssign>(ctx);
 }
 
-COVERAGE_SURVEYOR("page_graphic_assigns", writePageGraphicAssigns);
-COVERAGE_SURVEYOR("shape_graphic_assigns", writeShapeGraphicAssigns);
+COVERAGE_SURVEYOR("page_graphic_assigns", observePageGraphicAssigns);
+COVERAGE_SURVEYOR("shape_graphic_assigns", observeShapeGraphicAssigns);
 
 } // namespace
