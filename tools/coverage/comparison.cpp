@@ -1347,7 +1347,6 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         for (const auto& [path, unused] : sourceLeaves) paths.insert(path);
         for (const auto& [path, unused] : companionLeaves) paths.insert(path);
         auto& stats = result.classes[className];
-        std::set<std::string> recordedRenumbering;
         for (const auto& path : paths) {
             const auto sourceFound = sourceLeaves.find(path);
             const auto companionFound = companionLeaves.find(path);
@@ -1388,6 +1387,8 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     symbolFontNames, isPartNameText(className, path, source, companion));
                 if (comparison.equivalent && hasSynthesizedTextState(source, className, path)
                         && sourceFound->second.first != companionFound->second.first) {
+                    ++stats.expected;
+                    ++result.expected["enigma-text-difference"];
                     ++result.textDifferences[className]["added font info"];
                     if (result.textExamples.size() < maximumExamplesPerRow) {
                         result.textExamples.push_back({path, sourceFound->second.first,
@@ -1398,6 +1399,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     if (!comparison.transformation.empty()) ++result.transformations[comparison.transformation];
                 } else {
                     for (const auto& kind : comparison.differences) {
+                        if (kind == "other") {
+                            ++stats.unexpected;
+                        } else {
+                            ++stats.expected;
+                            ++result.expected["enigma-text-difference"];
+                        }
                         ++result.textDifferences[className][kind];
                         if (result.textExamples.size() < maximumExamplesPerRow) {
                             result.textExamples.push_back({path, sourceFound->second.first,
@@ -1441,9 +1448,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             } else if (category == "differs" && referent != textBlockReferents.end()
                     && referent->second == ReferentComparison::Renumbered) {
                 ++stats.expected;
-                if (recordedRenumbering.insert(prefix).second) {
-                    ++result.expected["finale-text-block-renumbering"];
-                }
+                ++result.expected["finale-text-block-renumbering"];
             } else if (category == "differs" && className == "text_blocks" && !prefix.empty()) {
                 const auto equals = prefix.find("cmper=");
                 const auto close = prefix.find(']', equals);

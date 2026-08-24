@@ -30,7 +30,7 @@ SURVEY_CLASS_POOLS = {
 }
 TEXT_CLASSES = sorted(name for name, pool in SURVEY_CLASS_POOLS.items() if pool == "texts")
 TEXT_KINDS = ("known encoding glitch", "whitespace", "font", "size", "effects",
-    "added font info", "empty part-name template", "missing run", "other")
+    "added font info", "empty part-name template", "missing run", "unresolved font", "other")
 PROGRESS_INTERVAL_SECONDS = 1.9
 VALUE_WIDTH = 60
 
@@ -206,7 +206,8 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     shared_widths = table_widths(headers,
         (row for values in pool_rows.values() for row in values))
     shared_widths[1] = max(shared_widths[1], 10)
-    print("\nAll companion-comparison columns count leaves.")
+    print("\nCompanion-comparison columns count leaves, except that each classified "
+        "Enigma-text finding counts separately.")
     printed = False
     for pool, values in pool_rows.items():
         if not values:
@@ -228,7 +229,8 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         for index in range(1, len(TEXT_KINDS) + 2)]])
     print_table("Enigma-text difference findings (one text may contribute more than one)",
         ["text type", "encoding", "whitespace", "font", "size", "effects",
-            "added font info", "empty part-name", "missing run", "other", "total"], text_rows)
+            "added font info", "empty part-name", "missing run", "unresolved font", "other",
+            "total"], text_rows)
 
     for kind, title in (("missing run", "Missing-run Enigma-text differences"),
             ("other", "Unclassified Enigma-text differences")):
