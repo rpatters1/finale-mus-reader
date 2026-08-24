@@ -43,6 +43,6 @@ Value observeMultimeasureRestOptions(const SurveyContext& ctx)
         originField<Target>("origin_autoUpdateMmRests", "autoUpdateMmRests"));
 }
 
-COVERAGE_SURVEYOR("mmrest_options", observeMultimeasureRestOptions);
+COVERAGE_SURVEYOR("options", "mmrest_options", observeMultimeasureRestOptions);
 
 } // namespace

@@ -24,6 +24,6 @@ Value observeMusicSpacingOptions(const SurveyContext& ctx)
         originField<Target>("origin_minDistTiedNotes", "minDistTiedNotes"));
 }
 
-COVERAGE_SURVEYOR("spacing_options", observeMusicSpacingOptions);
+COVERAGE_SURVEYOR("options", "spacing_options", observeMusicSpacingOptions);
 
 } // namespace

@@ -9,9 +9,6 @@ section below; do not expand the TODO bullets into investigation notes.
 - `ChordOptions::fretStyleId`, `fretInstId` -> `details::FretboardStyle`,
   `details::FretInstrument`. Recover and resolve the two default fretboard
   references.
-- `RepeatOptions::showOnStaffListNumber` -> `others::StaffListRepeatName`,
-  `StaffListRepeatScore`, `StaffListRepeatParts`, and their override classes.
-  Recover the linked repeat staff-list family.
 - `SmartShapeOptions::ssLineStyleCmp*` -> `others::SmartShapeCustomLine`
   (four fields: custom, glissando, tab slide, tab bend curve). Recover the
   referenced line styles; include their `CharParams::font` references.
@@ -36,3 +33,7 @@ section below; do not expand the TODO bullets into investigation notes.
   states no `<altHyphenFont>` either, so nothing is imported and musxdom's
   `integrityCheck` supplies the object. A null member during the import is the
   signal that the baseline omitted the element.
+- `RepeatOptions::showOnStaffListNumber` — closed with no legacy location. Controlled
+  Finale 2005 and Finale 2012 saves create repeat staff-list objects but persist no
+  selected-list reference; the pinned baseline supplies the document option. Repeat
+  staff-list objects can be recovered later without reopening this options field.

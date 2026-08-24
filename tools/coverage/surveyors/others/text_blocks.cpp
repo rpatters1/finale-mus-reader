@@ -60,6 +60,6 @@ Value observeTextBlocks(const SurveyContext& ctx)
     return Value(std::move(result));
 }
 
-COVERAGE_SURVEYOR("text_blocks", observeTextBlocks);
+COVERAGE_SURVEYOR("others", "text_blocks", observeTextBlocks);
 
 } // namespace

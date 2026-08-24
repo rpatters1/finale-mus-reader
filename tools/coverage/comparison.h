@@ -34,7 +34,7 @@ struct DifferenceExample
 
 struct ComparisonResult
 {
-    std::map<std::string, ClassComparison> classes;
+    std::map<std::string, std::map<std::string, ClassComparison>> classes;
     std::map<std::string, std::uint64_t> expected;
     std::map<std::string, std::uint64_t> transformations;
     std::map<std::string, std::map<std::string, std::uint64_t>> textDifferences;

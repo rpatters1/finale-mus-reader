@@ -36,7 +36,7 @@ Value observeTextOptions(const SurveyContext& ctx)
              "tabSpaces", "textTracking", "textBaselineShift", "textSuperscript", "textWordWrap", "textPageOffset",
              "textJustify", "textExpandSingleWord", "textHorzAlign", "textVertAlign", "textIsEdgeAligned"}) {
         result.asObject().emplace(std::string("origin_") + member,
-            std::string(ctx.fields.originOf(std::string("options.textOptions.") + member)));
+            fieldOrigin<Target>(ctx, member));
     }
 
     using Insert = musx::dom::options::AccidentalInsertSymbolType;
@@ -72,11 +72,11 @@ Value observeTextOptions(const SurveyContext& ctx)
             {"font_effects", insert.symFont ? int(insert.symFont->getEnigmaStyles()) : 0},
             {"font_name", fontName}, {"normalized_font_name", musx::dom::normalizeFontName(fontName)},
             {"dangling_font", dangling}});
-        const auto prefix = std::string("options.textOptions.symbolInserts[") + name + "].";
+        const auto prefix = std::string("symbolInserts[") + name + "].";
         for (const auto* member : {"trackingBefore", "trackingAfter", "baselineShiftPerc",
                  "symChar", "symFont.fontId", "symFont.fontSize", "symFont.effects"}) {
             observed.emplace(std::string("origin_") + member,
-                std::string(ctx.fields.originOf(prefix + member)));
+                fieldOrigin<Target>(ctx, prefix + member));
         }
         inserts.emplace_back(std::move(observed));
     }
@@ -84,6 +84,6 @@ Value observeTextOptions(const SurveyContext& ctx)
     return result;
 }
 
-COVERAGE_SURVEYOR("text_options", observeTextOptions);
+COVERAGE_SURVEYOR("options", "text_options", observeTextOptions);
 
 } // namespace

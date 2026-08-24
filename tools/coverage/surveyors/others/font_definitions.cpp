@@ -28,10 +28,10 @@ Value observeFontDefinitions(const SurveyContext& ctx)
         if (font->getCmper() == 0) continue;
         const auto name = musx::dom::normalizeFontName(font->name);
         if (name.empty()) continue;
-        const auto target = "others.fontName[" + std::to_string(font->getCmper()) + "].name";
         auto& [total, introduced] = nonzeroNameCounts[name];
         ++total;
-        if (std::string(ctx.fields.originOf(target)) != "legacy-mus") ++introduced;
+        if (fieldOrigin<musx::dom::others::FontDefinition>(ctx, "name", font->getCmper())
+                != "legacy-mus") ++introduced;
     }
     std::size_t duplicateCount = 0;
     std::size_t introducedDuplicateCount = 0;
@@ -44,7 +44,6 @@ Value observeFontDefinitions(const SurveyContext& ctx)
 
     Value::Array definitions;
     for (const auto& font : fonts) {
-        const auto target = "others.fontName[" + std::to_string(font->getCmper()) + "].name";
         definitions.emplace_back(observe(*font, ctx,
             field("cmper", [](const auto& value) { return value.getCmper(); }),
             field("name", &musx::dom::others::FontDefinition::name),
@@ -53,13 +52,32 @@ Value observeFontDefinitions(const SurveyContext& ctx)
             field("charset_value", &musx::dom::others::FontDefinition::charsetVal),
             field("pitch", &musx::dom::others::FontDefinition::pitch),
             field("family", &musx::dom::others::FontDefinition::family),
-            field("origin", [&ctx, &target](const auto&) { return ctx.fields.originOf(target); })));
+            field("origin_name", [&ctx](const auto& value) {
+                return fieldOrigin<musx::dom::others::FontDefinition>(
+                    ctx, "name", value.getCmper());
+            }),
+            field("origin_charsetBank", [&ctx](const auto& value) {
+                return fieldOrigin<musx::dom::others::FontDefinition>(
+                    ctx, "charsetBank", value.getCmper());
+            }),
+            field("origin_charsetValue", [&ctx](const auto& value) {
+                return fieldOrigin<musx::dom::others::FontDefinition>(
+                    ctx, "charsetVal", value.getCmper());
+            }),
+            field("origin_pitch", [&ctx](const auto& value) {
+                return fieldOrigin<musx::dom::others::FontDefinition>(
+                    ctx, "pitch", value.getCmper());
+            }),
+            field("origin_family", [&ctx](const auto& value) {
+                return fieldOrigin<musx::dom::others::FontDefinition>(
+                    ctx, "family", value.getCmper());
+            })));
     }
     return Value::Object{{"definitions", std::move(definitions)},
         {"duplicate_nonzero_name_count", duplicateCount},
         {"introduced_duplicate_nonzero_name_count", introducedDuplicateCount}};
 }
 
-COVERAGE_SURVEYOR("font_definitions", observeFontDefinitions);
+COVERAGE_SURVEYOR("others", "font_definitions", observeFontDefinitions);
 
 } // namespace

@@ -31,7 +31,7 @@ Value observeStemOptions(const SurveyContext& ctx)
     Value::Array connections;
     for (std::size_t index = 0; index < options->stemConnections.size(); ++index) {
         const auto& connection = options->stemConnections[index];
-        const auto prefix = "options.stemOptions.stemConnections[" + std::to_string(index) + "].";
+        const auto prefix = "stemConnections[" + std::to_string(index) + "].";
         // The face as well as the comparator. Finale 27 matches fonts against those installed
         // on the upgrading machine and renumbers its own table accordingly, so comparing
         // comparators against a companion manufactures disagreements; the face is what both
@@ -49,7 +49,7 @@ Value observeStemOptions(const SurveyContext& ctx)
         for (const auto* member : {"fontId", "symbol", "upStemVert", "downStemVert",
                  "upStemHorz", "downStemHorz"}) {
             observed.emplace(std::string("origin_") + member,
-                std::string(ctx.fields.originOf(prefix + member)));
+                fieldOrigin<Target>(ctx, prefix + member));
         }
         connections.emplace_back(std::move(observed));
     }
@@ -57,6 +57,6 @@ Value observeStemOptions(const SurveyContext& ctx)
     return result;
 }
 
-COVERAGE_SURVEYOR("stem_options", observeStemOptions);
+COVERAGE_SURVEYOR("options", "stem_options", observeStemOptions);
 
 } // namespace

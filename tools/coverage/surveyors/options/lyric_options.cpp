@@ -93,11 +93,11 @@ Value observeLyricOptions(const SurveyContext& ctx)
              "showAutoNumbersOnVerses", "showAutoNumbersOnChoruses", "showAutoNumbersOnSections",
              "hyphenChar", "lyricPunctuationToIgnore"}) {
         result.asObject().emplace(std::string("origin_") + member,
-            std::string(ctx.fields.originOf(std::string("options.lyricOptions.") + member)));
+            fieldOrigin<Lyrics>(ctx, member));
     }
     return result;
 }
 
-COVERAGE_SURVEYOR("lyric_options", observeLyricOptions);
+COVERAGE_SURVEYOR("options", "lyric_options", observeLyricOptions);
 
 } // namespace

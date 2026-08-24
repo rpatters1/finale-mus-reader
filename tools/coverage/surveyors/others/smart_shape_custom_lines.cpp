@@ -43,6 +43,6 @@ Value observeSmartShapeCustomLines(const SurveyContext& ctx)
     return result;
 }
 
-COVERAGE_SURVEYOR("ss_line_styles", observeSmartShapeCustomLines);
+COVERAGE_SURVEYOR("others", "ss_line_styles", observeSmartShapeCustomLines);
 
 } // namespace

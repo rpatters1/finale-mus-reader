@@ -148,3 +148,27 @@ F2012-ssline-offsets.mus
     Its Char line also shows that the era stores a code point rather than a byte: the character
     the fixed-row source holds as Mac Roman 199 is 171 here, which is what the fixed-row
     reader arrives at by decoding.
+
+F2012-rptopts-stafflist.mus
+    sha256 62d4c8cb442960d361e07f9501eb4275d75efe55b4dec6993a9eccc6b86416a2
+    From F2012-baseline, Repeat Options changed from Top Staff Only to Staff List 1.
+    The RepeatOptions numeric-global class is unchanged. The save adds the repeat
+    staff-list name and its score and parts membership records at cmper 1.
+
+-finale27/F2012-rptopts-stafflist.musx
+    sha256 634e24ba832808754144f5832a21e387c78cc3e8f33ed7543cb90a8aa59fdee1
+    Finale 27 preserves the repeat staff-list family but changes Repeat Options to
+    Top Staff Only. This is converter drift and not the semantic value of the source.
+
+F2012-rptopts-3lists-sel2.mus
+    sha256 42c6d5caf1e3b6ff36fbb56047b32923e0188ac8921c19b5ccdeae7e2b3bdd1d
+    From the repeat-options baseline, created three repeat staff lists and selected
+    staff list 2 in Repeat Options. The save adds only the three lists' name and
+    membership families; no RepeatOptions or other record distinguishes list 2 as
+    selected.
+
+-finale27/F2012-rptopts-3lists-sel2.musx
+    sha256 c68b8565453d3fc6df01ce84ce12016634a7f49cca79c241b0f809c909fb33b2
+    Finale 27 preserves all three repeat staff-list families and identifies the
+    class 0x00e5 cmper 2 record as repeatStaffListScoreOverride. It again writes
+    Top Staff Only and no showOnStaffListNumber.

@@ -129,7 +129,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 82ca33b32afe472e3e26714565a05b9818270fbb
+            GIT_TAG e04a90bc1fe772543b9399a551d81aa0181d6c6e
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -173,6 +173,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/lyric_options.cpp
     src/import/options/multimeasure_rest_options.cpp
     src/import/options/music_spacing_options.cpp
+    src/import/options/repeat_options.cpp
     src/import/options/stem_options.cpp
     src/import/options/text_options.cpp
     src/import/others/font_definitions.cpp
@@ -198,7 +199,7 @@ add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 set(FINALE_MUS_READER_INSTRUMENTATION_ENABLED OFF)
 if(FINALE_MUS_READER_INSTRUMENTATION STREQUAL "ON"
         OR (FINALE_MUS_READER_INSTRUMENTATION STREQUAL "AUTO"
-            AND FINALE_MUS_READER_BUILD_TOOLS))
+            AND (FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_TOOLS)))
     set(FINALE_MUS_READER_INSTRUMENTATION_ENABLED ON)
 endif()
 if(FINALE_MUS_READER_INSTRUMENTATION_ENABLED)
