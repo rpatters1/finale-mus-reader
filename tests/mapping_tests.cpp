@@ -2521,7 +2521,7 @@ void testFretClassesAreSourceOwned()
     const auto instrument = document->getOthers()->get<FretInstrument>(
         musx::dom::SCORE_PARTID, 7);
     const auto group = document->getOthers()->get<FretboardGroup>(
-        musx::dom::SCORE_PARTID, 9, 0);
+        musx::dom::SCORE_PARTID, 9, musx::dom::Inci(0));
     const auto style = document->getOthers()->get<FretboardStyle>(
         musx::dom::SCORE_PARTID, 3);
     expectMapping(instrument && instrument->numFrets == 21 && instrument->numStrings == 2
@@ -2597,7 +2597,7 @@ void testFretClassesAreSourceOwned()
     const auto fixedInstrument = fixedDocument->getOthers()->get<FretInstrument>(
         musx::dom::SCORE_PARTID, 7);
     const auto fixedGroup = fixedDocument->getOthers()->get<FretboardGroup>(
-        musx::dom::SCORE_PARTID, 9, 0);
+        musx::dom::SCORE_PARTID, 9, musx::dom::Inci(0));
     const auto fixedStyle = fixedDocument->getOthers()->get<FretboardStyle>(
         musx::dom::SCORE_PARTID, 3);
     expectMapping(fixedInstrument && fixedInstrument->numFrets == 21
@@ -2706,11 +2706,11 @@ void testFretboardGroupUnicodeLayout()
     finale_mus_reader::others::importFretboardGroups(context);
 
     const auto first = document->getOthers()->get<FretboardGroup>(
-        musx::dom::SCORE_PARTID, 1, 0);
+        musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
     const auto second = document->getOthers()->get<FretboardGroup>(
-        musx::dom::SCORE_PARTID, 1, 1);
+        musx::dom::SCORE_PARTID, 1, musx::dom::Inci(1));
     const auto nonexistent = document->getOthers()->get<FretboardGroup>(
-        musx::dom::SCORE_PARTID, 1, 2);
+        musx::dom::SCORE_PARTID, 1, musx::dom::Inci(2));
     expectMapping(first && first->fretInstId == 2 && first->name == "Simple Major Triad"
             && second && second->fretInstId == 2 && second->name == "Major   (copy)"
             && !nonexistent,
