@@ -30,6 +30,7 @@ struct DifferenceExample
     Value source;
     Value companion;
     std::string kind;
+    std::string origin;
 };
 
 struct ComparisonResult

@@ -205,7 +205,7 @@ void collectLeaves(const Value& value, std::string path, std::string origin,
     } else if (value.isArray()) {
         const auto segments = listSegments(value.asArray(), path);
         for (std::size_t index = 0; index < value.asArray().size(); ++index) {
-            collectLeaves(value.asArray()[index], path + segments[index], {}, includeOrigins, result);
+            collectLeaves(value.asArray()[index], path + segments[index], origin, includeOrigins, result);
         }
     } else {
         result.insert_or_assign(std::move(path), std::pair{value, std::move(origin)});
@@ -1225,6 +1225,20 @@ bool isDifferentDefault(const std::string& path, const std::string& category,
     const std::string& origin, const Value& sourceValue, const Value& companionValue)
 {
     if (category != "differs" || origin != "finale27-default") return false;
+    static const std::set<std::string_view> smartShapePaths{
+        "smart_shape_options.cresc_horizontal",
+        "smart_shape_options.cresc_line_width",
+        "smart_shape_options.short_hairpin_opening_width",
+        "smart_shape_options.slur_avoid_staff_lines",
+        "smart_shape_options.slur_left_break_horz_adj",
+        "smart_shape_options.smart_line_width",
+        "smart_shape_options.use_engraver_slurs"};
+    if (smartShapePaths.contains(path)) return true;
+    if (startsWith(path, "ss_line_styles[")
+            && (endsWith(path, ".solid_width")
+                || endsWith(path, ".char_font_size"))) {
+        return true;
+    }
     if (path == "repeat_options.bracket_height" && sourceValue.isInteger()
             && sourceValue.asInteger() == 96 && companionValue.isInteger()
             && std::set<std::int64_t>{72, 144}.contains(companionValue.asInteger())) {
@@ -1276,6 +1290,14 @@ std::optional<std::string> expectedDifference(const std::string& path,
             && sourceValue.isInteger() && sourceValue.asInteger() == 256
             && companionValue.isInteger() && companionValue.asInteger() == 128) {
         return "coda-stem-offset";
+    }
+    if (category == "differs" && origin == "legacy-mus"
+            && epoch == FormatEpoch::CodaBanner
+            && std::set<std::string_view>{
+                "smart_shape_options.slur_thickness_cp1_x",
+                "smart_shape_options.slur_thickness_cp2_x",
+                "smart_shape_options.slur_thickness_cp2_y"}.contains(path)) {
+        return "coda-slur-thickness-upgrade";
     }
     if (isDifferentDefault(path, category, origin, sourceValue, companionValue)) {
         return "different_defaults";
@@ -1432,7 +1454,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     ++result.textDifferences[className]["added font info"];
                     if (result.textExamples.size() < maximumExamplesPerRow) {
                         result.textExamples.push_back({path, sourceFound->second.first,
-                            companionFound->second.first, "added font info"});
+                            companionFound->second.first, "added font info", {}});
                     }
                 } else if (comparison.equivalent) {
                     ++stats.same;
@@ -1448,7 +1470,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                         ++result.textDifferences[className][kind];
                         if (result.textExamples.size() < maximumExamplesPerRow) {
                             result.textExamples.push_back({path, sourceFound->second.first,
-                                companionFound->second.first, kind});
+                                companionFound->second.first, kind, {}});
                         }
                     }
                 }
@@ -1501,12 +1523,14 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 }
                 ++stats.unexpected;
                 if (result.unexpectedExamples.size() < maximumExamplesPerRow) {
-                    result.unexpectedExamples.push_back({path, sourceValue, companionValue, {}});
+                    result.unexpectedExamples.push_back(
+                        {path, sourceValue, companionValue, {}, origin});
                 }
             } else if (category == "differs") {
                 ++stats.unexpected;
                 if (result.unexpectedExamples.size() < maximumExamplesPerRow) {
-                    result.unexpectedExamples.push_back({path, sourceValue, companionValue, {}});
+                    result.unexpectedExamples.push_back(
+                        {path, sourceValue, companionValue, {}, origin});
                 }
             } else if (category == "reader_only") {
                 ++stats.sourceOnly;
@@ -1548,20 +1572,23 @@ void writeCompactComparison(std::ostream& out, const ComparisonResult& compariso
         first = false;
     }
     out << '}';
-    const auto writeExamples = [&](std::string_view key, const std::vector<DifferenceExample>& examples) {
+    const auto writeExamples = [&](std::string_view key,
+                                   const std::vector<DifferenceExample>& examples,
+                                   bool writeOrigin) {
         out << ",\"" << key << "\":[";
         bool firstExample = true;
         for (const auto& example : examples) {
             out << (firstExample ? "" : ",") << '[' << jsonString(example.path) << ','
                 << example.source.toJson() << ',' << example.companion.toJson();
-            if (!example.kind.empty()) out << ',' << jsonString(example.kind);
+            const auto& annotation = writeOrigin ? example.origin : example.kind;
+            if (!annotation.empty()) out << ',' << jsonString(annotation);
             out << ']';
             firstExample = false;
         }
         out << ']';
     };
-    writeExamples("unexpected", comparison.unexpectedExamples);
-    writeExamples("text_examples", comparison.textExamples);
+    writeExamples("unexpected", comparison.unexpectedExamples, true);
+    writeExamples("text_examples", comparison.textExamples, false);
 }
 
 } // namespace coverage

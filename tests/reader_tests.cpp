@@ -2659,10 +2659,15 @@ void testSmartShapeCustomLines()
     REQUIRE(solidLine->solidParams != nullptr);
     CHECK(solidLine->solidParams->lineWidth == 118);
 
-    // Finale 27 upgrades this baseline document to a third, synthesized default (a Solid
-    // line with an ArrowheadPreset end cap) that the Finale 2000 source itself never wrote.
-    // The importer must not fabricate that object from nothing.
-    CHECK(fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3) == nullptr);
+    // The bend-curve tool postdates Finale 2000, so its baseline definition follows the two
+    // source-owned lines. Imported defaults retain baseline values rather than Finale's upgrade.
+    const auto bendLine = fixedRow.document->getOthers()->get<LineTarget>(SCORE_PARTID, 3);
+    REQUIRE(bendLine != nullptr);
+    CHECK(bendLine->lineStyle == LineTarget::LineStyle::Solid);
+    REQUIRE(bendLine->solidParams != nullptr);
+    CHECK(bendLine->solidParams->lineWidth == 115);
+    CHECK(bendLine->lineCapEndType == LineTarget::LineCapType::ArrowheadPreset);
+    CHECK(bendLine->lineCapEndArrowId == 1);
 
     // Every text-anchor and line-adjustment offset of one record, each set to its own value
     // so that no two slots can be confused. The five X offsets interleave with the Y offsets
@@ -2737,14 +2742,237 @@ void testSmartShapeCustomLines()
     CHECK(capped->lineCapStartArrowId == 0);
     CHECK(capped->lineCapEndHookLength == 0);
 
-    // Confirmed absent, not merely unread: no `ls` row occurs anywhere in a genuinely
-    // pre-2000 uncompressed source, and none at all in CodaBanner.
+    // No `ls` row occurs before Finale 2000. Those formats receive the baseline glissando,
+    // tab-slide, and guitar-bend definitions, in that order, so their option references are
+    // usable rather than foreign baseline cmpers.
     const auto pre2000 = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F97/Fin97-baseline.mus");
-    CHECK(pre2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
+    const auto pre2000Options =
+        pre2000.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(pre2000Options != nullptr);
+    CHECK(pre2000Options->ssLineStyleCmpGlissando == 1);
+    CHECK(pre2000Options->ssLineStyleCmpTabSlide == 2);
+    CHECK(pre2000Options->ssLineStyleCmpTabBendCurve == 3);
+    CHECK(pre2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
+    for (musx::dom::Cmper cmper = 1; cmper <= 3; ++cmper) {
+        const auto* origin = pre2000.report.findInstanceOrigin(
+            finale_mus_reader::instanceKey<LineTarget>(SCORE_PARTID, cmper));
+        REQUIRE(origin != nullptr);
+        CHECK(*origin == ValueOrigin::Finale27Default);
+    }
+
+    const auto preEngraverSlur = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F97/F97-slurtieopts-changed.mus");
+    const auto preEngraverSlurOptions =
+        preEngraverSlur.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(preEngraverSlurOptions != nullptr);
+    const auto shortContour = preEngraverSlurOptions->slurControlStyles.at(
+        options::SmartShapeOptions::SlurControlStyleType::ShortSpan);
+    const auto mediumContour = preEngraverSlurOptions->slurControlStyles.at(
+        options::SmartShapeOptions::SlurControlStyleType::MediumSpan);
+    const auto longContour = preEngraverSlurOptions->slurControlStyles.at(
+        options::SmartShapeOptions::SlurControlStyleType::LongSpan);
+    const auto extraLongContour = preEngraverSlurOptions->slurControlStyles.at(
+        options::SmartShapeOptions::SlurControlStyleType::ExtraLongSpan);
+    CHECK(shortContour->span == 36);
+    CHECK(shortContour->inset == 532);
+    CHECK(shortContour->height == 13);
+    CHECK(mediumContour->span == 288);
+    CHECK(mediumContour->inset == 553);
+    CHECK(mediumContour->height == 43);
+    CHECK(longContour->span == 864);
+    CHECK(longContour->inset == 358);
+    CHECK(longContour->height == 73);
+    CHECK(extraLongContour->span == 1152);
+    CHECK(extraLongContour->inset == 358);
+    CHECK(extraLongContour->height == 73);
+    CHECK(preEngraverSlurOptions->slurAvoidStaffLines);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurControlStyles[3].span").origin
+        == ValueOrigin::Finale27Default);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurControlStyles[3].inset").origin
+        == ValueOrigin::LegacyBehavior);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurControlStyles[3].height").rawValue
+        == 73);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurAvoidStaffLines").origin
+        == ValueOrigin::Finale27Default);
+
+    const auto preEngraverThickness = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2000/F2000-slur-thickness.mus");
+    const auto preEngraverThicknessOptions =
+        preEngraverThickness.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(preEngraverThicknessOptions != nullptr);
+    CHECK(preEngraverThicknessOptions->slurThicknessCp1Y == 17);
+    CHECK(preEngraverThicknessOptions->slurThicknessCp2Y == 17);
+    CHECK(field(preEngraverThickness,
+              "options.smartShapeOptions.slurThicknessCp1Y").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(preEngraverThickness,
+              "options.smartShapeOptions.slurThicknessCp2Y").rawValue
+        == 17);
+
     const auto coda = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F263/F263-baseline.mus");
-    CHECK(coda.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).empty());
+    const auto codaOptions = coda.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(codaOptions != nullptr);
+    CHECK(codaOptions->ssLineStyleCmpGlissando == 1);
+    CHECK(codaOptions->ssLineStyleCmpTabSlide == 2);
+    CHECK(codaOptions->ssLineStyleCmpTabBendCurve == 3);
+    CHECK(codaOptions->hookLength == 8);
+    CHECK(field(coda, "options.smartShapeOptions.hookLength").origin
+        == ValueOrigin::LegacyBehavior);
+    CHECK(coda.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
+
+    const auto finale100 = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F100/F100-baseline.mus");
+    const auto finale100Options =
+        finale100.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale100Options != nullptr);
+    CHECK(finale100Options->hookLength == 12);
+
+    // Finale 2000 and 2002 already own the glissando and tab-slide definitions but
+    // predate the bend-curve tool. Its baseline definition follows the source-owned pool.
+    const auto finale2000 = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2000/F2000-baseline.mus");
+    const auto finale2000Options =
+        finale2000.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2000Options != nullptr);
+    CHECK(finale2000Options->ssLineStyleCmpGlissando == 1);
+    CHECK(finale2000Options->ssLineStyleCmpTabSlide == 2);
+    CHECK(finale2000Options->ssLineStyleCmpTabBendCurve == 3);
+    CHECK(finale2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
+    const auto* finale2000BendOrigin = finale2000.report.findInstanceOrigin(
+        finale_mus_reader::instanceKey<LineTarget>(SCORE_PARTID, 3));
+    REQUIRE(finale2000BendOrigin != nullptr);
+    CHECK(*finale2000BendOrigin == ValueOrigin::Finale27Default);
+    CHECK(field(finale2000,
+              "options.smartShapeOptions.ssLineStyleCmpTabBendCurve").origin
+        == ValueOrigin::Finale27Default);
+
+    const auto finale2000Offsets = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2000/F2000-ssline-offsets.mus");
+    const auto finale2000OffsetsOptions =
+        finale2000Offsets.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2000OffsetsOptions != nullptr);
+    CHECK(finale2000OffsetsOptions->ssLineStyleCmpTabBendCurve == 7);
+    CHECK(finale2000Offsets.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 7);
+
+    const auto finale2002 = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2002/F2002-baseline.mus");
+    const auto finale2002Options =
+        finale2002.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2002Options != nullptr);
+    CHECK(finale2002Options->ssLineStyleCmpTabBendCurve == 3);
+    CHECK(finale2002.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
+    CHECK(field(finale2002,
+              "options.smartShapeOptions.ssLineStyleCmpTabBendCurve").origin
+        == ValueOrigin::Finale27Default);
+
+    const auto finale2002TipAvoidance = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2002/F2002-tips-avoid-stafflines.mus");
+    const auto finale2002TipAvoidanceOptions =
+        finale2002TipAvoidance.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2002TipAvoidanceOptions != nullptr);
+    CHECK(finale2002TipAvoidanceOptions->slurAvoidStaffLinesAmt == 17);
+    CHECK(field(finale2002TipAvoidance,
+              "options.smartShapeOptions.slurAvoidStaffLinesAmt").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(finale2002TipAvoidance,
+              "options.smartShapeOptions.slurAvoidStaffLinesAmt").rawValue
+        == 18);
+
+    const auto finale2002Avoidance = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2002/F2002-slursavoid-no-acci.mus");
+    const auto finale2002AvoidanceOptions =
+        finale2002Avoidance.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2002AvoidanceOptions != nullptr);
+    CHECK_FALSE(finale2002AvoidanceOptions->slurAvoidAccidentals);
+    CHECK(finale2002AvoidanceOptions->slurPadding == 37);
+    CHECK(finale2002AvoidanceOptions->slurAcciPadding == 37);
+    CHECK_FALSE(finale2002AvoidanceOptions->slurDoStretchFirst);
+    CHECK(field(finale2002Avoidance,
+              "options.smartShapeOptions.slurAcciPadding").origin
+        == ValueOrigin::LegacyBehavior);
+    CHECK(field(finale2002Avoidance,
+              "options.smartShapeOptions.slurAcciPadding").rawValue
+        == 37);
+    CHECK(field(finale2002Avoidance,
+              "options.smartShapeOptions.slurDoStretchFirst").origin
+        == ValueOrigin::LegacyBehavior);
+
+    const auto finale2003 = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2003/F2003-baseline.mus");
+    const auto finale2003Options =
+        finale2003.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(finale2003Options != nullptr);
+    CHECK(finale2003Options->ssLineStyleCmpTabBendCurve == 3);
+    CHECK(finale2003Options->slurAcciPadding == 3);
+    CHECK(finale2003Options->slurDoStretchFirst);
+    CHECK(finale2003.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
+    CHECK(field(finale2003,
+              "options.smartShapeOptions.ssLineStyleCmpTabBendCurve").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(finale2003,
+              "options.smartShapeOptions.slurAcciPadding").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(finale2003,
+              "options.smartShapeOptions.slurDoStretchFirst").origin
+        == ValueOrigin::LegacyMus);
+
+    for (const auto& test : std::array{
+             std::pair{"F2008-empty.mus", musx::dom::ShapeDirection::Automatic},
+             std::pair{"F2008-defss-over.mus", musx::dom::ShapeDirection::Over},
+             std::pair{"F2008-defss-under.mus", musx::dom::ShapeDirection::Under}}) {
+        const auto imported = Reader::readWithReport<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2008" / test.first);
+        const auto importedOptions =
+            imported.document->getOptions()->get<options::SmartShapeOptions>();
+        REQUIRE(importedOptions != nullptr);
+        CHECK(importedOptions->direction == test.second);
+        CHECK(field(imported, "options.smartShapeOptions.direction").origin
+            == ValueOrigin::LegacyMus);
+    }
+
+    const auto codaCurve = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F263/F263-curve-opt-2.mus");
+    const auto codaCurveOptions =
+        codaCurve.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(codaCurveOptions != nullptr);
+    CHECK(codaCurveOptions->slurThicknessCp1X == -13);
+    CHECK(codaCurveOptions->slurThicknessCp1Y == -17);
+    CHECK(codaCurveOptions->slurThicknessCp2X == -15);
+    CHECK(codaCurveOptions->slurThicknessCp2Y == -19);
+    CHECK(field(codaCurve,
+              "options.smartShapeOptions.slurThicknessCp1Y").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(codaCurve,
+              "options.smartShapeOptions.slurThicknessCp2Y").rawValue
+        == 19);
+
+    const auto codaCurveVisual = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F263/F263-curve-opt-3.mus");
+    const auto codaCurveVisualOptions =
+        codaCurveVisual.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(codaCurveVisualOptions != nullptr);
+    CHECK(codaCurveVisualOptions->slurThicknessCp1X == 131);
+    CHECK(codaCurveVisualOptions->slurThicknessCp1Y == 171);
+    CHECK(codaCurveVisualOptions->slurThicknessCp2X == -173);
+    CHECK(codaCurveVisualOptions->slurThicknessCp2Y == -179);
 
     // Zlib class 0x00de, Finale 2012: the character slot widens from one word to two and
     // every later field shifts by one word to keep the record 36 words long. cmper 2 here

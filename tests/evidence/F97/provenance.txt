@@ -39,3 +39,17 @@ F97-expword-off.mus
     Words 1 and 5 of that record are 1 in every other known document and moved together in
     the one earlier fixture that touched either, so this save is what separates them: word 5
     is the flag, which leaves word 1 as the line-spacing units selector.
+
+F97-slurtieopts-changed.mus / .etf
+    sha256 MUS a978bcd3b9f71b8aa48c97988294349adaed7fb80bf74e071d77003d48d6529a
+    sha256 ETF bf5278cf0550448c0d886ed2f2b57bca1c25673b72f254637a204ebed3fa36f8
+    Created from Fin97-baseline. The short, medium, and long slur contour inset/height
+    pairs were changed to 532/13, 553/43, and 358/73. Selector 52 retains its final
+    zero tuple. Finale 27 converts the extra-long contour to span/inset/height
+    1152/358/73, showing that this format supplies three contours and that upgrade
+    behavior copies the long inset and height while supplying the later span default.
+    Separate tie-control span edits appear only in TieOptions in the companion.
+
+-finale27/F97-slurtieopts-changed.musx
+    sha256 897be7eb865d0143eaff8224e77010b775f7d4a36f4aaf41c125622366e44aba
+    Finale 27 companion used for the semantic conversion observations above.

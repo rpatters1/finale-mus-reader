@@ -167,7 +167,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00d8` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x3444) |
 | `0x00d9` | unknown | unknown/options | open | 2007 | 96 | `mus-86fafceb1ef2ebe2` (0:0x2026) |
 | `0x00da` | unknown | unknown/options | open | 2007 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x2102) |
-| `0x00db` | frameSpec | others | weak | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x262a) |
+| `0x00db` | shapeDef | others | weak | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x262a) |
 | `0x00de` | ssLineStyle | others | strong | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x2142) |
 | `0x00df` | staffSystemSpec | others | strong | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x2244) |
 | `0x00e1` | unknown | unknown/options | open | 2012 | 12 | `mus-42c6d5caf1e3b6ff` (0:0x2550) |
@@ -182,7 +182,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0112` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2360) |
 | `0x011a` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x237a) |
 | `0x0120` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2394) |
-| `0x0122` | moviePlayerState | others | moderate | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x23ae) |
+| `0x0122` | moviePlayerState | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x23ae) |
 | `0x012c` | unknown | unknown/options | open | 2011, 2012 | 12, 24 | `mus-d89543077eefeae6` (0:0x25e6) |
 | `0x012d` | markingsCategoryName | others | weak | 2011, 2012 | 36 | `mus-eb742704c65232a2` (0:0x23be) |
 | `0x012e` | markingsCategoryName | others | weak | 2011, 2012 | 12, 24, 36 | `mus-eb742704c65232a2` (0:0x251c) |

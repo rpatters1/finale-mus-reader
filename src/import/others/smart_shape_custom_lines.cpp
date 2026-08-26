@@ -459,16 +459,9 @@ const MappingTable& ssLineWideClassTable()
 
 void importSmartShapeCustomLines(const ImportContext& context)
 {
-    // The class is entirely library content: no seeded option references a custom line style
-    // comparator (research/PRODUCTION_READINESS.md), so these objects are built from
-    // whichever comparators the source itself carries and nothing is seeded.
-    //
-    // The record's presence is the structural marker the gates rely on, which is why none of
-    // them names the Finale 2000 boundary the feature arrived at. A source from before that
-    // boundary and a source that simply never used a custom line style are indistinguishable
-    // here: both carry no rows under the tag and yield no objects, which is the right outcome
-    // for either, so a version gate would only add a way to fail closed on a file whose
-    // version could not be read.
+    // These tables construct only the custom lines stored by the source. Smart Shape options
+    // independently request the baseline lines required by formats that predate this class;
+    // deferred reference resolution adds those after every source-owned pool has been read.
     applyMappingTables({&ssLineFixedRowTable(), &ssLineNarrowClassTable(),
                            &ssLineWideClassTable()},
         context.index, context.profile, context.document, context.report);

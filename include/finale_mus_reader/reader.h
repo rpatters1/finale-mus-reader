@@ -229,6 +229,8 @@ struct ImportReport
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     using InstanceFields = std::unordered_map<std::string, FieldInfo>;
     std::unordered_map<InstanceKey, InstanceFields, InstanceKeyHash> fields;
+    /// @brief Provenance shared by every field of a document-pool instance.
+    std::unordered_map<InstanceKey, ValueOrigin, InstanceKeyHash> instanceOrigins;
     /// @brief Text conversion provenance keyed first by class instance, then member.
     std::unordered_map<InstanceKey,
         std::unordered_map<std::string, TextFieldInfo>, InstanceKeyHash> textFields;
@@ -239,6 +241,17 @@ struct ImportReport
     FieldInfo& setField(const InstanceKey& instance, std::string member, FieldInfo info)
     {
         return fields[instance].insert_or_assign(std::move(member), std::move(info)).first->second;
+    }
+
+    void setInstanceOrigin(const InstanceKey& instance, ValueOrigin origin)
+    {
+        instanceOrigins.insert_or_assign(instance, origin);
+    }
+
+    [[nodiscard]] const ValueOrigin* findInstanceOrigin(const InstanceKey& instance) const
+    {
+        const auto found = instanceOrigins.find(instance);
+        return found == instanceOrigins.end() ? nullptr : &found->second;
     }
 
     void setTextField(

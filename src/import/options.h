@@ -41,6 +41,10 @@ void importMusicSpacingOptions(const ImportContext& context);
 /// seeded from the reference document.
 void importRepeatOptions(const ImportContext& context);
 
+/// @brief Recovers the located scalar and slur-contour fields of
+/// options::SmartShapeOptions.
+void importSmartShapeOptions(const ImportContext& context);
+
 /// @brief Recovers options::StemOptions, whose connections are a source-owned collection.
 void importStemOptions(const ImportContext& context);
 

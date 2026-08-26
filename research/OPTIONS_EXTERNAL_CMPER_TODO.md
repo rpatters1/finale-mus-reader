@@ -9,10 +9,6 @@ section below; do not expand the TODO bullets into investigation notes.
 - `ChordOptions::fretStyleId`, `fretInstId` -> `details::FretboardStyle`,
   `details::FretInstrument`. Recover and resolve the two default fretboard
   references.
-- `SmartShapeOptions::ssLineStyleCmp*` -> `others::SmartShapeCustomLine`
-  (four fields: custom, glissando, tab slide, tab bend curve). Recover the
-  referenced line styles; include their `CharParams::font` references.
-
 ## Completed
 
 - `FontDefinition`
@@ -21,6 +17,11 @@ section below; do not expand the TODO bullets into investigation notes.
 - `ClefOptions::ClefDef::shapeId` — clefs 17 and 18 import their source-owned
   shapes on demand.
 - `StemOptions::StemConnection::fontId`
+- `SmartShapeOptions::ssLineStyleCmp*` — source-owned line definitions preserve
+  their comparators. Before the class existed, glissando, tab slide, and tab
+  bend curve copy the pinned baseline definitions in semantic order; the custom
+  field remains unset. The musxdom importer resolves shape, font, and raw-text
+  dependencies for copied definitions, all with `ShareMode::All`.
 - `MultimeasureRestOptions::shapeDef` — the source's own comparator in every
   era; a reference the source does not define is kept as stored and noted at
   `Info`, which 319 zlib documents trigger and Finale treats as normal.

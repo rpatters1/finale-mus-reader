@@ -43,3 +43,24 @@ F263-dateform-tab.mus
     Selector 05 word 5 moves 0 -> 2 and selector 13 word 0 moves 4 -> 7, against a companion
     reading <dateFormat>abbrev</dateFormat>. The value distinguishes the third DateFormat
     member from the second, which the Finale 1.0.0 save fixes.
+
+F263-curve-opt.mus / .etf
+    sha256 e0d207b83365f47d8a2ba8774f727ed268ac8293a719258fbedf1617d8ae2b52 (.mus)
+    sha256 9c2f8b6ef1d06f9cdc6dd60e27e644b283bab06c5cac21ce110bc62119dba309 (.etf)
+    Changes the curve and tie PostScript variables from the baseline. The ETF independently
+    preserves the edited legacy option words.
+
+F263-curve-opt-2.mus / .etf
+    sha256 d2076c77b9f3f65dc36a94397f0ca603350bd2c664a1c3b4f4c7bc71c70ee934 (.mus)
+    sha256 c4f364f083d47cd337bea1996a4ed231b37b1fce4167aeed51f42d1a01f83e49 (.etf)
+    Gives the two sides different magnitudes and reverses their signs. It also changes
+    non-PostScript tie settings to test whether they enter SmartShapeOptions.
+
+F263-curve-opt-3.mus / .etf / .pdf
+    sha256 ba0652c39a4fd350704eb6e10145469fe05671d639bf28d1a181c551c3df79ae (.mus)
+    sha256 501049367345aa9c82177172759058434aa229fa0ef872fa095c33198157b150 (.etf)
+    sha256 0e8278c169c0274b05bfb14bda5a8762c9100016c276e919de32f5bc9ae2f8d1 (.pdf)
+    Adds an actual curve and uses visually discriminating values. Finale 27's ordinary
+    upgrade distorts the curve. The corrected companion has SHA-256
+    e8f361373c9962ddae60844da1b597ecaf19494c0c05194d85d654333ee26e95 and stores
+    SmartShapeOptions thickness values (131, 171, -173, -179), reproducing the legacy appearance.
