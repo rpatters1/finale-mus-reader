@@ -80,15 +80,14 @@ std::size_t countOf(const ImportResult& result)
     return result.document->getTexts()->getArray<Target>().size();
 }
 
-const finale_mus_reader::FieldInfo& textField(const ImportResult& result, std::string_view target)
+template <typename Target>
+const finale_mus_reader::FieldInfo& textField(
+    const ImportResult& result, musx::dom::Cmper cmper, std::string_view member)
 {
-    for (const auto& [instance, fields] : result.report.fields) {
-        (void)instance;
-        for (const auto& [member, info] : fields) {
-            if (target.ends_with(member)) return info;
-        }
-    }
-    throw std::runtime_error("no report entry for " + std::string(target));
+    const auto* info = result.report.findField<Target>(
+        member, musx::dom::SCORE_PARTID, cmper);
+    if (info) return *info;
+    throw std::runtime_error("no report entry for " + std::string(member));
 }
 
 // -- synthetic stream support ------------------------------------------------------------
@@ -212,7 +211,8 @@ void testUncompressedTextPool()
     expectText(countOf<LyricsVerse>(result) == 0 && countOf<SmartShapeText>(result) == 0,
         "Objects were created for classes the source does not contain");
 
-    expectText(textField(result, "texts.blockText[1].text").origin == ValueOrigin::LegacyMus,
+    expectText(textField<BlockText>(result, musx::dom::Cmper(1), "text").origin
+            == ValueOrigin::LegacyMus,
         "A recovered block text was not reported as recovered");
 }
 
@@ -295,7 +295,8 @@ void testCompressedTextPool()
         musx::dom::SCORE_PARTID, 1);
     expectText(titleBlock
             && titleBlock->textType == musx::dom::others::TextBlock::TextType::Block
-            && textField(dcl, "others.textBlock[1].textType").rawValue == 2004,
+            && textField<musx::dom::others::TextBlock>(
+                   dcl, musx::dom::Cmper(1), "textType").rawValue == 2004,
         "The Finale 2006 block-text discriminator was not recovered");
 
     const auto mixed = readTextFixture("evidence/F2006/F2006-embedded-tiff.mus");
@@ -316,7 +317,8 @@ void testCompressedTextPool()
     expectText(expressionBlock && expressionBlock->textId == 35
             && expressionBlock->textType
                 == musx::dom::others::TextBlock::TextType::Expression
-            && textField(mixed, "others.textBlock[52].textType").rawValue == 2006,
+            && textField<musx::dom::others::TextBlock>(
+                   mixed, musx::dom::Cmper(52), "textType").rawValue == 2006,
         "The Finale 2006 expression-text discriminator was not recovered");
 
     // Every binary command code this reader knows, one per record, against the document
@@ -398,9 +400,11 @@ void testCompressedTextPool()
     const auto unicodeBlock = unicode.document->getOthers()
         ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 1);
     expectText(unicodeBlock && !unicodeBlock->roundCorners && unicodeBlock->cornerRadius == 0
-            && textField(unicode, "others.textBlock[1].roundCorners").origin
+            && textField<musx::dom::others::TextBlock>(
+                   unicode, musx::dom::Cmper(1), "roundCorners").origin
                 == ValueOrigin::LegacyBehavior
-            && textField(unicode, "others.textBlock[1].cornerRadius").origin
+            && textField<musx::dom::others::TextBlock>(
+                   unicode, musx::dom::Cmper(1), "cornerRadius").origin
                 == ValueOrigin::LegacyBehavior,
         "The final legacy MUS era did not retain square-corner TextBlock behavior");
 }
@@ -438,7 +442,8 @@ void testFinale2008Inserts()
         musx::dom::SCORE_PARTID, 1);
     expectText(firstBlock
             && firstBlock->textType == musx::dom::others::TextBlock::TextType::Block
-            && textField(result, "others.textBlock[1].textType").rawValue == 2004,
+            && textField<musx::dom::others::TextBlock>(
+                   result, musx::dom::Cmper(1), "textType").rawValue == 2004,
         "The zlib TextBlock family discriminator was not recovered");
 
     // The four appended inserts, each confirmed by the companion.
