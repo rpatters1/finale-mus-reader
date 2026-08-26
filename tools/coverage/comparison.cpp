@@ -36,6 +36,14 @@ std::string_view surveyorClass(std::string_view path)
 
 using Leaves = std::map<std::string, std::pair<Value, std::string>>;
 constexpr std::size_t maximumExamplesPerRow = 20;
+constexpr std::string_view finaleUpgradeLossRule = "finale-upgrade-loss";
+constexpr std::string_view readerCompletedConnectionArrayRule =
+    "reader-completed-connection-array";
+constexpr std::string_view slurConnectionStylePath =
+    "smart_shape_options.slur_connect_styles[type=";
+constexpr std::size_t completeSlurConnectionStyleCount =
+    static_cast<std::size_t>(
+        musx::dom::options::SmartShapeOptions::SlurConnectStyleType::UnderTabNumEnd) + 1;
 
 const std::unordered_set<std::string> metadataKeys = {
     "corpus_id", "status", "epoch", "saving_product", "source_version", "header",
@@ -89,6 +97,7 @@ bool isExcludedPath(std::string_view path)
     static const std::vector<std::string> exact = {
         "font_options.tuples", "font_options.recovered_count",
         "font_options.legacy_behavior_count", "font_options.default_count",
+        "font_options.unmapped_count", "font_options.musx_only_count",
         "font_definitions.duplicate_nonzero_name_count",
         "font_definitions.introduced_duplicate_nonzero_name_count",
         "shape_instruction_lists.instruction_types"};
@@ -137,6 +146,12 @@ std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& 
 std::optional<std::pair<std::string, std::string>> listKey(
     std::string_view path, const Value& item)
 {
+    if (startsWith(path, "smart_shape_options.")
+            && endsWith(path, "_connect_styles") && item.isObject()) {
+        if (const auto* type = item.find("type"); type && type->isInteger()) {
+            return std::pair{"type", std::to_string(type->asInteger())};
+        }
+    }
     if (path == "font_definitions.definitions" && item.isObject()) {
         if (const auto* cmper = item.find("cmper"); cmper && cmper->isInteger()
                 && cmper->asInteger() == 0) return std::pair{"cmper", "0"};
@@ -223,6 +238,57 @@ std::optional<std::int64_t> integerLeaf(const Leaves& leaves, const std::string&
     const auto found = leaves.find(path);
     if (found == leaves.end() || !found->second.first.isInteger()) return std::nullopt;
     return found->second.first.asInteger();
+}
+
+std::set<std::int64_t> slurConnectionStyleTypes(const Leaves& leaves)
+{
+    std::set<std::int64_t> types;
+    for (const auto& [path, value] : leaves) {
+        if (!startsWith(path, slurConnectionStylePath) || !endsWith(path, "].type")
+                || !value.first.isInteger()) continue;
+        types.insert(value.first.asInteger());
+    }
+    return types;
+}
+
+std::optional<std::string> omittedSlurConnectionStyleDifference(
+    const std::string& path, const std::string& category,
+    const Leaves& source, const Leaves& companion)
+{
+    if (category != "reader_only" || !startsWith(path, slurConnectionStylePath)) {
+        return std::nullopt;
+    }
+    const auto close = path.find(']');
+    if (close == std::string::npos) return std::nullopt;
+    const auto prefix = path.substr(0, close + 1);
+    const auto type = integerLeaf(source, prefix + ".type");
+    const auto sourceTypes = slurConnectionStyleTypes(source);
+    const auto companionTypes = slurConnectionStyleTypes(companion);
+    bool sourceIsComplete = sourceTypes.size() == completeSlurConnectionStyleCount;
+    for (std::size_t index = 0;
+            sourceIsComplete && index < completeSlurConnectionStyleCount; ++index) {
+        sourceIsComplete = sourceTypes.contains(static_cast<std::int64_t>(index));
+    }
+    if (!type || !sourceIsComplete
+            || (companionTypes.size() != 4 && companionTypes.size() != 25)
+            || companionTypes.contains(*type)) {
+        return std::nullopt;
+    }
+
+    bool hasNonzeroLegacyValue = false;
+    for (const auto suffix : {".connect_index", ".x", ".y"}) {
+        const auto found = source.find(prefix + suffix);
+        if (found == source.end() || !found->second.first.isInteger()
+                || (found->second.second != "legacy-mus"
+                    && found->second.second != "finale27-default")) {
+            return std::nullopt;
+        }
+        if (found->second.second == "legacy-mus" && found->second.first.asInteger() != 0) {
+            hasNonzeroLegacyValue = true;
+        }
+    }
+    return std::string(hasNonzeroLegacyValue
+        ? finaleUpgradeLossRule : readerCompletedConnectionArrayRule);
 }
 
 bool equalSurrounding(const Leaves& source, const Leaves& companion,
@@ -1228,12 +1294,16 @@ bool isDifferentDefault(const std::string& path, const std::string& category,
     static const std::set<std::string_view> smartShapePaths{
         "smart_shape_options.cresc_horizontal",
         "smart_shape_options.cresc_line_width",
-        "smart_shape_options.short_hairpin_opening_width",
         "smart_shape_options.slur_avoid_staff_lines",
         "smart_shape_options.slur_left_break_horz_adj",
         "smart_shape_options.smart_line_width",
         "smart_shape_options.use_engraver_slurs"};
     if (smartShapePaths.contains(path)) return true;
+    if (startsWith(path, "smart_shape_options.")
+            && path.find("_connect_styles[type=") != std::string::npos
+            && (endsWith(path, ".x") || endsWith(path, ".y"))) {
+        return true;
+    }
     if (startsWith(path, "ss_line_styles[")
             && (endsWith(path, ".solid_width")
                 || endsWith(path, ".char_font_size"))) {
@@ -1265,6 +1335,22 @@ bool isBaselineFontCharsetNormalization(const std::string& path,
     return false;
 }
 
+bool isFinaleUpgradeLoss(const std::string& path, const std::string& category,
+    const std::string& origin, FormatEpoch epoch, const SourceVersion* sourceVersion)
+{
+    if (category != "differs" || origin != "legacy-mus") return false;
+    if (epoch == FormatEpoch::CodaBanner
+            && std::set<std::string_view>{
+                "smart_shape_options.slur_thickness_cp1_x",
+                "smart_shape_options.slur_thickness_cp2_x",
+                "smart_shape_options.slur_thickness_cp2_y"}.contains(path)) {
+        return true;
+    }
+    return epoch == FormatEpoch::DclLegacy && sourceVersion && sourceVersion->major == 8
+        && startsWith(path, "smart_shape_options.bend_curve_connect_styles[type=")
+        && (endsWith(path, ".x") || endsWith(path, ".y"));
+}
+
 std::optional<std::string> expectedDifference(const std::string& path,
     const std::string& category, const std::string& origin, const Value& sourceValue,
     const Value& companionValue, const Leaves& source, const Leaves& companion,
@@ -1291,13 +1377,12 @@ std::optional<std::string> expectedDifference(const std::string& path,
             && companionValue.isInteger() && companionValue.asInteger() == 128) {
         return "coda-stem-offset";
     }
-    if (category == "differs" && origin == "legacy-mus"
-            && epoch == FormatEpoch::CodaBanner
-            && std::set<std::string_view>{
-                "smart_shape_options.slur_thickness_cp1_x",
-                "smart_shape_options.slur_thickness_cp2_x",
-                "smart_shape_options.slur_thickness_cp2_y"}.contains(path)) {
-        return "coda-slur-thickness-upgrade";
+    if (isFinaleUpgradeLoss(path, category, origin, epoch, sourceVersion)) {
+        return std::string(finaleUpgradeLossRule);
+    }
+    if (const auto omitted = omittedSlurConnectionStyleDifference(
+            path, category, source, companion)) {
+        return omitted;
     }
     if (isDifferentDefault(path, category, origin, sourceValue, companionValue)) {
         return "different_defaults";

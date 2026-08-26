@@ -116,6 +116,19 @@ std::string fieldOrigin(const SurveyContext& context, std::string_view member,
 }
 
 template <typename Class>
+std::string fieldOrigin(const SurveyContext& context, std::string_view member,
+    const InstanceKey& instance)
+{
+    if (const auto* info = context.report.findField(instance, member)) {
+        return originName(info->origin);
+    }
+    if (const auto* origin = context.report.findInstanceOrigin(instance)) {
+        return originName(*origin);
+    }
+    return "absent";
+}
+
+template <typename Class>
 const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_view member,
     musx::dom::Cmper cmper1 = 0)
 {

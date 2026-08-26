@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "coverage/registry.h"
@@ -98,6 +99,35 @@ Value observeSmartShapeOptions(const SurveyContext& ctx)
         controls.emplace_back(std::move(observed));
     }
     result.asObject().emplace("slur_control_styles", std::move(controls));
+
+    const auto addConnectionStyles = [&ctx, &result]<typename Map>(
+        std::string_view outputName, std::string_view reportName, const Map& styles) {
+        std::vector<std::pair<typename Map::key_type, typename Map::mapped_type>> ordered(
+            styles.begin(), styles.end());
+        std::ranges::sort(ordered, {}, [](const auto& item) { return item.first; });
+        Value::Array observedStyles;
+        for (std::size_t index = 0; index < ordered.size(); ++index) {
+            const auto& [type, item] = ordered[index];
+            const auto prefix = std::string(reportName) + "[" + std::to_string(index) + "].";
+            Value::Object observed{{"type", static_cast<std::int64_t>(type)},
+                {"connect_index", static_cast<std::int64_t>(item->connectIndex)},
+                {"x", item->xOffset}, {"y", item->yOffset}};
+            observed.emplace("origin_connectIndex",
+                fieldOrigin<Target>(ctx, prefix + "connectIndex"));
+            observed.emplace("origin_x", fieldOrigin<Target>(ctx, prefix + "xOffset"));
+            observed.emplace("origin_y", fieldOrigin<Target>(ctx, prefix + "yOffset"));
+            observedStyles.emplace_back(std::move(observed));
+        }
+        result.asObject().emplace(std::string(outputName), std::move(observedStyles));
+    };
+    addConnectionStyles("slur_connect_styles", "slurConnectStyles",
+        options->slurConnectStyles);
+    addConnectionStyles("tab_slide_connect_styles", "tabSlideConnectStyles",
+        options->tabSlideConnectStyles);
+    addConnectionStyles("glissando_connect_styles", "glissandoConnectStyles",
+        options->glissandoConnectStyles);
+    addConnectionStyles("bend_curve_connect_styles", "bendCurveConnectStyles",
+        options->bendCurveConnectStyles);
     return result;
 }
 

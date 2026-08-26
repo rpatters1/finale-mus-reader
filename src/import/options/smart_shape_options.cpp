@@ -3,6 +3,7 @@
 
 #include "import/options.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +11,9 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "musx/musx.h"
 
@@ -18,6 +22,108 @@ namespace options {
 namespace {
 
 using SmartShapeTarget = musx::dom::options::SmartShapeOptions;
+
+template <typename Enum, std::size_t Size>
+consteval bool enumValuesMatchIndices(const std::array<Enum, Size>& values)
+{
+    for (std::size_t index = 0; index < values.size(); ++index) {
+        if (static_cast<std::size_t>(values[index]) != index) return false;
+    }
+    return true;
+}
+
+constexpr std::array smartShapeConnectionIndices{
+    SmartShapeTarget::ConnectionIndex::HeadLeftTop,
+    SmartShapeTarget::ConnectionIndex::HeadRightTop,
+    SmartShapeTarget::ConnectionIndex::HeadRightBottom,
+    SmartShapeTarget::ConnectionIndex::HeadLeftBottom,
+    SmartShapeTarget::ConnectionIndex::StemLeftTop,
+    SmartShapeTarget::ConnectionIndex::StemRightTop,
+    SmartShapeTarget::ConnectionIndex::StemRightBottom,
+    SmartShapeTarget::ConnectionIndex::StemLeftBottom,
+    SmartShapeTarget::ConnectionIndex::NoteLeftTop,
+    SmartShapeTarget::ConnectionIndex::NoteRightTop,
+    SmartShapeTarget::ConnectionIndex::NoteRightBottom,
+    SmartShapeTarget::ConnectionIndex::NoteLeftBottom,
+    SmartShapeTarget::ConnectionIndex::NoteLeftCenter,
+    SmartShapeTarget::ConnectionIndex::NoteRightCenter,
+};
+constexpr std::array smartShapeSlurConnectionTypes{
+    SmartShapeTarget::SlurConnectStyleType::OverNoteStart,
+    SmartShapeTarget::SlurConnectStyleType::OverNoteEnd,
+    SmartShapeTarget::SlurConnectStyleType::OverStemStart,
+    SmartShapeTarget::SlurConnectStyleType::OverStemEnd,
+    SmartShapeTarget::SlurConnectStyleType::UnderNoteStart,
+    SmartShapeTarget::SlurConnectStyleType::UnderNoteEnd,
+    SmartShapeTarget::SlurConnectStyleType::UnderStemStart,
+    SmartShapeTarget::SlurConnectStyleType::UnderStemEnd,
+    SmartShapeTarget::SlurConnectStyleType::OverMixStemStart,
+    SmartShapeTarget::SlurConnectStyleType::OverMixStemEnd,
+    SmartShapeTarget::SlurConnectStyleType::OverStemGrace,
+    SmartShapeTarget::SlurConnectStyleType::OverStemPrincipal,
+    SmartShapeTarget::SlurConnectStyleType::UnderStemGrace,
+    SmartShapeTarget::SlurConnectStyleType::UnderStemPrincipal,
+    SmartShapeTarget::SlurConnectStyleType::UnderNoteGrace,
+    SmartShapeTarget::SlurConnectStyleType::UnderStemNotePrincipal,
+    SmartShapeTarget::SlurConnectStyleType::OverNoteGrace,
+    SmartShapeTarget::SlurConnectStyleType::OverStemNotePrincipal,
+    SmartShapeTarget::SlurConnectStyleType::OverBeamStart,
+    SmartShapeTarget::SlurConnectStyleType::OverBeamEnd,
+    SmartShapeTarget::SlurConnectStyleType::UnderBeamStart,
+    SmartShapeTarget::SlurConnectStyleType::UnderBeamEnd,
+    SmartShapeTarget::SlurConnectStyleType::OverMixFlagStart,
+    SmartShapeTarget::SlurConnectStyleType::OverFlagStart,
+    SmartShapeTarget::SlurConnectStyleType::UnderFlagStart,
+    SmartShapeTarget::SlurConnectStyleType::OverTabNumStart,
+    SmartShapeTarget::SlurConnectStyleType::OverTabNumEnd,
+    SmartShapeTarget::SlurConnectStyleType::UnderTabNumStart,
+    SmartShapeTarget::SlurConnectStyleType::UnderTabNumEnd,
+};
+constexpr std::array smartShapeTabSlideConnectionTypes{
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchUpLineStart,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchUpLineEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchUpSpaceStart,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchUpSpaceEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchDownLineStart,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchDownLineEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchDownSpaceStart,
+    SmartShapeTarget::TabSlideConnectStyleType::DiffLevelPitchDownSpaceEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchUpLineStart,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchUpLineEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchUpSpaceStart,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchUpSpaceEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchDownLineStart,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchDownLineEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchDownSpaceStart,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchDownSpaceEnd,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchSameStart,
+    SmartShapeTarget::TabSlideConnectStyleType::SameLevelPitchSameEnd,
+};
+constexpr std::array smartShapeGlissandoConnectionTypes{
+    SmartShapeTarget::GlissandoConnectStyleType::DefaultStart,
+    SmartShapeTarget::GlissandoConnectStyleType::DefaultEnd,
+};
+constexpr std::array smartShapeBendCurveConnectionTypes{
+    SmartShapeTarget::BendCurveConnectStyleType::NoteStart,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffEnd,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffStart,
+    SmartShapeTarget::BendCurveConnectStyleType::NoteEnd,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffToTopLineStart,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffFromTopLineEnd,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffEndOffset,
+    SmartShapeTarget::BendCurveConnectStyleType::StaffFromTopEndOffset,
+};
+
+static_assert(enumValuesMatchIndices(smartShapeConnectionIndices),
+    "musxdom ConnectionIndex order must match the legacy stored indices");
+static_assert(enumValuesMatchIndices(smartShapeSlurConnectionTypes),
+    "musxdom slur connection-type order must match the legacy collection");
+static_assert(enumValuesMatchIndices(smartShapeTabSlideConnectionTypes),
+    "musxdom tab-slide connection-type order must match the legacy collection");
+static_assert(enumValuesMatchIndices(smartShapeGlissandoConnectionTypes),
+    "musxdom glissando connection-type order must match the legacy collection");
+static_assert(enumValuesMatchIndices(smartShapeBendCurveConnectionTypes),
+    "musxdom bend-curve connection-type order must match the legacy collection");
 
 constexpr std::uint16_t smartShapeSelector(std::string_view tag)
 {
@@ -34,6 +140,10 @@ constexpr std::string_view lineStyleTag = "92";
 constexpr std::string_view slurTipTag = "93";
 constexpr std::string_view guitarBendTag = "97";
 constexpr std::string_view figureTag = "FI";
+constexpr std::uint16_t smartShapeSlurConnectionSelector = 26;
+constexpr std::uint16_t smartShapeTabSlideConnectionSelector = 90;
+constexpr std::uint16_t smartShapeGlissandoConnectionSelector = 91;
+constexpr std::uint16_t smartShapeBendCurveConnectionSelector = 98;
 constexpr std::uint16_t slurThicknessSelector = smartShapeSelector(slurThicknessTag);
 constexpr std::uint16_t directionSelector = smartShapeSelector(directionTag);
 constexpr std::uint16_t engraverSlurSelector = smartShapeSelector(engraverSlurTag);
@@ -49,6 +159,8 @@ constexpr records::LegacyTag zlibFigureClass = 0x008d;
 constexpr std::size_t controlStyleCount = 4;
 constexpr std::size_t controlStyleWords = 3;
 constexpr std::size_t controlStylePayloadWords = controlStyleCount * controlStyleWords;
+constexpr std::size_t smartShapeConnectionStyleWords = 3;
+constexpr std::size_t smartShapeConnectionIndexCount = smartShapeConnectionIndices.size();
 constexpr std::uint8_t firstCustomLineMajorVersion = 5;
 constexpr std::uint8_t firstTabBendCurveMajorVersion = 8;
 constexpr musx::dom::Evpu finale26HookLength = 8;
@@ -581,19 +693,11 @@ void applyPreFinale37FigureBehavior(const ImportContext& context,
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
-void applyPreShortHairpinBehavior(const ImportContext& context,
+void applyLegacyHairpinOpeningBehavior(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
-    if (context.profile.epoch == FormatEpoch::CodaBanner
-        || context.profile.epoch == FormatEpoch::Unknown
-        || !hasFigureSettings(context.index, context.profile)) {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-            "shortHairpinOpeningWidth",
-            {ValueOrigin::Finale27Default, 0, 0, target->shortHairpinOpeningWidth});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        return;
-    }
+    // Legacy formats have one hairpin opening. The separate short opening postdates MUS,
+    // so both modern fields receive that one behavior even where its source remains unlocated.
     target->shortHairpinOpeningWidth = target->crescHeight;
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     const auto* source = context.report.findField<SmartShapeTarget>("crescHeight");
@@ -651,26 +755,122 @@ void applyFinale26HookBehavior(const ImportContext& context,
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
-void reportUnsupportedSmartShapeDefaults(const ImportContext& context,
+template <typename Map>
+void captureSmartShapeConnectionStyles(const ImportContext& context,
+    const std::shared_ptr<SmartShapeTarget>& target, std::uint16_t selector,
+    std::string_view collection, Map SmartShapeTarget::* member,
+    std::size_t semanticStyleCount, bool trailingTupleAfterInitialLayout = false)
+{
+    const auto family = readGlobalWords(context.index, context.profile, selector);
+    if (!family.present) {
+        return;
+    }
+
+    auto& styles = target.get()->*member;
+    auto tupleCount = family.words.size() / smartShapeConnectionStyleWords;
+    // The slur family starts as two ordinary tuples. Its two later fixed shapes append
+    // one structural tuple after the 25- or 29-element semantic collection.
+    if (trailingTupleAfterInitialLayout && tupleCount > 2) {
+        --tupleCount;
+    }
+    const auto storedStyleCount = (std::min)(tupleCount, semanticStyleCount);
+    for (std::size_t index = 0; index < storedStyleCount; ++index) {
+        const auto first = index * smartShapeConnectionStyleWords;
+        const auto storedConnection = wordAt(family.words, first);
+        if (storedConnection < 0
+            || static_cast<std::size_t>(storedConnection) >= smartShapeConnectionIndexCount) {
+            continue;
+        }
+        auto style = std::make_shared<SmartShapeTarget::ConnectionStyle>();
+        style->connectIndex = static_cast<SmartShapeTarget::ConnectionIndex>(storedConnection);
+        style->xOffset = wordAt(family.words, first + 1);
+        style->yOffset = wordAt(family.words, first + 2);
+        styles.insert_or_assign(
+            static_cast<typename Map::key_type>(index), std::move(style));
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
+        const auto& recovered = *styles.at(static_cast<typename Map::key_type>(index));
+        const auto instance = instanceKey<SmartShapeTarget>();
+        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+            prefix + "connectIndex",
+            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
+                storedConnection});
+        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+            prefix + "xOffset",
+            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
+                recovered.xOffset});
+        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+            prefix + "yOffset",
+            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
+                recovered.yOffset});
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    }
+}
+
+template <typename Map>
+void reportSmartShapeConnectionStyleDefaults(const ImportContext& context,
+    std::string_view collection, const Map& styles)
+{
+    std::vector<std::pair<typename Map::key_type, typename Map::mapped_type>> ordered(
+        styles.begin(), styles.end());
+    std::ranges::sort(ordered, {}, [](const auto& item) { return item.first; });
+    for (std::size_t index = 0; index < ordered.size(); ++index) {
+        const auto& style = *ordered[index].second;
+        const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        const auto instance = instanceKey<SmartShapeTarget>();
+        if (!context.report.findField(instance, prefix + "connectIndex")) {
+            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+                prefix + "connectIndex",
+                {ValueOrigin::Finale27Default, 0, 0,
+                    static_cast<std::int64_t>(style.connectIndex)});
+        }
+        if (!context.report.findField(instance, prefix + "xOffset")) {
+            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+                prefix + "xOffset",
+                {ValueOrigin::Finale27Default, 0, 0, style.xOffset});
+        }
+        if (!context.report.findField(instance, prefix + "yOffset")) {
+            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
+                prefix + "yOffset",
+                {ValueOrigin::Finale27Default, 0, 0, style.yOffset});
+        }
+#else
+        static_cast<void>(context);
+        static_cast<void>(prefix);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    }
+}
+
+void reportRemainingSmartShapeFields(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
+    const auto instance = instanceKey<SmartShapeTarget>();
+    FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
         "maximumShortHairpinLength",
-        {ValueOrigin::Finale27Default, 0, 0, target->maximumShortHairpinLength});
+        {ValueOrigin::MusxOnly, 0, 0, target->maximumShortHairpinLength});
     if (!context.report.findField<SmartShapeTarget>("direction")) {
         FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
             "direction",
             {ValueOrigin::Finale27Default, 0, 0,
                 static_cast<std::int64_t>(target->direction)});
     }
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
+    FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
         "articAvoidSlurAmt",
-        {ValueOrigin::Finale27Default, 0, 0, target->articAvoidSlurAmt});
+        {ValueOrigin::MusxOnly, 0, 0, target->articAvoidSlurAmt});
 #else
     static_cast<void>(context);
     static_cast<void>(target);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    reportSmartShapeConnectionStyleDefaults(context, "slurConnectStyles",
+        target->slurConnectStyles);
+    reportSmartShapeConnectionStyleDefaults(context, "tabSlideConnectStyles",
+        target->tabSlideConnectStyles);
+    reportSmartShapeConnectionStyleDefaults(context, "glissandoConnectStyles",
+        target->glissandoConnectStyles);
+    reportSmartShapeConnectionStyleDefaults(context, "bendCurveConnectStyles",
+        target->bendCurveConnectStyles);
 }
 
 void requestUnavailableToolLineDefaults(const ImportContext& context,
@@ -736,6 +936,18 @@ void importSmartShapeOptions(const ImportContext& context)
         && context.profile.epoch != FormatEpoch::Unknown) {
         captureControlStyles(context, target);
     }
+    captureSmartShapeConnectionStyles(context, target, smartShapeSlurConnectionSelector,
+        "slurConnectStyles", &SmartShapeTarget::slurConnectStyles,
+        smartShapeSlurConnectionTypes.size(), true);
+    captureSmartShapeConnectionStyles(context, target, smartShapeTabSlideConnectionSelector,
+        "tabSlideConnectStyles", &SmartShapeTarget::tabSlideConnectStyles,
+        smartShapeTabSlideConnectionTypes.size());
+    captureSmartShapeConnectionStyles(context, target, smartShapeGlissandoConnectionSelector,
+        "glissandoConnectStyles", &SmartShapeTarget::glissandoConnectStyles,
+        smartShapeGlissandoConnectionTypes.size());
+    captureSmartShapeConnectionStyles(context, target, smartShapeBendCurveConnectionSelector,
+        "bendCurveConnectStyles", &SmartShapeTarget::bendCurveConnectStyles,
+        smartShapeBendCurveConnectionTypes.size());
     captureDirection(context, target);
     applyMappingTables({&codaSlurThicknessTable(), &fixedEarlySlurTable(), &fixedSlurTable(),
                            &classSlurTable(), &fixedLineTable(), &classLineTable(),
@@ -745,8 +957,8 @@ void importSmartShapeOptions(const ImportContext& context)
     captureSlurAvoidStaffLinesAmount(context, target);
     applySingleIncidenceSlurAdjustmentBehavior(context, target);
     applyFinale26HookBehavior(context, target);
-    applyPreShortHairpinBehavior(context, target);
-    reportUnsupportedSmartShapeDefaults(context, target);
+    applyLegacyHairpinOpeningBehavior(context, target);
+    reportRemainingSmartShapeFields(context, target);
 }
 
 } // namespace options

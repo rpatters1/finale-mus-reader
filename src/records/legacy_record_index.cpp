@@ -168,10 +168,8 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 // records in block 0x001b retain the pre-zlib second comparator between cmper1 and part id;
 // the endian-specific length geometry is handled below. Incidence arrays remain in each
 // class-specific payload rather than becoming a header dimension.
-// **Believed: that second comparator is the measure.** It holds the measure the assignment
-// belongs to, and the 20-word payload after it is the older mg tuple unchanged. Revise the
-// interpretation if contrary data appears, but do not discard the field by treating it as an
-// incidence.
+// Class 0x041d establishes that the second comparator is the measure. Its payload retains the
+// fixed-detail representation: an 18-word graphic assignment rounded up to four five-word rows.
 std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
     bool details, std::vector<std::uint8_t>& payload)
 {

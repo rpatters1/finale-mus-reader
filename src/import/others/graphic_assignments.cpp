@@ -7,6 +7,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "import/support/graphic_assignment.h"
@@ -72,37 +73,40 @@ void reportAssignmentValue(const ImportContext& context, musx::dom::Cmper cmper,
         std::move(member), {ValueOrigin::LegacyMus,
         row.blockOffset, row.decodedOffset, value});
 }
-#define REPORT_ASSIGNMENT_VALUE(Target, ...) reportAssignmentValue<Target>(__VA_ARGS__)
-#else
-#define REPORT_ASSIGNMENT_VALUE(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 template <typename Target>
-void populatePosition(Target& target, std::uint16_t packed)
+void reportPositionValues(const ImportContext& context, musx::dom::Cmper cmper,
+    musx::dom::Inci inci, std::string_view prefix, std::int64_t value,
+    const records::LegacyRow& row, bool hasPositionFrom)
 {
-    using H = typename Target::HorizontalAlignment;
-    using V = typename Target::VerticalAlignment;
-    switch (packed & 0x0007U) {
-    case 0x0001: target.hAlign = H::Left; break;
-    case 0x0002: target.hAlign = H::Right; break;
-    case 0x0004: target.hAlign = H::Center; break;
-    default: break;
+    const auto memberName = [prefix](std::string_view suffix) {
+        if (!prefix.empty()) return std::string(prefix) + std::string(suffix);
+        auto result = std::string(suffix);
+        result.front() = static_cast<char>(result.front() - 'A' + 'a');
+        return result;
+    };
+    reportAssignmentValue<Target>(context, cmper, inci,
+        memberName("HAlign"), value, row);
+    reportAssignmentValue<Target>(context, cmper, inci,
+        memberName("VAlign"), value, row);
+    if (hasPositionFrom) {
+        reportAssignmentValue<Target>(context, cmper, inci,
+            memberName("PosFrom"), value, row);
     }
-    switch (packed & 0x0038U) {
-    case 0x0008: target.vAlign = V::Top; break;
-    case 0x0010: target.vAlign = V::Bottom; break;
-    case 0x0020: target.vAlign = V::Center; break;
-    default: break;
-    }
-    target.fixedPerc = (packed & 0x0100U) != 0;
+    reportAssignmentValue<Target>(context, cmper, inci,
+        memberName("FixedPerc"), value, row);
 }
+#define REPORT_ASSIGNMENT_VALUE(Target, ...) reportAssignmentValue<Target>(__VA_ARGS__)
+#define REPORT_POSITION_VALUES(Target, ...) reportPositionValues<Target>(__VA_ARGS__)
+#else
+#define REPORT_ASSIGNMENT_VALUE(...) ((void)0)
+#define REPORT_POSITION_VALUES(...) ((void)0)
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void populatePagePosition(PageTarget& target, std::uint16_t packed, bool right)
 {
     if (!right) {
-        populatePosition(target, packed);
-        if ((packed & 0x0080U) != 0) target.posFrom = PageTarget::PositionFrom::PageEdge;
-        else if ((packed & 0x0040U) != 0) target.posFrom = PageTarget::PositionFrom::Margins;
+        populateGraphicAssignmentPosition<true>(target, packed);
         return;
     }
     using H = PageTarget::HorizontalAlignment;
@@ -126,13 +130,13 @@ void populatePagePosition(PageTarget& target, std::uint16_t packed, bool right)
 
 PageTarget::PageAssignType pageAssignType(std::uint16_t raw)
 {
-    // The source is a one-hot page-selection mask. **Believed for all but One,** which is the
-    // only value seen; the other three preserve the bit spelling Finale's related
-    // page-assignment records use.
-    switch (raw) {
+    // Page selection occupies a one-hot low nibble; visibility is an independent bit in the
+    // same display-flags word.
+    switch (raw & 0x000fU) {
     case 1: return PageTarget::PageAssignType::One;
-    case 2: return PageTarget::PageAssignType::Odd;
-    case 4: return PageTarget::PageAssignType::Even;
+    case 2: return PageTarget::PageAssignType::AllPages;
+    case 4: return PageTarget::PageAssignType::Odd;
+    case 8: return PageTarget::PageAssignType::Even;
     default: return PageTarget::PageAssignType::AllPages;
     }
 }
@@ -164,13 +168,25 @@ void importPageFamily(const ImportContext& context)
             target->rightPgBottom = tuple[15];
             populatePagePosition(*target, static_cast<std::uint16_t>(tuple[16]), true);
             constexpr const char* names[] = {"version", "left", "bottom", "width", "height",
-                "fDescId", "hidden", "displayType", "position", "startPage", "endPage",
+                "fDescId", nullptr, "displayType", nullptr, "startPage", "endPage",
                 "savedRecord", "origWidth", "origHeight", "rightPgLeft", "rightPgBottom",
-                "rightPgPosition", "graphicCmper"};
+                nullptr, "graphicCmper"};
             for (std::size_t slot = 0; slot < graphicAssignmentWordCount; ++slot) {
+                if (!names[slot]) continue;
                 REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, names[slot], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
+            REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, "hidden", tuple[7],
+                sourceRow(source, rows, at + 7));
+            REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, "", tuple[8],
+                sourceRow(source, rows, at + 8), true);
+            REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, "rightPg", tuple[16],
+                sourceRow(source, rows, at + 16), true);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            context.report.setInstanceOrigin(
+                instanceKey<PageTarget>(musx::dom::SCORE_PARTID, cmper, inci),
+                ValueOrigin::LegacyMus);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             context.document->getOthers()->add(PageTarget::XmlNodeName, std::move(target));
         }
     }
@@ -195,16 +211,23 @@ void importShapeFamily(const ImportContext& context)
             const std::span<const std::int16_t> tuple(
                 words.data() + at, graphicAssignmentWordCount);
             populateGraphicAssignmentCommon(*target, tuple);
-            populatePosition(*target, static_cast<std::uint16_t>(tuple[8]));
-            constexpr std::size_t importedSlots[] = {0, 1, 2, 3, 4, 5, 6, 8, 11, 12, 13, 17};
+            populateGraphicAssignmentPosition<false>(
+                *target, static_cast<std::uint16_t>(tuple[8]));
+            constexpr std::size_t importedSlots[] = {0, 1, 2, 3, 4, 5, 7, 11, 12, 13, 17};
             constexpr const char* names[] = {"version", "left", "bottom", "width", "height",
-                "fDescId", "hidden", "position", "savedRecord", "origWidth", "origHeight",
-                "graphicCmper"};
+                "fDescId", "hidden", "savedRecord", "origWidth", "origHeight", "graphicCmper"};
             for (std::size_t index = 0; index < std::size(importedSlots); ++index) {
                 const auto slot = importedSlots[index];
                 REPORT_ASSIGNMENT_VALUE(ShapeTarget, context, cmper, inci, names[index], tuple[slot],
                     sourceRow(source, rows, at + slot));
             }
+            REPORT_POSITION_VALUES(ShapeTarget, context, cmper, inci, "", tuple[8],
+                sourceRow(source, rows, at + 8), false);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            context.report.setInstanceOrigin(
+                instanceKey<ShapeTarget>(musx::dom::SCORE_PARTID, cmper, inci),
+                ValueOrigin::LegacyMus);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             context.document->getOthers()->add(ShapeTarget::XmlNodeName, std::move(target));
         }
     }
@@ -226,3 +249,4 @@ void importShapeGraphicAssignments(const ImportContext& context)
 } // namespace finale_mus_reader
 
 #undef REPORT_ASSIGNMENT_VALUE
+#undef REPORT_POSITION_VALUES

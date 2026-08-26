@@ -1435,15 +1435,16 @@ void testLyricPostFormatAssertions()
     expectMapping(lyrics->hyphenChar == U'~',
         "The hyphen character was asserted in code instead of taken from the seed");
     expectMapping(field(report, "options.lyricOptions.hyphenChar").origin
-            == ValueOrigin::Finale27Default,
-        "The seeded hyphen character was reported as something other than a Finale 27 default");
+            == ValueOrigin::MusxOnly,
+        "The post-legacy hyphen character was not reported as MUSX-only");
     // musxdom populates altHyphenFont only from an <altHyphenFont> element and synthesizes one
-    // in integrityCheck, so a null pointer during the import means the baseline omitted it.
-    // The reader must not invent a value for it, nor report one.
-    expectMapping(!anyMappingReportedField(report, [](const auto& member, const auto&) {
-                      return member.find("altHyphenFont.") != std::string::npos;
-                  }),
-        "The alternate hyphen font was reported although nothing states it");
+    // in integrityCheck, so the field surface is reported without claiming a source.
+    for (const auto* member : {"altHyphenFont.fontId", "altHyphenFont.fontSize",
+             "altHyphenFont.effects"}) {
+        expectMapping(field(report, std::string("options.lyricOptions.") + member).origin
+                == ValueOrigin::MusxOnly,
+            std::string("The alternate hyphen font field was not MUSX-only: ") + member);
+    }
 
     // The three assertions that do contradict the seed, for contrast: without any of the six
     // selectors the reader must not leave a document claiming these.
@@ -1716,7 +1717,7 @@ void testGraphicAssignmentsAcrossEpochs()
 {
     using PageGraphicAssign = musx::dom::others::PageGraphicAssign;
     const std::vector<std::int16_t> tuple{
-        0x100, 120, -48, 640, 320, 7, 0, 1, 0x014c,
+        0x100, 120, -48, 640, 320, 7, 0, 0x11, 0x014c,
         4, 4, 1, 1280, 640, 144, -24, 0x0192, 2};
     const std::vector<SyntheticRow> fixedRows{
         {4, "pg", {tuple[0], tuple[1], tuple[2], tuple[3], tuple[4], tuple[5]}},
@@ -1747,7 +1748,7 @@ void testGraphicAssignmentsAcrossEpochs()
         expectMapping(assignment && assignment->version == 0x100
                 && assignment->left == 120 && assignment->bottom == -48
                 && assignment->width == 640 && assignment->height == 320
-                && assignment->fDescId == 7 && !assignment->hidden
+                && assignment->fDescId == 7 && assignment->hidden
                 && assignment->displayType == PageGraphicAssign::PageAssignType::One
                 && assignment->hAlign == PageGraphicAssign::HorizontalAlignment::Center
                 && assignment->vAlign == PageGraphicAssign::VerticalAlignment::Top
@@ -1762,8 +1763,53 @@ void testGraphicAssignmentsAcrossEpochs()
                 && assignment->rightPgFixedPerc && assignment->graphicCmper == 2,
             "A PageGraphicAssign field failed in epoch "
                 + std::to_string(static_cast<int>(epoch)));
-        expectMapping(reportedFieldCount(report) == 18,
-            "A PageGraphicAssign did not report all source words");
+        expectMapping(reportedFieldCount(report) == 24,
+            "A PageGraphicAssign did not report every persisted field");
+    }
+
+    const std::array<std::pair<std::int16_t, PageGraphicAssign::PageAssignType>, 4>
+        displayTypes{{
+            {std::int16_t(0x0001), PageGraphicAssign::PageAssignType::One},
+            {std::int16_t(0x0002), PageGraphicAssign::PageAssignType::AllPages},
+            {std::int16_t(0x0004), PageGraphicAssign::PageAssignType::Odd},
+            {std::int16_t(0x0008), PageGraphicAssign::PageAssignType::Even},
+        }};
+    std::vector<SyntheticRow> displayRows;
+    for (const auto& [displayFlags, expected] : displayTypes) {
+        (void)expected;
+        auto displayTuple = tuple;
+        displayTuple[7] = displayFlags;
+        for (std::size_t at = 0; at < displayTuple.size();
+                at += finale_mus_reader::records::otherWordCount) {
+            SyntheticRow row{4, "pg", {}};
+            for (std::size_t slot = 0;
+                    slot < finale_mus_reader::records::otherWordCount; ++slot) {
+                row.words[slot] = displayTuple[at + slot];
+            }
+            displayRows.push_back(row);
+        }
+    }
+    const auto displayParsed = makeContainer(displayRows, FormatEpoch::UncompressedLegacy);
+    const auto displayIndex = LegacyRecordIndex::build(displayParsed);
+    auto displaySession = musx::factory::DocumentFactory::begin();
+    const auto displayDocument = displaySession.getDocument();
+    auto displayReferenceSession = musx::factory::DocumentFactory::begin();
+    const auto displayReference = std::move(displayReferenceSession).finish();
+    ImportReport displayReport;
+    finale_mus_reader::PendingReferences displayPending;
+    SourceProfile displayProfile;
+    displayProfile.epoch = FormatEpoch::UncompressedLegacy;
+    displayProfile.byteOrder = displayParsed.byteOrder;
+    musx::factory::ConstructionContext displayConstruction;
+    const finale_mus_reader::ImportContext displayContext{displayIndex, displayProfile, noSource,
+        displayDocument, displayReference, displayReport, displayPending, displayConstruction};
+    finale_mus_reader::others::importPageGraphicAssignments(displayContext);
+    for (std::size_t index = 0; index < displayTypes.size(); ++index) {
+        const auto assignment = displayDocument->getOthers()->get<PageGraphicAssign>(
+            musx::dom::SCORE_PARTID, 4, musx::dom::Inci(static_cast<int>(index)));
+        expectMapping(assignment && assignment->displayType == displayTypes[index].second
+                && !assignment->hidden,
+            "A page graphic display flag did not map to its page-selection type");
     }
 }
 
@@ -1877,6 +1923,8 @@ void testShapeGraphicAssignmentsAcrossEpochs()
                 && assignment->graphicCmper == 3,
             "A ShapeGraphicAssign field failed in epoch "
                 + std::to_string(static_cast<int>(epoch)));
+        expectMapping(reportedFieldCount(report) == 14,
+            "A ShapeGraphicAssign did not report every persisted field");
     }
 }
 
@@ -2148,12 +2196,26 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
                 && assignment->left == 120 && assignment->bottom == -324
                 && assignment->width == 336 && assignment->height == 168
                 && assignment->fDescId == 1 && !assignment->hidden
+                && assignment->hAlign == Target::HorizontalAlignment::Left
+                && assignment->vAlign == Target::VerticalAlignment::Top
+                && assignment->posFrom == Target::PositionFrom::PageEdge
+                && assignment->fixedPerc
                 && assignment->savedRecord && assignment->origWidth == 336
                 && assignment->origHeight == 168 && assignment->graphicCmper == 1,
             "A MeasureGraphicAssign field or comparator failed in epoch "
                 + std::to_string(static_cast<int>(epoch)));
-        expectMapping(reportedFieldCount(report) == 11,
-            "A MeasureGraphicAssign did not report every imported field");
+        expectMapping(reportedFieldCount(report) == 15,
+            "A MeasureGraphicAssign did not report every persisted field");
+        const auto instance = finale_mus_reader::instanceKey<Target>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0),
+            musx::dom::Cmper(2));
+        for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
+            const auto* info = report.findField(instance, member);
+            expectMapping(info && info->origin == ValueOrigin::LegacyMus
+                    && info->rawValue == 393,
+                std::string("MeasureGraphicAssign did not recover ") + member
+                    + " from the packed positioning word");
+        }
     }
     const auto bigEndian = makeDetailClassContainer(7, 12, 2, tuple, ByteOrder::BigEndian);
     const auto bigEndianIndex = LegacyRecordIndex::build(bigEndian);
@@ -2951,6 +3013,7 @@ musx::dom::DocumentPtr makeSmartShapeOptionsDocument()
     auto options = std::make_shared<SmartShape>(document);
     options->shortHairpinOpeningWidth = 901;
     options->crescHeight = 902;
+    options->maximumShortHairpinLength = 927;
     options->crescLineWidth = 903;
     options->hookLength = 904;
     options->smartLineWidth = 905;
@@ -2978,6 +3041,7 @@ musx::dom::DocumentPtr makeSmartShapeOptionsDocument()
     options->slurDoStretchFirst = true;
     options->slurStretchByPercent = false;
     options->maxSlurStretchPercent = 921;
+    options->articAvoidSlurAmt = 928;
     options->ssLineStyleCmpCustom = 922;
     options->ssLineStyleCmpGlissando = 923;
     options->ssLineStyleCmpTabSlide = 924;
@@ -3000,6 +3064,23 @@ musx::dom::DocumentPtr makeSmartShapeOptionsDocument()
         control->height = 929 + static_cast<int>(index) * 3;
         options->slurControlStyles.emplace(controlTypes[index], std::move(control));
     }
+    const auto addConnections = []<typename Map>(Map& map, std::size_t count) {
+        for (std::size_t index = 0; index < count; ++index) {
+            auto connection = std::make_shared<SmartShape::ConnectionStyle>();
+            connection->connectIndex = SmartShape::ConnectionIndex::HeadRightTop;
+            connection->xOffset = 929 + static_cast<int>(index);
+            connection->yOffset = 930 + static_cast<int>(index);
+            map.emplace(static_cast<typename Map::key_type>(index), std::move(connection));
+        }
+    };
+    addConnections(options->slurConnectStyles,
+        static_cast<std::size_t>(SmartShape::SlurConnectStyleType::UnderTabNumEnd) + 1);
+    addConnections(options->tabSlideConnectStyles,
+        static_cast<std::size_t>(SmartShape::TabSlideConnectStyleType::SameLevelPitchSameEnd) + 1);
+    addConnections(options->glissandoConnectStyles,
+        static_cast<std::size_t>(SmartShape::GlissandoConnectStyleType::DefaultEnd) + 1);
+    addConnections(options->bendCurveConnectStyles,
+        static_cast<std::size_t>(SmartShape::BendCurveConnectStyleType::StaffFromTopEndOffset) + 1);
     document->getOptions()->add(SmartShape::XmlNodeName, options);
     return std::move(session).finish();
 }
@@ -3007,7 +3088,25 @@ musx::dom::DocumentPtr makeSmartShapeOptionsDocument()
 void testSmartShapeOptionsAcrossEpochs()
 {
     using SmartShape = musx::dom::options::SmartShapeOptions;
-    const std::vector<SyntheticRow> rows{
+    const auto connectionWords = [](std::size_t count, bool appendTerminal = false) {
+        std::vector<std::int16_t> words;
+        words.reserve((count + (appendTerminal ? 1 : 0)) * 3);
+        for (std::size_t index = 0; index < count; ++index) {
+            words.push_back(static_cast<std::int16_t>(index % 14));
+            words.push_back(static_cast<std::int16_t>(1000 + index));
+            words.push_back(static_cast<std::int16_t>(-1000 - index));
+        }
+        if (appendTerminal) {
+            words.insert(words.end(), 3, 0);
+        }
+        return words;
+    };
+    const auto slurConnectionWords = connectionWords(29, true);
+    const auto tabSlideConnectionWords = connectionWords(18);
+    const auto glissandoConnectionWords = connectionWords(2);
+    const auto bendCurveConnectionWords = connectionWords(8);
+
+    std::vector<SyntheticRow> rows{
         {GLOBALS_CMPER, "50", {10, 11, 12, 13, 2, 9}},
         {GLOBALS_CMPER, "51", {0, 1536, 0, 2048, 8500, 1}},
         {GLOBALS_CMPER, "52", {36, 614, 16, 288, 512, 60}},
@@ -3021,6 +3120,22 @@ void testSmartShapeOptionsAcrossEpochs()
         {11, "FI", {40, 224, 12, 0, 225, 1}},
         {12, "FI", {0, 18, 0, 19, 1, 0}},
     };
+    const auto appendFixedFamily = [](std::vector<SyntheticRow>& destination,
+                                      const char* tag,
+                                      const std::vector<std::int16_t>& words) {
+        expectMapping(words.size() % 6 == 0,
+            "A synthetic fixed-row family did not end on an incidence boundary");
+        for (std::size_t first = 0; first < words.size(); first += 6) {
+            std::array<std::int16_t, 6> incidence{};
+            std::ranges::copy(words.begin() + static_cast<std::ptrdiff_t>(first),
+                words.begin() + static_cast<std::ptrdiff_t>(first + 6), incidence.begin());
+            destination.push_back({GLOBALS_CMPER, tag, incidence});
+        }
+    };
+    appendFixedFamily(rows, "26", slurConnectionWords);
+    appendFixedFamily(rows, "90", tabSlideConnectionWords);
+    appendFixedFamily(rows, "91", glissandoConnectionWords);
+    appendFixedFamily(rows, "98", bendCurveConnectionWords);
     const auto runImport = [](const finale_mus_reader::container::ParsedContainer& parsed,
                                const SourceProfile& profile, ImportReport& report) {
         const auto document = makeSmartShapeOptionsDocument();
@@ -3073,6 +3188,25 @@ void testSmartShapeOptionsAcrossEpochs()
         expectMapping(extraLong->span == 1152 && extraLong->inset == 369
                 && extraLong->height == 80,
             epoch + " did not recover the extra-long slur contour");
+        const auto lastSlur = options->slurConnectStyles.at(
+            SmartShape::SlurConnectStyleType::UnderTabNumEnd);
+        const auto lastTabSlide = options->tabSlideConnectStyles.at(
+            SmartShape::TabSlideConnectStyleType::SameLevelPitchSameEnd);
+        const auto glissandoEnd = options->glissandoConnectStyles.at(
+            SmartShape::GlissandoConnectStyleType::DefaultEnd);
+        const auto lastBend = options->bendCurveConnectStyles.at(
+            SmartShape::BendCurveConnectStyleType::StaffFromTopEndOffset);
+        expectMapping(options->slurConnectStyles.size() == 29
+                && lastSlur->connectIndex == SmartShape::ConnectionIndex::HeadLeftTop
+                && lastSlur->xOffset == 1028 && lastSlur->yOffset == -1028
+                && options->tabSlideConnectStyles.size() == 18
+                && lastTabSlide->connectIndex == SmartShape::ConnectionIndex::HeadLeftBottom
+                && lastTabSlide->xOffset == 1017
+                && options->glissandoConnectStyles.size() == 2
+                && glissandoEnd->connectIndex == SmartShape::ConnectionIndex::HeadRightTop
+                && options->bendCurveConnectStyles.size() == 8
+                && lastBend->connectIndex == SmartShape::ConnectionIndex::StemLeftBottom,
+            epoch + " did not recover every Smart Shape connection style");
         expectMapping(field(report, "options.smartShapeOptions.crescHeight").origin
                     == ValueOrigin::LegacyMus
                 && field(report,
@@ -3082,6 +3216,26 @@ void testSmartShapeOptionsAcrossEpochs()
                        "options.smartShapeOptions.slurControlStyles[3].height").rawValue
                     == 80,
             epoch + " reported incorrect Smart Shape origins");
+        expectMapping(field(report,
+                          "options.smartShapeOptions.maximumShortHairpinLength").origin
+                    == ValueOrigin::MusxOnly
+                && field(report,
+                       "options.smartShapeOptions.articAvoidSlurAmt").origin
+                    == ValueOrigin::MusxOnly,
+            epoch + " reported incorrect unresolved Smart Shape scalar origins");
+        expectMapping(field(report,
+                          "options.smartShapeOptions.slurConnectStyles[28].xOffset").origin
+                    == ValueOrigin::LegacyMus
+                && field(report,
+                       "options.smartShapeOptions.tabSlideConnectStyles[17].yOffset").origin
+                    == ValueOrigin::LegacyMus
+                && field(report,
+                       "options.smartShapeOptions.glissandoConnectStyles[1].connectIndex").origin
+                    == ValueOrigin::LegacyMus
+                && field(report,
+                       "options.smartShapeOptions.bendCurveConnectStyles[7].xOffset").origin
+                    == ValueOrigin::LegacyMus,
+            epoch + " reported incorrect Smart Shape connection-style origins");
     };
 
     for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
@@ -3187,6 +3341,10 @@ void testSmartShapeOptionsAcrossEpochs()
             {0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0}},
         {0x008d, {40, 224, 12, 0, 225, 1}, 11},
         {0x008d, {0, 18, 0, 19, 1, 0}, 12},
+        {0x0028, slurConnectionWords},
+        {0x0068, tabSlideConnectionWords},
+        {0x0069, glissandoConnectionWords},
+        {0x0070, bendCurveConnectionWords},
     };
     for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
         auto profile = profileFor(16, 0);
@@ -3204,15 +3362,25 @@ void testSmartShapeOptionsAcrossEpochs()
     ImportReport codaReport;
     const std::vector<SyntheticRow> codaRows{
         {GLOBALS_CMPER, "51", {-13, 17, -15, 19, 3, 5}},
+        {GLOBALS_CMPER, "26", {13, 31, -32, 0, 33, -34}},
     };
     const auto codaOptions = runImport(makeContainer(codaRows, FormatEpoch::CodaBanner),
         coda, codaReport);
     expectMapping(codaOptions->crescHeight == 902
+            && codaOptions->shortHairpinOpeningWidth == 902
             && codaOptions->slurThicknessCp1X == -13
             && codaOptions->slurThicknessCp1Y == -17
             && codaOptions->slurThicknessCp2X == -15
             && codaOptions->slurThicknessCp2Y == -19
-            && codaOptions->slurControlStyles.size() == 4,
+            && codaOptions->slurControlStyles.size() == 4
+            && codaOptions->slurConnectStyles.size() == 29
+            && codaOptions->slurConnectStyles.at(
+                   SmartShape::SlurConnectStyleType::OverNoteStart)->connectIndex
+                == SmartShape::ConnectionIndex::NoteRightCenter
+            && codaOptions->slurConnectStyles.at(
+                   SmartShape::SlurConnectStyleType::OverNoteStart)->xOffset == 31
+            && codaOptions->slurConnectStyles.at(
+                   SmartShape::SlurConnectStyleType::OverNoteEnd)->yOffset == -34,
         "The Coda epoch did not recover its SmartShapeOptions control-point pairs");
     expectMapping(field(codaReport, "options.smartShapeOptions.crescHeight").origin
                 == ValueOrigin::Finale27Default
@@ -3224,6 +3392,12 @@ void testSmartShapeOptionsAcrossEpochs()
                 == 19
             && field(codaReport,
                    "options.smartShapeOptions.shortHairpinOpeningWidth").origin
+                == ValueOrigin::LegacyBehavior
+            && field(codaReport,
+                   "options.smartShapeOptions.slurConnectStyles[1].yOffset").origin
+                == ValueOrigin::LegacyMus
+            && field(codaReport,
+                   "options.smartShapeOptions.slurConnectStyles[2].yOffset").origin
                 == ValueOrigin::Finale27Default,
         "The Coda epoch reported incorrect SmartShapeOptions origins");
 

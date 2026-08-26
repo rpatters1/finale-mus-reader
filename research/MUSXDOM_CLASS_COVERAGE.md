@@ -10,10 +10,10 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**19 done, 8 partial, 163 to do, 190 total.** Verified class for class against the registry on
+**23 done, 4 partial, 163 to do, 190 total.** Verified class for class against the registry on
 2026-08-24: every registered type appears here and nothing here is unregistered.
 
-## options  (7 done, 2 partial, 19 to do, 28 total)
+## options  (8 done, 1 partial, 19 to do, 28 total)
 
     [ ] AccidentalOptions
     [ ] AlternateNotationOptions
@@ -30,13 +30,13 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] LyricOptions                            lyric_options.cpp
     [ ] MiscOptions
     [x] MultimeasureRestOptions                 multimeasure_rest_options.cpp
-    [~] MusicSpacingOptions                     music_spacing_options.cpp       4 of 26 fields
+    [~] MusicSpacingOptions                     music_spacing_options.cpp       stub; completeness audit excluded
     [ ] MusicSymbolOptions
     [ ] NoteRestOptions
     [ ] PageFormatOptions
     [ ] PianoBraceBracketOptions
     [x] RepeatOptions                           repeat_options.cpp
-    [~] SmartShapeOptions                       smart_shape_options.cpp         39 of 41 fields; 1 of 5 collections
+    [x] SmartShapeOptions                       smart_shape_options.cpp
     [ ] StaffOptions
     [x] StemOptions                             stem_options.cpp
     [x] TextOptions                             text_options.cpp
@@ -44,7 +44,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TimeSignatureOptions
     [ ] TupletOptions
 
-## others  (6 done, 3 partial, 84 to do, 93 total)
+## others  (8 done, 1 partial, 84 to do, 93 total)
 
     [ ] AcciAmountFlats
     [ ] AcciAmountSharps
@@ -69,7 +69,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] KeyAttributes
     [ ] KeyFormat
     [ ] KeyMapArray
-    [~] LayerAttributes                         layer_attributes.cpp            1 of 11 fields
+    [~] LayerAttributes                         layer_attributes.cpp            stub; completeness audit excluded
     [ ] MarkingCategory
     [ ] MarkingCategoryName
     [ ] Measure
@@ -86,7 +86,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] OssiaHeader
     [ ] OssiaMusic
     [ ] Page
-    [~] PageGraphicAssign                       graphic_assignments.cpp         placement only
+    [x] PageGraphicAssign                       graphic_assignments.cpp
     [ ] PageOssiaAssign
     [ ] PageTextAssign
     [ ] PartDefinition
@@ -105,7 +105,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] ShapeData                               shape_definitions.cpp
     [x] ShapeDef                                shape_definitions.cpp
     [ ] ShapeExpressionDef
-    [~] ShapeGraphicAssign                      graphic_assignments.cpp         placement only
+    [x] ShapeGraphicAssign                      graphic_assignments.cpp
     [x] ShapeInstructionList                    shape_definitions.cpp
     [ ] SmartShape
     [x] SmartShapeCustomLine                    smart_shape_custom_lines.cpp
@@ -140,7 +140,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TonalCenterFlats
     [ ] TonalCenterSharps
 
-## details  (0 done, 1 partial, 59 to do, 60 total)
+## details  (1 done, 0 partial, 59 to do, 60 total)
 
     [ ] AccidentalAlterations
     [ ] ArticulationAssign
@@ -182,7 +182,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] LyricAssignSection
     [ ] LyricAssignVerse
     [ ] LyricEntryInfo
-    [~] MeasureGraphicAssign                    measure_graphic_assign.cpp      placement only
+    [x] MeasureGraphicAssign                    measure_graphic_assign.cpp
     [ ] MeasureNumberIndividualPositioning
     [ ] MeasureOssiaAssign
     [ ] MeasureTextAssign

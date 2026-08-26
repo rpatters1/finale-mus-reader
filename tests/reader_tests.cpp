@@ -1580,20 +1580,22 @@ void testLyricOptionsRecovery()
         expect(lyrics->hyphenChar == U'-', wrong("hyphen character"));
         expect(!lyrics->useAltHyphenFont, wrong("alternate hyphen font switch"));
         expect(field(result, "options.lyricOptions.hyphenChar").origin
-                == ValueOrigin::Finale27Default,
+                == ValueOrigin::MusxOnly,
             wrong("hyphen character provenance"));
         expect(field(result, "options.lyricOptions.useAltHyphenFont").origin
                 == ValueOrigin::LegacyBehavior,
             wrong("alternate hyphen font switch provenance"));
-        // The pinned <lyricOptions> carries no <altHyphenFont>, so the reader declines to
-        // invent one and reports nothing for it. musxdom synthesizes it in integrityCheck,
-        // which has run by the time a caller sees the document.
+        // The pinned <lyricOptions> carries no <altHyphenFont>. musxdom synthesizes it in
+        // integrityCheck, while the reader reports its persisted leaves as MUSX-only.
         expect(static_cast<bool>(lyrics->altHyphenFont),
             wrong("alternate hyphen font, which musxdom should have synthesized"));
-        expect(!anyReportedField(result.report, [](const auto& member, const auto&) {
-                   return member.find("altHyphenFont.") != std::string::npos;
-               }),
-            wrong("alternate hyphen font, which the reader reported without importing"));
+        for (const auto* member : {"fontId", "fontSize", "effects"}) {
+            const auto description = std::string("alternate hyphen font ")
+                + member + " provenance";
+            expect(field(result, std::string("options.lyricOptions.altHyphenFont.") + member)
+                        .origin == ValueOrigin::MusxOnly,
+                wrong(description.c_str()));
+        }
     }
 
     // Two Finale 2004 one-variable saves for the two switches that live on selector 57's
@@ -2800,6 +2802,13 @@ void testSmartShapeCustomLines()
     CHECK(field(preEngraverSlur,
               "options.smartShapeOptions.slurAvoidStaffLines").origin
         == ValueOrigin::Finale27Default);
+    CHECK(preEngraverSlurOptions->slurConnectStyles.size() == 29);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurConnectStyles[24].connectIndex").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(preEngraverSlur,
+              "options.smartShapeOptions.slurConnectStyles[25].connectIndex").origin
+        == ValueOrigin::Finale27Default);
 
     const auto preEngraverThickness = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
@@ -2826,6 +2835,15 @@ void testSmartShapeCustomLines()
     CHECK(codaOptions->hookLength == 8);
     CHECK(field(coda, "options.smartShapeOptions.hookLength").origin
         == ValueOrigin::LegacyBehavior);
+    CHECK(field(coda,
+              "options.smartShapeOptions.slurConnectStyles[0].connectIndex").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(coda,
+              "options.smartShapeOptions.slurConnectStyles[1].yOffset").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(coda,
+              "options.smartShapeOptions.slurConnectStyles[2].xOffset").origin
+        == ValueOrigin::Finale27Default);
     CHECK(coda.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
 
     const auto finale100 = Reader::readWithReport<TestXmlDocument>(
@@ -2849,11 +2867,24 @@ void testSmartShapeCustomLines()
     CHECK(finale2000Options->ssLineStyleCmpTabBendCurve == 3);
     CHECK(finale2000.document->getOthers()->getArray<LineTarget>(SCORE_PARTID).size() == 3);
     const auto* finale2000BendOrigin = finale2000.report.findInstanceOrigin(
-        finale_mus_reader::instanceKey<LineTarget>(SCORE_PARTID, 3));
+        finale_mus_reader::instanceKey<LineTarget>(SCORE_PARTID, musx::dom::Cmper(3)));
     REQUIRE(finale2000BendOrigin != nullptr);
     CHECK(*finale2000BendOrigin == ValueOrigin::Finale27Default);
     CHECK(field(finale2000,
               "options.smartShapeOptions.ssLineStyleCmpTabBendCurve").origin
+        == ValueOrigin::Finale27Default);
+    CHECK(finale2000Options->slurConnectStyles.size() == 29);
+    CHECK(finale2000Options->tabSlideConnectStyles.size() == 18);
+    CHECK(finale2000Options->glissandoConnectStyles.size() == 2);
+    CHECK(finale2000Options->bendCurveConnectStyles.size() == 8);
+    CHECK(field(finale2000,
+              "options.smartShapeOptions.tabSlideConnectStyles[17].yOffset").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(finale2000,
+              "options.smartShapeOptions.glissandoConnectStyles[1].xOffset").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(finale2000,
+              "options.smartShapeOptions.bendCurveConnectStyles[0].xOffset").origin
         == ValueOrigin::Finale27Default);
 
     const auto finale2000Offsets = Reader::readWithReport<TestXmlDocument>(
@@ -2930,6 +2961,9 @@ void testSmartShapeCustomLines()
     CHECK(field(finale2003,
               "options.smartShapeOptions.slurDoStretchFirst").origin
         == ValueOrigin::LegacyMus);
+    CHECK(field(finale2003,
+              "options.smartShapeOptions.bendCurveConnectStyles[7].connectIndex").origin
+        == ValueOrigin::LegacyMus);
 
     for (const auto& test : std::array{
              std::pair{"F2008-empty.mus", musx::dom::ShapeDirection::Automatic},
@@ -2981,6 +3015,18 @@ void testSmartShapeCustomLines()
     const auto zlib = Reader::readWithReport<TestXmlDocument>(
         std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
             / "evidence/F2012/F2012-baseline.mus");
+    const auto zlibOptions = zlib.document->getOptions()->get<options::SmartShapeOptions>();
+    REQUIRE(zlibOptions != nullptr);
+    CHECK(zlibOptions->slurConnectStyles.size() == 29);
+    CHECK(zlibOptions->tabSlideConnectStyles.size() == 18);
+    CHECK(zlibOptions->glissandoConnectStyles.size() == 2);
+    CHECK(zlibOptions->bendCurveConnectStyles.size() == 8);
+    CHECK(field(zlib,
+              "options.smartShapeOptions.slurConnectStyles[28].yOffset").origin
+        == ValueOrigin::LegacyMus);
+    CHECK(field(zlib,
+              "options.smartShapeOptions.bendCurveConnectStyles[7].xOffset").origin
+        == ValueOrigin::LegacyMus);
     const auto zlibChar = zlib.document->getOthers()->get<LineTarget>(SCORE_PARTID, 1);
     REQUIRE(zlibChar != nullptr);
     REQUIRE(zlibChar->charParams != nullptr);

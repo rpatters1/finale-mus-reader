@@ -95,7 +95,19 @@ Value observeTuple(std::size_t ordinal, const Tuple& tuple,
     addSourceField(result, "source_font_size", *tuple.fontSize, ctx.report.formatEpoch, ordinal, 1);
     addSourceField(result, "source_effects", *tuple.effects, ctx.report.formatEpoch, ordinal, 2);
     result.insert({{"font_id", fontId}, {"font_size", actual->fontSize},
-        {"effects", actual->getEnigmaStyles()}, {"font_id_origin", std::string(originName(tuple.fontId->origin))},
+        {"effects", actual->getEnigmaStyles()}, {"bold", actual->bold},
+        {"italic", actual->italic}, {"underline", actual->underline},
+        {"strikeout", actual->strikeout}, {"absolute", actual->absolute},
+        {"hidden", actual->hidden},
+        {"origin_bold", std::string(originName(tuple.effects->origin))},
+        {"origin_italic", std::string(originName(tuple.effects->origin))},
+        {"origin_underline", std::string(originName(tuple.effects->origin))},
+        {"origin_strikeout", std::string(originName(tuple.effects->origin))},
+        {"origin_absolute", std::string(originName(tuple.effects->origin))},
+        {"origin_hidden", std::string(originName(tuple.effects->origin))},
+        {"font_id_origin", std::string(originName(tuple.fontId->origin))},
+        {"font_size_origin", std::string(originName(tuple.fontSize->origin))},
+        {"effects_origin", std::string(originName(tuple.effects->origin))},
         {"font_status", fontStatus}, {"font_name", fontName},
         {"normalized_font_name", musx::dom::normalizeFontName(fontName)}});
     return result;
@@ -111,6 +123,8 @@ Value observeFontOptions(const SurveyContext& ctx)
     std::size_t recoveredCount = 0;
     std::size_t behaviorCount = 0;
     std::size_t defaultCount = 0;
+    std::size_t unmappedCount = 0;
+    std::size_t musxOnlyCount = 0;
     for (const auto& [type, font] : options->fontOptions) {
         static_cast<void>(type);
         if (font->fontId != 0
@@ -122,6 +136,8 @@ Value observeFontOptions(const SurveyContext& ctx)
     for (const auto& [ordinal, tuple] : tuples) {
         if (!tuple.fontId) continue;
         switch (tuple.fontId->origin) {
+        case finale_mus_reader::ValueOrigin::Unmapped: ++unmappedCount; break;
+        case finale_mus_reader::ValueOrigin::MusxOnly: ++musxOnlyCount; break;
         case finale_mus_reader::ValueOrigin::LegacyMus: ++recoveredCount; break;
         case finale_mus_reader::ValueOrigin::LegacyBehavior: ++behaviorCount; break;
         case finale_mus_reader::ValueOrigin::Finale27Default: ++defaultCount; break;
@@ -135,6 +151,7 @@ Value observeFontOptions(const SurveyContext& ctx)
     }
     return Value::Object{{"option_count", options->fontOptions.size()}, {"recovered_count", recoveredCount},
         {"legacy_behavior_count", behaviorCount}, {"default_count", defaultCount},
+        {"unmapped_count", unmappedCount}, {"musx_only_count", musxOnlyCount},
         {"dangling_nonzero_font_id_count", danglingNonzeroCount}, {"tuples", std::move(observedTuples)}};
 }
 

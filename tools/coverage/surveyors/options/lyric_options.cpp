@@ -48,6 +48,28 @@ Value observeLyricOptions(const SurveyContext& ctx)
         }
     }
     result.asObject().emplace("alt_hyphen_font_name", altHyphenName);
+    result.asObject().emplace("alt_hyphen_font_size",
+        options->altHyphenFont ? options->altHyphenFont->fontSize : 0);
+    result.asObject().emplace("alt_hyphen_font_bold",
+        options->altHyphenFont && options->altHyphenFont->bold);
+    result.asObject().emplace("alt_hyphen_font_italic",
+        options->altHyphenFont && options->altHyphenFont->italic);
+    result.asObject().emplace("alt_hyphen_font_underline",
+        options->altHyphenFont && options->altHyphenFont->underline);
+    result.asObject().emplace("alt_hyphen_font_strikeout",
+        options->altHyphenFont && options->altHyphenFont->strikeout);
+    result.asObject().emplace("alt_hyphen_font_absolute",
+        options->altHyphenFont && options->altHyphenFont->absolute);
+    result.asObject().emplace("alt_hyphen_font_hidden",
+        options->altHyphenFont && options->altHyphenFont->hidden);
+    result.asObject().emplace("origin_altHyphenFontName",
+        fieldOrigin<Lyrics>(ctx, "altHyphenFont.fontId"));
+    result.asObject().emplace("origin_altHyphenFontSize",
+        fieldOrigin<Lyrics>(ctx, "altHyphenFont.fontSize"));
+    for (const auto* member : {"Bold", "Italic", "Underline", "Strikeout", "Absolute", "Hidden"}) {
+        result.asObject().emplace(std::string("origin_altHyphenFont") + member,
+            fieldOrigin<Lyrics>(ctx, "altHyphenFont.effects"));
+    }
 
     Value::Object syllableStyles;
     for (const auto& [name, type] : {
@@ -60,8 +82,12 @@ Value observeLyricOptions(const SurveyContext& ctx)
             syllableStyles.emplace(name, Value{});
             continue;
         }
+        const auto prefix = std::string("syllablePosStyles[") + name + "].";
         syllableStyles.emplace(name, Value::Object{{"align", static_cast<int>(found->second->align)},
-            {"justify", static_cast<int>(found->second->justify)}, {"on", found->second->on}});
+            {"justify", static_cast<int>(found->second->justify)}, {"on", found->second->on},
+            {"origin_align", fieldOrigin<Lyrics>(ctx, prefix + "align")},
+            {"origin_justify", fieldOrigin<Lyrics>(ctx, prefix + "justify")},
+            {"origin_on", fieldOrigin<Lyrics>(ctx, prefix + "on")}});
     }
     result.asObject().emplace("syllable_pos_styles", std::move(syllableStyles));
 
@@ -81,8 +107,12 @@ Value observeLyricOptions(const SurveyContext& ctx)
             connectStyles.emplace(name, Value{});
             continue;
         }
+        const auto prefix = std::string("wordExtConnectStyles[") + name + "].";
         connectStyles.emplace(name, Value::Object{{"connect_index", static_cast<int>(found->second->connectIndex)},
-            {"x", found->second->xOffset}, {"y", found->second->yOffset}});
+            {"x", found->second->xOffset}, {"y", found->second->yOffset},
+            {"origin_connectIndex", fieldOrigin<Lyrics>(ctx, prefix + "connectIndex")},
+            {"origin_x", fieldOrigin<Lyrics>(ctx, prefix + "xOffset")},
+            {"origin_y", fieldOrigin<Lyrics>(ctx, prefix + "yOffset")}});
     }
     result.asObject().emplace("word_ext_connect_styles", std::move(connectStyles));
 

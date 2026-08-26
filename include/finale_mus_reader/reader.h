@@ -65,6 +65,16 @@ enum class SourcePlatform
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 enum class ValueOrigin
 {
+    /// @brief A possible legacy source for this field has not yet been mapped.
+    /// @details The value is the musxdom default for a source-owned object or the seeded Finale
+    /// 27 value for an options object. This differs from @ref Finale27Default, which identifies
+    /// a known mapping that does not supply a value for the current source, and from @ref
+    /// MusxOnly, which identifies a field known to postdate every supported legacy layout.
+    Unmapped,
+    /// @brief The field postdates every supported legacy MUS layout.
+    /// @details No source value can be recovered. The value remains default-initialized for a
+    /// source-owned object or retains its seeded value for an options object.
+    MusxOnly,
     /// @brief Read from the source file's own bytes.
     LegacyMus,
     /// @brief Supplied from how the source version behaved, because it had no option to
@@ -166,7 +176,7 @@ template <typename T>
 
 struct FieldInfo
 {
-    ValueOrigin origin = ValueOrigin::Finale27Default;
+    ValueOrigin origin = ValueOrigin::Unmapped;
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
     std::int64_t rawValue{};

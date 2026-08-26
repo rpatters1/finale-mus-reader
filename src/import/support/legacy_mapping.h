@@ -597,6 +597,26 @@ struct ImportContext
     musx::factory::ConstructionContext& construction;
 };
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+/// @brief Records a field whose legacy source has not been located in any supported layout.
+/// @details An existing entry always wins, so a recovered value or known fallback cannot be
+/// downgraded by the completeness pass.
+template <typename Class>
+void reportUnmappedField(ImportReport& report, const InstanceKey& instance,
+    std::string member, std::int64_t value)
+{
+    if (!report.findField(instance, member)) {
+        report.setField(instance, std::move(member),
+            {ValueOrigin::Unmapped, 0, 0, value});
+    }
+}
+#else
+template <typename Class, typename... Args>
+void reportUnmappedField(Args&&...)
+{
+}
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
 /// @brief Reports every object created by a reference-document import as a pinned default.
 musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report);
 

@@ -5,6 +5,9 @@
 // stores rather than a named field list. Both carry the same sixteen words plus the graphic
 // they name, so one template serves both -- registered as two surveyors, one per class.
 
+#include <type_traits>
+#include <utility>
+
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
@@ -18,12 +21,30 @@ Value observeGraphicAssignments(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& assign : ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
-        result.push_back(observe(*assign, ctx,
+        auto observed = observe(*assign, ctx,
             field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("inci", [](const Target& value) { return value.getInci().value_or(0); }),
-            field("left", &Target::left), field("bottom", &Target::bottom),
+            field("version", &Target::version), field("left", &Target::left),
+            field("bottom", &Target::bottom),
             field("width", &Target::width), field("height", &Target::height),
-            field("f_desc_id", &Target::fDescId)));
+            field("f_desc_id", &Target::fDescId), field("hidden", &Target::hidden),
+            field("h_align", &Target::hAlign), field("v_align", &Target::vAlign),
+            field("fixed_perc", &Target::fixedPerc), field("saved_record", &Target::savedRecord),
+            field("orig_width", &Target::origWidth), field("orig_height", &Target::origHeight),
+            field("graphic_cmper", &Target::graphicCmper));
+        if constexpr (std::is_same_v<Target, musx::dom::others::PageGraphicAssign>) {
+            observed.asObject().insert({
+                {"display_type", static_cast<std::int64_t>(assign->displayType)},
+                {"pos_from", static_cast<std::int64_t>(assign->posFrom)},
+                {"start_page", assign->startPage}, {"end_page", assign->endPage},
+                {"right_pg_h_align", static_cast<std::int64_t>(assign->rightPgHAlign)},
+                {"right_pg_v_align", static_cast<std::int64_t>(assign->rightPgVAlign)},
+                {"right_pg_pos_from", static_cast<std::int64_t>(assign->rightPgPosFrom)},
+                {"right_pg_fixed_perc", assign->rightPgFixedPerc},
+                {"right_pg_left", assign->rightPgLeft},
+                {"right_pg_bottom", assign->rightPgBottom}});
+        }
+        result.push_back(std::move(observed));
     }
     return Value(std::move(result));
 }

@@ -471,6 +471,11 @@ void importSmartShapeCustomLines(const ImportContext& context)
     // a Char line has a font, and only after the tables have settled which lines those are.
     for (const auto& line : context.document->getOthers()
              ->getArray<CustomLine>(musx::dom::SCORE_PARTID)) {
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        context.report.setInstanceOrigin(
+            instanceKey<CustomLine>(musx::dom::SCORE_PARTID, line->getCmper()),
+            ValueOrigin::LegacyMus);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
         if (line->charParams) {
             context.construction.registerFontId(line->charParams->font->fontId);
         }

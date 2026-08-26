@@ -1325,7 +1325,7 @@
   unclassified in that capture. Subsequent review applies the same origin-only rule to custom-line `charFontSize`;
   the 108-document capture contains six such Finale 97 differences, all inherited from `Finale27Default`. The same
   origin-only treatment also applies to seven reviewed `SmartShapeOptions` leaves:
-  `crescHorizontal`, `crescLineWidth`, `shortHairpinOpeningWidth`, `slurAvoidStaffLines`,
+  `crescHorizontal`, `crescLineWidth`, `slurAvoidStaffLines`,
   `slurLeftBreakHorzAdj`, `smartLineWidth`, and `useEngraverSlurs`. A difference in any of those fields
   is `different_defaults` only when its source origin is `Finale27Default`.
 
@@ -1358,7 +1358,7 @@
   Horizontal values map directly to the corresponding thickness-control X field; vertical values map sign-inverted
   to the Y field. This deliberately preserves source geometry rather than reproducing Finale 27's lossy upgrade.
   All other Coda Smart Shape scalars remain unsupported. After review, the nine differing `Cp1X`, `Cp2X`, and
-  `Cp2Y` leaves in the three edited fixtures are classified as `coda-slur-thickness-upgrade`; the rule requires
+  `Cp2Y` leaves in the three edited fixtures are classified as `finale-upgrade-loss`; the rule requires
   Coda-banner epoch and `LegacyMus` origin and does not include `Cp1Y`, which Finale upgrades correctly.
 
 ## 2026-08-25 — Finale 2002 Engraver-Slur contour boundary
@@ -1494,6 +1494,94 @@
   has no identified structural change at the boundary.
 - **Confidence:** **Strong** across the stated range: the available versions agree and Finale 3.7
   discriminates the upper boundary, but no paired 3.1, 3.3, 3.4, or 3.6 specimen exists.
+
+## 2026-08-26 — Smart Shape connection-style collections
+
+- **Private lead:** Authorized historical Settings Scrapbook code identifies the four preference
+  families as selectors `26`, `90`, `91`, and `98`, all at globals comparator 65534. This locator
+  evidence is **private-framework-derived**; only the interoperability facts are recorded here.
+- **Independent structure check:** Fixed-row record families and zlib class payloads contain the
+  same signed 16-bit triples: connection index, horizontal offset, and vertical offset. The zlib
+  classes are `0x0028`, `0x0068`, `0x0069`, and `0x0070`, matching the established numeric-global
+  bridge. Existing Finale 2008 big-endian and Finale 2012 little-endian documents establish both
+  zlib byte orders, so no additional zlib fixture is needed for this mapping.
+- **Enum order:** Collection elements occur in the order of musxdom's four collection-type enums.
+  The stored connection index is a separate zero-based enum whose order runs from head-left-top
+  through note-right-center. Musxdom's `ConnectionIndex` declaration and XML mapping now use that
+  same order, so the reader can assign the stored ordinal without maintaining a second conversion
+  table.
+- **Collection shapes:** Selector `26` has three observed shapes: two semantic styles in Finale
+  2.6.3; 25 styles plus a terminal zero triple in Finale 97 through 2002; and all 29 styles plus a
+  terminal zero triple from Finale 2003 onward. Selectors `90`, `91`, and `98` contain exactly 18,
+  2, and 8 styles, with the first two present by Finale 2000 and the bend family present by Finale
+  2003. The payload length, rather than a version gate, selects the slur prefix.
+- **Implementation:** `smart_shape_options.cpp` overlays each complete source tuple onto the seeded
+  collection and reports its three leaves as `LegacyMus`. It ignores the slur family's structural
+  terminal tuple, retains seeded styles beyond a shorter source prefix, and reports every retained
+  or wholly absent family leaf as `Finale27Default`. Synthetic fixed-row, DCL, big-endian zlib, and
+  little-endian zlib tests cover exact values and enum ordinals; tracked Finale 2.6.3, 97, 2000,
+  2003, and 2012 files cover the observed collection boundaries.
+- **Remaining class work:** All 41 scalar fields and all five collections are accounted for;
+  `maximumShortHairpinLength` and `articAvoidSlurAmt` are `MusxOnly`. Most Coda-era scalar source
+  locations remain open, so the class is still partial.
+- **Approved classification:** A differing horizontal or vertical connection-style offset is
+  `different_defaults` only when the reader retained the pinned baseline value. The rule excludes
+  connection indices and every `LegacyMus` offset.
+- **Sparse Finale 27 slur collections:** The combined companion population contains slur
+  connection maps of 4, 25, and 29 elements within the same source versions. Three discriminating
+  Finale 2003 sources each retain all 29 stored tuples; their companions respectively serialize
+  all 29 types, types 0-24 while omitting a zero-valued tab tail, and only the nonzero tab types
+  25-28 while omitting 25 zero-valued types. Engraver Slurs is enabled in all three companions, so
+  neither the source version nor that option determines the serialized size.
+- **Reader-complete classification:** The reader deliberately retains a complete 29-element map.
+  A missing companion object whose recovered `connectIndex`, X, or Y is nonzero is
+  `finale-upgrade-loss`; an object containing only zero recovered values or seeded values is
+  `reader-completed-connection-array`. The rule applies one disposition to all four leaves of the
+  missing object, including its identity leaf. In the 16,222-occurrence combined capture, this
+  reclassifies all 27,808 former SmartShapeOptions reader-only leaves: 26,744 as completed-array
+  structure and 1,064 as upgrade loss, leaving zero reader-only and zero unexpected
+  SmartShapeOptions leaves.
+
+## 2026-08-26 — Finale 2003 bend-connection upgrade loss
+
+- **Question:** Are the Finale 2003 bend-connection offset disagreements source mapping errors,
+  changed defaults, or lossy Finale 27 upgrade behavior?
+- **Source evidence:** An untouched Finale 2003 document stores the eight selector-`98` Y values as
+  `(0, 40, 40, 4, 48, 48, 40, 48)`. Separate controlled edits change X and Y for types 0, 1, 2, 3,
+  and 6. The MUS reader and same-version ETF agree exactly in all three documents.
+- **UI boundary:** Finale 2002 has no bend-connection controls, Finale 2003 presents three, and
+  Finale 2004 presents the complete six-control interface. The three Finale 2003 controls therefore
+  fan out across five stored semantic tuples while types 4, 5, and 7 remain hidden support entries.
+- **Companion behavior:** Finale 27 resets every edited X coordinate to `(8, 0, 0, 0, 36)` and every
+  edited Y coordinate to `(0, 40, 40, 4, 40)` for the five exposed tuples. It also changes the three
+  hidden top-line Y values from 48 to 40. The reader preserves the source tuples as `LegacyMus`.
+- **Classification:** These offset disagreements use the shared `finale-upgrade-loss` category. Its
+  predicate requires the DCL epoch, source major version 8, `LegacyMus` origin, the bend-connection
+  collection, and an X or Y leaf. Connection indices remain unclassified pending a discriminator.
+
+## 2026-08-26 — Page and measure graphic assignment layout
+
+- **Hypothesis:** Page-attached and measure-attached legacy graphic assignments use the same
+  record layout.
+- **Structure:** Both assignments have the same 18-word semantic layout. An other row carries six
+  payload words, so a page assignment fills three rows exactly. A detail row carries only five
+  payload words after its second comparator, so a measure assignment requires four rows and the
+  remaining two slots are zero filler. Zlib class `0x041d` preserves that padded 20-word stride.
+  Word 8 is the packed horizontal alignment, vertical alignment, positioning reference, and
+  preserve-aspect value in both families.
+- **Controlled evidence:** The Finale 3.7.2 linked measure graphic, Finale 2006 embedded EPS, and
+  Finale 2012 embedded GIF each carry word-8 bits whose decoded values match the independently
+  parsed Finale 27 companion. Before the shared decoding was applied, the only five tracked
+  companion differences were the nonzero `posFrom` and `fixedPerc` leaves those words predict;
+  `hAlign` and `vAlign` already matched their zero-valued companion leaves by coincidence.
+- **Display flags:** The supplied PDK declarations assign `0x0001/0x0002/0x0004/0x0008` to
+  one/all/odd/even and `0x0010` to hidden in the assignment's display-flags word. Nine independently
+  upgraded Finale 2012 page assignments store `0x0011` and preserve both `One` and `hidden=true`,
+  distinguishing the packed interpretation from separate words 6 and 7.
+- **Conclusion:** **Confirmed** for the common 18-word prefix across the uncompressed, DCL, and
+  zlib epochs. The reader now uses one packed-position implementation for page, shape, and measure
+  graphic assignments. A Coda-banner graphic assignment remains structurally accepted but has no
+  corpus specimen.
 
 ## Commands
 

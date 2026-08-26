@@ -624,7 +624,7 @@ the length across the next two words and begins its payload two bytes later. Thi
 **confirmed** for class `0x041d`: each of two Finale 2008 documents supplies nine score records
 with part id 0 and three records with part id 17. Their companions contain the same three
 part-owned `MeasureGraphicAssign` nodes as `part="17" shared="true"`, while `cmper1`, `cmper2`,
-and the 20-word payload correspond to the score nodes' staff, measure, and values. Structural
+and the padded payload correspond to the score nodes' staff, measure, and values. Structural
 incidences remain the ordered tuples inside the payload, as they do in the fixed-row encoding.
 
 The logical model is therefore unchanged. What moved is the physical encoding: the
@@ -1110,18 +1110,31 @@ are exact 18-word tuples: three six-word fixed rows per assignment, or successiv
 inside a zlib class payload. The assignment comparator remains the DOM cmper and tuple order is its
 zero-based incidence.
 
-Words 0-17 are `version`, `left`, `bottom`, `width`, `height`, `fDescId`, `hidden`, `displayType`,
-packed left/all-page positioning, `startPage`, `endPage`, `savedRecord`, `origWidth`, `origHeight`,
-`rightPgLeft`, `rightPgBottom`, packed right-page positioning, and `graphicCmper`. The positioning
-word uses one-hot bits: horizontal left/right/center are `0x01/0x02/0x04`, vertical top/bottom/center
-are `0x08/0x10/0x20`, margins/page-edge are `0x40/0x80`, and preserve-aspect is `0x100`.
+Words 0-5 are `version`, `left`, `bottom`, `width`, `height`, and `fDescId`; word 6 has no mapped
+musxdom leaf. Word 7 is a packed display-flags word: page selection uses one-hot values
+`0x0001/0x0002/0x0004/0x0008` for one/all/odd/even, and `0x0010` independently marks the graphic
+hidden. Words 8-17 are packed left/all-page positioning, `startPage`, `endPage`, `savedRecord`,
+`origWidth`, `origHeight`, `rightPgLeft`, `rightPgBottom`, packed right-page positioning, and
+`graphicCmper`. The positioning word uses one-hot bits: horizontal left/right/center are
+`0x01/0x02/0x04`, vertical top/bottom/center are `0x08/0x10/0x20`, margins/page-edge are
+`0x40/0x80`, and preserve-aspect is `0x100`.
+
+Measure-attached graphics use that same field order and packed positioning word through word 17.
+An other row has six payload words, so an 18-word page assignment occupies exactly three rows. A
+detail row has five payload words after its second comparator, so the same assignment occupies four
+rows and its last two slots are zero filler. Zlib class `0x041d` retains that padded 20-word stride.
+The page-only words remain present but have no measure-placement meaning. Controlled
+Finale 3.7.2, 2006, and 2012 assignments independently agree that word 8 supplies `hAlign`,
+`vAlign`, `posFrom`, and `fixedPerc` with the page-assignment masks above. Their Finale 27
+companions preserve those four values. Thus the common 18-word prefix is **confirmed** across the
+uncompressed, DCL, and zlib epochs; a Coda-banner assignment remains corpus-unverified.
 
 ### Earliest controlled graphic placement
 
 **Confirmed in Finale 3.7.2; absent from the Finale 2.6.3-and-earlier UI.** The controlled
 `F372-measure-graphic` fixture places a linked EPS on staff 1 at measure 3. Its MUS and ETF both
-carry four `mg(1,3)` rows forming the same 20-word assignment used through Finale 2006, including
-file-description cmper 1 and `graphicCmper` zero. No stored graphic block exists, as expected for
+carry four `mg(1,3)` rows containing the 18-word assignment followed by two zero filler words,
+including file-description cmper 1 and `graphicCmper` zero. No stored graphic block exists, as expected for
 a linked file. The user who produced the fixture observed the Graphics Tool in Finale 3.7.2's Tool
 menu and observed it absent in Finale 2.6.3 and earlier.
 
@@ -2532,18 +2545,17 @@ the formats, and it is what makes the value *known* rather than synthesized. `Le
 reader asserts on the strength of era knowledge, whether or not the baseline happens to agree — not merely one that
 contradicts the baseline.
 
-`hyphenChar` is **left exactly as seeded and reported as `Finale27Default`**, and the asymmetry is deliberate. A
-boolean that is false because its feature does not exist can be stated in code without restating anything; the
-character a legacy document drew cannot, because writing U+002D beside a pinned resource that already says 45 would
-be a second copy of one fact — the case the repository's rule is actually aimed at.
+`hyphenChar` is **left exactly as seeded and reported as `MusxOnly`**. It postdates every supported legacy layout,
+so there is no source value to recover. `MusxOnly` distinguishes this settled absence from `Unmapped`, which marks
+a field that could have a legacy source whose mapping has not yet been established.
 
 `altHyphenFont` is the one that needed a decision. **It is absent from the pinned `<lyricOptions>` element
 entirely**, so the seeded member holds a null pointer, and musxdom populates it only from an `<altHyphenFont>`
 element and otherwise synthesizes one in `integrityCheck` — which runs at the end of construction, after every
 importer. A null pointer during the import therefore means exactly one thing, that the baseline carried no such
 element, **and it means it without reading the baseline's XML**, which no importer has access to in any case. The
-reader declines: there is no value to import, so none is imported and none is reported, and musxdom fills the
-member in afterwards as it does for any document that omits it.
+reader imports no value, reports the three persisted `FontInfo` leaves as `MusxOnly`, and musxdom fills the member
+in afterwards as it does for any document that omits it.
 
 The obvious-looking alternative is wrong and worth naming, because it was tried first. A `FontInfo` the baseline
 *did* seed would carry the baseline's font numbering rather than the imported document's and would need
@@ -2571,9 +2583,11 @@ and the question stays **open**.
 
 ### Smart Shape options
 
-`SmartShapeOptions` is **partially implemented**: 39 of its 41 scalar fields and the four
-slur-control contours are recovered where their source families exist. The four connection-style
-collections remain unsupported, as do `maximumShortHairpinLength` and `articAvoidSlurAmt`.
+`SmartShapeOptions` is **implemented**: all 41 scalar fields and all five collections are recovered
+or resolved where their source families exist. `maximumShortHairpinLength` and
+`articAvoidSlurAmt` postdate MUS and are reported as `MusxOnly`. The remaining Coda-era scalar
+locations cannot be narrowed further from controlled fixtures; they are future real-world evidence
+opportunities rather than implementation gaps.
 Source-owned `ssLineStyleCmp*` values retain the comparators of the imported
 `SmartShapeCustomLine` records. Before custom lines existed, the glissando and tab-slide fields resolve
 to copied baseline definitions; the tab-bend curve similarly resolves to a copied baseline definition
@@ -2605,6 +2619,32 @@ The source layout is selected structurally rather than by the document's marketi
   reported as `LegacyBehavior`. A second incidence introduces independent values for those fields.
 - Selector `92` marks the four custom-line references and the associated selector `93` slur-tip
   width.
+- The four connection-style collections are signed-word triples in collection-enum order:
+  `(connection index, horizontal offset, vertical offset)`. The stored connection index is the
+  ordinal of musxdom's `ConnectionIndex`: head, stem, and note anchors in the legacy order from
+  `HeadLeftTop = 0` through `NoteRightCenter = 13`. Selector `26` carries slur connections,
+  selector `90` tab-slide connections, selector `91` glissando connections, and selector `98`
+  bend-curve connections. Their zlib identities are respectively `0x0028`, `0x0068`, `0x0069`,
+  and `0x0070`, following the numeric-global class bridge.
+- The slur collection's payload length states which semantic prefix exists. Finale 2.6.3 stores
+  two styles in one incidence. Finale 97 through 2002 store 25 styles followed by one structural
+  zero triple in thirteen incidences. Finale 2003 and later store all 29 styles followed by the
+  same structural triple in fifteen incidences. The reader overlays that prefix and retains the
+  seeded values for unavailable later styles. Tab-slide, glissando, and bend-curve payloads have
+  no trailing triple and contain exactly 18, 2, and 8 styles when present. Absent families retain
+  seeded values with `Finale27Default` origin.
+
+Finale 27 companions do not necessarily serialize all 29 slur connection styles. Across the
+combined companion population they contain 4, 25, or 29 keyed styles even within the same source
+version. A discriminating Finale 2003 trio retains all 29 source tuples in each document: the
+29-style companion includes every type; the 25-style companion omits the four zero-valued tab
+types; and the 4-style companion contains only the four nonzero tab types while omitting 25
+zero-valued types. Thus the shorter collection is sparse serialization, not a source-version
+layout. The reader continues to construct the complete 29-style options array. Coverage classifies
+an omitted object as `finale-upgrade-loss` when any of its source-owned semantic values is nonzero,
+and otherwise as `reader-completed-connection-array`; the object's `type`, `connectIndex`, X, and Y
+leaves receive the same object-level disposition.
+
 - Selector `10` incidence 0 word 0 stores the default Smart Shape direction from Finale 2002
   through the fixed-row DCL epoch; its zlib class `0x0018` retains the same word. The stored enum
   is exactly `-1 = Under`, `0 = Automatic`, and `1 = Over`. Controlled Finale 2002, 2005, and 2008
@@ -2692,7 +2732,9 @@ companion, SHA-256 `e8f361373c9962ddae60844da1b597ecaf19494c0c05194d85d654333ee2
 stores exactly `(131, 171, -173, -179)` and reproduces the legacy curve's appearance. Tie-end
 values and additional non-PostScript tie edits do not populate `SmartShapeOptions`. Coverage records
 the resulting Coda `LegacyMus` disagreements in `Cp1X`, `Cp2X`, and `Cp2Y` as
-`coda-slur-thickness-upgrade`; `Cp1Y` is excluded because Finale upgrades it correctly.
+`finale-upgrade-loss`; `Cp1Y` is excluded because Finale upgrades it correctly. That shared
+classification names confirmed loss of source-owned values during a Finale upgrade; its executable
+rules remain narrowly gated for each independently established case.
 
 The Coda-banner files contain no stored `FI` hook-length preference, but the semantic companions
 separate their behavior by version: all surveyed Finale 2.6.3 companions use 8 EVPU, while Finale
@@ -2702,16 +2744,42 @@ that tempting correlation. The reader therefore assigns 8 as `LegacyBehavior` on
 profile is both Coda-banner epoch and version 2.6. This version gate is necessary because the
 record structure cannot distinguish the two observed Coda behaviors. Confidence is **strong**.
 
-The hairpin opening fields have one versionless legacy asymmetry. Where `FI` exists, the legacy
-format stores `crescHeight` but no separate short-opening width. The reader therefore reports
-`shortHairpinOpeningWidth = crescHeight` as `LegacyBehavior`; this is not attributed to a second MUS
-word. All other unsupported members retain `Finale27Default` origin.
+Legacy formats have one hairpin opening rather than differentiated short and long openings. The
+reader therefore assigns `shortHairpinOpeningWidth = crescHeight` unconditionally and reports the
+short value as `LegacyBehavior`; where `FI` exists, `crescHeight` comes from comparator 11 word 0,
+and where that source remains unlocated it retains the pinned baseline value. The separate short
+opening and maximum-short-span settings both arrive in Finale 25.3, after the last MUS format. This
+boundary is **private-framework-derived** and agrees with their absence from the Finale 2012 UI.
+`maximumShortHairpinLength` remains at the pinned baseline value and is reported as `MusxOnly`, so
+that modern threshold cannot create differentiated legacy behavior.
 
-Coverage classifies differing `crescHorizontal`, `crescLineWidth`, `shortHairpinOpeningWidth`,
-`slurAvoidStaffLines`, `slurLeftBreakHorzAdj`, `smartLineWidth`, and `useEngraverSlurs` values as
+`articAvoidSlurAmt` is also `MusxOnly`. Finale 2012 exposes no such control, no mapping or accessor
+for it appears in the authorized legacy Smart Shape preference history, and the Finale 27 baseline
+supplies 8 EVPU. Finale's official version 26 feature list says that release added automatic
+articulation adjustment around slurs and added a minimum-space control to Smart Slur Options; the
+linked dialog documentation names it "Articulations Avoid Slurs By." This establishes Finale 26 as
+the introduction boundary. The source is Finale's [New Features in Finale](https://usermanuals.finalemusic.com/FinaleWin/Content/Finale/What_s_new.htm)
+and [Smart Slur Options](https://usermanuals.finalemusic.com/FinaleWin/Content/Finale/db-smart-slur-options.htm)
+documentation, accessed 2026-08-26. The reader leaves the baseline value untouched and reports its
+provenance separately from source recovery. **Confirmed.**
+
+Coverage classifies differing `crescHorizontal`, `crescLineWidth`, `slurAvoidStaffLines`,
+`slurLeftBreakHorzAdj`, `smartLineWidth`, and `useEngraverSlurs` values as
 `different_defaults` when, and only when, the imported value retains `Finale27Default` origin. This
 records the reviewed baseline-versus-upgrade disagreement without treating a source-recovered value
-on the same path as expected.
+on the same path as expected. The same classification applies to horizontal and vertical offsets in
+the four connection-style collections, again only with `Finale27Default` origin; connection indices
+and source-recovered offsets remain outside the rule.
+
+Finale 2003 is a separate, confirmed `finale-upgrade-loss` case for bend-curve connection offsets.
+Finale 2002 has no bend-connection controls, Finale 2003 presents three, and Finale 2004 presents the
+complete six-control interface. Selector `98` nevertheless stores all eight modern semantic tuples
+in Finale 2003. Its three controls write the X and Y coordinates of types 0, 1, 2, 3, and 6; the
+three top-line support tuples, types 4, 5, and 7, are not exposed and retain their source defaults.
+Finale 27 resets every discriminating Finale 2003 X and Y edit during upgrade and also replaces the
+three hidden Y values of 48 with 40. The coverage rule is restricted to DCL files whose source major
+version is 8, `LegacyMus` bend-connection offsets, and the X and Y leaves. Connection indices are
+excluded because no controlled Finale 2003 fixture varies them.
 
 ### Repeat options: the document staff-list reference
 
