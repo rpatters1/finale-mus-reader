@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "import/support/fret_records.h"
+#include "import/support/legacy_mapping.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -49,25 +49,25 @@ FretboardDiagramTarget::Shape fretboardCellShape(std::uint16_t symbols)
 
 void importFretboardDiagrams(const ImportContext& context)
 {
-    const auto source = fret_records::selectSource(context, context.index.getDetails(),
+    const auto source = selectRecordFamilySource(context, context.index.getDetails(),
         context.index.getClassDetails(), fretboardDiagramTag, fretboardDiagramClass);
     if (!source) return;
     for (const auto cmper1 : source->pool->cmpersForTag(source->identity)) {
         for (const auto cmper2 : source->pool->secondCmpersForTag(source->identity, cmper1)) {
             const auto rows = source->pool->getArray(source->identity, cmper1, cmper2);
             if (rows.empty()) continue;
-            const auto payload = fret_records::collectPayload(*source, rows);
+            const auto payload = collectRecordPayload(*source, rows);
             if (payload.size() < fretboardDiagramHeaderSize) continue;
             auto target = std::make_shared<FretboardDiagramTarget>(context.document,
                 musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
                 cmper1, cmper2);
-            target->numFrets = fret_records::readWord(payload, 0, context.profile.byteOrder);
-            target->fretboardNum = fret_records::readWord(payload, 2, context.profile.byteOrder);
-            const auto flags = fret_records::readWord(payload, 4, context.profile.byteOrder);
+            target->numFrets = payloadWord(payload, 0, context.profile.byteOrder);
+            target->fretboardNum = payloadWord(payload, 2, context.profile.byteOrder);
+            const auto flags = payloadWord(payload, 4, context.profile.byteOrder);
             target->lock = flags & 0x0001U;
             target->showNum = flags & 0x0004U;
-            target->numFretCells = fret_records::readWord(payload, 6, context.profile.byteOrder);
-            target->numFretBarres = fret_records::readWord(payload, 8, context.profile.byteOrder);
+            target->numFretCells = payloadWord(payload, 6, context.profile.byteOrder);
+            target->numFretBarres = payloadWord(payload, 8, context.profile.byteOrder);
             const auto cellCount = static_cast<std::size_t>(target->numFretCells);
             const auto barreCount = static_cast<std::size_t>(target->numFretBarres);
             const auto barreOffset = fretboardDiagramHeaderSize
@@ -81,9 +81,9 @@ void importFretboardDiagrams(const ImportContext& context)
             }
             for (int index = 0; index < target->numFretCells; ++index) {
                 const auto at = fretboardDiagramItemOffset(static_cast<std::size_t>(index));
-                const auto fretString = fret_records::readWord(
+                const auto fretString = payloadWord(
                     payload, at, context.profile.byteOrder);
-                const auto symbols = fret_records::readWord(
+                const auto symbols = payloadWord(
                     payload, at + 2, context.profile.byteOrder);
                 auto cell = std::make_shared<FretboardDiagramTarget::Cell>();
                 cell->fret = fretString & 0x00ffU;
@@ -96,9 +96,9 @@ void importFretboardDiagrams(const ImportContext& context)
                 const auto at = barreOffset
                     + fretboardDiagramItemOffset(static_cast<std::size_t>(index))
                     - fretboardDiagramHeaderSize;
-                const auto fretString = fret_records::readWord(
+                const auto fretString = payloadWord(
                     payload, at, context.profile.byteOrder);
-                const auto endpoints = fret_records::readWord(
+                const auto endpoints = payloadWord(
                     payload, at + 2, context.profile.byteOrder);
                 auto barre = std::make_shared<FretboardDiagramTarget::Barre>();
                 barre->fret = fretString & 0x00ffU;

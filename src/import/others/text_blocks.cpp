@@ -43,37 +43,6 @@ std::optional<Target::TextType> textTypeFromLegacy(std::int16_t value)
     }
 }
 
-struct TextBlockSource
-{
-    const records::LegacyRowPool* pool{};
-    records::LegacyTag identity{};
-    bool classRecords{};
-};
-
-TextBlockSource textBlockSource(const ImportContext& context)
-{
-    if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-        return {&context.index.getClassOthers(), textBlockClass, true};
-    }
-    return {&context.index.getOthers(), textBlockTag, false};
-}
-
-std::vector<std::int16_t> textBlockWords(const TextBlockSource& source,
-                                         std::span<const records::LegacyRow> rows,
-                                         ByteOrder byteOrder)
-{
-    std::vector<std::int16_t> result;
-    for (const auto& row : rows) {
-        if (source.classRecords) {
-            const auto words = payloadWords(source.pool->payloadOf(row), byteOrder);
-            result.insert(result.end(), words.begin(), words.end());
-        } else {
-            result.insert(result.end(), row.words.begin(), row.words.begin() + row.wordCount);
-        }
-    }
-    return result;
-}
-
 std::int32_t highFirstLong(std::int16_t high, std::int16_t low)
 {
     return static_cast<std::int32_t>(
@@ -81,7 +50,7 @@ std::int32_t highFirstLong(std::int16_t high, std::int16_t low)
         static_cast<std::uint16_t>(low));
 }
 
-const records::LegacyRow& textBlockRow(const TextBlockSource& source,
+const records::LegacyRow& textBlockRow(const RecordFamilySource& source,
                                        std::span<const records::LegacyRow> rows,
                                        std::size_t wordIndex)
 {
@@ -122,9 +91,9 @@ void applyLegacyTextBlockCorners(
 
 void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmper,
                              std::span<const records::LegacyRow> rows,
-                             const TextBlockSource& source)
+                             const RecordFamilySource& source)
 {
-    const auto words = textBlockWords(source, rows, context.profile.byteOrder);
+    const auto words = collectRecordWords(source, rows, context.profile.byteOrder);
     if (words.size() < textBlockWordCount) {
         context.report.diagnostics.push_back(
             {musx::util::Logger::LogLevel::Info,
@@ -200,10 +169,12 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
 
 void importStoredTextBlocks(const ImportContext& context)
 {
-    const auto source = textBlockSource(context);
-    for (const auto cmper : source.pool->cmpersForTag(source.identity)) {
-        populateStoredTextBlock(context, cmper, source.pool->getArray(source.identity, cmper),
-                                source);
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
+        context.index.getClassOthers(), textBlockTag, textBlockClass);
+    if (!source) return;
+    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
+        populateStoredTextBlock(context, cmper,
+            source->pool->getArray(source->identity, cmper), *source);
     }
 }
 

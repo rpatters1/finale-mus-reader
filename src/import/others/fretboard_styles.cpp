@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "import/support/fret_records.h"
+#include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -28,10 +28,10 @@ void populateFretboardStyleFont(const ImportContext& context,
     std::shared_ptr<musx::dom::FontInfo>& target)
 {
     target = std::make_shared<musx::dom::FontInfo>(context.document);
-    target->fontId = fret_records::readWord(payload, at, context.profile.byteOrder);
+    target->fontId = payloadWord(payload, at, context.profile.byteOrder);
     target->fontSize = static_cast<std::int16_t>(
-        fret_records::readWord(payload, at + 2, context.profile.byteOrder));
-    target->setEnigmaStyles(fret_records::readWord(
+        payloadWord(payload, at + 2, context.profile.byteOrder));
+    target->setEnigmaStyles(payloadWord(
         payload, at + 4, context.profile.byteOrder));
 }
 
@@ -39,42 +39,54 @@ void populateFretboardStyleFont(const ImportContext& context,
 
 void importFretboardStyles(const ImportContext& context)
 {
-    const auto source = fret_records::selectSource(context, context.index.getOthers(),
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretboardStyleTag, fretboardStyleClass);
     if (!source) return;
     for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
         const auto rows = source->pool->getArray(source->identity, cmper);
         if (rows.empty()) continue;
-        const auto payload = fret_records::collectPayload(*source, rows);
+        const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() < fretboardStyleRecordSize) continue;
         auto target = std::make_shared<FretboardStyleTarget>(context.document,
             musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
-        target->showLastFret = fret_records::readWord(payload, 0, context.profile.byteOrder);
-        target->rotate = fret_records::readWord(payload, 2, context.profile.byteOrder);
-        target->fingNumWhite = fret_records::readWord(payload, 4, context.profile.byteOrder);
-        target->fingStrShapeId = fret_records::readWord(payload, 6, context.profile.byteOrder);
-        target->openStrShapeId = fret_records::readWord(payload, 8, context.profile.byteOrder);
-        target->muteStrShapeId = fret_records::readWord(payload, 10, context.profile.byteOrder);
-        target->barreShapeId = fret_records::readWord(payload, 12, context.profile.byteOrder);
-        target->customShapeId = fret_records::readWord(payload, 14, context.profile.byteOrder);
-        target->defNumFrets = fret_records::readWord(payload, 16, context.profile.byteOrder);
-        target->stringGap = fret_records::readHighFirstLong(payload, 18, context.profile.byteOrder);
-        target->fretGap = fret_records::readHighFirstLong(payload, 22, context.profile.byteOrder);
-        target->stringWidth = fret_records::readHighFirstLong(payload, 26, context.profile.byteOrder);
-        target->fretWidth = fret_records::readHighFirstLong(payload, 30, context.profile.byteOrder);
-        target->nutWidth = fret_records::readHighFirstLong(payload, 34, context.profile.byteOrder);
-        target->vertTextOff = fret_records::readHighFirstLong(payload, 38, context.profile.byteOrder);
-        target->horzTextOff = fret_records::readHighFirstLong(payload, 42, context.profile.byteOrder);
-        target->horzHandleOff = fret_records::readHighFirstLong(payload, 46, context.profile.byteOrder);
-        target->vertHandleOff = fret_records::readHighFirstLong(payload, 50, context.profile.byteOrder);
-        target->whiteout = fret_records::readHighFirstLong(payload, 54, context.profile.byteOrder);
+        target->showLastFret = payloadWord(payload, 0, context.profile.byteOrder);
+        target->rotate = payloadWord(payload, 2, context.profile.byteOrder);
+        target->fingNumWhite = payloadWord(payload, 4, context.profile.byteOrder);
+        target->fingStrShapeId = payloadWord(payload, 6, context.profile.byteOrder);
+        target->openStrShapeId = payloadWord(payload, 8, context.profile.byteOrder);
+        target->muteStrShapeId = payloadWord(payload, 10, context.profile.byteOrder);
+        target->barreShapeId = payloadWord(payload, 12, context.profile.byteOrder);
+        target->customShapeId = payloadWord(payload, 14, context.profile.byteOrder);
+        target->defNumFrets = payloadWord(payload, 16, context.profile.byteOrder);
+        target->stringGap = payloadLong(
+            payload, 18, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->fretGap = payloadLong(
+            payload, 22, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->stringWidth = payloadLong(
+            payload, 26, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->fretWidth = payloadLong(
+            payload, 30, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->nutWidth = payloadLong(
+            payload, 34, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertTextOff = payloadLong(
+            payload, 38, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->horzTextOff = payloadLong(
+            payload, 42, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->horzHandleOff = payloadLong(
+            payload, 46, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertHandleOff = payloadLong(
+            payload, 50, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->whiteout = payloadLong(
+            payload, 54, context.profile.byteOrder, LongWordOrder::HighFirst);
         populateFretboardStyleFont(context, payload, 58, target->fretNumFont);
         populateFretboardStyleFont(context, payload, 64, target->fingNumFont);
-        target->horzFingNumOff = fret_records::readHighFirstLong(payload, 70, context.profile.byteOrder);
-        target->vertFingNumOff = fret_records::readHighFirstLong(payload, 74, context.profile.byteOrder);
-        target->name = text::toUtf8(fret_records::readString(payload,
+        target->horzFingNumOff = payloadLong(
+            payload, 70, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertFingNumOff = payloadLong(
+            payload, 74, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->name = text::toUtf8(payloadString(payload,
             fretboardStyleNameOffset, fretboardStyleNameSize), context.profile.platform);
-        target->fretNumText = text::toUtf8(fret_records::readString(payload,
+        target->fretNumText = text::toUtf8(payloadString(payload,
             fretboardStyleNumberTextOffset, fretboardStyleNumberTextSize),
             context.profile.platform);
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

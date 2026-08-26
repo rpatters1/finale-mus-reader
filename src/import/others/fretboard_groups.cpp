@@ -6,7 +6,6 @@
 #include <memory>
 #include <string>
 
-#include "import/support/fret_records.h"
 #include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
@@ -28,16 +27,16 @@ constexpr std::size_t unicodeFretboardGroupNameSize = 192;
 
 void importFretboardGroups(const ImportContext& context)
 {
-    const auto source = fret_records::selectSource(context, context.index.getOthers(),
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretboardGroupTag, fretboardGroupClass);
     if (!source) return;
     for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
         const auto rows = source->pool->getArray(source->identity, cmper);
         if (rows.empty()) continue;
-        const auto payload = fret_records::collectPayload(*source, rows);
+        const auto payload = collectRecordPayload(*source, rows);
         // Finale 2012 widens the fixed-capacity group name from bytes to UTF-16LE code units.
         // The class record is correspondingly 204 bytes per logical group incidence.
-        const bool unicodeLayout = source->variableLength
+        const bool unicodeLayout = source->classRecords
             && versions::storesUnicodeCodepoints(context.profile.version);
         const auto tupleSize = unicodeLayout
             ? unicodeFretboardGroupTupleSize : narrowFretboardGroupTupleSize;
@@ -50,12 +49,12 @@ void importFretboardGroups(const ImportContext& context)
             const auto inci = static_cast<musx::dom::Inci>(at / tupleSize);
             auto target = std::make_shared<FretboardGroupTarget>(context.document,
                 musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper, inci);
-            target->fretInstId = fret_records::readWord(payload, at, context.profile.byteOrder);
+            target->fretInstId = payloadWord(payload, at, context.profile.byteOrder);
             if (unicodeLayout) {
                 target->name = text::utf16LeToUtf8(std::span(payload).subspan(
                     at + fretboardGroupNameOffset, unicodeFretboardGroupNameSize));
             } else {
-                target->name = text::toUtf8(fret_records::readString(payload,
+                target->name = text::toUtf8(payloadString(payload,
                     at + fretboardGroupNameOffset, narrowFretboardGroupNameSize),
                     context.profile.platform);
             }

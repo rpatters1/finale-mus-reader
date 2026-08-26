@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "import/support/fret_records.h"
+#include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -26,22 +26,22 @@ constexpr std::size_t fretInstrumentStringsOffset =
 
 void importFretInstruments(const ImportContext& context)
 {
-    const auto source = fret_records::selectSource(context, context.index.getOthers(),
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretInstrumentTag, fretInstrumentClass);
     if (!source) return;
     for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
         const auto rows = source->pool->getArray(source->identity, cmper);
         if (rows.empty()) continue;
-        const auto payload = fret_records::collectPayload(*source, rows);
+        const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() < fretInstrumentStringsOffset) continue;
         auto target = std::make_shared<FretInstrumentTarget>(context.document,
             musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
         const auto stepBits = static_cast<std::uint32_t>(
-            fret_records::readLowFirstLong(payload, 0, context.profile.byteOrder));
-        target->numFrets = fret_records::readWord(payload, 4, context.profile.byteOrder);
-        target->numStrings = fret_records::readWord(payload, 6, context.profile.byteOrder);
-        target->speedyClef = fret_records::readWord(payload, 8, context.profile.byteOrder);
-        target->name = text::toUtf8(fret_records::readString(payload,
+            payloadLong(payload, 0, context.profile.byteOrder, LongWordOrder::LowFirst));
+        target->numFrets = payloadWord(payload, 4, context.profile.byteOrder);
+        target->numStrings = payloadWord(payload, 6, context.profile.byteOrder);
+        target->speedyClef = payloadWord(payload, 8, context.profile.byteOrder);
+        target->name = text::toUtf8(payloadString(payload,
             fretInstrumentHeaderSize, fretInstrumentNameSize), context.profile.platform);
         const auto storedStrings = (payload.size() - fretInstrumentStringsOffset) / 2;
         const auto stringCount = (std::min)(static_cast<std::size_t>(target->numStrings),
@@ -50,7 +50,7 @@ void importFretInstruments(const ImportContext& context)
             auto stringInfo = std::make_shared<FretInstrumentTarget::StringInfo>();
             // Old and class-record string tunings retain their little-endian byte encoding even
             // when the surrounding payload's numeric fields follow big-endian container order.
-            stringInfo->pitch = static_cast<std::int16_t>(fret_records::readWord(payload,
+            stringInfo->pitch = static_cast<std::int16_t>(payloadWord(payload,
                 fretInstrumentStringsOffset + index * 2, ByteOrder::LittleEndian));
             target->strings.push_back(std::move(stringInfo));
         }

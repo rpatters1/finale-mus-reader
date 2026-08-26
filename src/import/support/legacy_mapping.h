@@ -32,6 +32,7 @@
 
 namespace finale_mus_reader {
 
+struct ImportContext;
 
 /// @brief Width of a mapped value in the source record.
 enum class ValueWidth : std::uint8_t
@@ -68,6 +69,42 @@ enum class RecordEncoding : std::uint8_t
     /// address a byte offset inside a single record's payload.
     ClassRecord
 };
+
+/// @brief One logical record family selected from either fixed rows or class records.
+struct RecordFamilySource
+{
+    const records::LegacyRowPool* pool{};
+    records::LegacyTag identity{};
+    bool classRecords{};
+};
+
+/// @brief Selects a fixed-row family through the DCL epoch and its class-record replacement
+/// in the zlib epoch.
+[[nodiscard]] std::optional<RecordFamilySource> selectRecordFamilySource(
+    const ImportContext& context, const records::LegacyRowPool& fixedPool,
+    const records::LegacyRowPool& classPool, records::LegacyTag fixedTag,
+    records::LegacyTag classId);
+
+/// @brief Collects a record family's payload bytes in incidence order.
+[[nodiscard]] std::vector<std::uint8_t> collectRecordPayload(
+    const RecordFamilySource& source, std::span<const records::LegacyRow> rows);
+
+/// @brief Collects a record family into one word stream in incidence order.
+[[nodiscard]] std::vector<std::int16_t> collectRecordWords(
+    const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
+    ByteOrder byteOrder);
+
+/// @brief Reads one unsigned word from a payload in the container's byte order.
+[[nodiscard]] std::uint16_t payloadWord(
+    std::span<const std::uint8_t> payload, std::size_t offset, ByteOrder byteOrder);
+
+/// @brief Reads two payload words as one signed long in their stored word order.
+[[nodiscard]] std::int32_t payloadLong(std::span<const std::uint8_t> payload,
+    std::size_t offset, ByteOrder byteOrder, LongWordOrder wordOrder);
+
+/// @brief Reads a fixed-capacity, null-terminated byte string from a payload.
+[[nodiscard]] std::string payloadString(std::span<const std::uint8_t> payload,
+    std::size_t offset, std::size_t capacity);
 
 /// @brief Where one field lives in the legacy record stream.
 struct SourceLocation
