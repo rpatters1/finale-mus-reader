@@ -104,8 +104,27 @@ statistical unit; occurrences describe corpus reach and duplication.
 
 - Extract source and companion observations independently. A Finale 27 save is upgrade behavior,
   not proof of the source representation.
+- Treat every newly observed unexpected difference as evidence to review, not as a classification
+  backlog to clear. Before adding or broadening an expected-difference rule, show the user the
+  unexpected paths, source and companion values, origins, and distinct-document counts (using
+  public `corpus_id` tokens rather than private paths), and wait for the user to review them. For a
+  large repeated population, show every distinct path/value transformation and representative
+  corpus IDs rather than hiding variation in an aggregate. Do not classify a difference in the
+  same step that discovers it unless the user has already reviewed that exact transformation and
+  explicitly directed its classification.
+- Before treating a source/companion disagreement as Finale upgrade behavior, inspect the raw
+  companion representation when available. Confirm whether the differing value is actually stored
+  in EnigmaXML or was introduced by musxdom, the XML backend, a surveyor, or comparison logic. A
+  dependency or observation bug must remain unexpected until fixed and recaptured; never make an
+  expected-difference rule that merely conceals it.
 - Match cmper-keyed objects by same-side semantic content or referents, never by assuming cmpers or
   ordering survive a save.
+- Compare every font reference by its resolved, normalized font face on each side, never by its
+  numeric font ID. Font-definition cmpers are document-local references and Finale may renumber
+  them when saving a companion. Keep the other members of a font tuple, such as size and effects,
+  as independent comparisons. If either ID does not resolve, or the resolved faces differ, keep
+  the disagreement visible for review; semantic comparison alone does not authorize classifying a
+  font substitution as expected.
 - Separate physical recovery, semantic equivalence, companion transformation, and reader coverage.
 - Classify transformations as `preserved`, `remapped`, `normalized`, `substituted`, `synthesized`,
   `removed`, or `unresolved`. Record `reader-gap` independently.
@@ -115,8 +134,9 @@ statistical unit; occurrences describe corpus reach and duplication.
   Report unmatched populations separately; they may hide additional transformations but are not
   counterexamples.
 - Expected-difference rules in `tools/coverage/comparison.cpp` are executable interpretation.
-  Add a rule only after the difference is characterized; scope it by path, category, and origin so
-  it cannot conceal a recovered-value disagreement. Python must not reclassify a probe result.
+  After the user has reviewed and approved a characterized transformation, scope its rule by path,
+  category, origin, and the narrowest evidence-backed structural predicate so it cannot conceal a
+  recovered-value disagreement. Python must not reclassify a probe result.
 - Surveyors return structured `coverage::Value` observations. Use the C++20 field descriptors in
   `tools/coverage/schema.h` for class leaves; do not serialize or parse an intermediate JSON value.
 

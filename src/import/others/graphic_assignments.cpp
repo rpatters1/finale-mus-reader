@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-#include "import/support/graphic_assignment.h"
+#include "import/shared/graphic_assignment.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -25,38 +25,7 @@ constexpr auto shapeGraphicTag = records::packTag("sg");
 constexpr records::LegacyTag pageGraphicClass = 0x00bc;
 constexpr records::LegacyTag shapeGraphicClass = 0x00d8;
 
-struct AssignmentSource
-{
-    const records::LegacyRowPool* pool{};
-    records::LegacyTag identity{};
-    bool classRecords{};
-};
-
-AssignmentSource assignmentSource(const ImportContext& context,
-    records::LegacyTag fixedTag, records::LegacyTag classId)
-{
-    if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-        return {&context.index.getClassOthers(), classId, true};
-    }
-    return {&context.index.getOthers(), fixedTag, false};
-}
-
-std::vector<std::int16_t> assignmentWords(const AssignmentSource& source,
-    std::span<const records::LegacyRow> rows, ByteOrder byteOrder)
-{
-    std::vector<std::int16_t> result;
-    for (const auto& row : rows) {
-        if (source.classRecords) {
-            const auto words = payloadWords(source.pool->payloadOf(row), byteOrder);
-            result.insert(result.end(), words.begin(), words.end());
-        } else {
-            result.insert(result.end(), row.words.begin(), row.words.begin() + row.wordCount);
-        }
-    }
-    return result;
-}
-
-const records::LegacyRow& sourceRow(const AssignmentSource& source,
+const records::LegacyRow& sourceRow(const RecordFamilySource& source,
     std::span<const records::LegacyRow> rows, std::size_t wordIndex)
 {
     return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
@@ -143,10 +112,12 @@ PageTarget::PageAssignType pageAssignType(std::uint16_t raw)
 
 void importPageFamily(const ImportContext& context)
 {
-    const auto source = assignmentSource(context, pageGraphicTag, pageGraphicClass);
-    for (const auto cmper : source.pool->cmpersForTag(source.identity)) {
-        const auto rows = source.pool->getArray(source.identity, cmper);
-        const auto words = assignmentWords(source, rows, context.profile.byteOrder);
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
+        context.index.getClassOthers(), pageGraphicTag, pageGraphicClass);
+    if (!source) return;
+    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
+        const auto rows = source->pool->getArray(source->identity, cmper);
+        const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
         if (words.size() % graphicAssignmentWordCount != 0) {
             context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                 "Page graphic assignment " + std::to_string(cmper)
@@ -174,14 +145,14 @@ void importPageFamily(const ImportContext& context)
             for (std::size_t slot = 0; slot < graphicAssignmentWordCount; ++slot) {
                 if (!names[slot]) continue;
                 REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, names[slot], tuple[slot],
-                    sourceRow(source, rows, at + slot));
+                    sourceRow(*source, rows, at + slot));
             }
             REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, "hidden", tuple[7],
-                sourceRow(source, rows, at + 7));
+                sourceRow(*source, rows, at + 7));
             REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, "", tuple[8],
-                sourceRow(source, rows, at + 8), true);
+                sourceRow(*source, rows, at + 8), true);
             REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, "rightPg", tuple[16],
-                sourceRow(source, rows, at + 16), true);
+                sourceRow(*source, rows, at + 16), true);
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             context.report.setInstanceOrigin(
                 instanceKey<PageTarget>(musx::dom::SCORE_PARTID, cmper, inci),
@@ -194,10 +165,12 @@ void importPageFamily(const ImportContext& context)
 
 void importShapeFamily(const ImportContext& context)
 {
-    const auto source = assignmentSource(context, shapeGraphicTag, shapeGraphicClass);
-    for (const auto cmper : source.pool->cmpersForTag(source.identity)) {
-        const auto rows = source.pool->getArray(source.identity, cmper);
-        const auto words = assignmentWords(source, rows, context.profile.byteOrder);
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
+        context.index.getClassOthers(), shapeGraphicTag, shapeGraphicClass);
+    if (!source) return;
+    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
+        const auto rows = source->pool->getArray(source->identity, cmper);
+        const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
         if (words.size() % graphicAssignmentWordCount != 0) {
             context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                 "Shape graphic assignment " + std::to_string(cmper)
@@ -219,10 +192,10 @@ void importShapeFamily(const ImportContext& context)
             for (std::size_t index = 0; index < std::size(importedSlots); ++index) {
                 const auto slot = importedSlots[index];
                 REPORT_ASSIGNMENT_VALUE(ShapeTarget, context, cmper, inci, names[index], tuple[slot],
-                    sourceRow(source, rows, at + slot));
+                    sourceRow(*source, rows, at + slot));
             }
             REPORT_POSITION_VALUES(ShapeTarget, context, cmper, inci, "", tuple[8],
-                sourceRow(source, rows, at + 8), false);
+                sourceRow(*source, rows, at + 8), false);
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             context.report.setInstanceOrigin(
                 instanceKey<ShapeTarget>(musx::dom::SCORE_PARTID, cmper, inci),

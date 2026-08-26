@@ -8,6 +8,9 @@
 namespace finale_mus_reader {
 namespace details {
 
+/// @brief Recovers source fretboard diagrams.
+void importFretboardDiagrams(const ImportContext& context);
+
 /// @brief Recovers graphics anchored to a staff and measure.
 void importMeasureGraphicAssignments(const ImportContext& context);
 

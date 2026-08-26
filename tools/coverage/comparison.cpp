@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <limits>
 #include <optional>
 #include <regex>
 #include <set>
@@ -1110,7 +1111,6 @@ std::set<std::string> shapeFontPaths(const SurveySnapshot& snapshot)
 
 std::string fontIdentity(const SurveySnapshot& snapshot, std::int64_t id)
 {
-    if (id == 0) return "<default-music-font>";
     const auto found = snapshot.find("font_definitions");
     if (found == snapshot.end()) return {};
     const auto* definitions = found->second.find("definitions");
@@ -1122,6 +1122,12 @@ std::string fontIdentity(const SurveySnapshot& snapshot, std::int64_t id)
         }
     }
     return {};
+}
+
+bool isFontReferencePath(std::string_view path,
+    const std::set<std::string>& shapeFontPaths)
+{
+    return endsWith(path, "_font_id") || shapeFontPaths.contains(std::string(path));
 }
 
 std::pair<std::int64_t, std::set<std::int64_t>> partNameTextIds(
@@ -1335,10 +1341,98 @@ bool isBaselineFontCharsetNormalization(const std::string& path,
     return false;
 }
 
-bool isFinaleUpgradeLoss(const std::string& path, const std::string& category,
-    const std::string& origin, FormatEpoch epoch, const SourceVersion* sourceVersion)
+bool hasByteSwappedCStringSuffix(std::string_view source, std::string_view companion)
 {
+    std::size_t firstDifference = 0;
+    while (firstDifference < source.size() && firstDifference < companion.size()
+            && source[firstDifference] == companion[firstDifference]) {
+        ++firstDifference;
+    }
+    std::string swapped(source.substr(firstDifference));
+    swapped.push_back('\0');
+    if (swapped.size() % 2 != 0) {
+        // When the terminator is the first byte of its word, swapping that word exposes the
+        // byte after it as the companion's one additional trailing byte.
+        if (companion.size() != source.size() + 1) return false;
+        swapped.push_back(companion.back());
+    }
+    for (std::size_t i = 0; i < swapped.size(); i += 2) {
+        std::swap(swapped[i], swapped[i + 1]);
+    }
+    swapped.resize(swapped.find('\0'));
+    return companion == std::string(source.substr(0, firstDifference)) + swapped;
+}
+
+bool isFretInstrumentStringByteSplit(const std::string& path,
+    const std::string& category, const Leaves& source, const Leaves& companion)
+{
+    if (category != "differs") return false;
+    static const std::regex stringMember(
+        R"(^(fret_instruments\[cmper=\d+\]\.strings\[\d+\])\.(pitch|nut_offset)$)");
+    std::smatch match;
+    if (!std::regex_match(path, match, stringMember)) return false;
+    const auto prefix = match[1].str();
+    const auto sourcePitch = source.find(prefix + ".pitch");
+    const auto sourceNutOffset = source.find(prefix + ".nut_offset");
+    const auto companionPitch = companion.find(prefix + ".pitch");
+    const auto companionNutOffset = companion.find(prefix + ".nut_offset");
+    if (sourcePitch == source.end() || sourceNutOffset == source.end()
+            || companionPitch == companion.end() || companionNutOffset == companion.end()
+            || sourcePitch->second.second != "legacy-mus"
+            || sourceNutOffset->second.second != "legacy-behavior"
+            || !sourcePitch->second.first.isInteger()
+            || !sourceNutOffset->second.first.isInteger()
+            || !companionPitch->second.first.isInteger()
+            || !companionNutOffset->second.first.isInteger()) {
+        return false;
+    }
+    const auto oldPitch = sourcePitch->second.first.asInteger();
+    const auto oldNutOffset = sourceNutOffset->second.first.asInteger();
+    const auto splitPitch = companionPitch->second.first.asInteger();
+    const auto splitNutOffset = companionNutOffset->second.first.asInteger();
+    if (oldPitch < (std::numeric_limits<std::int16_t>::min)()
+            || oldPitch > (std::numeric_limits<std::int16_t>::max)()
+            || oldNutOffset != 0 || splitPitch < 0
+            || splitPitch > (std::numeric_limits<std::uint8_t>::max)()
+            || splitNutOffset < 0
+            || splitNutOffset > (std::numeric_limits<std::uint8_t>::max)()) {
+        return false;
+    }
+    const auto oldWord = static_cast<std::uint16_t>(oldPitch);
+    const auto splitWord = static_cast<std::uint16_t>(splitPitch
+        | (splitNutOffset << 8U));
+    return oldWord == splitWord;
+}
+
+bool isFinaleUpgradeLoss(const std::string& path, const std::string& category,
+    const std::string& origin, const Value& sourceValue, const Value& companionValue,
+    const Leaves& source, const Leaves& companion, FormatEpoch epoch,
+    ByteOrder byteOrder, const SourceVersion* sourceVersion)
+{
+    if (isFretInstrumentStringByteSplit(path, category, source, companion)) return true;
     if (category != "differs" || origin != "legacy-mus") return false;
+    static const std::regex fretGroupInstrumentReference(
+        R"(^fretboard_groups\[cmper=\d+,inci=\d+\]\.fret_inst_id$)");
+    if (byteOrder == ByteOrder::BigEndian
+            && std::regex_match(path, fretGroupInstrumentReference)
+            && sourceValue.isInteger() && companionValue.isInteger()) {
+        const auto sourceInstrument = sourceValue.asInteger();
+        const auto companionInstrument = companionValue.asInteger();
+        if (sourceInstrument >= 0 && sourceInstrument <= 0xffff
+                && companionInstrument >= 0 && companionInstrument <= 0xffff) {
+            const auto byteSwappedInstrument =
+                ((sourceInstrument & 0x00ff) << 8) | ((sourceInstrument & 0xff00) >> 8);
+            if (companionInstrument == byteSwappedInstrument) return true;
+        }
+    }
+    static const std::regex fretGroupName(
+        R"(^fretboard_groups\[cmper=\d+,inci=\d+\]\.name$)");
+    if (byteOrder == ByteOrder::BigEndian && std::regex_match(path, fretGroupName)
+            && sourceValue.isString() && companionValue.isString()
+            && hasByteSwappedCStringSuffix(
+                sourceValue.asString(), companionValue.asString())) {
+        return true;
+    }
     if (epoch == FormatEpoch::CodaBanner
             && std::set<std::string_view>{
                 "smart_shape_options.slur_thickness_cp1_x",
@@ -1354,7 +1448,7 @@ bool isFinaleUpgradeLoss(const std::string& path, const std::string& category,
 std::optional<std::string> expectedDifference(const std::string& path,
     const std::string& category, const std::string& origin, const Value& sourceValue,
     const Value& companionValue, const Leaves& source, const Leaves& companion,
-    FormatEpoch epoch, const SourceVersion* sourceVersion)
+    FormatEpoch epoch, ByteOrder byteOrder, const SourceVersion* sourceVersion)
 {
     if (category == "companion_only" && startsWith(path, "stem_options.stem_connections[")) {
         return "stem-connection-past-terminator";
@@ -1377,7 +1471,8 @@ std::optional<std::string> expectedDifference(const std::string& path,
             && companionValue.isInteger() && companionValue.asInteger() == 128) {
         return "coda-stem-offset";
     }
-    if (isFinaleUpgradeLoss(path, category, origin, epoch, sourceVersion)) {
+    if (isFinaleUpgradeLoss(path, category, origin, sourceValue, companionValue,
+            source, companion, epoch, byteOrder, sourceVersion)) {
         return std::string(finaleUpgradeLossRule);
     }
     if (const auto omitted = omittedSlurConnectionStyleDifference(
@@ -1467,7 +1562,7 @@ void writeCounts(std::ostream& out, const std::map<std::string, std::uint64_t>& 
 ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion,
     const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument,
-    FormatEpoch sourceEpoch, const SourceVersion* sourceVersion,
+    FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
     const text::SymbolFontNames* symbolFontNames)
 {
     ComparisonResult result;
@@ -1478,7 +1573,9 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
     }
     const auto textBlockReferents = compareTextBlockReferents(
         sourceDocument, companionDocument, symbolFontNames);
-    const auto sourceFontPaths = shapeFontPaths(source);
+    auto shapeSetFontPaths = shapeFontPaths(source);
+    const auto companionShapeFontPaths = shapeFontPaths(companion);
+    shapeSetFontPaths.insert(companionShapeFontPaths.begin(), companionShapeFontPaths.end());
     std::set<std::string> classes;
     for (const auto& [name, unused] : source) if (!excludedClasses.contains(name)) classes.insert(name);
     for (const auto& [name, unused] : companion) if (!excludedClasses.contains(name)) classes.insert(name);
@@ -1498,7 +1595,28 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const auto companionFound = companionLeaves.find(path);
             const bool inSource = sourceFound != sourceLeaves.end();
             const bool inCompanion = companionFound != companionLeaves.end();
-            if (inSource && inCompanion && sourceFound->second.first == companionFound->second.first) {
+            const bool fontReference = isFontReferencePath(path, shapeSetFontPaths);
+            if (inSource && inCompanion && fontReference
+                    && sourceFound->second.first.isInteger()
+                    && companionFound->second.first.isInteger()) {
+                const auto sourceName = fontIdentity(
+                    source, sourceFound->second.first.asInteger());
+                const auto companionName = fontIdentity(
+                    companion, companionFound->second.first.asInteger());
+                if (!sourceName.empty() && sameFontName(sourceName, companionName)) {
+                    ++stats.same;
+                    continue;
+                }
+                if (shapeSetFontPaths.contains(path)) {
+                    ++stats.expected;
+                    ++result.expected["setfont-font-substitution"];
+                    ++result.fontSubstitutions[(sourceName.empty() ? "?" : sourceName) + '\t'
+                        + (companionName.empty() ? "?" : companionName)];
+                    continue;
+                }
+            }
+            if (inSource && inCompanion && !fontReference
+                    && sourceFound->second.first == companionFound->second.first) {
                 ++stats.same;
                 continue;
             }
@@ -1566,22 +1684,9 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const Value sourceValue = inSource ? sourceFound->second.first : Value{};
             const Value companionValue = inCompanion ? companionFound->second.first : Value{};
             const auto origin = inSource ? sourceFound->second.second : std::string{};
-            if (category == "differs" && sourceFontPaths.contains(path)
-                    && sourceValue.isInteger() && companionValue.isInteger()) {
-                const auto sourceName = fontIdentity(source, sourceValue.asInteger());
-                const auto companionName = fontIdentity(companion, companionValue.asInteger());
-                if (!sourceName.empty() && sameFontName(sourceName, companionName)) {
-                    ++stats.same;
-                } else {
-                    ++stats.expected;
-                    ++result.expected["setfont-font-substitution"];
-                    ++result.fontSubstitutions[(sourceName.empty() ? "?" : sourceName) + '\t'
-                        + (companionName.empty() ? "?" : companionName)];
-                }
-                continue;
-            }
             if (const auto expected = expectedDifference(path, category, origin, sourceValue,
-                    companionValue, sourceLeaves, companionLeaves, sourceEpoch, sourceVersion)) {
+                    companionValue, sourceLeaves, companionLeaves, sourceEpoch,
+                    sourceByteOrder, sourceVersion)) {
                 ++stats.expected;
                 ++result.expected[*expected];
             } else if (category == "differs" && referent != textBlockReferents.end()

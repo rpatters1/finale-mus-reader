@@ -49,6 +49,27 @@ namespace {
 
 using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
 
+template <typename UnitAt>
+std::string utf16ToUtf8Impl(std::size_t size, UnitAt unitAt)
+{
+    std::string result;
+    for (std::size_t at = 0; at < size; ++at) {
+        const auto unit = unitAt(at);
+        if (unit == 0) break;
+        char32_t codepoint = unit;
+        if (unit >= 0xd800 && unit <= 0xdbff && at + 1 < size) {
+            const auto low = unitAt(at + 1);
+            if (low >= 0xdc00 && low <= 0xdfff) {
+                codepoint = static_cast<char32_t>(
+                    0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
+                ++at;
+            }
+        }
+        result += musx::util::EnigmaString::toU8(codepoint);
+    }
+    return result;
+}
+
 // Windows code page numbers are the portable encoding identifier: Windows consumes them
 // directly, while the other platforms map them to their native conversion APIs.
 enum class CodePage : int
@@ -599,6 +620,22 @@ std::optional<char32_t> firstCodepoint(std::string_view utf8)
 }
 
 } // namespace
+
+std::string utf16ToUtf8(std::span<const std::int16_t> source)
+{
+    return utf16ToUtf8Impl(source.size(), [&source](std::size_t at) {
+        return static_cast<std::uint16_t>(source[at]);
+    });
+}
+
+std::string utf16LeToUtf8(std::span<const std::uint8_t> source)
+{
+    return utf16ToUtf8Impl(source.size() / 2, [&source](std::size_t at) {
+        const auto byte = at * 2;
+        return static_cast<std::uint16_t>(source[byte]
+            | (static_cast<std::uint16_t>(source[byte + 1]) << 8U));
+    });
+}
 
 static char32_t firstCodepointOrByte(std::uint8_t stored, const std::string& converted)
 {

@@ -10,7 +10,7 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**23 done, 4 partial, 163 to do, 190 total.** Verified class for class against the registry on
+**27 done, 4 partial, 159 to do, 190 total.** Verified class for class against the registry on
 2026-08-24: every registered type appears here and nothing here is unregistered.
 
 ## options  (8 done, 1 partial, 19 to do, 28 total)
@@ -44,7 +44,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TimeSignatureOptions
     [ ] TupletOptions
 
-## others  (8 done, 1 partial, 84 to do, 93 total)
+## others  (11 done, 1 partial, 81 to do, 93 total)
 
     [ ] AcciAmountFlats
     [ ] AcciAmountSharps
@@ -63,9 +63,9 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] FileUrlBookmark
     [x] FontDefinition                          font_definitions.cpp
     [ ] Frame
-    [ ] FretInstrument
-    [ ] FretboardGroup
-    [ ] FretboardStyle
+    [x] FretInstrument                          fret_instruments.cpp
+    [x] FretboardGroup                          fretboard_groups.cpp
+    [x] FretboardStyle                          fretboard_styles.cpp
     [ ] KeyAttributes
     [ ] KeyFormat
     [ ] KeyMapArray
@@ -140,7 +140,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] TonalCenterFlats
     [ ] TonalCenterSharps
 
-## details  (1 done, 0 partial, 59 to do, 60 total)
+## details  (2 done, 0 partial, 58 to do, 60 total)
 
     [ ] AccidentalAlterations
     [ ] ArticulationAssign
@@ -174,7 +174,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] DotAlterations
     [ ] EntryPartFieldDetail
     [ ] EntrySize
-    [ ] FretboardDiagram
+    [x] FretboardDiagram                        fretboard_diagrams.cpp
     [ ] GFrameHold
     [ ] IndependentStaffDetails
     [ ] KeySymbolListElement

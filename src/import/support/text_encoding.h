@@ -67,6 +67,15 @@ std::string toUtf8(std::string_view source, std::uint16_t packedCharset);
 /// result remains valid UTF-8 and retains enough information for a better-informed pass.
 std::string toUtf8(std::string_view source, SourcePlatform platform);
 
+/// @brief Converts null-terminated UTF-16 code units to UTF-8.
+/// @details Unpaired surrogates remain visible as their stored codepoint rather than being
+/// discarded. Input after the first null code unit is ignored.
+std::string utf16ToUtf8(std::span<const std::int16_t> source);
+
+/// @brief Converts null-terminated little-endian UTF-16 bytes to UTF-8.
+/// @details A final unpaired byte is ignored.
+std::string utf16LeToUtf8(std::span<const std::uint8_t> source);
+
 /// @brief Converts legacy text using the named document font.
 /// @details A resolved font determines whether its bytes are text or glyph numbers. If the
 /// font is absent, @p unresolvedFontFallback supplies that fact. Text uses the source

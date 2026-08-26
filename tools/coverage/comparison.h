@@ -47,7 +47,7 @@ struct ComparisonResult
 ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion,
     const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument,
-    FormatEpoch sourceEpoch, const SourceVersion* sourceVersion,
+    FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
     const text::SymbolFontNames* symbolFontNames);
 
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison);

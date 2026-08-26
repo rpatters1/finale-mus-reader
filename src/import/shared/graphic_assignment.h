@@ -3,6 +3,8 @@
 
 #pragma once
 
+// Shared layout operations for page, shape, and measure graphic assignments.
+
 #include <cstddef>
 #include <cstdint>
 #include <span>

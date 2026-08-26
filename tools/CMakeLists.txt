@@ -33,5 +33,10 @@ finale_mus_reader_add_tool(globals_census PRIVATE_HEADERS)
 finale_mus_reader_add_tool(record_dump PRIVATE_HEADERS)
 finale_mus_reader_add_tool(text_pool_probe PRIVATE_HEADERS)
 finale_mus_reader_add_tool(graphics_record_probe PRIVATE_HEADERS)
+finale_mus_reader_add_tool(fret_companion_probe)
+target_sources(fret_companion_probe PRIVATE coverage/support/musx_companion.cpp)
+target_include_directories(fret_companion_probe PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/coverage/support")
+target_link_libraries(fret_companion_probe PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
 
 add_subdirectory(coverage)

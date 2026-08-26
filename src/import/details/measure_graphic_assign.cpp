@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "import/support/graphic_assignment.h"
+#include "import/shared/graphic_assignment.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -38,20 +38,12 @@ void reportMeasureGraphicValue(const ImportContext& context, musx::dom::Cmper st
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void importMeasureGraphicFamily(const ImportContext& context,
-    const records::LegacyRowPool& pool, records::LegacyTag identity, bool classRecords)
+    const RecordFamilySource& source)
 {
-    for (const auto staffId : pool.cmpersForTag(identity)) {
-        for (const auto meas : pool.secondCmpersForTag(identity, staffId)) {
-            const auto rows = pool.getArray(identity, staffId, meas);
-            std::vector<std::int16_t> words;
-            for (const auto& row : rows) {
-                if (classRecords) {
-                    const auto payload = payloadWords(pool.payloadOf(row), context.profile.byteOrder);
-                    words.insert(words.end(), payload.begin(), payload.end());
-                } else {
-                    words.insert(words.end(), row.words.begin(), row.words.begin() + row.wordCount);
-                }
-            }
+    for (const auto staffId : source.pool->cmpersForTag(source.identity)) {
+        for (const auto meas : source.pool->secondCmpersForTag(source.identity, staffId)) {
+            const auto rows = source.pool->getArray(source.identity, staffId, meas);
+            const auto words = collectRecordWords(source, rows, context.profile.byteOrder);
             if (words.size() % measureGraphicAssignWordCount != 0) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                     "Measure graphic assignment for staff " + std::to_string(staffId)
@@ -76,7 +68,7 @@ void importMeasureGraphicFamily(const ImportContext& context,
                     "origHeight", "graphicCmper"};
                 for (std::size_t index = 0; index < std::size(slots); ++index) {
                     const auto slot = slots[index];
-                    const auto& sourceRow = rows[classRecords ? 0
+                    const auto& sourceRow = rows[source.classRecords ? 0
                         : (at + slot) / records::detailWordCount];
                     reportMeasureGraphicValue(context, staffId, meas, inci,
                         names[index], tuple[slot], sourceRow);
@@ -85,7 +77,7 @@ void importMeasureGraphicFamily(const ImportContext& context,
                 const auto reportInstance = instanceKey<MeasureGraphicTarget>(
                     musx::dom::SCORE_PARTID, staffId, inci, meas);
                 context.report.setInstanceOrigin(reportInstance, ValueOrigin::LegacyMus);
-                const auto& positionRow = rows[classRecords ? 0
+                const auto& positionRow = rows[source.classRecords ? 0
                     : (at + 8) / records::detailWordCount];
                 for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
                     reportMeasureGraphicValue(context, staffId, meas, inci,
@@ -103,24 +95,10 @@ void importMeasureGraphicFamily(const ImportContext& context,
 
 void importMeasureGraphicAssignments(const ImportContext& context)
 {
-    switch (context.profile.epoch) {
-    case FormatEpoch::CodaBanner:
-        // No Coda-banner assignment has been seen. The normalized fixed detail pool remains
-        // accepted so a future specimen can use the same mg layout.
-        [[fallthrough]];
-    case FormatEpoch::UncompressedLegacy:
-    case FormatEpoch::DclLegacy:
-        importMeasureGraphicFamily(
-            context, context.index.getDetails(), measureGraphicAssignTag, false);
-        break;
-    case FormatEpoch::ZlibLegacy:
-        importMeasureGraphicFamily(
-            context, context.index.getClassDetails(), measureGraphicAssignClass, true);
-        break;
-    case FormatEpoch::Unknown:
-        // An unknown container has no trustworthy detail-pool framing.
-        break;
-    }
+    // The fixed-row selection also accepts a normalized Coda-banner mg family when present.
+    const auto source = selectRecordFamilySource(context, context.index.getDetails(),
+        context.index.getClassDetails(), measureGraphicAssignTag, measureGraphicAssignClass);
+    if (source) importMeasureGraphicFamily(context, *source);
 }
 
 } // namespace details

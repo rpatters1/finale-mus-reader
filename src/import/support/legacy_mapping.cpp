@@ -44,6 +44,78 @@ std::optional<InstanceKey> importedInstanceKey(const musx::dom::EnigmaBase& obje
 }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
+} // namespace
+
+std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context,
+    const records::LegacyRowPool& fixedPool, const records::LegacyRowPool& classPool,
+    records::LegacyTag fixedTag, records::LegacyTag classId)
+{
+    switch (context.profile.epoch) {
+    case FormatEpoch::CodaBanner:
+    case FormatEpoch::UncompressedLegacy:
+    case FormatEpoch::DclLegacy:
+        return RecordFamilySource{&fixedPool, fixedTag, false};
+    case FormatEpoch::ZlibLegacy:
+        return RecordFamilySource{&classPool, classId, true};
+    case FormatEpoch::Unknown:
+        return std::nullopt;
+    }
+    return std::nullopt;
+}
+
+std::vector<std::uint8_t> collectRecordPayload(
+    const RecordFamilySource& source, std::span<const records::LegacyRow> rows)
+{
+    std::vector<std::uint8_t> result;
+    for (const auto& row : rows) {
+        const auto payload = source.pool->payloadOf(row);
+        result.insert(result.end(), payload.begin(), payload.end());
+    }
+    return result;
+}
+
+std::vector<std::int16_t> collectRecordWords(
+    const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
+    ByteOrder byteOrder)
+{
+    return payloadWords(collectRecordPayload(source, rows), byteOrder);
+}
+
+std::uint16_t payloadWord(
+    std::span<const std::uint8_t> payload, std::size_t offset, ByteOrder byteOrder)
+{
+    return byteOrder == ByteOrder::BigEndian
+        ? static_cast<std::uint16_t>((static_cast<std::uint16_t>(payload[offset]) << 8U)
+            | payload[offset + 1])
+        : static_cast<std::uint16_t>(payload[offset]
+            | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U));
+}
+
+std::int32_t payloadLong(std::span<const std::uint8_t> payload,
+    std::size_t offset, ByteOrder byteOrder, LongWordOrder wordOrder)
+{
+    const auto first = payloadWord(payload, offset, byteOrder);
+    const auto second = payloadWord(payload, offset + 2, byteOrder);
+    const auto high = wordOrder == LongWordOrder::HighFirst ? first : second;
+    const auto low = wordOrder == LongWordOrder::HighFirst ? second : first;
+    return static_cast<std::int32_t>(
+        (static_cast<std::uint32_t>(high) << 16U) | low);
+}
+
+std::string payloadString(std::span<const std::uint8_t> payload,
+    std::size_t offset, std::size_t capacity)
+{
+    const auto available = (std::min)(capacity, payload.size() - offset);
+    std::string result(
+        reinterpret_cast<const char*>(payload.data() + offset), available);
+    if (const auto end = result.find('\0'); end != std::string::npos) {
+        result.resize(end);
+    }
+    return result;
+}
+
+namespace {
+
 /// @brief Every musxdom class this reader recovers, one entry each, grouped by pool.
 /// @details The registry says what is imported and in what order, and nothing else. How many
 /// physical layouts a class has, which epochs each covers, and whether it needs a capture
@@ -89,12 +161,16 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others
+        FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
+        FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
+        FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         // details
+        FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         // entries (none recovered yet)
         // texts
