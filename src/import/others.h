@@ -19,6 +19,15 @@ void importFontDefinitions(const ImportContext& context);
 /// @brief Recovers the four others::LayerAttributes objects.
 void importLayerAttributes(const ImportContext& context);
 
+/// @brief Recovers source fret instrument definitions.
+void importFretInstruments(const ImportContext& context);
+
+/// @brief Recovers source fretboard groups.
+void importFretboardGroups(const ImportContext& context);
+
+/// @brief Recovers source fretboard styles.
+void importFretboardStyles(const ImportContext& context);
+
 /// @brief Recovers page graphic assignments and their embedded-graphic references.
 void importPageGraphicAssignments(const ImportContext& context);
 

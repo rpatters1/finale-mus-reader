@@ -665,26 +665,18 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         if (unicodeTail) {
             for (std::size_t word = punctuationTailWord; word < lyric.words.size(); ++word) {
                 const auto unit = static_cast<std::uint16_t>(lyric.words[word]);
-                if (unit == 0) {
-                    break;
-                }
+                if (unit == 0) break;
                 ++units;
-                char32_t codepoint = unit;
-                // UTF-16, so an astral character arrives as a surrogate pair. Nothing seen so
-                // far leaves the basic multilingual plane, but the era is the Unicode one and a
-                // user can type anything into the field. A half pair passes through as itself
-                // rather than being dropped, so a malformed tail stays visible.
                 if (unit >= 0xd800 && unit <= 0xdbff && word + 1 < lyric.words.size()) {
                     const auto low = static_cast<std::uint16_t>(lyric.words[word + 1]);
                     if (low >= 0xdc00 && low <= 0xdfff) {
-                        codepoint = static_cast<char32_t>(
-                            0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
                         ++word;
                         ++units;
                     }
                 }
-                ignored += musx::util::EnigmaString::toU8(codepoint);
             }
+            ignored = text::utf16ToUtf8(std::span(lyric.words).subspan(
+                (std::min)(punctuationTailWord, lyric.words.size())));
         } else if (const auto* row = index.getClassOthers().get(
                        numericGlobalClass(wordExtSelector), GLOBALS_CMPER, 0, 0)) {
             // Bytes, so the payload is read directly rather than through the word stream the

@@ -34,11 +34,15 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";
     case Phase::ImportStemOptions: return "stem_options";
     case Phase::ImportTextOptions: return "text_options";
+    case Phase::ImportFretInstruments: return "fret_instruments";
+    case Phase::ImportFretboardGroups: return "fretboard_groups";
+    case Phase::ImportFretboardStyles: return "fretboard_styles";
     case Phase::ImportLayerAttributes: return "layer_atts";
     case Phase::ImportPageGraphicAssignments: return "page_graphic_assigns";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
     case Phase::ImportShapeDefinitions: return "shape_definitions";
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
+    case Phase::ImportFretboardDiagrams: return "fretboard_diagrams";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";
     case Phase::ImportTexts: return "texts";
     case Phase::ImportTextBlocks: return "text_blocks";

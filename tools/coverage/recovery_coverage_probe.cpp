@@ -747,6 +747,7 @@ int main(int argc, char** argv)
         std::optional<SurveySnapshot> sourceSnapshot;
         musx::dom::DocumentPtr sourceDocument;
         FormatEpoch sourceEpoch = FormatEpoch::Unknown;
+        ByteOrder sourceByteOrder = ByteOrder::Unknown;
         std::optional<SourceVersion> sourceVersion;
         try {
             const auto readerStarted = std::chrono::steady_clock::now();
@@ -764,6 +765,7 @@ int main(int argc, char** argv)
             }
             sourceDocument = result.document;
             sourceEpoch = result.report.formatEpoch;
+            sourceByteOrder = result.report.byteOrder;
             sourceVersion = result.report.sourceVersion;
             out << ",\"status\":\"ok\""
                 << ",\"epoch\":" << jsonString(epochName(result.report.formatEpoch))
@@ -920,7 +922,7 @@ int main(int argc, char** argv)
                 if (sourceSnapshot && companionSnapshot) {
                     out << ",\"comparison\":{";
                     const auto comparison = compareSnapshots(*sourceSnapshot, *companionSnapshot,
-                        sourceDocument, companionDocument, sourceEpoch,
+                        sourceDocument, companionDocument, sourceEpoch, sourceByteOrder,
                         sourceVersion ? &*sourceVersion : nullptr, &symbolFontNames);
                     writeCompactComparison(out, comparison);
                     out << '}';

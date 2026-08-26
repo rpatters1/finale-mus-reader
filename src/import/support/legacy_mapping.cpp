@@ -89,12 +89,16 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others
+        FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
+        FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
+        FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         // details
+        FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         // entries (none recovered yet)
         // texts
