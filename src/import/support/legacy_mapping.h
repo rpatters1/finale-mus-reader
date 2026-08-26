@@ -542,8 +542,26 @@ struct PendingShapeReference
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
 
-/// @brief Requests accumulated during capture, drained by @ref resolveDeferredReferences.
-using PendingReferences = std::vector<PendingShapeReference>;
+/// @brief A reference-document custom line a target field needs, resolved after all source pools.
+struct PendingCustomLineReference
+{
+    /// @brief The custom line's comparator in the reference document.
+    musx::dom::Cmper referenceLineId{};
+    /// @brief Writes the resolved target comparator into the field that needs it.
+    std::function<void(musx::dom::Cmper)> assign;
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    /// @brief The structured report instance and member whose value resolution updates.
+    InstanceKey reportInstance;
+    std::string reportMember;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+};
+
+/// @brief Reference-object requests accumulated during capture and drained after all source pools.
+struct PendingReferences
+{
+    std::vector<PendingShapeReference> shapes; ///< Shape definitions requested by recovered classes.
+    std::vector<PendingCustomLineReference> customLines; ///< Custom lines requested by recovered classes.
+};
 
 /// @brief Everything the importer for one musxdom class is handed.
 /// @details Passed by reference and outlived by nothing: it is built once per import and
@@ -578,6 +596,29 @@ struct ImportContext
     /// the discarded one would mint a placeholder definition that nothing references.
     musx::factory::ConstructionContext& construction;
 };
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+/// @brief Records a field whose legacy source has not been located in any supported layout.
+/// @details An existing entry always wins, so a recovered value or known fallback cannot be
+/// downgraded by the completeness pass.
+template <typename Class>
+void reportUnmappedField(ImportReport& report, const InstanceKey& instance,
+    std::string member, std::int64_t value)
+{
+    if (!report.findField(instance, member)) {
+        report.setField(instance, std::move(member),
+            {ValueOrigin::Unmapped, 0, 0, value});
+    }
+}
+#else
+template <typename Class, typename... Args>
+void reportUnmappedField(Args&&...)
+{
+}
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+/// @brief Reports every object created by a reference-document import as a pinned default.
+musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report);
 
 /// @brief Recovers one musxdom class, from record identity to finished object.
 /// @details One per class. An importer owns every decision its class needs -- which tables

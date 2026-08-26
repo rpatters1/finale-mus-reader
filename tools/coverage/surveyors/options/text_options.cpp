@@ -70,6 +70,12 @@ Value observeTextOptions(const SurveyContext& ctx)
             {"font_id", insert.symFont ? int(insert.symFont->fontId) : 0},
             {"font_size", insert.symFont ? insert.symFont->fontSize : 0},
             {"font_effects", insert.symFont ? int(insert.symFont->getEnigmaStyles()) : 0},
+            {"font_bold", insert.symFont && insert.symFont->bold},
+            {"font_italic", insert.symFont && insert.symFont->italic},
+            {"font_underline", insert.symFont && insert.symFont->underline},
+            {"font_strikeout", insert.symFont && insert.symFont->strikeout},
+            {"font_absolute", insert.symFont && insert.symFont->absolute},
+            {"font_hidden", insert.symFont && insert.symFont->hidden},
             {"font_name", fontName}, {"normalized_font_name", musx::dom::normalizeFontName(fontName)},
             {"dangling_font", dangling}});
         const auto prefix = std::string("symbolInserts[") + name + "].";
@@ -77,6 +83,10 @@ Value observeTextOptions(const SurveyContext& ctx)
                  "symChar", "symFont.fontId", "symFont.fontSize", "symFont.effects"}) {
             observed.emplace(std::string("origin_") + member,
                 fieldOrigin<Target>(ctx, prefix + member));
+        }
+        for (const auto* member : {"Bold", "Italic", "Underline", "Strikeout", "Absolute", "Hidden"}) {
+            observed.emplace(std::string("origin_font") + member,
+                fieldOrigin<Target>(ctx, prefix + "symFont.effects"));
         }
         inserts.emplace_back(std::move(observed));
     }

@@ -34,6 +34,8 @@ std::string jsonString(std::string_view value)
 const char* originName(ValueOrigin origin)
 {
     switch (origin) {
+    case ValueOrigin::Unmapped: return "unmapped";
+    case ValueOrigin::MusxOnly: return "musx-only";
     case ValueOrigin::LegacyMus: return "legacy-mus";
     case ValueOrigin::LegacyBehavior: return "legacy-behavior";
     case ValueOrigin::Finale27Default: return "finale27-default";

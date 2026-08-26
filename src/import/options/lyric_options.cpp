@@ -771,30 +771,15 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     target->useAltHyphenFont = false;
     reportLyricField(report, "useAltHyphenFont", ValueOrigin::LegacyBehavior, 0);
 
-    // The hyphen character postdates Finale 2012 in the same way, and is handled differently
-    // on purpose. A boolean that is false because its feature does not exist can be stated in
-    // code without restating anything; the character a legacy document drew cannot, because
-    // writing U+002D here beside a pinned resource that already says 45 would be a second copy
-    // of one fact -- the case the repository's rule is actually aimed at. The seeded value
-    // stands and is reported as what it is, a Finale 27 default.
-    reportLyricField(report, "hyphenChar", ValueOrigin::Finale27Default,
+    // These members postdate every supported legacy layout. Their seeded values remain untouched;
+    // musxdom creates the FontInfo placeholder after import.
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    reportLyricField(report, "hyphenChar", ValueOrigin::MusxOnly,
         static_cast<std::int64_t>(target->hyphenChar));
-
-    // `altHyphenFont` itself is a different case from the switch above, and is deliberately
-    // left alone. Which typeface an alternate hyphen would have used is not a fact about any
-    // legacy era -- the feature did not exist, so there is no such typeface -- and the pinned
-    // baseline carries no <altHyphenFont> element either. musxdom populates that member only
-    // from such an element and synthesizes one in `integrityCheck` otherwise, and
-    // `integrityCheck` runs at the end of construction, after every importer. A null pointer
-    // here therefore means exactly that the baseline omitted the element, and it means it
-    // without reading the baseline's XML, which no importer has access to in any case.
-    //
-    // So nothing is imported and nothing is reported for it. The obvious-looking alternative is
-    // wrong: a FontInfo the baseline *had* seeded would carry the baseline's font numbering
-    // rather than this document's and would need `musx::dom::importFontDefinitionInto` before
-    // it named anything here, but a member the baseline never filled in is absent rather than
-    // wrong. Copying the reference document's own synthesized placeholder into it would put a
-    // value in the document that no document ever stated.
+    reportLyricField(report, "altHyphenFont.fontId", ValueOrigin::MusxOnly, 0);
+    reportLyricField(report, "altHyphenFont.fontSize", ValueOrigin::MusxOnly, 0);
+    reportLyricField(report, "altHyphenFont.effects", ValueOrigin::MusxOnly, 0);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 } // namespace

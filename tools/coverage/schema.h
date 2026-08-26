@@ -82,6 +82,23 @@ Value observe(const Object& object, const SurveyContext& context, const Fields&.
     Value::Object result;
     (result.emplace(std::string(fields.name),
          detail::schemaValue(detail::fieldValue(object, context, fields.accessor))), ...);
+    InstanceKey instance{typeid(Object), musx::dom::SCORE_PARTID, std::nullopt,
+        std::nullopt, std::nullopt};
+    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Object>) {
+        instance.partId = object.getSourcePartId();
+        instance.cmper1 = object.getCmper();
+        instance.inci = object.getInci();
+    } else if constexpr (std::is_base_of_v<musx::dom::DetailsBase, Object>) {
+        instance.partId = object.getSourcePartId();
+        instance.cmper1 = object.getCmper1();
+        instance.cmper2 = object.getCmper2();
+        instance.inci = object.getInci();
+    } else if constexpr (std::is_base_of_v<musx::dom::TextsBase, Object>) {
+        instance.cmper1 = object.getTextNumber();
+    }
+    if (const auto* origin = context.report.findInstanceOrigin(instance)) {
+        result.emplace("origin", originName(*origin));
+    }
     return Value(std::move(result));
 }
 
@@ -91,7 +108,24 @@ std::string fieldOrigin(const SurveyContext& context, std::string_view member,
 {
     const auto* info = context.report.findField<Class>(member, musx::dom::SCORE_PARTID,
         cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt);
-    return info ? originName(info->origin) : "absent";
+    if (info) return originName(info->origin);
+    const auto* instance = context.report.findInstanceOrigin(instanceKey<Class>(
+        musx::dom::SCORE_PARTID,
+        cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt));
+    return instance ? originName(*instance) : "absent";
+}
+
+template <typename Class>
+std::string fieldOrigin(const SurveyContext& context, std::string_view member,
+    const InstanceKey& instance)
+{
+    if (const auto* info = context.report.findField(instance, member)) {
+        return originName(info->origin);
+    }
+    if (const auto* origin = context.report.findInstanceOrigin(instance)) {
+        return originName(*origin);
+    }
+    return "absent";
 }
 
 template <typename Class>

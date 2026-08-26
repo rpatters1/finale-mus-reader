@@ -287,6 +287,10 @@ from independently corpus-verified behavior.
 - Analysis scripts must remain read-only with respect to the evidence corpus.
 - Treat later Finale/MUSX conversions and ETF exports as semantic references;
   resaving may normalize, synthesize, reorder, or expand records.
+- Before consulting any authorized private Framework source for a Finale header or
+  declaration, search the publicly available Framework headers at
+  `pdk.finalelua.com`. All Framework headers are expected to be available there;
+  use private history only when the public headers do not answer the question.
 - Public PDK facts must cite an immutable public URL and access date, use the
   project's own terminology, and remain labeled `public-PDK-derived` until
   independently verified.

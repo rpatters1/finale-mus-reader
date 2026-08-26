@@ -724,7 +724,8 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
                         + " insert names a font definition the baseline does not carry;"
                           " substituted font id 0."});
             } else if (const auto resolved
-                = musx::dom::importFontDefinitionInto(document, referenceFont)) {
+                = musx::dom::importFontDefinitionInto(
+                    document, referenceFont, baselineObjectReporter(report))) {
                 fontId = *resolved;
             } else {
                 report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,

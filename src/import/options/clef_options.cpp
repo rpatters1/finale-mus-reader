@@ -381,7 +381,7 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
         // the field stays zero until then: a blank clef is honest, a foreign comparator is not.
         def->shapeId = 0;
         if (source->isShape && source->shapeId != 0) {
-            pending.push_back({source->shapeId,
+            pending.shapes.push_back({source->shapeId,
                 [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                 ,

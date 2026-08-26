@@ -459,16 +459,9 @@ const MappingTable& ssLineWideClassTable()
 
 void importSmartShapeCustomLines(const ImportContext& context)
 {
-    // The class is entirely library content: no seeded option references a custom line style
-    // comparator (research/PRODUCTION_READINESS.md), so these objects are built from
-    // whichever comparators the source itself carries and nothing is seeded.
-    //
-    // The record's presence is the structural marker the gates rely on, which is why none of
-    // them names the Finale 2000 boundary the feature arrived at. A source from before that
-    // boundary and a source that simply never used a custom line style are indistinguishable
-    // here: both carry no rows under the tag and yield no objects, which is the right outcome
-    // for either, so a version gate would only add a way to fail closed on a file whose
-    // version could not be read.
+    // These tables construct only the custom lines stored by the source. Smart Shape options
+    // independently request the baseline lines required by formats that predate this class;
+    // deferred reference resolution adds those after every source-owned pool has been read.
     applyMappingTables({&ssLineFixedRowTable(), &ssLineNarrowClassTable(),
                            &ssLineWideClassTable()},
         context.index, context.profile, context.document, context.report);
@@ -478,6 +471,11 @@ void importSmartShapeCustomLines(const ImportContext& context)
     // a Char line has a font, and only after the tables have settled which lines those are.
     for (const auto& line : context.document->getOthers()
              ->getArray<CustomLine>(musx::dom::SCORE_PARTID)) {
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        context.report.setInstanceOrigin(
+            instanceKey<CustomLine>(musx::dom::SCORE_PARTID, line->getCmper()),
+            ValueOrigin::LegacyMus);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
         if (line->charParams) {
             context.construction.registerFontId(line->charParams->font->fontId);
         }

@@ -64,3 +64,28 @@ F2002-clef-stem-font.mus
     decoding 192 through Mac Roman would name an infinity sign. Every clef, connection and
     insert in every other fixture is of that kind, which is why no earlier document showed the
     difference.
+
+F2002-slursavoid-no-acci.mus
+    sha256 5ce382eb880cc1cf7f7869b1400c8036e1a74c829cd225e4ce42db703d8ce201
+F2002-slursavoid-no-acci.etf
+    sha256 dcd2c908d0909cb774db4a48623951c3e14957ee503530dd170a473315313bf3
+F2002-slursavoid-no-acci.musx
+    sha256 89b8722768a37e18499a9d43d9fda3dc8bacae7fdd383b8b57e448b27d971643
+    From F2002-empty, with Slur Padding changed from 18 to 37 and Avoid
+    Accidentals disabled. The source changes only selector 53 incidence 0 word 4
+    from 18 to 37 and selector 50 word 4 from 2 to 1. Selector 53 retains its
+    single incidence. The modern companion preserves general padding 37, copies
+    it to accidental padding despite avoidance being disabled, and leaves Initial
+    Adjustment: Stretch false. Together with the other Finale 2002 companions,
+    this distinguishes copied padding values 12, 18, and 37.
+
+F2002-tips-avoid-stafflines.mus
+    sha256 467e64324757b3d17e277a39fd3103d4c5853c14277f855f1c7c1b67426c4eab
+F2002-tips-avoid-stafflines.etf
+    sha256 b359505ca3cc4a37478e30aa15dcbe563da06b85878fd13a1429a36f911477f9
+F2002-tips-avoid-stafflines.musx
+    sha256 aa6b5a7d7374ef390c2f47f944d5c76b7cb2cc738f052113d0db73128d7cad23
+    From F2002-empty, with Avoid Staff Lines By changed from 8 to 17. The
+    source changes only selector 50 incidence 0 word 5, from 9 to 18. The
+    modern companion preserves the displayed value 17, confirming that a
+    positive stored amount is one greater than the option value.

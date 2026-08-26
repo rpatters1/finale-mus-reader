@@ -351,7 +351,8 @@ musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
             + std::to_string(referenceId) + "; substituted font id 0."});
         return 0;
     }
-    if (const auto resolved = musx::dom::importFontDefinitionInto(document, referenceFont)) {
+    if (const auto resolved = musx::dom::importFontDefinitionInto(
+            document, referenceFont, baselineObjectReporter(report))) {
         return *resolved;
     }
     report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,

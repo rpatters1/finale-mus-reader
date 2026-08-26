@@ -74,3 +74,43 @@ F2000-ssline-offsets.mus
     Against its parent the only records that move are `ls` cmpers 3 through 6, which the parent
     does not have at all, the five smart shape text blocks cmper 3's anchors reference, and the
     font definition Arial takes.
+
+F2000-tieopts-changed.mus
+    sha256 5f6bd9a07894902bbc56867af9648d46ccaa8a91d9fb29ad9bfcfacdb023d5ba
+    From F2000-empty, with tie options edited as a discriminator for the hypothesis that Finale's
+    pre-2002 conversion copied tie controls into modern Smart Shape slur-thickness controls. The
+    fixed-global options diff changes only selector 84 incidence 0: thicknessRight moves from 6
+    to -17 and thicknessLeft from 6 to 11. Two detail-record series named #c2 through #c10 and
+    #s2 through #s10 in the ETF also change, so this is not a one-leaf fixture, but no Smart Shape
+    preference record changes.
+    Its Finale 27 companion changes only TieOptions thicknessRight and thicknessLeft in the two
+    relevant option subtrees. SmartShapeOptions is identical to the parent's companion, including
+    slurThicknessCp1Y and slurThicknessCp2Y at 6. The fixture therefore rejects direct copying of
+    these tie thickness values into the Smart Shape controls.
+    ETF sha256 3fb12729aa91f41209c5854cd2b5294cd7285de6289ffc0b83e00c0f36142ef2
+    Finale 27 companion sha256 939b9df06048d19bd57768e89be2a27fc5126032aaef685c925c184d3f4ebd79
+
+F2000-tie-insets.mus
+    sha256 29bfbd492b47c1ef5a43b7987027ff37c919f96865de685bf3958373ef58d838
+    From F2000-empty, with the three ordinary tie contours switched from percentage to fixed
+    insets and their two control-point insets changed from 8/8 to 17/13. The complete record diff
+    changes only selector 84 incidence 3 word 2, which selects the inset mode, and the six
+    corresponding insetFixed positions in selector 86. The tie-end contour remains 8/8, and
+    selector 85's tie-placement offsets remain unchanged.
+    Its Finale 27 companion carries 17 and 13 in cp1.insetFixed and cp2.insetFixed for the short,
+    medium, and long TieOptions control styles. SmartShapeOptions is identical to the parent's
+    companion, including slurThicknessCp1Y and slurThicknessCp2Y at 6. Tie contour insets are
+    therefore not the source of the pre-2002 synthesized Smart Shape thickness controls.
+    ETF sha256 3b4bd8c9ca66a428196da5b884e1f2bc02563d58b55d553f3fdc2698fef1673b
+    Finale 27 companion sha256 3fd43fc83a50411427515d23a6962fbad6bcbf5b644a544fef351697dfe739ee
+
+F2000-slur-thickness.mus
+    sha256 4927a830c3b19ec51d2d6c21c8160b204773da8dd1184940181be5f81d948c1b
+    From F2000-empty, with the Slur Thickness changed from 6 to 17. The complete record diff
+    changes exactly selector 59 incidence 0 word 5 from 6 to 17. No selector 50-53, tie option,
+    tie placement, or tie contour word changes.
+    Its Finale 27 companion changes exactly SmartShapeOptions slurThicknessCp1Y and
+    slurThicknessCp2Y from 6 to 17 in the relevant option subtrees. This establishes that the
+    single pre-Engraver-Slur thickness value supplies both modern vertical control-point values.
+    ETF sha256 e16da42eb66534af279eb55e1323d3617f48b2f63ac57cbcf2fea601af31a6fb
+    Finale 27 companion sha256 e72372e5f663d13780ce9c427d35997de4c3bd1fe8c5580e343f8045e70d5402

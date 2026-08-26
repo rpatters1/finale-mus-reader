@@ -23,6 +23,16 @@ Require current `private/generated/<survey_id>/corpus_locations.csv`, the public
 generated `private/generated/corpus-<survey_id>.tsv` for every selected survey. If these are absent
 or stale, stop and use `inventory-a-corpus`; do not rescan the corpus here.
 
+`private/generated/<survey_id>/` is persistent survey output. It belongs only to a complete corpus
+inventory and remains in place until that survey is regenerated. Never put recovery-coverage probe
+captures, rendered reports, or other development-cycle analysis artifacts there.
+
+Recovery-coverage output is transient. Keep probe JSONL and probe/report stdout and stderr under
+`private/reports/`, which the local private repository ignores. Use stable names for a target so a
+later run against that same target replaces the earlier run; do not accumulate numbered snapshots.
+These files are working evidence, not survey state, and are intended to be deleted at the end of the
+development cycle.
+
 Treat `private/active_corpora.txt` as user-managed state: do not use or modify it unless the user
 explicitly asks for that exact manifest. The probe CLI already accepts the full range of useful
 inputs, so choose the narrowest one that answers the question:
@@ -35,16 +45,21 @@ inputs, so choose the narrowest one that answers the question:
 - a single source path when the CLI recognizes it directly. For a single source whose extension
   would be interpreted as a manifest, use a one-row analysis-local TSV.
 
-Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifests under `/tmp` or
-an analysis directory under `private/generated/`. Build the existing coverage target, inspect
-`--help`, and write the probe to an explicit ignored path. A normal one-corpus capture is:
+Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifests under
+`private/reports/` or `/tmp`. Always build and run the coverage probe from the instrumented Release
+tree, normally `build-release`; the Debug probe is never appropriate for coverage captures. Coverage
+and timing use the same instrumentation. Inspect `--help`, and write every capture stream to
+`private/reports/`. A normal one-corpus capture is:
 
 ```bash
-cmake --build build --target recovery_coverage_probe
-build/tools/coverage/recovery_coverage_probe --progress \
+mkdir -p private/reports
+cmake --build build-release --target recovery_coverage_probe
+build-release/tools/coverage/recovery_coverage_probe --progress \
   --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
   private/generated/corpus-rpatters1-installs.tsv \
-  private/generated/recovery_coverage.next.jsonl
+  private/reports/rpatters1-installs.recovery_coverage.jsonl \
+  > private/reports/rpatters1-installs.probe.stdout.txt \
+  2> private/reports/rpatters1-installs.probe.stderr.txt
 ```
 
 **Every probe capture must supply Finale's `MacSymbolFonts.txt` with
@@ -56,26 +71,15 @@ list, legacy symbol-font bytes can be decoded through the wrong text encoding an
 source/companion differences. Record the supplied file's path privately with the capture metadata,
 never in public aggregate results.
 
-Validate the completed `.next.jsonl` before replacing the prior snapshot; an interrupted probe must
-not destroy the last analyzable capture. The canonical full-regression snapshot is:
+There is no canonical or archival recovery-coverage snapshot. A subsequent probe of the same target
+may overwrite its JSONL and stream captures. Every failed occurrence must still be available in the
+captured stderr with its private source path and error. Validate row count, JSON parsing, source
+status counts, companion count, and the selected-corpus funnel before analysis.
 
-```text
-private/generated/recovery_coverage.jsonl
-```
-
-Capture stderr privately. Every failed occurrence must still be printed locally with its private
-source path and error. Validate row count, JSON parsing, source status counts, companion count, and
-the selected-corpus funnel before analysis.
-
-For any timing study, run a separately configured instrumented Release probe (normally
-`build-release`, with `CMAKE_BUILD_TYPE=Release` and
-`FINALE_MUS_READER_INSTRUMENTATION=ON`). Treat a Debug
-probe, especially one launched under LLDB or another debugger, as diagnostic only: unoptimized
-standard-library, map, shared-pointer, and instrumentation overhead can swamp or distort the
-production-code differences being measured. Compare timings only between equivalent Release
-configurations, and record the build type and whether instrumentation was enabled with the result.
-Pass `--include-timings` for that capture; normal schema-3 output omits timing structures. Capture
-stderr separately when diagnostic messages are needed because JSON rows retain only their counts.
+For a timing study, use the same instrumented Release probe and pass `--include-timings`; normal
+schema-3 output omits timing structures. Compare timings only between equivalent Release
+configurations, and record the build configuration with the result. Capture stderr separately when
+diagnostic messages are needed because JSON rows retain only their counts.
 
 ### Rendering loop — repeat freely
 
@@ -83,6 +87,14 @@ Do not rerun the probe merely because aggregation or presentation changed. Treat
 JSONL as an immutable set of classifications for the rendering pass and rerun
 `scripts/recovery_coverage_report.py` freely. Matching rules, semantic comparison, and expected-
 difference classification live in `tools/coverage/`; changing any of them requires a new capture.
+Capture report output under `private/reports/` as well, for example:
+
+```bash
+python3 scripts/recovery_coverage_report.py \
+  private/reports/rpatters1-installs.recovery_coverage.jsonl \
+  > private/reports/rpatters1-installs.report.txt \
+  2> private/reports/rpatters1-installs.report.stderr.txt
+```
 
 Always state which snapshot was analyzed, its row/status/companion counts, selected surveys, and
 whether counts are occurrences or distinct `corpus_id` values. Distinct content is the primary
@@ -110,15 +122,42 @@ statistical unit; occurrences describe corpus reach and duplication.
 
 ## Privacy and publication
 
-Keep per-fixture observations, selection files, paths, and filenames under
-`private/generated/<survey_id>/class_coverage/<analysis_id>/` or `/tmp`. Local console diagnostics
-may name private fixtures. User-facing or tracked findings use aggregates and, when reproducibility
-needs them, a small number of `corpus_id` tokens.
+Keep transient per-fixture observations, selection files, paths, filenames, and captured streams
+under `private/reports/` or `/tmp`, never under `private/generated/<survey_id>/`. Local console
+diagnostics may name private fixtures. User-facing or tracked findings use aggregates and, when
+reproducibility needs them, a small number of `corpus_id` tokens.
 
 Use the repository confidence vocabulary: `confirmed`, `strong`, `weak`, and `open`. Before
 changing shared findings, read `research/CITING_EVIDENCE.md`. If tracked deliverables are requested,
 publish only sanitized aggregates and concise research notes, then apply the leak checks documented
 by `inventory-a-corpus`.
+
+## Milestone accounting
+
+At every coverage milestone, state what remains as well as what passed. Milestones include a
+successful capture, a clean tracked-evidence report, a clean all-corpus report, validation of a
+reader or classification change, and the final handoff for a class-focused investigation.
+
+Keep these four questions separate:
+
+1. Are any observed differences still unexpected?
+2. Which target fields, collections, record families, or source epochs are still unsupported or
+   intentionally left at the baseline?
+3. Which claims still lack controlled evidence or corpus representation?
+4. Which selected documents failed before comparison?
+
+For class-focused work, determine the second answer independently of the report: compare the
+target's registered musxdom members with the importer and
+`research/MUSXDOM_CLASS_COVERAGE.md`, then consult the target section of
+`research/FORMAT_NOTES.md` for known open eras or fields. Enumerate the remaining members and
+epochs concisely; if none are known, say so explicitly. Update the checklist when that accounting
+changes.
+
+Never use “clean,” “zero unexpected differences,” or successful companion coverage as a synonym
+for complete source recovery. Baseline-seeded unsupported members can compare equal to companions
+and therefore disappear from the difference report. Describe such a result as clean only for the
+observations and classifications exercised by that snapshot. Claim a class is complete only when
+its member-by-member accounting also has no remaining recovery scope.
 
 ## Validation and handoff
 
@@ -129,7 +168,10 @@ by `inventory-a-corpus`.
 - Ensure candidate counts equal matched plus explicitly classified unmatched/excluded counts.
 - Run syntax checks for changed analysis scripts and focused/full tests when production or surveyor
   code changed.
+- Remove obsolete `private/reports/` artifacts at the end of the development cycle; they are not a
+  historical archive.
 - Inspect `git status --short` and `git diff --check`; preserve unrelated worktree changes.
 
 Lead the result with the selection funnel, then the finding, contrary/unresolved evidence,
-confidence, and the precise condition that would require another capture-loop run.
+confidence, remaining implementation and evidence scope, and the precise condition that would
+require another capture-loop run.

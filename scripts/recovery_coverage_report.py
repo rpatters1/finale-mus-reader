@@ -238,8 +238,10 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     if unexpected_examples:
         shown = unexpected_examples[:max_unexpected]
         print_table(f"Non-text unexpected differences (first {len(shown)} of "
-            f"{len(unexpected_examples)})", ["corpus_id", "path", "source", "companion"],
-            ([corpus_id, item[0], truncate(item[1]), truncate(item[2])]
+            f"{len(unexpected_examples)})",
+            ["corpus_id", "path", "source", "companion", "origin"],
+            ([corpus_id, item[0], truncate(item[1]), truncate(item[2]),
+                 item[3] if len(item) > 3 else ""]
                 for corpus_id, item in shown))
     return True
 

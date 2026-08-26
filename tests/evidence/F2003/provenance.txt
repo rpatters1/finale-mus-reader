@@ -1,2 +1,15 @@
 Version 2003a.r1
 Mac OS 9.0.4 running in SheepShaver
+
+F2003-empty.mus and F2003-empty.etf
+    Untouched new document used as the parent for the controlled bend-connection edits.
+
+F2003-bendcnct-changed.mus and F2003-bendcnct-changed.etf
+    Derived from F2003-empty. Distinct vertical-offset edits in Finale 2003's three visible bend
+    connection controls change selector 98 tuple types 0, 1, 2, 3, and 6. The Finale 27 companion
+    resets every edited value and also changes the hidden top-line types 4, 5, and 7 from 48 to 40.
+
+F2003-bendcnct-change-x.mus and F2003-bendcnct-change-x.etf
+    Derived from F2003-empty. Distinct horizontal-offset edits change the same five selector 98
+    tuple types. The Finale 27 companion resets every edited value. Together with the vertical
+    fixture, this establishes lossy upgrade behavior for Finale 2003 bend-connection offsets.

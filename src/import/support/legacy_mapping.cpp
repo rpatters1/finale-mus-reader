@@ -21,6 +21,29 @@ namespace finale_mus_reader {
 
 namespace {
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+std::optional<InstanceKey> importedInstanceKey(const musx::dom::EnigmaBase& object)
+{
+    if (const auto* other = dynamic_cast<const musx::dom::OthersBase*>(&object)) {
+        return InstanceKey{typeid(object), other->getSourcePartId(), other->getCmper(),
+            other->getInci(), std::nullopt};
+    }
+    if (const auto* detail = dynamic_cast<const musx::dom::DetailsBase*>(&object)) {
+        return InstanceKey{typeid(object), detail->getSourcePartId(), detail->getCmper1(),
+            detail->getInci(), detail->getCmper2()};
+    }
+    if (const auto* text = dynamic_cast<const musx::dom::TextsBase*>(&object)) {
+        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID,
+            text->getTextNumber(), std::nullopt, std::nullopt};
+    }
+    if (dynamic_cast<const musx::dom::OptionsBase*>(&object)) {
+        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID, std::nullopt,
+            std::nullopt, std::nullopt};
+    }
+    return std::nullopt;
+}
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
 /// @brief Every musxdom class this reader recovers, one entry each, grouped by pool.
 /// @details The registry says what is imported and in what order, and nothing else. How many
 /// physical layouts a class has, which epochs each covers, and whether it needs a capture
@@ -62,6 +85,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
         FINALE_MUS_READER_IMPORTER(ImportRepeatOptions, &options::importRepeatOptions),
+        FINALE_MUS_READER_IMPORTER(ImportSmartShapeOptions, &options::importSmartShapeOptions),
         FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others
@@ -314,6 +338,20 @@ std::string reportMember(const FieldMapping& field)
 
 } // namespace
 
+musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
+{
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    return [&report](const musx::dom::EnigmaBase& object) {
+        if (const auto instance = importedInstanceKey(object)) {
+            report.setInstanceOrigin(*instance, ValueOrigin::Finale27Default);
+        }
+    };
+#else
+    static_cast<void>(report);
+    return {};
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+}
+
 bool epochMatches(EpochMask mask, FormatEpoch epoch)
 {
     auto bit = EpochMask::None;
@@ -431,21 +469,24 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
     PendingReferences& pending, ImportReport& report)
 {
+    const auto reportImported = baselineObjectReporter(report);
     // Keyed by the reference comparator, and scoped to this one import. Two clefs naming the same
     // reference shape share a copy; this is not a search of the target for something equivalent,
     // which is never correct for a shape.
-    std::map<musx::dom::Cmper, musx::dom::Cmper> copied;
+    std::map<musx::dom::Cmper, musx::dom::Cmper> copiedShapes;
     bool reportedFailure = false;
-    for (auto& request : pending) {
+    for (auto& request : pending.shapes) {
         musx::dom::Cmper resolved = 0;
-        if (const auto found = copied.find(request.referenceShapeId); found != copied.end()) {
+        if (const auto found = copiedShapes.find(request.referenceShapeId);
+            found != copiedShapes.end()) {
             resolved = found->second;
         } else if (const auto source = referenceDocument->getOthers()
                 ->get<musx::dom::others::ShapeDef>(
                     musx::dom::SCORE_PARTID, request.referenceShapeId)) {
-            if (const auto imported = musx::dom::others::importShapeDefInto(document, source)) {
+            if (const auto imported = musx::dom::others::importShapeDefInto(
+                    document, source, reportImported)) {
                 resolved = *imported;
-                copied.emplace(request.referenceShapeId, resolved);
+                copiedShapes.emplace(request.referenceShapeId, resolved);
             }
         }
         if (resolved == 0) {
@@ -464,10 +505,51 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
         }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     }
-    if (!pending.empty()) {
+    if (!pending.shapes.empty()) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "Copied " + std::to_string(copied.size()) + " Finale 27 shape(s) for "
-            + std::to_string(pending.size()) + " clef definition(s)."});
+            "Copied " + std::to_string(copiedShapes.size()) + " Finale 27 shape(s) for "
+            + std::to_string(pending.shapes.size()) + " clef definition(s)."});
+    }
+
+    std::map<musx::dom::Cmper, musx::dom::Cmper> copiedCustomLines;
+    reportedFailure = false;
+    for (auto& request : pending.customLines) {
+        musx::dom::Cmper resolved = 0;
+        if (const auto found = copiedCustomLines.find(request.referenceLineId);
+            found != copiedCustomLines.end()) {
+            resolved = found->second;
+        } else if (const auto source = referenceDocument->getOthers()
+                ->get<musx::dom::others::SmartShapeCustomLine>(
+                    musx::dom::SCORE_PARTID, request.referenceLineId)) {
+            if (const auto imported =
+                    musx::dom::others::importSmartShapeCustomLineInto(
+                        document, source, reportImported)) {
+                resolved = *imported;
+                copiedCustomLines.emplace(request.referenceLineId, resolved);
+            }
+        }
+        if (resolved == 0) {
+            if (!reportedFailure) {
+                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+                    "A Finale 27 custom line could not be copied into this document; the "
+                    "Smart Shape tools that use it have no line style."});
+                reportedFailure = true;
+            }
+            continue;
+        }
+        request.assign(resolved);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        if (auto* info = report.findField(request.reportInstance, request.reportMember)) {
+            info->origin = ValueOrigin::Finale27Default;
+            info->rawValue = resolved;
+        }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    }
+    if (!pending.customLines.empty()) {
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
+            "Copied " + std::to_string(copiedCustomLines.size())
+            + " Finale 27 custom line(s) for "
+            + std::to_string(pending.customLines.size()) + " Smart Shape option field(s)."});
     }
 }
 

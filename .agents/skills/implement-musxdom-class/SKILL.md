@@ -23,8 +23,11 @@ revise one layer without destabilizing the others.
 - Keep physical framing separate from logical interpretation. Gate layouts and semantic
   changes explicitly, choosing the instrument by the hierarchy below rather than reaching
   for the version first.
-- Make the first implementation a narrow vertical slice with stated coverage. Do not
-  wait for universal knowledge, and do not advertise an untested epoch as supported.
+- Make the first implementation a narrow vertical slice of **recovery**, but a complete
+  vertical slice of the musxdom class's **field surface**. The reader mapping and coverage
+  surveyor must enumerate every field from the first implementation, even when only a few
+  have located source bytes. Do not wait for universal recovery knowledge, and do not
+  advertise an untested epoch as supported.
 - **Never leave an epoch entirely uncovered by accident.** A gate that excludes a whole
   epoch must say in a comment at the gate that the exclusion is intended and why: that
   the era does not store the class, that it stores it somewhere still unlocated, or that
@@ -71,6 +74,30 @@ revise one layer without destabilizing the others.
   Where the baseline already carries what the era's behaviour implies, leave it there: the
   baseline is generated from committed resources with recorded hashes, so asserting the same
   value in code is a second copy of one fact rather than a safeguard against drift.
+- **An implemented class is field-complete before it is recovery-complete.** Inventory every
+  persisted musxdom field, including leaves of contained objects and every fixed collection
+  element, directly from the class and its XML mapping. Give every leaf an initial reader/report
+  entry and emit every leaf from the class surveyor. A field is never omitted because its MUS
+  source is unknown, because its current value equals a constructor or Finale 27 default, or
+  because no controlled fixture changes it. Unknown fields must therefore participate in generic
+  companion comparison and produce unexpected differences when their values disagree.
+
+  Use `Unmapped` for a field that could have a legacy source but for which no source mapping has
+  been established in any layout or epoch. Use `MusxOnly` when evidence establishes that the field
+  postdates every supported legacy layout and therefore cannot be recovered. In either case its
+  value remains default-initialized for a source-owned object and remains at the seeded Finale 27
+  value for an options object. `Finale27Default` has a narrower meaning: the field is a
+  known member of the recovery model, but the applicable source layout does not supply it and no
+  legacy behavior overrides the baseline. This distinction prevents an importer that maps a field
+  in one epoch and deliberately falls back in another from looking like an importer that has never
+  investigated the field at all.
+
+  If the existing options instrumentation necessarily labels every untouched seeded value
+  `Finale27Default`, preserve that behavior only when the probe also emits an explicit structured
+  mapping status that distinguishes `unmapped` from `mapped-but-defaulted`. The probe is the
+  authority for that status; the Python report must not infer it from values, epochs, incidental
+  origins, or the presence of a mapping table. Prefer expressing `Unmapped` and `MusxOnly` directly
+  in `ValueOrigin` when that cleanly avoids a parallel status model.
 - Keep project-owned source files unity-build clean. A future build may combine many
   class-specific translation units, and anonymous namespaces do not isolate names from
   one another after CMake amalgamates those files. Use distinctive file-local aliases,
@@ -142,18 +169,22 @@ Identify:
 
 1. The fully qualified musxdom class and pool (`options`, `others`, `details`, or
    another owner), including comparator, incidence, sharing, and part semantics.
-2. The first fields or collection elements to recover. List their C++ types, defaults,
-   enum meanings, units, bit semantics, and whether they are references.
+2. Every persisted field and fixed collection element in the musxdom class. List its C++ type,
+   default, XML name or contained path, enum meaning, units, bit semantics, whether it is a
+   reference, and its initial mapping status. Separately identify the first subset whose source
+   recovery will be attempted.
 3. The epochs in scope: early pre-banner/Coda, fixed-row uncompressed, DCL, and zlib.
 4. The preliminary physical locators and structure hints supplied by the user.
 5. The fallback behavior expected when the source lacks the class or a field.
 6. What will count as semantic agreement with ETF or modern EnigmaXML.
 
-Start a working evidence matrix, kept private while exploratory, with one row per
-field and layout variant:
+Start a working evidence matrix, kept private while exploratory, with at least one row per
+musxdom field. Add rows for each layout variant as evidence is found; a field with no located
+source still has an explicit `unmapped` row; a field known to postdate every supported layout has
+an explicit `musx-only` row instead:
 
-| epoch/version | record identity | selector/cmper | incidence | offset/width | transform | target field | evidence | confidence |
-|---|---|---|---|---|---|---|---|---|
+| epoch/version | record identity | selector/cmper | incidence | offset/width | transform | target field | mapping status | evidence | confidence |
+|---|---|---|---|---|---|---|---|---|---|
 
 Do not assume every target field existed in every era, that physical order equals an
 enum's modern order, or that one record corresponds to one object.
@@ -305,6 +336,16 @@ platform-appropriate reference document, overlay source values, and leave unsupp
 fields at the reference default. Exclude a class from blanket seeding only when it must
 be reconstructed as a collection or requires class-specific referential repair.
 
+Before adding source mappings, create the class's complete field manifest in the reader/report
+path. Initialize every unresolved source-owned leaf to its musxdom default with `Unmapped`
+provenance; for options, retain the seeded value while marking the unresolved leaf `Unmapped`,
+subject to the instrumentation compatibility rule above. Mark a field `MusxOnly` only when evidence
+establishes that it postdates every supported legacy layout. A later mapping changes only the fields it establishes. For a field
+mapped in some layouts, explicitly report `Finale27Default` in layouts where the baseline is the
+chosen result. Do not let blanket initialization overwrite `LegacyMus` or `LegacyBehavior`, and do
+not promote an untouched field from `Unmapped` merely because its default happens to match a
+companion.
+
 For cmper fields, never compare or copy ids across documents as identities. Resolve the
 referent on each side and define semantic equality for that class. If fallback requires
 cloning a reference object, reuse an equivalent target object when safe; otherwise
@@ -317,8 +358,10 @@ an ordinary pooled object.
 `tools/coverage/surveyors/<pool>/<class>.cpp` -- one file per pool directory, matching
 `src/import/`'s layout one for one -- and register its pool, key, and observer together with
 `COVERAGE_SURVEYOR` at
-namespace scope (see `tools/coverage/registry.h`). Emit the fields a comparison can
-classify, and name a contained object rather than flattening it: flattening a variant
+namespace scope (see `tools/coverage/registry.h`). Emit **every persisted field**, including
+every currently unmapped field. The serialized field paths must exhaust the musxdom class surface
+established in Step 2; mapping uncertainty changes provenance, not presence. Name a contained
+object rather than flattening it: flattening a variant
 block loses which variant the record chose. `recovery_coverage_probe` is registry-driven
 and self-registering, so nothing else has to change for the new class to appear in every
 future corpus run -- but nothing makes the surveyor itself appear automatically either. A
@@ -334,6 +377,11 @@ told about a change.
 
 Add focused tests for:
 
+- an exact comparison between the inventoried musxdom field manifest and the reader/report plus
+  surveyor field sets, so adding or overlooking a field cannot silently reduce coverage;
+- every initially unresolved or MUSX-only field appearing in probe output with its
+  default-initialized or seeded value and the corresponding `Unmapped` or `MusxOnly` status,
+  rather than being absent;
 - one exact fixture from every claimed physical layout and byte order;
 - each implemented version boundary;
 - exact target values plus `ImportReport` origin and offsets;
@@ -423,8 +471,10 @@ transformations that the generic comparison cannot express correctly.
 
 Make the targeted survey answer at least:
 
+- Does every persisted musxdom field appear in both source and companion observations, including
+  fields whose source mapping is still unknown?
 - Does every claimed epoch import the class without failing the document?
-- How often is each field physically present, recovered, defaulted, unresolved, or
+- How often is each field unmapped, physically present, recovered, defaulted, unresolved, or
   rejected by a version gate?
 - Do companions preserve, remap, normalize, substitute, synthesize, or remove it?
 - Are there new payload sizes, incidences, identities, orderings, or version boundaries?
@@ -478,7 +528,8 @@ After the user has approved the completed work and its pull request, identify th
 
 Finish with a concise account of the implemented class and fields, supported epochs and
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
-known upgrade variances, remaining open layouts, and the next smallest evidence request.
+known upgrade variances, every still-unmapped field, every MUSX-only field, remaining open layouts, and the next
+smallest evidence request.
 **Include the full-regression import table from Step 8, per survey.** A completion report
 without it is not a completion report: nothing else in this procedure would notice that the
 work broke a class it never mentions.

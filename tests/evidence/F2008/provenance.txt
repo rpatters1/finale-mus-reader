@@ -52,3 +52,21 @@ F2008-BE-text-inserts.musx
     `^fontid(1)^size(12)^nfx(0)FULL SCORE`; the reader keeps what the file says
     rather than synthesizing a font the document did not state. And Finale 27
     emits no `^time` at all, where the reader preserves it.
+
+F2008-empty.mus
+    sha256 d9321c0564199287238185f0952bd282ee4abaed8c65d72a099f7d62f96fea3e
+F2008-empty.musx
+    sha256 a2a890b97ef4c3044fb26717b43d50a4c22c626aad8436b14baf0ead3523532a
+F2008-defss-over.mus
+    sha256 d0d5b2138ca33127cf8b9a5314642a32029d19394eedfa0559c2c1b0cbac71ef
+F2008-defss-over.musx
+    sha256 629b4e975e967c06b617e9b56c638943c742e4c23139775d6d3cb9a7ea198ec3
+F2008-defss-under.mus
+    sha256 eb079da13cd839006c282e54acd90efc26471f9871a2a2462a3df6e24522d4d4
+F2008-defss-under.musx
+    sha256 7776effb28e18466e37a06ae3fd0d226cf192f042e5298936e65660c65b6b2be
+    A controlled Default Smart Shape Direction set. Class `0x0018`, global
+    comparator 65534, incidence 0, word 0 stores `0` for Automatic, `1` for
+    Over, and `-1` for Under; no other word in the class record changes. The
+    Finale 27 companions preserve all three meanings. Values outside this enum
+    are not direction values and retain the reader's seeded default.
