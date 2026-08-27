@@ -16,6 +16,9 @@ namespace options {
 // Individual stages that a test drives on their own are declared in options/test_access.h,
 // which no library code includes. A stage no test drives is file-local to its class.
 
+/// @brief Recovers options::ChordOptions, including source-owned default fret references.
+void importChordOptions(const ImportContext& context);
+
 /// @brief Recovers options::ClefOptions: its definition collection and its scalars.
 void importClefOptions(const ImportContext& context);
 

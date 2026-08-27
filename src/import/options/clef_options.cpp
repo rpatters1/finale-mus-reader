@@ -62,7 +62,10 @@ constexpr std::uint32_t earlyBaselineDifferenceSlot = 4;
 // rather than to an unconditional yes.
 constexpr std::uint32_t earlyBaselineEnableSlot = 5;
 constexpr std::uint16_t earlyBaselineEnableBit = 0x0001;
-const VersionRange alwaysAdjustsBaseline = versions::between({3, 8}, {5, 0xff});
+bool sourceAlwaysAdjustsClefBaseline(const SourceProfile& profile)
+{
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale97);
+}
 
 // Word counts of the two clef-table tuple shapes. They differ only in the clef character,
 // which Finale 2012 widened from one word to a long when it gained Unicode text support.
@@ -298,8 +301,8 @@ bool captureEarlyClefs(const musx::dom::DocumentPtr& document,
     // The Coda era is excluded outright. Its word 4 is a mid-measure-clef baseline rather than
     // the general clef baseline musxdom means, and its switch is never set. Transferring it
     // would invent an offset from a field that does not mean the same thing.
-    const bool baselineEnabled = profile.epoch != FormatEpoch::CodaBanner
-        && (alwaysAdjustsBaseline.includes(profile.version)
+    const bool baselineEnabled = sourceMatches(profile, EpochMask::FixedRow)
+        && (sourceAlwaysAdjustsClefBaseline(profile)
             || (firstRow
                 && (static_cast<std::uint16_t>(firstRow->words[earlyBaselineEnableSlot])
                     & earlyBaselineEnableBit) != 0));

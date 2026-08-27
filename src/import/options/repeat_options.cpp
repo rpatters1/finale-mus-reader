@@ -54,8 +54,7 @@ bool hasRepeatOptionsLayout(const records::LegacyRecordIndex& index,
     // A Coda row with the same two-character tag is not a numeric global in the later
     // fixed-row sense. Selector 72 is part of every located RepeatOptions family in the
     // encodings that support numeric globals; its absence retains the seeded object.
-    if (profile.epoch == FormatEpoch::CodaBanner
-        || profile.epoch == FormatEpoch::Unknown) {
+    if (profile.epoch == FormatEpoch::CodaBanner) {
         return false;
     }
     return readGlobalWords(index, profile, repeatSelector(endingTag)).present;

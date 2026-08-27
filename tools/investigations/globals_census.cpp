@@ -19,13 +19,14 @@
 #include <vector>
 
 #include "container/mus_container.h"
+#include "musx/dom/Fundamentals.h"
 #include "records/legacy_record_index.h"
 
 using namespace finale_mus_reader;
 
 namespace {
 
-constexpr std::uint16_t globalsCmper = 65534;
+constexpr auto globalsCmper = musx::dom::MUSX_GLOBALS_CMPER;
 
 void censusPool(const char* poolName, const records::LegacyRowPool& pool)
 {

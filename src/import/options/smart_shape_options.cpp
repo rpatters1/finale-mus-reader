@@ -161,45 +161,44 @@ constexpr std::size_t controlStyleWords = 3;
 constexpr std::size_t controlStylePayloadWords = controlStyleCount * controlStyleWords;
 constexpr std::size_t smartShapeConnectionStyleWords = 3;
 constexpr std::size_t smartShapeConnectionIndexCount = smartShapeConnectionIndices.size();
-constexpr std::uint8_t firstCustomLineMajorVersion = 5;
-constexpr std::uint8_t firstTabBendCurveMajorVersion = 8;
 constexpr musx::dom::Evpu finale26HookLength = 8;
-const VersionRange smartShapePreFinale37FigureVersions =
-    versions::between({3, 0}, {3, 6});
 // The editable default direction begins in Finale 2002 within the DCL epoch.
 // Earlier epochs retain the seeded Automatic direction; every zlib file is later.
-const VersionRange smartShapeDirectionDclVersions =
-    versions::between({7, 0}, {11, 0xff});
+
+bool sourceStoresSmartShapeDirection(const SourceProfile& profile)
+{
+    if (sourceMatches(profile, EpochMask::Zlib)) return true;
+    return sourceMatches(profile, EpochMask::Dcl)
+        && sourceAtOrAfter(profile, FormatEpoch::DclLegacy, versions::finale2002)
+        && !sourceAtOrAfter(profile, FormatEpoch::DclLegacy, versions::finale2007);
+}
+
+bool sourceHasPreFinale37FigureBehavior(const SourceProfile& profile)
+{
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale3_0)
+        && !sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale3_7);
+}
+
+bool sourceIsFinale26(const SourceProfile& profile)
+{
+    return sourceMatches(profile, EpochMask::CodaBanner) && profile.version
+        && VersionBound{profile.version->major, profile.version->minor} == versions::finale2_6;
+}
 
 bool predatesCustomLineCapability(const SourceProfile& profile)
 {
     // Coda-banner files predate custom lines. Within the uncompressed epoch, internal
-    // major version 5 is the capability boundary. DCL and zlib are wholly later; an
-    // unknown epoch receives no reference objects because its capability is not established.
-    if (profile.epoch == FormatEpoch::CodaBanner) {
-        return true;
-    }
-    if (profile.epoch == FormatEpoch::UncompressedLegacy) {
-        return profile.version
-            && profile.version->major < firstCustomLineMajorVersion;
-    }
-    return false;
+    // major version 5 is the capability boundary. DCL and zlib are wholly later.
+    return !sourceAtOrAfter(
+        profile, FormatEpoch::UncompressedLegacy, versions::finale2000);
 }
 
 bool predatesTabBendCurveCapability(const SourceProfile& profile)
 {
     // Coda-banner and uncompressed files predate the bend-curve tool. Within the DCL
-    // epoch, internal major version 8 is the capability boundary. Zlib is wholly later;
-    // an unknown epoch receives no reference object because its capability is not established.
-    if (profile.epoch == FormatEpoch::CodaBanner
-        || profile.epoch == FormatEpoch::UncompressedLegacy) {
-        return true;
-    }
-    if (profile.epoch == FormatEpoch::DclLegacy) {
-        return profile.version
-            && profile.version->major < firstTabBendCurveMajorVersion;
-    }
-    return false;
+    // epoch, internal major version 8 is the capability boundary. Zlib is wholly later.
+    return !sourceAtOrAfter(
+        profile, FormatEpoch::DclLegacy, versions::finale2003);
 }
 
 bool hasModernSlurScalars(const records::LegacyRecordIndex& index,
@@ -361,7 +360,7 @@ const FieldMapping fixedLineFields[] = {
     MUS_WORD(SmartShapeTarget, lineStyleTag, GLOBALS_CMPER, 0, 2, ssLineStyleCmpTabSlide),
     MUS_WORD(SmartShapeTarget, lineStyleTag, GLOBALS_CMPER, 0, 3, ssLineStyleCmpTabBendCurve),
     MUS_FIELD_AS_IF(SmartShapeTarget, slurTipTag, GLOBALS_CMPER, 0, 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, versions::any(), nullptr,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
         smartSlurTipWidth, slurTipWidth(value)),
 };
 
@@ -543,10 +542,7 @@ void reportControlStyle(ImportReport& report, std::size_t index,
 void captureDirection(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
-    const bool storesDirection = context.profile.epoch == FormatEpoch::ZlibLegacy
-        || (context.profile.epoch == FormatEpoch::DclLegacy
-            && smartShapeDirectionDclVersions.includes(context.profile.version));
-    if (!storesDirection) {
+    if (!sourceStoresSmartShapeDirection(context.profile)) {
         return;
     }
 
@@ -669,8 +665,7 @@ void applyPreFinale37FigureBehavior(const ImportContext& context,
 {
     // Believed: Finale 3.0 through 3.6 has neither an independent crescendo
     // line width nor the later hook-length setting.
-    if (context.profile.epoch != FormatEpoch::UncompressedLegacy
-        || !smartShapePreFinale37FigureVersions.includes(context.profile.version)
+    if (!sourceHasPreFinale37FigureBehavior(context.profile)
         || !hasFigureSettings(context.index, context.profile)) {
         return;
     }
@@ -742,10 +737,7 @@ void applyFinale26HookBehavior(const ImportContext& context,
 {
     // Believed: Finale 2.6 has no stored hook-length preference; apply its fixed
     // behavior only inside the Coda epoch.
-    if (context.profile.epoch != FormatEpoch::CodaBanner
-        || !context.profile.version
-        || context.profile.version->major != 2
-        || context.profile.version->minor != 6) {
+    if (!sourceIsFinale26(context.profile)) {
         return;
     }
     target->hookLength = finale26HookLength;
@@ -877,8 +869,7 @@ void requestUnavailableToolLineDefaults(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
     const bool needsAllToolLines = predatesCustomLineCapability(context.profile);
-    const bool needsTabBendCurve = predatesTabBendCurveCapability(context.profile);
-    if (!needsTabBendCurve) {
+    if (!predatesTabBendCurveCapability(context.profile)) {
         return;
     }
     const auto reference = context.referenceDocument->getOptions()->get<SmartShapeTarget>();
@@ -932,8 +923,7 @@ void importSmartShapeOptions(const ImportContext& context)
     }
     const auto target = std::const_pointer_cast<SmartShapeTarget>(pooled);
     requestUnavailableToolLineDefaults(context, target);
-    if (context.profile.epoch != FormatEpoch::CodaBanner
-        && context.profile.epoch != FormatEpoch::Unknown) {
+    if (context.profile.epoch != FormatEpoch::CodaBanner) {
         captureControlStyles(context, target);
     }
     captureSmartShapeConnectionStyles(context, target, smartShapeSlurConnectionSelector,

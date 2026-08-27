@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <limits>
 #include <optional>
 #include <regex>
@@ -15,6 +16,7 @@
 #include <unordered_set>
 
 #include "coverage/json.h"
+#include "coverage/support/source_gate.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/CommonClasses.h"
 #include "musx/musx.h"
@@ -37,6 +39,7 @@ std::string_view surveyorClass(std::string_view path)
 
 using Leaves = std::map<std::string, std::pair<Value, std::string>>;
 constexpr std::size_t maximumExamplesPerRow = 20;
+constexpr double chordScalingComparisonTolerance = 0.010001;
 constexpr std::string_view finaleUpgradeLossRule = "finale-upgrade-loss";
 constexpr std::string_view readerCompletedConnectionArrayRule =
     "reader-completed-connection-array";
@@ -53,6 +56,16 @@ const std::unordered_set<std::string> metadataKeys = {
 
 const std::unordered_set<std::string> excludedClasses = {
     "header", "layer_atts", "relationships", "spacing_options"};
+
+bool equalChordScalingPercent(
+    std::string_view path, const Value& source, const Value& companion)
+{
+    if (path != "chord_options.fret_percent"
+            && path != "chord_options.chord_percent") return false;
+    return source.isDouble() && companion.isDouble()
+        && std::abs(source.asDouble() - companion.asDouble())
+            <= chordScalingComparisonTolerance;
+}
 
 bool startsWith(std::string_view value, std::string_view prefix)
 {
@@ -1294,7 +1307,8 @@ bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& cl
 }
 
 bool isDifferentDefault(const std::string& path, const std::string& category,
-    const std::string& origin, const Value& sourceValue, const Value& companionValue)
+    const std::string& origin, const Value& sourceValue, const Value& companionValue,
+    FormatEpoch epoch, const SourceVersion* sourceVersion)
 {
     if (category != "differs" || origin != "finale27-default") return false;
     static const std::set<std::string_view> smartShapePaths{
@@ -1305,6 +1319,18 @@ bool isDifferentDefault(const std::string& path, const std::string& category,
         "smart_shape_options.smart_line_width",
         "smart_shape_options.use_engraver_slurs"};
     if (smartShapePaths.contains(path)) return true;
+    if (path == "chord_options.use_fretboard_font"
+            && sourceValue.isBool() && !sourceValue.asBool()
+            && companionValue.isBool() && companionValue.asBool()) {
+        return true;
+    }
+    if (path == "chord_options.use_simple_chord_spelling"
+            && sourceIsVersion(epoch, sourceVersion,
+                FormatEpoch::UncompressedLegacy, versions::finale3_0)
+            && sourceValue.isBool() && sourceValue.asBool()
+            && companionValue.isBool() && !companionValue.asBool()) {
+        return true;
+    }
     if (startsWith(path, "smart_shape_options.")
             && path.find("_connect_styles[type=") != std::string::npos
             && (endsWith(path, ".x") || endsWith(path, ".y"))) {
@@ -1440,7 +1466,8 @@ bool isFinaleUpgradeLoss(const std::string& path, const std::string& category,
                 "smart_shape_options.slur_thickness_cp2_y"}.contains(path)) {
         return true;
     }
-    return epoch == FormatEpoch::DclLegacy && sourceVersion && sourceVersion->major == 8
+    return sourceIsVersion(epoch, sourceVersion,
+        FormatEpoch::DclLegacy, versions::finale2003)
         && startsWith(path, "smart_shape_options.bend_curve_connect_styles[type=")
         && (endsWith(path, ".x") || endsWith(path, ".y"));
 }
@@ -1479,7 +1506,8 @@ std::optional<std::string> expectedDifference(const std::string& path,
             path, category, source, companion)) {
         return omitted;
     }
-    if (isDifferentDefault(path, category, origin, sourceValue, companionValue)) {
+    if (isDifferentDefault(path, category, origin, sourceValue, companionValue,
+            epoch, sourceVersion)) {
         return "different_defaults";
     }
     if (startsWith(path, "text_blocks[cmper=") && category == "differs"
@@ -1538,7 +1566,8 @@ std::optional<std::string> expectedDifference(const std::string& path,
     if (path == "lyric_options.word_ext_connect_styles.oneEntryEnd.x"
             && category == "differs" && sourceValue.isInteger() && companionValue.isInteger()
             && sourceValue.asInteger() == 42 && companionValue.asInteger() == 44
-            && (epoch == FormatEpoch::CodaBanner || (sourceVersion && sourceVersion->major < 9))
+            && (epoch == FormatEpoch::CodaBanner
+                || sourcePredatesVersion(sourceVersion, versions::finale2004))
             && equalSurrounding(source, companion,
                 "lyric_options.word_ext_connect_styles.", path)) {
         return "pre-connection-endpoint";
@@ -1617,6 +1646,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             }
             if (inSource && inCompanion && !fontReference
                     && sourceFound->second.first == companionFound->second.first) {
+                ++stats.same;
+                continue;
+            }
+            if (inSource && inCompanion && !fontReference
+                    && equalChordScalingPercent(path, sourceFound->second.first,
+                        companionFound->second.first)) {
                 ++stats.same;
                 continue;
             }

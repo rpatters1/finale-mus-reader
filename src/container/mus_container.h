@@ -20,7 +20,9 @@ struct DecodedBlock
 
 struct ParsedContainer
 {
-    FormatEpoch formatEpoch = FormatEpoch::Unknown;
+    explicit ParsedContainer(FormatEpoch epoch) : formatEpoch(epoch) {}
+
+    FormatEpoch formatEpoch;
     ByteOrder byteOrder = ByteOrder::Unknown;
     std::vector<DecodedBlock> blocks;
     std::size_t trailingByteCount{};

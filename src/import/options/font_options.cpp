@@ -44,7 +44,6 @@ enum class TupleField : std::size_t
 struct FontOptionsLayout
 {
     EpochMask epochs{};
-    VersionRange versions{};
     RecordEncoding encoding{};
     records::LegacyTag identity{};
 };
@@ -63,15 +62,14 @@ struct EarlyTuple
 
 // One row per variable-length physical representation. Tuple counts come from the file.
 //
-// The fixed-row row is gated on the epoch rather than on a version range. Selector 24 is the
+// The fixed-row row is gated on the epoch rather than on a version. Selector 24 is the
 // default-font array in every epoch that uses fixed rows except the Coda-banner era, where it
 // holds one row of unrelated values, and `EpochMask::FixedRow` excludes exactly that era. A
-// version range would add nothing here and could only cost files, since the era boundary and
+// version gate would add nothing here and could only cost files, since the era boundary and
 // the epoch boundary are the same one.
 const std::array<FontOptionsLayout, 2> layouts{{
-    {EpochMask::FixedRow, versions::any(),
-        RecordEncoding::FixedRow, records::packTag("24")},
-    {EpochMask::Zlib, versions::any(), RecordEncoding::ClassRecord,
+    {EpochMask::FixedRow, RecordEncoding::FixedRow, records::packTag("24")},
+    {EpochMask::Zlib, RecordEncoding::ClassRecord,
         numericGlobalClass(fontOptionsSelector)},
 }};
 
@@ -134,8 +132,7 @@ constexpr std::array<FontType, 3> codaNameCompanionTypes{
 const FontOptionsLayout* layoutFor(const SourceProfile& profile)
 {
     for (const auto& layout : layouts) {
-        if (epochMatches(layout.epochs, profile.epoch)
-            && layout.versions.includes(profile.version)) {
+        if (sourceMatches(profile, layout.epochs)) {
             return &layout;
         }
     }
@@ -239,17 +236,6 @@ void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
 #define reportPhysicalTuple(...) ((void)0)
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
-/// @brief First major version whose physical font ordinals match the modern enum.
-/// @details Finale 2012 renumbered the tail of the array: through Finale 2011 physical 13 is
-/// a holding slot and physical 28 carries the default tablature font, and from Finale 2012
-/// physical 13 is tablature and 28 is percussion. The boundary is named rather than written
-/// as a literal because it is the whole content of the rule.
-///
-/// This is deliberately NOT shared with @ref versions::firstUnicodeMajorVersion even though
-/// both fall at major 17. Nothing establishes a common cause -- this is an array
-/// renumbering, not a text-encoding change -- and merging them would assert one.
-constexpr std::uint8_t firstModernOrdinalMajorVersion = 17; // Finale 2012
-
 /// @brief Maps a stored tuple position to the modern FontType it means.
 /// @details Two layouts exist, and which applies is decided by epoch first. The uncompressed
 /// and DCL epochs are entirely pre-2012, so they need no version test at all and keep working
@@ -261,16 +247,10 @@ constexpr std::uint8_t firstModernOrdinalMajorVersion = 17; // Finale 2012
 std::optional<FontType> semanticType(
     const SourceProfile& profile, std::size_t physicalOrdinal)
 {
-    // **This boundary is Finale 2012 by measurement, NOT by documentation.** Finale's own
-    // documentation places the 13/28 renumbering at Finale 2003. Documents say otherwise:
-    // through Finale 2011 tablature is at physical ordinal 28, and from Finale 2012 it is at 13
-    // with percussion at 28. If the 2003 claim turns up in some MakeMusic source, it does not
-    // override this -- check a file. Taking the boundary at Finale 2003 costs every 2003-2011
-    // document its tablature font and gives it a bogus percussion font.
-    const bool modernOrdinals = profile.epoch == FormatEpoch::ZlibLegacy
-        && profile.version
-        && profile.version->major >= firstModernOrdinalMajorVersion;
-    if (modernOrdinals) {
+    // Believed: the modern physical ordinals begin in Finale 2012. Earlier sources use the
+    // legacy layout, in which tablature occupies ordinal 28 and percussion has no tuple.
+    if (sourceAtOrAfter(
+            profile, FormatEpoch::ZlibLegacy, versions::finale2012)) {
         if (physicalOrdinal < fontTypeCount) {
             return static_cast<FontType>(physicalOrdinal);
         }

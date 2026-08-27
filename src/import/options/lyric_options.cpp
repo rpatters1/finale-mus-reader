@@ -90,17 +90,13 @@ constexpr musx::dom::Efix unstatedWordExtLineWidth = 224;
 /// This is deliberately its own constant rather than a shared "Finale 2012" one: the Unicode
 /// codepoint widening and the font-ordinal renumbering both fall at major 17, and this does
 /// not.
-constexpr std::uint8_t firstEdgePunctuationMajorVersion = 16; // Finale 2011
-
 /// @brief The first Enigma major version whose punctuation tail is verified as UTF-16.
 /// @details The switch itself arrives one release earlier, at
-/// @ref firstEdgePunctuationMajorVersion, but Finale 2012 is the Unicode release. A tail
+/// Finale 2011, but Finale 2012 is the Unicode release. A tail
 /// written by the intervening release would be 8-bit text of an undetermined code page, packed
 /// either one or two characters to a word. Reading one through the Unicode rule would produce
 /// mojibake for any non-ASCII punctuation, so such a tail is declined and reported rather than
 /// decoded. See @ref captureLyricOptions.
-constexpr std::uint8_t firstUnicodePunctuationMajorVersion = 17; // Finale 2012
-
 constexpr const char* lyricReportPrefix = "options.lyricOptions";
 
 // Every epoch whose records are 16-byte rows. Which of them can actually answer a given
@@ -236,7 +232,7 @@ bool storesWordExtLineWidth(
 }
 
 /// @brief Whether this source's era stores the syllable-edge punctuation setting.
-/// @details The setting arrives with Finale 2011; see @ref firstEdgePunctuationMajorVersion.
+/// @details The setting arrives with Finale 2011.
 ///
 /// The word exists for seven releases before it means anything. Documents from before Finale
 /// 2004 carry no selector 57 at all, and those from Finale 2004 through Finale 2010 carry it
@@ -254,8 +250,8 @@ bool storesWordExtLineWidth(
 bool storesEdgePunctuationSetting(
     const records::LegacyRecordIndex&, const SourceProfile& profile)
 {
-    return profile.epoch == FormatEpoch::ZlibLegacy && profile.version
-        && profile.version->major >= firstEdgePunctuationMajorVersion;
+    return sourceAtOrAfter(
+        profile, FormatEpoch::ZlibLegacy, versions::finale2011);
 }
 
 // The maximum hyphen separation, in the two epochs whose selector 15 states it.
@@ -659,7 +655,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         // definition that carries no charset of its own. That is the only source available
         // here, this text belonging to no font record.
         const bool unicodeTail = profile.version
-            && profile.version->major >= firstUnicodePunctuationMajorVersion;
+            && VersionBound{profile.version->major, profile.version->minor}
+                >= versions::finale2012;
         std::string ignored;
         std::size_t units = 0;
         if (unicodeTail) {

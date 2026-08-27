@@ -95,8 +95,7 @@ constexpr std::uint32_t ssLineParamsEndSlot = 6;
 /// earlier layouts put them. The block is one word longer in every record all the same, so
 /// everything after it moves whatever the line style is.
 ///
-/// This is the boundary @ref versions::firstUnicodeMajorVersion already names for the clef and
-/// stem-connection tables, applied here as another instance of it rather than as a new rule.
+/// This is the Finale 2012 boundary shared with the clef and stem-connection tables.
 constexpr std::uint32_t ssLineUnicodeSlot(std::uint32_t slot)
 {
     return slot > ssLineParamsEndSlot ? slot + 1 : slot;
@@ -441,10 +440,14 @@ const MappingTable& ssLineNarrowClassTable()
 
 const MappingTable& ssLineWideClassTable()
 {
+    static constexpr auto sourceHasWideCharacters = [](const SourceProfile& profile) {
+        return sourceAtOrAfter(profile, FormatEpoch::ZlibLegacy,
+            versions::finale2012);
+    };
     static const MappingTable table{
         .reportPrefix = ssLineReportPrefix,
         .epochs = EpochMask::Zlib,
-        .versions = versions::from(versions::firstUnicodeMajorVersion),
+        .sourceApplies = sourceHasWideCharacters,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = ssLineClass,

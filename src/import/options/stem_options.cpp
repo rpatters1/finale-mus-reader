@@ -391,7 +391,7 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     // collection is the honest result for a source that stores none.
     target->stemConnections.clear();
 
-    const bool wide = profile.epoch == FormatEpoch::ZlibLegacy
+    const bool wide = sourceMatches(profile, EpochMask::Zlib)
         && versions::storesUnicodeCodepoints(profile.version);
     const std::size_t elementWords = wide ? wideElementWords : narrowElementWords;
 

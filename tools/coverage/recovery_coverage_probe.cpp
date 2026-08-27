@@ -746,9 +746,7 @@ int main(int argc, char** argv)
         std::optional<SurveyTimings> sourceSurveyTimings;
         std::optional<SurveySnapshot> sourceSnapshot;
         musx::dom::DocumentPtr sourceDocument;
-        FormatEpoch sourceEpoch = FormatEpoch::Unknown;
-        ByteOrder sourceByteOrder = ByteOrder::Unknown;
-        std::optional<SourceVersion> sourceVersion;
+        std::unique_ptr<ImportReport> sourceReport;
         try {
             const auto readerStarted = std::chrono::steady_clock::now();
             timing::Session readerTimingSession;
@@ -764,9 +762,7 @@ int main(int argc, char** argv)
                 throw std::runtime_error(importError(result.report));
             }
             sourceDocument = result.document;
-            sourceEpoch = result.report.formatEpoch;
-            sourceByteOrder = result.report.byteOrder;
-            sourceVersion = result.report.sourceVersion;
+            sourceReport = std::make_unique<ImportReport>(result.report);
             out << ",\"status\":\"ok\""
                 << ",\"epoch\":" << jsonString(epochName(result.report.formatEpoch))
                 << ",\"saving_product\":" << jsonString(result.report.savingProduct)
@@ -878,7 +874,7 @@ int main(int argc, char** argv)
                     const std::chrono::duration<double, std::milli> documentLoadElapsed =
                         std::chrono::steady_clock::now() - documentLoadStarted;
                     documentLoadDurationMs = documentLoadElapsed.count();
-                    const ImportReport emptyReport;
+                    const ImportReport emptyReport(sourceReport->formatEpoch);
                     companionOut << "\"status\":\"ok\""
                         << ",\"warning_count\":" << loggerCaptured.size();
                     auto survey = runAllSurveyors(
@@ -922,8 +918,10 @@ int main(int argc, char** argv)
                 if (sourceSnapshot && companionSnapshot) {
                     out << ",\"comparison\":{";
                     const auto comparison = compareSnapshots(*sourceSnapshot, *companionSnapshot,
-                        sourceDocument, companionDocument, sourceEpoch, sourceByteOrder,
-                        sourceVersion ? &*sourceVersion : nullptr, &symbolFontNames);
+                        sourceDocument, companionDocument, sourceReport->formatEpoch,
+                        sourceReport->byteOrder,
+                        sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr,
+                        &symbolFontNames);
                     writeCompactComparison(out, comparison);
                     out << '}';
                 }

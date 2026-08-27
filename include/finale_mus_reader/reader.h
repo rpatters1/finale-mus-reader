@@ -35,7 +35,6 @@ using DocumentParser = musx::dom::DocumentPtr (*)(const char* data, std::size_t 
 
 enum class FormatEpoch
 {
-    Unknown,
     /// @brief The era before the `ENIGMA BINARY FILE` signature existed.
     /// @details These files are not headerless. They open with a plain-text product
     /// banner of the form `Finale(TM) 2.6 Copyright 1987 by Coda.`, which is where their
@@ -219,7 +218,9 @@ struct Diagnostic
 
 struct ImportReport
 {
-    FormatEpoch formatEpoch = FormatEpoch::Unknown;
+    explicit ImportReport(FormatEpoch epoch) : formatEpoch(epoch) {}
+
+    FormatEpoch formatEpoch;
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform sourcePlatform = SourcePlatform::Unknown;
     /// @brief The pinned Finale 27 baseline that supplied the synthesized defaults.
@@ -229,8 +230,7 @@ struct ImportReport
     /// @brief The Enigma version recorded by the last application to save the file.
     /// @details Absent when the file has no banner, or when the recovered major version
     /// falls outside Finale's 0-27 range, which means the header layout was not what was
-    /// expected. Mapping rows that are gated to a version range apply only when this is
-    /// present.
+    /// expected. A source gate that needs a version fails when this is absent.
     std::optional<SourceVersion> sourceVersion;
     std::size_t sourceSize{};
     std::string banner;
@@ -301,16 +301,15 @@ struct ImportReport
 };
 
 /// @brief The outcome of an import, successful or not.
-/// @details A failed import is returned, not thrown. Check @ref document: it is null exactly
-/// when the import failed, and @ref ImportReport::diagnostics then carries one entry at
-/// @c LogLevel::Error saying why. That is the only level whose meaning is absolute -- every
-/// other level accompanies a document that exists.
-///
-/// Failure is returned rather than propagated because this reader exists to rescue damaged
-/// and obsolete documents. A caller sweeping a corpus should be able to keep going past a
-/// file that turns out not to be a Finale document at all, without wrapping every call.
+/// @details Input that cannot be read or classified as a supported MUS container is rejected
+/// by exception before an ImportResult exists. Once classification establishes a source
+/// epoch, a later recovery failure returns a null @ref document and records one
+/// @c LogLevel::Error entry in @ref ImportReport::diagnostics. Every other diagnostic level
+/// accompanies a document that exists.
 struct ImportResult
 {
+    explicit ImportResult(FormatEpoch epoch) : report(epoch) {}
+
     /// @brief The imported document, or null when the import failed.
     std::shared_ptr<musx::dom::Document> document;
     ImportReport report;
