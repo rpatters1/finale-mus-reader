@@ -29,26 +29,28 @@ struct DifferenceExample
     std::string path;
     Value source;
     Value companion;
-    std::string kind;
+    DifferenceClassification classification{DifferenceClassification::Unexpected};
+    std::optional<TextDifferenceClassification> kind;
     std::string origin;
 };
 
 struct ComparisonResult
 {
     std::map<std::string, std::map<std::string, ClassComparison>> classes;
-    std::map<std::string, std::uint64_t> expected;
-    std::map<std::string, std::uint64_t> transformations;
-    std::map<std::string, std::map<std::string, std::uint64_t>> textDifferences;
+    std::map<DifferenceClassification, std::uint64_t> expected;
+    std::map<ComparisonTransformation, std::uint64_t> transformations;
+    std::map<std::string, std::map<TextDifferenceClassification, std::uint64_t>> textDifferences;
     std::map<std::string, std::uint64_t> fontSubstitutions;
     std::vector<DifferenceExample> unexpectedExamples;
     std::vector<DifferenceExample> textExamples;
 };
 
 ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion,
-    const musx::dom::DocumentPtr& sourceDocument,
-    const musx::dom::DocumentPtr& companionDocument,
-    FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
-    const text::SymbolFontNames* symbolFontNames);
+                                  const musx::dom::DocumentPtr& sourceDocument,
+                                  const musx::dom::DocumentPtr& companionDocument,
+                                  FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
+                                  const SourceVersion* sourceVersion,
+                                  const text::SymbolFontNames* symbolFontNames);
 
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison);
 

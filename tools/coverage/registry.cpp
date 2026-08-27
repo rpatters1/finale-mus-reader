@@ -16,12 +16,17 @@ namespace {
 
 // A function-local static avoids the static-initialization-order fiasco: every
 // registerSurveyor() call happens during some other translation unit's static
-// initialization, and this guarantees the vector exists before the first of them runs.
+// initialization, and this guarantees the vector exists before the first of
+// them runs.
 struct RegisteredSurveyor
 {
     std::string pool;
     std::string key;
     SurveyorFn fn;
+    DifferenceClassifierFn classifyDifference{};
+    TextDifferenceClassifierFn classifyTextDifference{};
+    DifferenceEquivalenceFn equivalentDifference{};
+    ComparisonPreparationFn prepareComparison{};
 };
 
 std::vector<RegisteredSurveyor>& registry()
@@ -32,14 +37,49 @@ std::vector<RegisteredSurveyor>& registry()
 
 } // namespace
 
-void registerSurveyor(std::string_view pool, std::string_view key, SurveyorFn fn)
+void registerSurveyor(const CoverageClassDescriptor& descriptor)
 {
     for (const auto& registered : registry()) {
-        if (registered.key == key) {
-            throw std::logic_error("duplicate coverage surveyor key: " + std::string(key));
+        if (registered.key == descriptor.key) {
+            throw std::logic_error("duplicate coverage surveyor key: " +
+                                   std::string(descriptor.key));
         }
     }
-    registry().push_back({std::string(pool), std::string(key), fn});
+    registry().push_back({std::string(descriptor.pool), std::string(descriptor.key),
+                          descriptor.observe, descriptor.classifyDifference,
+                          descriptor.classifyTextDifference, descriptor.equivalentDifference});
+    registry().back().prepareComparison = descriptor.prepareComparison;
+}
+
+DifferenceEquivalenceFn differenceEquivalence(std::string_view key)
+{
+    for (const auto& registered : registry()) {
+        if (registered.key == key) return registered.equivalentDifference;
+    }
+    throw std::logic_error("unregistered coverage surveyor key: " + std::string(key));
+}
+
+void runComparisonPreparers(ComparisonPreparationContext& context)
+{
+    for (const auto& registered : registry()) {
+        if (registered.prepareComparison) registered.prepareComparison(context);
+    }
+}
+
+TextDifferenceClassifierFn textDifferenceClassifier(std::string_view key)
+{
+    for (const auto& registered : registry()) {
+        if (registered.key == key) return registered.classifyTextDifference;
+    }
+    throw std::logic_error("unregistered coverage surveyor key: " + std::string(key));
+}
+
+DifferenceClassifierFn differenceClassifier(std::string_view key)
+{
+    for (const auto& registered : registry()) {
+        if (registered.key == key) return registered.classifyDifference;
+    }
+    throw std::logic_error("unregistered coverage surveyor key: " + std::string(key));
 }
 
 std::string_view surveyorPool(std::string_view key)

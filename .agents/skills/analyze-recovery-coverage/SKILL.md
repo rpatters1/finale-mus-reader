@@ -137,10 +137,12 @@ statistical unit; occurrences describe corpus reach and duplication.
 - When testing a transformation, test its converse and search every represented version/epoch.
   Report unmatched populations separately; they may hide additional transformations but are not
   counterexamples.
-- Expected-difference rules in `tools/coverage/comparison.cpp` are executable interpretation.
-  After the user has reviewed and approved a characterized transformation, scope its rule by path,
-  category, origin, and the narrowest evidence-backed structural predicate so it cannot conceal a
-  recovered-value disagreement. Python must not reclassify a probe result.
+- Expected-difference rules are executable interpretation registered by the class descriptor in
+  that class's `tools/coverage/surveyors/` translation unit. After the user has reviewed and
+  approved a characterized transformation, scope its rule by path, category, origin, and the
+  narrowest evidence-backed structural predicate so it cannot conceal a recovered-value
+  disagreement. Generic comparison mechanics remain in `tools/coverage/comparison.cpp`; Python
+  must not reclassify a probe result.
 - Surveyors return structured `coverage::Value` observations. Use the C++20 field descriptors in
   `tools/coverage/schema.h` for class leaves; do not serialize or parse an intermediate JSON value.
 
