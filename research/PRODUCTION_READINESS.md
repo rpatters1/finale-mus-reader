@@ -538,7 +538,7 @@ Classification as of 2026-08-09:
 | `shapeDef`, `shapeData`, `shapeList` | ShapeDesigner | never | Referenced by seeded options, but the ids are not transferable; see P2.2. |
 | `markingsCategory`, `markingsCategoryName`, `categoryStaffListScore`, `categoryStaffListParts` | category set | no | See P2.1. |
 | `ssLineStyle` | `SmartShapeCustomLine` | no | Library content; no seeded option references it. |
-| `fretInst`, `fretStyle` | fretboard library | no | `ChordOptions` fret ids are absent, so they default to 0. |
+| `fretInst`, `fretStyle` | fretboard library | no | Source-owned definitions and `ChordOptions` references are recovered together; the fallback library is never seeded. |
 | `measSpec`, `staffSpec`, `staffSystemSpec`, `pageSpec`, `frameSpec`, `instUsed`, `partDef`, `partGlobals`, `textBlock`, `measNumbRegion` | score content | never | Fallback score content; must not leak. |
 
 Nine baseline tags have no registered musxdom type and are skipped regardless of

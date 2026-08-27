@@ -177,8 +177,7 @@ std::optional<ParsedContainer> tryUncompressed(
         return std::nullopt;
     }
 
-    ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::UncompressedLegacy;
+    ParsedContainer parsed(FormatEpoch::UncompressedLegacy);
     parsed.byteOrder = byteOrder;
     std::size_t offset = bodyOffset;
     while (offset < size) {
@@ -252,8 +251,7 @@ std::optional<ParsedContainer> tryCompressed(
         return std::nullopt;
     }
 
-    ParsedContainer parsed;
-    parsed.formatEpoch = dcl ? FormatEpoch::DclLegacy : FormatEpoch::ZlibLegacy;
+    ParsedContainer parsed(dcl ? FormatEpoch::DclLegacy : FormatEpoch::ZlibLegacy);
     parsed.byteOrder = byteOrder;
     const auto expectedFirstType = dcl ? std::uint16_t{0x000f} : std::uint16_t{0x001a};
     if (read16(data + bodyOffset, byteOrder) != expectedFirstType) {
@@ -376,8 +374,7 @@ std::optional<ParsedContainer> tryCompressed(
 // follows them uses different framing and is not decoded here.
 ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
 {
-    ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::CodaBanner;
+    ParsedContainer parsed(FormatEpoch::CodaBanner);
     // The era states its platform in the banner product, and the platform gives the byte
     // order: its Windows documents say `PC` and are little-endian, its Mac documents carry a
     // bare version and are big-endian. This is read from the file rather than asserted about
@@ -501,7 +498,7 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
                 return std::move(*parsed);
             }
         }
-        return {};
+        throw std::invalid_argument("This file does not appear to be a Finale MUS document.");
     }
 
     // The body of a Coda-banner file opens with a count followed by the body offset
@@ -513,7 +510,7 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
         return parseCodaBanner(data, size);
     }
 
-    return {};
+    throw std::invalid_argument("This file does not appear to be a Finale MUS document.");
 }
 
 } // namespace container

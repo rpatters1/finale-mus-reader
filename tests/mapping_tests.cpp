@@ -53,9 +53,40 @@ using finale_mus_reader::LongWordOrder;
 using finale_mus_reader::MappingTable;
 using finale_mus_reader::SourceProfile;
 using finale_mus_reader::TargetKind;
-using finale_mus_reader::VersionRange;
+using finale_mus_reader::SourceGate;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
+
+constexpr auto sourceMatchTestProfile = [] {
+    SourceProfile result(FormatEpoch::ZlibLegacy);
+    result.version = SourceVersion{.major = 15, .minor = 1};
+    return result;
+}();
+static_assert(finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask::Zlib));
+static_assert(!finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask::Dcl));
+static_assert(finale_mus_reader::sourceAtOrAfter(
+    sourceMatchTestProfile, FormatEpoch::DclLegacy));
+constexpr SourceProfile earlierSourceMatchTestProfile(FormatEpoch::DclLegacy);
+static_assert(!finale_mus_reader::sourceAtOrAfter(
+    earlierSourceMatchTestProfile, FormatEpoch::ZlibLegacy));
+static_assert(finale_mus_reader::sourceAtOrAfter(
+    sourceMatchTestProfile, FormatEpoch::DclLegacy, finale_mus_reader::versions::finale2007));
+static_assert(finale_mus_reader::sourceAtOrAfter(
+    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceAtOrAfter(
+    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011));
+
+bool sourceAtFinale2007(const SourceProfile& profile)
+{
+    return finale_mus_reader::sourceAtOrAfter(
+        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2007);
+}
+
+bool sourceAtFinale35(const SourceProfile& profile)
+{
+    return finale_mus_reader::sourceAtOrAfter(
+        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5);
+}
 
 // These tests drive one importer at a time against a synthesized record set, so none of them
 // has a source file for the importer to read the header out of.
@@ -81,8 +112,7 @@ finale_mus_reader::container::ParsedContainer makeContainer(
     const std::vector<SyntheticRow>& rows,
     FormatEpoch epoch = FormatEpoch::UncompressedLegacy)
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = epoch;
+    finale_mus_reader::container::ParsedContainer parsed(epoch);
     parsed.byteOrder = ByteOrder::BigEndian;
 
     finale_mus_reader::container::DecodedBlock block;
@@ -130,8 +160,7 @@ struct SyntheticClassRow
 finale_mus_reader::container::ParsedContainer makeClassContainer(
     const std::vector<SyntheticClassRow>& rows, ByteOrder byteOrder)
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::ZlibLegacy;
+    finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::ZlibLegacy);
     parsed.byteOrder = byteOrder;
 
     finale_mus_reader::container::DecodedBlock block;
@@ -180,8 +209,7 @@ finale_mus_reader::container::ParsedContainer makeClassContainer(
 void testClassRecordContinuationSegment()
 {
     const auto verify = [](ByteOrder byteOrder) {
-        finale_mus_reader::container::ParsedContainer parsed;
-        parsed.formatEpoch = FormatEpoch::ZlibLegacy;
+        finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::ZlibLegacy);
         parsed.byteOrder = byteOrder;
 
         finale_mus_reader::container::DecodedBlock block;
@@ -254,8 +282,7 @@ finale_mus_reader::container::ParsedContainer makeDetailContainer(
     FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
     const std::vector<std::int16_t>& words, const char* tag = "mg")
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = epoch;
+    finale_mus_reader::container::ParsedContainer parsed(epoch);
     parsed.byteOrder = ByteOrder::BigEndian;
     finale_mus_reader::container::DecodedBlock block;
     block.info.type = epoch == FormatEpoch::DclLegacy ? 0x0010 : 0x0002;
@@ -331,8 +358,7 @@ musx::dom::DocumentPtr makeClefReferenceDocument()
 
 SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0)
 {
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::UncompressedLegacy;
+    SourceProfile profile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     SourceVersion version;
     version.major = major;
@@ -390,7 +416,7 @@ void testMissingRecoveredFontDefinitionFallback()
     addReference(FontType::Fretboard, 3, "Seville", 24, 4);
     addReference(FontType::Tablature, 4, " arIAL ", 18, 5);
 
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::options::repairMissingRecoveredFontDefinitions(
         targetDocument, referenceDocument, targetOptions, report);
 
@@ -517,12 +543,12 @@ std::size_t reportedFieldCount(const ImportReport& report)
 }
 
 MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size_t count,
-    VersionRange versions = {}, EpochMask epochs = EpochMask::FixedRow)
+    SourceGate sourceApplies = nullptr, EpochMask epochs = EpochMask::FixedRow)
 {
     return MappingTable{
         .reportPrefix = prefix,
         .epochs = epochs,
-        .versions = versions,
+        .sourceApplies = sourceApplies,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &finale_mus_reader::enumerateOptionsTarget<Spacing>,
         .fields = fields,
@@ -549,7 +575,7 @@ void testFourByteStraddlesIncidence()
 
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
@@ -577,7 +603,7 @@ void testLongWordOrder()
         const std::vector<const MappingTable*> tables{&table};
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
         return spacing->referenceDuration;
@@ -601,7 +627,7 @@ void testBitExtraction()
         const auto parsed = makeContainer({{GLOBALS_CMPER, "94", {0, 0, 0, 0, 0, flagWord}}});
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
         return spacing->avoidColNotes;
@@ -624,7 +650,7 @@ void testAbsentRecordKeepsSeededDefault()
     const auto parsed = makeContainer({{7, "ZZ", {0, 0, 0, 0, 0, 0}}});
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profileFor(7), document, report);
 
@@ -640,8 +666,8 @@ void testAbsentRecordKeepsSeededDefault()
 void testVersionGating()
 {
     const FieldMapping fields[] = {
-        MUS_WORD_V(Spacing, "94", GLOBALS_CMPER, 0, 1,
-            finale_mus_reader::versions::from(12), minWidth),
+        MUS_WORD_IF_SOURCE(Spacing, "94", GLOBALS_CMPER, 0, 1,
+            &sourceAtFinale2007, minWidth),
     };
     const auto table = makeTable("options.spacing", fields, std::size(fields));
     const std::vector<const MappingTable*> tables{&table};
@@ -650,7 +676,7 @@ void testVersionGating()
     const auto readWithProfile = [&](const SourceProfile& profile) {
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profile, document, report);
         return spacing->minWidth;
@@ -661,8 +687,7 @@ void testVersionGating()
     expectMapping(readWithProfile(profileFor(12)) == 777,
         "A row gated to this version was not applied");
 
-    SourceProfile unknownVersion;
-    unknownVersion.epoch = FormatEpoch::UncompressedLegacy;
+    SourceProfile unknownVersion(FormatEpoch::UncompressedLegacy);
     expectMapping(readWithProfile(unknownVersion) == 111,
         "A gated row was applied to a file with no recovered version");
 }
@@ -672,8 +697,8 @@ void testVersionGating()
 void testMinorVersionOrdering()
 {
     const FieldMapping fields[] = {
-        MUS_WORD_V(Spacing, "94", GLOBALS_CMPER, 0, 1,
-            finale_mus_reader::versions::from(3, 5), minWidth),
+        MUS_WORD_IF_SOURCE(Spacing, "94", GLOBALS_CMPER, 0, 1,
+            &sourceAtFinale35, minWidth),
     };
     const auto table = makeTable("options.spacing", fields, std::size(fields));
     const std::vector<const MappingTable*> tables{&table};
@@ -682,7 +707,7 @@ void testMinorVersionOrdering()
     const auto readWith = [&](std::uint8_t major, std::uint8_t minor) {
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(major, minor), document, report);
         return spacing->minWidth;
@@ -705,7 +730,7 @@ void testTableLayering()
     };
     const auto base = makeTable("options.spacing", baseFields, std::size(baseFields));
     const auto override = makeTable("options.spacing", overrideFields,
-        std::size(overrideFields), finale_mus_reader::versions::from(12));
+        std::size(overrideFields), &sourceAtFinale2007);
     const std::vector<const MappingTable*> tables{&base, &override};
 
     const auto parsed = makeContainer({{GLOBALS_CMPER, "94", {0, 11, 22, 33, 0, 0}}});
@@ -713,7 +738,7 @@ void testTableLayering()
     const auto readWith = [&](std::uint8_t major) {
         Spacing* spacing = nullptr;
         auto document = makeDocument(&spacing);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             tables, LegacyRecordIndex::build(parsed), profileFor(major), document, report);
         return std::pair<int, int>{spacing->minWidth, spacing->maxWidth};
@@ -738,11 +763,10 @@ void testUncoveredEpochStillReports()
     const std::vector<const MappingTable*> tables{&table};
     const auto parsed = makeContainer({{GLOBALS_CMPER, "94", {0, 777, 0, 0, 0, 0}}});
 
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::ZlibLegacy;
+    SourceProfile profile(FormatEpoch::ZlibLegacy);
     Spacing* spacing = nullptr;
     auto document = makeDocument(&spacing);
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::applyMappingTables(
         tables, LegacyRecordIndex::build(parsed), profile, document, report);
 
@@ -763,7 +787,7 @@ void testClefTupleDecoding()
                               const SourceProfile& profile) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(LegacyRecordIndex::build(parsed),
             profile, document, makeClefReferenceDocument(), report, pending);
@@ -825,7 +849,7 @@ void testClefTupleDecoding()
         profile.epoch = FormatEpoch::DclLegacy;
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeContainer(dclRows)), profile, document,
@@ -853,7 +877,7 @@ void testClefTupleDecoding()
             options->clefDefs.push_back(std::make_shared<ClefOptions::ClefDef>(options));
         }
         document->getOptions()->add(ClefOptions::XmlNodeName, options);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         musx::factory::ConstructionContext construction;
         finale_mus_reader::options::validateClefOptions(document, report, construction);
         expectMapping(options->defaultClef == 99,
@@ -863,7 +887,7 @@ void testClefTupleDecoding()
                               return entry.message.find("default clef index 99") != std::string::npos;
                           }),
             "An out-of-range default clef index was accepted without a warning");
-        ImportReport clean;
+        ImportReport clean(FormatEpoch::UncompressedLegacy);
         options->defaultClef = 17;
         finale_mus_reader::options::validateClefOptions(document, clean, construction);
         expectMapping(clean.diagnostics.empty(), "A valid default clef index warned");
@@ -935,7 +959,7 @@ void testClefTupleDecoding()
         // Class 0x1b is globals selector 13; word 2 is the percent and word 3 the offset.
         auto options = std::make_shared<ClefOptions>(document);
         document->getOptions()->add(ClefOptions::XmlNodeName, options);
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::applyMappingTables(
             {&finale_mus_reader::options::classClefOptionsTable()},
             LegacyRecordIndex::build(makeClassContainer(
@@ -956,7 +980,7 @@ void testClefTupleDecoding()
         auto profile = profileFor(17);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::BigEndian;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::BigEndian)),
@@ -972,7 +996,7 @@ void testClefTupleDecoding()
 
     // The same payload from a pre-Unicode file is the narrow tuple, and twenty definitions
     // is more than Finale stores, so the reader must say so rather than pass it off.
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
@@ -995,8 +1019,7 @@ void testClefTupleDecoding()
 
 void testDetailRowShape()
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::UncompressedLegacy;
+    finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::UncompressedLegacy);
     parsed.byteOrder = ByteOrder::BigEndian;
 
     finale_mus_reader::container::DecodedBlock block;
@@ -1130,7 +1153,7 @@ void testMmRestEarlyLayoutMarker()
     // Finale 3.0 and 3.2 by version, one version from well past the boundary, and a
     // Coda-banner file that states no version at all.
     for (const auto& profile : {profileFor(3, 0), profileFor(3, 2), profileFor(15, 0), coda}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(early, profile, report);
         expectMapping(options->measWidth == 320 && options->numAdjY == -20
                 && options->shapeDef == 5,
@@ -1166,7 +1189,7 @@ void testMmRestEarlyLayoutMarker()
     // carries is what decides: the epoch mask says only that these are 16-byte rows.
     for (const auto& profile :
             {profileFor(3, 0), profileFor(3, 5), profileFor(15, 0), coda}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(later, profile, report);
         expectMapping(options->measWidth == 216 && options->numAdjY == -20
                 && options->shapeDef == 5 && options->numStart == 3
@@ -1192,7 +1215,7 @@ void testMmRestEarlyLayoutMarker()
     }
 
     // With the selector present, the flag is read rather than asserted, and from word 4.
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     auto withUpdate = later;
     withUpdate.push_back({GLOBALS_CMPER, "83", {0, 0, 1, 0, 1, 0}});
     const auto options = runImport(withUpdate, profileFor(5, 0), report);
@@ -1201,17 +1224,6 @@ void testMmRestEarlyLayoutMarker()
                 == ValueOrigin::LegacyMus,
         "The automatic-update word was not read from selector 83");
 
-    // An absent selector 83 means off with no further qualification, including for a document
-    // whose epoch could not be classified. That is the document most in need of it: nothing was
-    // read from it, and the baseline would otherwise leave it claiming a Finale 27 setting.
-    ImportReport unclassified;
-    SourceProfile unknown;
-    unknown.epoch = FormatEpoch::Unknown;
-    const auto unknownOptions = runImport(later, unknown, unclassified);
-    expectMapping(!unknownOptions->autoUpdateMmRests
-            && field(unclassified, "options.multimeasureRestOptions.autoUpdateMmRests").origin
-                == ValueOrigin::LegacyBehavior,
-        "An unclassified document inherited the baseline's automatic-update setting");
 }
 
 /// @brief A LyricOptions seeded with the opposite of everything the reader asserts.
@@ -1254,7 +1266,7 @@ void testLyricWordExtConnectionLayouts()
         const auto reference = makeLyricDocument();
         auto profile = profileFor(9);
         profile.epoch = FormatEpoch::DclLegacy;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
@@ -1308,7 +1320,7 @@ void testLyricEdgePunctuationVersionGate()
         auto profile = profileFor(major);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::LittleEndian;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
@@ -1336,10 +1348,9 @@ void testLyricEdgePunctuationVersionGate()
     // which is the right answer for every release but one.
     const auto document = makeLyricDocument();
     const auto reference = makeLyricDocument();
-    SourceProfile unknown;
-    unknown.epoch = FormatEpoch::ZlibLegacy;
+    SourceProfile unknown(FormatEpoch::ZlibLegacy);
     unknown.byteOrder = ByteOrder::LittleEndian;
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed), unknown,
@@ -1367,13 +1378,15 @@ void testLyricPunctuationTailEncodingGate()
         static_cast<std::int16_t>(0x2625), 0, 0, 0, 0};
     const auto runAt = [&](std::uint8_t major) {
         const auto parsed = makeClassContainer(0x0047,
-            major >= 17 ? unicodeTail : byteTail, ByteOrder::LittleEndian);
+            finale_mus_reader::VersionBound{major} >= finale_mus_reader::versions::finale2012
+                ? unicodeTail : byteTail,
+            ByteOrder::LittleEndian);
         const auto document = makeLyricDocument();
         const auto reference = makeLyricDocument();
         auto profile = profileFor(major);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::LittleEndian;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
@@ -1418,7 +1431,7 @@ void testLyricPostFormatAssertions()
     }));
     const auto document = makeLyricDocument();
     const auto reference = makeLyricDocument();
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{
@@ -1532,7 +1545,7 @@ void testStemPreFinale35Units()
     coda.epoch = FormatEpoch::CodaBanner;
     coda.version.reset();
     for (const auto& profile : {profileFor(3, 0), profileFor(3, 2), profileFor(15, 0), coda}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(tableWith(earlySlots), profile, report);
         expectMapping(options->stemLength == 7 * 12 && options->shortStemLength == 5 * 12
                 && options->revStemAdj == 18 * 12,
@@ -1548,7 +1561,7 @@ void testStemPreFinale35Units()
     // The same words in the later shape are already in the modern units, and the version that
     // would have said otherwise is ignored.
     for (const auto& profile : {profileFor(3, 0), profileFor(5, 0), profileFor(15, 0)}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(tableWith(modernSlots), profile, report);
         expectMapping(options->stemLength == 7 && options->shortStemLength == 5
                 && options->revStemAdj == 18,
@@ -1562,7 +1575,7 @@ void testStemPreFinale35Units()
 // no connections must produce none rather than inheriting three.
 void testStemConnectionsAreSourceOwned()
 {
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     const auto document = makeStemDocument();
     const auto options = captureStems(
         makeContainer({{GLOBALS_CMPER, "94", {1, 2, 3, 4, 5, 6}}}),
@@ -1584,14 +1597,13 @@ void testStemStaleUnicodeRecord()
     const auto parsed = makeClassContainer(numericGlobalClass(40),
         {0, 192, 768, -768, 0, 0, 0, 131, -2304, 2304, -1024, 1024, 0, 0},
         ByteOrder::LittleEndian);
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::ZlibLegacy;
+    SourceProfile profile(FormatEpoch::ZlibLegacy);
     profile.byteOrder = ByteOrder::LittleEndian;
     SourceVersion version;
     version.major = 17;
     profile.version = version;
 
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     const auto document = makeStemDocument();
     const auto options = captureStems(parsed, profile, document, report);
     expectMapping(options->stemConnections.empty(),
@@ -1613,7 +1625,7 @@ void testStemStaleUnicodeRecord()
     SourceVersion narrow;
     narrow.major = 13;
     earlier.version = narrow;
-    ImportReport narrowReport;
+    ImportReport narrowReport(FormatEpoch::UncompressedLegacy);
     const auto narrowDocument = makeStemDocument();
     const auto narrowOptions = captureStems(parsed, earlier, narrowDocument, narrowReport);
     expectMapping(narrowOptions->stemConnections.size() == 2
@@ -1628,7 +1640,7 @@ void testStemStaleUnicodeRecord()
 // comparator unusable, which is what testDanglingFontComparatorRequiresRegistration verifies.
 void testStemFontReferenceValidation()
 {
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     const auto document = makeStemDocument();
     const auto options = captureStems(
         makeContainer({{GLOBALS_CMPER, "40", {7, 192, 768, -768, 0, 0}},
@@ -1735,10 +1747,9 @@ void testGraphicAssignmentsAcrossEpochs()
         const auto document = session.getDocument();
         auto referenceSession = musx::factory::DocumentFactory::begin();
         const auto reference = std::move(referenceSession).finish();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
-        SourceProfile profile;
-        profile.epoch = epoch;
+        SourceProfile profile(epoch);
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
@@ -1796,10 +1807,9 @@ void testGraphicAssignmentsAcrossEpochs()
     const auto displayDocument = displaySession.getDocument();
     auto displayReferenceSession = musx::factory::DocumentFactory::begin();
     const auto displayReference = std::move(displayReferenceSession).finish();
-    ImportReport displayReport;
+    ImportReport displayReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences displayPending;
-    SourceProfile displayProfile;
-    displayProfile.epoch = FormatEpoch::UncompressedLegacy;
+    SourceProfile displayProfile(FormatEpoch::UncompressedLegacy);
     displayProfile.byteOrder = displayParsed.byteOrder;
     musx::factory::ConstructionContext displayConstruction;
     const finale_mus_reader::ImportContext displayContext{displayIndex, displayProfile, noSource,
@@ -1816,8 +1826,7 @@ void testGraphicAssignmentsAcrossEpochs()
 
 void testEmbeddedGraphicFraming()
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::ZlibLegacy;
+    finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::ZlibLegacy);
     parsed.byteOrder = ByteOrder::LittleEndian;
     finale_mus_reader::container::DecodedBlock block;
     block.info.type = 0x0013;
@@ -1840,7 +1849,7 @@ void testEmbeddedGraphicFraming()
     appendItem(eps);
     appendItem(unknown);
     parsed.blocks.push_back(std::move(block));
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     const auto graphics = finale_mus_reader::recoverEmbeddedGraphics(parsed, report);
     expectMapping(graphics.size() == 2 && graphics.at(1).extension == "png"
             && graphics.at(1).bytes == std::vector<std::uint8_t>(png.begin(), png.end())
@@ -1857,7 +1866,7 @@ void testEmbeddedGraphicFraming()
 
     auto unsupportedFooter = parsed;
     unsupportedFooter.blocks.front().data[6 + png.size()] = 2;
-    ImportReport unsupportedFooterReport;
+    ImportReport unsupportedFooterReport(FormatEpoch::UncompressedLegacy);
     const auto withoutFirst = finale_mus_reader::recoverEmbeddedGraphics(
         unsupportedFooter, unsupportedFooterReport);
     expectMapping(withoutFirst.size() == 1
@@ -1871,7 +1880,7 @@ void testEmbeddedGraphicFraming()
         "An unsupported graphic footer did not report its embedded graphic comparator");
 
     parsed.blocks.front().data.pop_back();
-    ImportReport truncatedReport;
+    ImportReport truncatedReport(FormatEpoch::UncompressedLegacy);
     const auto truncated = finale_mus_reader::recoverEmbeddedGraphics(parsed, truncatedReport);
     expectMapping(truncated.size() == 2
             && std::any_of(truncatedReport.diagnostics.begin(), truncatedReport.diagnostics.end(),
@@ -1902,10 +1911,9 @@ void testShapeGraphicAssignmentsAcrossEpochs()
         const auto document = session.getDocument();
         auto referenceSession = musx::factory::DocumentFactory::begin();
         const auto reference = std::move(referenceSession).finish();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
-        SourceProfile profile;
-        profile.epoch = epoch;
+        SourceProfile profile(epoch);
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
@@ -2017,9 +2025,8 @@ void testSmartShapeCustomLinesAcrossEpochs()
         const auto era = " in epoch " + std::to_string(static_cast<int>(epoch));
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = ssLineDocument(session);
-        ImportReport report;
-        SourceProfile profile;
-        profile.epoch = epoch;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
+        SourceProfile profile(epoch);
         if (epoch == FormatEpoch::ZlibLegacy) {
             // One record per container, so each line style is imported into its own document
             // and then read back from a document of its own.
@@ -2129,7 +2136,7 @@ void testSmartShapeCustomLineUnicodeLayout()
     using CustomLine = musx::dom::others::SmartShapeCustomLine;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = ssLineDocument(session);
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     auto profile = profileFor(17);
     profile.epoch = FormatEpoch::ZlibLegacy;
     profile.byteOrder = ByteOrder::LittleEndian;
@@ -2182,10 +2189,9 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
         const auto document = session.getDocument();
         auto referenceSession = musx::factory::DocumentFactory::begin();
         const auto reference = std::move(referenceSession).finish();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
-        SourceProfile profile;
-        profile.epoch = epoch;
+        SourceProfile profile(epoch);
         profile.byteOrder = parsed.byteOrder;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
@@ -2233,10 +2239,9 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
     const auto partDocument = partSession.getDocument();
     auto partReferenceSession = musx::factory::DocumentFactory::begin();
     const auto partReference = std::move(partReferenceSession).finish();
-    ImportReport partReport;
+    ImportReport partReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences partPending;
-    SourceProfile partProfile;
-    partProfile.epoch = FormatEpoch::ZlibLegacy;
+    SourceProfile partProfile(FormatEpoch::ZlibLegacy);
     partProfile.byteOrder = ByteOrder::BigEndian;
     musx::factory::ConstructionContext partConstruction;
     const finale_mus_reader::ImportContext partContext{bigEndianIndex, partProfile, noSource,
@@ -2282,9 +2287,8 @@ void testStoredTextBlocksAcrossEpochs()
              FormatEpoch::DclLegacy, FormatEpoch::ZlibLegacy}) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
-        ImportReport report;
-        SourceProfile profile;
-        profile.epoch = epoch;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
+        SourceProfile profile(epoch);
         profile.byteOrder = ByteOrder::BigEndian;
         if (epoch == FormatEpoch::ZlibLegacy) {
             textBlockImport(makeClassContainer(0x00b7, words, profile.byteOrder, 7),
@@ -2320,9 +2324,8 @@ void testStoredTextBlocksAcrossEpochs()
 
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    ImportReport report;
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::UncompressedLegacy;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    SourceProfile profile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     auto absolute = words;
     absolute[4] = 72;
@@ -2336,7 +2339,7 @@ void testStoredTextBlocksAcrossEpochs()
 
     auto zeroSpacingSession = musx::factory::DocumentFactory::begin();
     const auto zeroSpacingDocument = zeroSpacingSession.getDocument();
-    ImportReport zeroSpacingReport;
+    ImportReport zeroSpacingReport(FormatEpoch::UncompressedLegacy);
     auto zeroSpacing = absolute;
     zeroSpacing[4] = 0;
     textBlockImport(makeContainer(textBlockFixedRows(10, zeroSpacing)),
@@ -2351,7 +2354,7 @@ void testStoredTextBlocksAcrossEpochs()
 
     auto zeroPercentSession = musx::factory::DocumentFactory::begin();
     const auto zeroPercentDocument = zeroPercentSession.getDocument();
-    ImportReport zeroPercentReport;
+    ImportReport zeroPercentReport(FormatEpoch::UncompressedLegacy);
     auto zeroPercent = words;
     zeroPercent[4] = 0;
     textBlockImport(makeContainer(textBlockFixedRows(11, zeroPercent)),
@@ -2372,7 +2375,7 @@ void testStoredTextBlocksAcrossEpochs()
              std::int16_t(2006)}) {
         auto expressionSession = musx::factory::DocumentFactory::begin();
         const auto expressionDocument = expressionSession.getDocument();
-        ImportReport expressionReport;
+        ImportReport expressionReport(FormatEpoch::UncompressedLegacy);
         auto expression = words;
         expression[12] = discriminator;
         textBlockImport(makeContainer(textBlockFixedRows(9, expression), FormatEpoch::DclLegacy),
@@ -2388,7 +2391,7 @@ void testStoredTextBlocksAcrossEpochs()
 
     auto taggedBlockSession = musx::factory::DocumentFactory::begin();
     const auto taggedBlockDocument = taggedBlockSession.getDocument();
-    ImportReport taggedBlockReport;
+    ImportReport taggedBlockReport(FormatEpoch::UncompressedLegacy);
     auto taggedBlockWords = words;
     taggedBlockWords[12] =
         static_cast<std::int16_t>(finale_mus_reader::records::packTag("bl"));
@@ -2403,7 +2406,7 @@ void testStoredTextBlocksAcrossEpochs()
 
     auto oldSession = musx::factory::DocumentFactory::begin();
     const auto oldDocument = oldSession.getDocument();
-    ImportReport oldReport;
+    ImportReport oldReport(FormatEpoch::UncompressedLegacy);
     auto oldWords = words;
     oldWords[12] = 0;
     textBlockImport(makeContainer(textBlockFixedRows(11, oldWords)),
@@ -2427,9 +2430,8 @@ void testCodaTextBlockSynthesis()
     }
     const auto parsed = makeContainer({{0, "HS", {0, 0, 1036, 0, 0, 0x0080}},
         {0, "HS", {0, 0, 1036, 0, 0, 0x0081}}}, FormatEpoch::CodaBanner);
-    ImportReport report;
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::CodaBanner;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    SourceProfile profile(FormatEpoch::CodaBanner);
     profile.byteOrder = ByteOrder::BigEndian;
     textBlockImport(parsed, profile, document, report);
 
@@ -2506,10 +2508,9 @@ void testFretClassesAreSourceOwned()
     const auto document = session.getDocument();
     auto referenceSession = musx::factory::DocumentFactory::begin();
     const auto reference = std::move(referenceSession).finish();
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::ZlibLegacy;
+    SourceProfile profile(FormatEpoch::ZlibLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{
@@ -2548,7 +2549,7 @@ void testFretClassesAreSourceOwned()
     const auto detailParsed = makeDetailClassContainer(
         9, 2, 0, diagramWords, ByteOrder::BigEndian, 0x0413);
     const auto detailIndex = LegacyRecordIndex::build(detailParsed);
-    ImportReport detailReport;
+    ImportReport detailReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences detailPending;
     musx::factory::ConstructionContext detailConstruction;
     const finale_mus_reader::ImportContext detailContext{detailIndex, profile, noSource,
@@ -2583,10 +2584,9 @@ void testFretClassesAreSourceOwned()
     const auto fixedIndex = LegacyRecordIndex::build(fixedParsed);
     auto fixedSession = musx::factory::DocumentFactory::begin();
     const auto fixedDocument = fixedSession.getDocument();
-    ImportReport fixedReport;
+    ImportReport fixedReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences fixedPending;
-    SourceProfile fixedProfile;
-    fixedProfile.epoch = FormatEpoch::DclLegacy;
+    SourceProfile fixedProfile(FormatEpoch::DclLegacy);
     fixedProfile.byteOrder = ByteOrder::BigEndian;
     musx::factory::ConstructionContext fixedConstruction;
     const finale_mus_reader::ImportContext fixedContext{fixedIndex, fixedProfile, noSource,
@@ -2610,7 +2610,7 @@ void testFretClassesAreSourceOwned()
     const auto fixedDetailParsed = makeDetailContainer(
         FormatEpoch::DclLegacy, 9, 2, diagramWords, "fb");
     const auto fixedDetailIndex = LegacyRecordIndex::build(fixedDetailParsed);
-    ImportReport fixedDetailReport;
+    ImportReport fixedDetailReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences fixedDetailPending;
     musx::factory::ConstructionContext fixedDetailConstruction;
     const finale_mus_reader::ImportContext fixedDetailContext{fixedDetailIndex, fixedProfile,
@@ -2627,7 +2627,7 @@ void testFretClassesAreSourceOwned()
         makeClassContainer(std::vector<SyntheticClassRow>{}, ByteOrder::LittleEndian));
     auto emptySession = musx::factory::DocumentFactory::begin();
     const auto emptyDocument = emptySession.getDocument();
-    ImportReport emptyReport;
+    ImportReport emptyReport(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences emptyPending;
     musx::factory::ConstructionContext emptyConstruction;
     const finale_mus_reader::ImportContext emptyContext{emptyIndex, profile, noSource,
@@ -2652,10 +2652,9 @@ void testFretClassesAreSourceOwned()
             makeContainer({}, emptyEpoch));
         auto emptyFixedSession = musx::factory::DocumentFactory::begin();
         const auto emptyFixedDocument = emptyFixedSession.getDocument();
-        ImportReport emptyFixedReport;
+        ImportReport emptyFixedReport(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences emptyFixedPending;
-        SourceProfile emptyFixedProfile;
-        emptyFixedProfile.epoch = emptyEpoch;
+        SourceProfile emptyFixedProfile(emptyEpoch);
         emptyFixedProfile.byteOrder = ByteOrder::BigEndian;
         musx::factory::ConstructionContext emptyFixedConstruction;
         const finale_mus_reader::ImportContext emptyFixedContext{emptyFixedIndex,
@@ -2695,7 +2694,7 @@ void testFretboardGroupUnicodeLayout()
     const auto document = session.getDocument();
     auto referenceSession = musx::factory::DocumentFactory::begin();
     const auto reference = std::move(referenceSession).finish();
-    ImportReport report;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
     auto profile = profileFor(17);
     profile.epoch = FormatEpoch::ZlibLegacy;
@@ -2823,7 +2822,7 @@ void testTextOptionsScalars()
 
     // A Coda-banner document: the two old selectors and nothing else.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         auto coda = profileFor(2, 6);
         coda.epoch = FormatEpoch::CodaBanner;
         coda.version.reset();
@@ -2845,7 +2844,7 @@ void testTextOptionsScalars()
     // Finale 97 onward, with the full set. Selector 82 states a percent, so the percent member
     // is engaged and the absolute one stays empty.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(
             {
                 {GLOBALS_CMPER, "05", {0, 0, 0, 0, 1, 1}},
@@ -2881,7 +2880,7 @@ void testTextOptionsScalars()
     // The same record with the two exchanged enum values, which is what separates Finale's
     // order from musxdom's: a stored 2 is centre in both lists.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(
             {
                 {GLOBALS_CMPER, "82", {100, 1, 1, 0, 2, 1}},
@@ -2897,7 +2896,7 @@ void testTextOptionsScalars()
     // Selector 82 word 1 clear: the same word 0 is an absolute distance, and the baseline's
     // percent must not survive beside it. musxdom's own integrity check rejects both engaged.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(
             {{GLOBALS_CMPER, "82", {72, 0, 1, 0, 0, 1}}}, profileFor(3, 8), report);
         expectMapping(options->textLineSpacingEvpu.has_value()
@@ -2931,7 +2930,7 @@ void testTextOptionsScalars()
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = byteOrder;
 
-        ImportReport layoutReport;
+        ImportReport layoutReport(FormatEpoch::UncompressedLegacy);
         const auto layout = runClassImport(
             makeClassContainer(finale_mus_reader::numericGlobalClass(82), {137, 0, 0, 77, 3, 0}, byteOrder),
             profile, layoutReport);
@@ -2944,7 +2943,7 @@ void testTextOptionsScalars()
                 && !layout->textWordWrap,
             "The zlib epoch did not read selector 82 from its own offsets");
 
-        ImportReport metricsReport;
+        ImportReport metricsReport(FormatEpoch::UncompressedLegacy);
         const auto metrics = runClassImport(
             makeClassContainer(finale_mus_reader::numericGlobalClass(81), {-1, -6, 0, 2016, -1, -3168}, byteOrder),
             profile, metricsReport);
@@ -3002,7 +3001,7 @@ void testTextOptionsSymbolInserts()
     // Finale 3.7-2000: a 17-byte element with a one-byte character, read little-endian on a
     // big-endian file. These are the words a Finale 97 fixture carries.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const std::vector<SyntheticRow> rows{
             {GLOBALS_CMPER, "78", {35, 0, 0, 0, 34, 0}},
             {GLOBALS_CMPER, "78", {100, 0, 12835, 0, 0, 0}},
@@ -3021,7 +3020,7 @@ void testTextOptionsSymbolInserts()
     // which only the low byte counts. The double sharp and double flat are stored
     // sign-extended here, as four Finale 2006 fixtures do.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const std::vector<SyntheticRow> rows{
             {GLOBALS_CMPER, "78", {0, 35, 0, 0, 34, 0}},
             {GLOBALS_CMPER, "78", {100, 0, 35, 0, 50, 0}},
@@ -3056,7 +3055,7 @@ void testTextOptionsSymbolInserts()
         element(60, 19, 186);
         words.insert(words.end(), 4, 0);
 
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         auto profile = profileFor(16, 0);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::LittleEndian;
@@ -3075,7 +3074,7 @@ void testTextOptionsSymbolInserts()
         const std::size_t dblSharpChar = 3 * 10 + 8;
         astral[dblSharpChar] = static_cast<std::int16_t>(0x6469);
         astral[dblSharpChar + 1] = 2;
-        ImportReport astralReport;
+        ImportReport astralReport(FormatEpoch::UncompressedLegacy);
         const auto withAstral = runImport(
             makeClassContainer(finale_mus_reader::numericGlobalClass(78), astral,
                 ByteOrder::LittleEndian),
@@ -3088,7 +3087,7 @@ void testTextOptionsSymbolInserts()
     // All five come from the pinned baseline and must say so, and the font must be cloned into
     // this document rather than shared with the reference.
     {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         auto coda = profileFor(2, 6);
         coda.epoch = FormatEpoch::CodaBanner;
         coda.version.reset();
@@ -3198,14 +3197,14 @@ void testRepeatOptionsAcrossEpochs()
     for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         auto profile = profileFor(epoch == FormatEpoch::DclLegacy ? 12 : 3, 0);
         profile.epoch = epoch;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectRecovered(runImport(makeContainer(rows, epoch), profile, report), report,
             epoch == FormatEpoch::DclLegacy ? "The DCL epoch" : "The uncompressed epoch");
     }
 
     auto sentinelRows = rows;
     sentinelRows[1].words[3] = 0;
-    ImportReport sentinelReport;
+    ImportReport sentinelReport(FormatEpoch::UncompressedLegacy);
     expectMapping(runImport(makeContainer(sentinelRows), profileFor(3, 7), sentinelReport)
             ->maxPasses == 20,
         "The older zero maximum-pass sentinel did not retain its twenty-pass behavior");
@@ -3221,7 +3220,7 @@ void testRepeatOptionsAcrossEpochs()
         auto profile = profileFor(16, 0);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = byteOrder;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectRecovered(runImport(makeClassContainer(classRows, byteOrder), profile, report),
             report, byteOrder == ByteOrder::BigEndian
                 ? "The big-endian zlib epoch" : "The little-endian zlib epoch");
@@ -3230,7 +3229,7 @@ void testRepeatOptionsAcrossEpochs()
     auto coda = profileFor(2, 6);
     coda.epoch = FormatEpoch::CodaBanner;
     coda.version.reset();
-    ImportReport codaReport;
+    ImportReport codaReport(FormatEpoch::UncompressedLegacy);
     const auto codaOptions = runImport(
         makeContainer(rows, FormatEpoch::CodaBanner), coda, codaReport);
     expectMapping(codaOptions->maxPasses == 90 && codaOptions->bracketHeight == 101
@@ -3252,7 +3251,7 @@ void testRepeatOptionsAcrossEpochs()
     earlyUncompressed.epoch = FormatEpoch::UncompressedLegacy;
     auto rowsWithoutLayoutMarker = rows;
     rowsWithoutLayoutMarker.erase(rowsWithoutLayoutMarker.begin() + 5);
-    ImportReport earlyReport;
+    ImportReport earlyReport(FormatEpoch::UncompressedLegacy);
     const auto earlyOptions = runImport(
         makeContainer(rowsWithoutLayoutMarker, FormatEpoch::UncompressedLegacy),
         earlyUncompressed, earlyReport);
@@ -3506,7 +3505,7 @@ void testSmartShapeOptionsAcrossEpochs()
     for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         auto profile = profileFor(epoch == FormatEpoch::DclLegacy ? 12 : 4, 0);
         profile.epoch = epoch;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectRecovered(runImport(makeContainer(rows, epoch), profile, report), report,
             epoch == FormatEpoch::DclLegacy ? "The DCL epoch" : "The uncompressed epoch");
     }
@@ -3539,7 +3538,7 @@ void testSmartShapeOptionsAcrossEpochs()
         auto profile = profileFor(4, 0);
         profile.epoch = test.epoch;
         profile.version = test.version;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(makeContainer(rows, test.epoch), profile, report);
         const auto& recoveredWidth = field(
             report, "options.smartShapeOptions.crescLineWidth");
@@ -3557,7 +3556,7 @@ void testSmartShapeOptionsAcrossEpochs()
     zeroAvoidanceRows.front().words[5] = 0;
     auto zeroAvoidanceProfile = profileFor(7, 0);
     zeroAvoidanceProfile.epoch = FormatEpoch::DclLegacy;
-    ImportReport zeroAvoidanceReport;
+    ImportReport zeroAvoidanceReport(FormatEpoch::UncompressedLegacy);
     const auto zeroAvoidanceOptions = runImport(
         makeContainer(zeroAvoidanceRows, FormatEpoch::DclLegacy),
         zeroAvoidanceProfile, zeroAvoidanceReport);
@@ -3574,7 +3573,7 @@ void testSmartShapeOptionsAcrossEpochs()
     singleAdjustmentRows.erase(singleAdjustmentRows.begin() + 5);
     auto singleAdjustmentProfile = profileFor(7, 0);
     singleAdjustmentProfile.epoch = FormatEpoch::DclLegacy;
-    ImportReport singleAdjustmentReport;
+    ImportReport singleAdjustmentReport(FormatEpoch::UncompressedLegacy);
     const auto singleAdjustmentOptions = runImport(
         makeContainer(singleAdjustmentRows, FormatEpoch::DclLegacy),
         singleAdjustmentProfile, singleAdjustmentReport);
@@ -3615,7 +3614,7 @@ void testSmartShapeOptionsAcrossEpochs()
         auto profile = profileFor(16, 0);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = byteOrder;
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectRecovered(runImport(makeClassContainer(classRows, byteOrder), profile, report),
             report, byteOrder == ByteOrder::BigEndian
                 ? "The big-endian zlib epoch" : "The little-endian zlib epoch");
@@ -3624,7 +3623,7 @@ void testSmartShapeOptionsAcrossEpochs()
     auto coda = profileFor(2, 6);
     coda.epoch = FormatEpoch::CodaBanner;
     coda.version.reset();
-    ImportReport codaReport;
+    ImportReport codaReport(FormatEpoch::UncompressedLegacy);
     const std::vector<SyntheticRow> codaRows{
         {GLOBALS_CMPER, "51", {-13, 17, -15, 19, 3, 5}},
         {GLOBALS_CMPER, "26", {13, 31, -32, 0, 33, -34}},
@@ -3666,7 +3665,7 @@ void testSmartShapeOptionsAcrossEpochs()
                 == ValueOrigin::Finale27Default,
         "The Coda epoch reported incorrect SmartShapeOptions origins");
 
-    ImportReport codaDefaultReport;
+    ImportReport codaDefaultReport(FormatEpoch::UncompressedLegacy);
     const std::vector<SyntheticRow> codaDefaultRows{
         {GLOBALS_CMPER, "51", {0, -6, 0, -6, 0, 8}},
     };
@@ -3685,7 +3684,7 @@ void testSmartShapeOptionsAcrossEpochs()
     earlyRows.erase(earlyRows.begin() + 3);
     auto earlyProfile = profileFor(3, 7);
     earlyProfile.epoch = FormatEpoch::UncompressedLegacy;
-    ImportReport earlyReport;
+    ImportReport earlyReport(FormatEpoch::UncompressedLegacy);
     const auto earlyOptions = runImport(
         makeContainer(earlyRows), earlyProfile, earlyReport);
     expectMapping(earlyOptions->slurThicknessCp1X == 908
@@ -3698,7 +3697,7 @@ void testSmartShapeOptionsAcrossEpochs()
         {GLOBALS_CMPER, "52", {864, 358, 73, 0, 0, 0}},
         {GLOBALS_CMPER, "53", {3, 5, 7, 0, 0, 0}},
     };
-    ImportReport preEngraverReport;
+    ImportReport preEngraverReport(FormatEpoch::UncompressedLegacy);
     const auto preEngraverOptions = runImport(
         makeContainer(preEngraverRows), earlyProfile, preEngraverReport);
     const auto longStyle = preEngraverOptions->slurControlStyles.at(
@@ -3747,7 +3746,7 @@ void testSmartShapeCustomLineFallbackGate()
         profile.epoch = epoch;
         const auto document = makeSmartShapeOptionsDocument();
         const auto reference = makeSmartShapeOptionsDocument();
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{
@@ -3803,14 +3802,14 @@ void testSmartShapeDirectionGate()
         return document->getOptions()->get<SmartShape>()->direction;
     };
 
-    ImportReport finale2001Report;
+    ImportReport finale2001Report(FormatEpoch::UncompressedLegacy);
     expectMapping(importFixed(FormatEpoch::DclLegacy, 6, true, -1, finale2001Report)
                 == Direction::Automatic
             && field(finale2001Report, "options.smartShapeOptions.direction").origin
                 == ValueOrigin::Finale27Default,
         "A pre-Finale-2002 DCL word replaced the seeded Automatic direction");
 
-    ImportReport finale2002Report;
+    ImportReport finale2002Report(FormatEpoch::UncompressedLegacy);
     expectMapping(importFixed(FormatEpoch::DclLegacy, 7, true, -1, finale2002Report)
                 == Direction::Under
             && field(finale2002Report, "options.smartShapeOptions.direction").origin
@@ -3818,13 +3817,13 @@ void testSmartShapeDirectionGate()
             && field(finale2002Report, "options.smartShapeOptions.direction").rawValue == -1,
         "Finale 2002 did not recover its default slur direction");
 
-    ImportReport finale2006Report;
+    ImportReport finale2006Report(FormatEpoch::UncompressedLegacy);
     expectMapping(importFixed(FormatEpoch::DclLegacy, 11, true, 1, finale2006Report)
             == Direction::Over,
         "The Finale 2002 direction range ended before the DCL epoch");
 
     for (const auto invalid : std::array<std::int16_t, 2>{-2, 103}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectMapping(importFixed(FormatEpoch::DclLegacy, 11, true, invalid, report)
                     == Direction::Automatic
                 && field(report, "options.smartShapeOptions.direction").origin
@@ -3835,7 +3834,7 @@ void testSmartShapeDirectionGate()
     for (const auto& test : std::array{
              std::pair{FormatEpoch::UncompressedLegacy, true},
              std::pair{FormatEpoch::DclLegacy, false}}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectMapping(importFixed(test.first, 7, test.second, -1, report)
                 == Direction::Automatic,
             "The direction gate crossed an epoch or accepted a missing version");
@@ -3859,13 +3858,13 @@ void testSmartShapeDirectionGate()
         return document->getOptions()->get<SmartShape>()->direction;
     };
 
-    ImportReport zlibReport;
+    ImportReport zlibReport(FormatEpoch::UncompressedLegacy);
     expectMapping(importClass(1, zlibReport) == Direction::Over
             && field(zlibReport, "options.smartShapeOptions.direction").origin
                 == ValueOrigin::LegacyMus,
         "The zlib direction class did not recover the stored direction");
 
-    ImportReport invalidZlibReport;
+    ImportReport invalidZlibReport(FormatEpoch::UncompressedLegacy);
     expectMapping(importClass(103, invalidZlibReport) == Direction::Automatic
             && field(invalidZlibReport, "options.smartShapeOptions.direction").origin
                 == ValueOrigin::Finale27Default,
@@ -3895,7 +3894,7 @@ void testSmartShapeHookLengthBehaviorGate()
         return document->getOptions()->get<SmartShape>()->hookLength;
     };
 
-    ImportReport finale26Report;
+    ImportReport finale26Report(FormatEpoch::UncompressedLegacy);
     expectMapping(importHookLength(FormatEpoch::CodaBanner, 2, 6, true, finale26Report) == 8
             && field(finale26Report, "options.smartShapeOptions.hookLength").origin
                 == ValueOrigin::LegacyBehavior,
@@ -3912,7 +3911,7 @@ void testSmartShapeHookLengthBehaviorGate()
              ProfileCase{FormatEpoch::CodaBanner, 1, 0, true},
              ProfileCase{FormatEpoch::CodaBanner, 2, 6, false},
              ProfileCase{FormatEpoch::UncompressedLegacy, 2, 6, true}}) {
-        ImportReport report;
+        ImportReport report(FormatEpoch::UncompressedLegacy);
         expectMapping(importHookLength(profile.epoch, profile.major, profile.minor,
                           profile.keepVersion, report)
                 == 904,

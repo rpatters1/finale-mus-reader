@@ -8,6 +8,7 @@
 #include <optional>
 #include <functional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -29,6 +30,7 @@
 #include "musx/dom/Fundamentals.h"
 #include "musx/factory/ConstructionContext.h"
 #include "records/legacy_record_index.h"
+#include "support/finale_version.h"
 
 namespace finale_mus_reader {
 
@@ -209,91 +211,14 @@ struct GlobalSelectorWords
     return value;
 }
 
-/// @brief One end of a version gate, ordered by major then minor.
-/// @details Minor participates because the major version alone does not order Finale's
-/// whole history: Finale 97 and the Finale 3.x line both appear to carry major 3, so an
-/// early gate needs the minor version to separate them. Later eras are expected to need
-/// only the major, which is why minor defaults at both ends.
-struct VersionBound
-{
-    std::uint8_t major{};
-    std::uint8_t minor{};
-
-    [[nodiscard]] std::uint16_t key() const
-    {
-        return static_cast<std::uint16_t>((static_cast<std::uint16_t>(major) << 8U) | minor);
-    }
-};
-
-/// @brief An inclusive version range, both bounds optional.
-/// @details Gating is on the version embedded in the file, never on a number synthesized
-/// from the banner product text. A file whose version could not be recovered, which
-/// includes any file whose header tuple could not be read, matches only an
-/// unrestricted range.
-struct VersionRange
-{
-    std::optional<VersionBound> minVersion;
-    std::optional<VersionBound> maxVersion;
-
-    [[nodiscard]] bool unrestricted() const { return !minVersion && !maxVersion; }
-
-    [[nodiscard]] bool includes(const std::optional<SourceVersion>& version) const
-    {
-        if (unrestricted()) {
-            return true;
-        }
-        if (!version) {
-            return false;
-        }
-        const auto key = VersionBound{version->major, version->minor}.key();
-        if (minVersion && key < minVersion->key()) {
-            return false;
-        }
-        return !maxVersion || key <= maxVersion->key();
-    }
-};
-
-/// @brief Convenience constructors for version gates.
 namespace versions {
-[[nodiscard]] inline VersionRange any() { return {}; }
-
-/// @brief This version and later. Omitting the minor starts at the whole major version.
-[[nodiscard]] inline VersionRange from(std::uint8_t major, std::uint8_t minor = 0)
-{
-    return {VersionBound{major, minor}, std::nullopt};
-}
-
-/// @brief This version and earlier. Omitting the minor includes every minor of the major.
-[[nodiscard]] inline VersionRange upTo(std::uint8_t major, std::uint8_t minor = 0xff)
-{
-    return {std::nullopt, VersionBound{major, minor}};
-}
-
-/// @brief An inclusive span between two bounds.
-[[nodiscard]] inline VersionRange between(VersionBound minVersion, VersionBound maxVersion)
-{
-    return {minVersion, maxVersion};
-}
-
-/// @brief The first Enigma major version that stores a symbol codepoint as a long.
-/// @details Finale 2012 gained Unicode text, and every option that names a glyph widened
-/// with it: the clef table's character and the stem-connection table's symbol were both
-/// 8-bit characters stored in a 16-bit word, and both became full 32-bit codepoints
-/// occupying two words, shifting every field after them in their tuple.
-///
-/// This is one boundary shared by several classes, not a general "Finale 2012" constant.
-/// The font-ordinal renumbering in font_options.cpp also falls at major 17 and is
-/// deliberately kept separate: it is an array renumbering rather than a text-encoding
-/// change, and nothing establishes a common cause that a shared constant would assert.
-inline constexpr std::uint8_t firstUnicodeMajorVersion = 17; // Finale 2012
-
 /// @brief Whether a source stores symbol codepoints as longs rather than as words.
 /// @details A version that could not be recovered reads as pre-Unicode. That is the safe
 /// direction and costs nothing: only the zlib epoch reaches Finale 2012 at all, and every
 /// earlier epoch stores the narrow form regardless of what its header says.
 [[nodiscard]] inline bool storesUnicodeCodepoints(const std::optional<SourceVersion>& version)
 {
-    return version && version->major >= firstUnicodeMajorVersion;
+    return version && VersionBound{version->major, version->minor} >= finale2012;
 }
 } // namespace versions
 
@@ -316,17 +241,67 @@ enum class EpochMask : std::uint8_t
         static_cast<std::uint8_t>(left) | static_cast<std::uint8_t>(right));
 }
 
-[[nodiscard]] bool epochMatches(EpochMask mask, FormatEpoch epoch);
+/// @brief The chronological position of a classified format epoch.
+[[nodiscard]] constexpr std::uint8_t formatEpochOrdinal(FormatEpoch epoch)
+{
+    switch (epoch) {
+    case FormatEpoch::CodaBanner: return 0;
+    case FormatEpoch::UncompressedLegacy: return 1;
+    case FormatEpoch::DclLegacy: return 2;
+    case FormatEpoch::ZlibLegacy: return 3;
+    }
+    MUSX_ASSERT_IF(true) {
+        throw std::logic_error("Format epoch is not classified");
+    }
+    return 0;
+}
+
+[[nodiscard]] constexpr bool epochMatches(EpochMask mask, FormatEpoch epoch)
+{
+    const auto bit = static_cast<EpochMask>(1U << formatEpochOrdinal(epoch));
+    return (static_cast<std::uint8_t>(mask) & static_cast<std::uint8_t>(bit)) != 0;
+}
 
 /// @brief The classified properties of the source file that gate mapping rows.
 struct SourceProfile
 {
-    FormatEpoch epoch = FormatEpoch::Unknown;
+    constexpr explicit SourceProfile(FormatEpoch sourceEpoch) : epoch(sourceEpoch)
+    {
+        static_cast<void>(formatEpochOrdinal(sourceEpoch));
+    }
+
+    FormatEpoch epoch;
     std::optional<SourceVersion> version;
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform platform = SourcePlatform::Unknown;
     const text::SymbolFontNames* symbolFontNames{};
 };
+
+/// @brief Whether a source belongs to any of the requested format epochs.
+[[nodiscard]] constexpr bool sourceMatches(const SourceProfile& profile, EpochMask epochs)
+{
+    return epochMatches(epochs, profile.epoch);
+}
+
+/// @brief Whether a source is at or beyond a chronological format epoch.
+[[nodiscard]] constexpr bool sourceAtOrAfter(
+    const SourceProfile& profile, FormatEpoch boundaryEpoch)
+{
+    return formatEpochOrdinal(profile.epoch) >= formatEpochOrdinal(boundaryEpoch);
+}
+
+/// @brief Whether a source is at or beyond a chronological epoch and version boundary.
+/// @details A later epoch passes without needing a version. The boundary epoch passes only
+/// when its recovered version is at least the requested version.
+[[nodiscard]] constexpr bool sourceAtOrAfter(const SourceProfile& profile,
+    FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
+{
+    if (profile.epoch != boundaryEpoch) return sourceAtOrAfter(profile, boundaryEpoch);
+    return profile.version
+        && VersionBound{profile.version->major, profile.version->minor} >= boundaryVersion;
+}
+
+using SourceGate = bool (*)(const SourceProfile& profile);
 
 /// @brief One numeric global's whole payload, in whichever encoding the source uses.
 /// @details A capture pass reads a collection the field tables cannot express, and the two
@@ -402,7 +377,7 @@ struct FieldMapping
     const char* fieldName{};
     FieldKind kind = FieldKind::Number;
     SourceLocation source{};
-    VersionRange versions{};
+    SourceGate sourceApplies{};
     void (*apply)(void* instance, std::int64_t value){};
     /// @brief Reads the seeded default, so the report can record a synthesized value
     /// without a separately maintained list of supported fields.
@@ -470,7 +445,7 @@ struct MappingTable
     /// @brief Report target prefix, also the identity used when layering tables.
     const char* reportPrefix{};
     EpochMask epochs = EpochMask::FixedRow;
-    VersionRange versions{};
+    SourceGate sourceApplies{};
     /// @brief Optional extra test, for a boundary neither the epoch nor the version states.
     /// @details Some layouts change at a release that sits inside one epoch, at a version no
     /// available file occupies, or in a way the record stream states more directly than the
@@ -682,7 +657,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// field inside a contained object is written `charParams->lineChar` and needs no second
 /// spelling: the report turns that path into the dotted one it prints.
 #define MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                     orderValue, bitsValue, versionsValue, appliesValue, member) \
+                     orderValue, bitsValue, sourceGateValue, appliesValue, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
@@ -690,7 +665,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
-        (versionsValue), \
+        (sourceGateValue), \
         [](void* instance, std::int64_t value) { \
             ::finale_mus_reader::assignFrom( \
                 static_cast<Class*>(instance)->member, value); }, \
@@ -703,9 +678,9 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 
 /// @brief Declares a numeric field mapping with every column stated explicitly.
 #define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                  orderValue, bitsValue, versionsValue, member) \
+                  orderValue, bitsValue, sourceGateValue, member) \
     MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-        orderValue, bitsValue, versionsValue, nullptr, member)
+        orderValue, bitsValue, sourceGateValue, nullptr, member)
 
 /// @brief Declares a class-record field mapping with every column stated explicitly, including
 /// the @ref FieldMapping::targetApplies test.
@@ -719,7 +694,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             (identityValue), static_cast<std::uint16_t>(selectorValue), 0, \
             static_cast<std::uint32_t>(byteOffset), \
             (widthValue), (orderValue), (bitsValue) }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         [](void* instance, std::int64_t value) { \
             ::finale_mus_reader::assignFrom( \
                 static_cast<Class*>(instance)->member, value); }, \
@@ -791,7 +766,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             (identityValue), static_cast<std::uint16_t>(selectorValue), 0, \
             static_cast<std::uint32_t>(byteOffset), \
             (widthValue), (orderValue), (bitsValue) }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
@@ -848,7 +823,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             ::finale_mus_reader::BitRange{} }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->owner->setter(static_cast<Stored>(value)); }, \
         nullptr, \
@@ -866,7 +841,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             ::finale_mus_reader::BitRange{} }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         nullptr, \
         nullptr, \
         [](void* instance, std::string_view value) { \
@@ -876,7 +851,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @brief The counterpart of @ref MUS_FIELD_IF for a value that needs converting on the way
 /// in. `value` names the extracted source value.
 #define MUS_FIELD_AS_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                        orderValue, bitsValue, versionsValue, appliesValue, member, ...) \
+                        orderValue, bitsValue, sourceGateValue, appliesValue, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
@@ -884,7 +859,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
-        (versionsValue), \
+        (sourceGateValue), \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->member = (__VA_ARGS__); }, \
         [](const void* instance) -> std::int64_t { \
@@ -904,7 +879,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         (::finale_mus_reader::BitRange{ \
             static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
-        ::finale_mus_reader::VersionRange{}, nullptr, member, __VA_ARGS__)
+        nullptr, nullptr, member, __VA_ARGS__)
 
 /// @brief A two-byte field a record carries only when it selects that layout, assigned
 /// through a conversion expression.
@@ -913,7 +888,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         ::finale_mus_reader::BitRange{}, \
-        ::finale_mus_reader::VersionRange{}, (applies), member, __VA_ARGS__)
+        nullptr, (applies), member, __VA_ARGS__)
 
 /// @brief The fixed-row spelling of @ref MUS_CLASS_SET_IF.
 #define MUS_SET_IF(Class, tagText, selector, incidence, slot, applies, owner, field, setter, \
@@ -927,7 +902,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             ::finale_mus_reader::BitRange{} }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         [](void* instance, std::int64_t value) { \
             static_cast<Class*>(instance)->owner->setter(static_cast<Stored>(value)); }, \
         nullptr, \
@@ -946,7 +921,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             ::finale_mus_reader::ValueWidth::Word, \
             ::finale_mus_reader::LongWordOrder::HighFirst, \
             ::finale_mus_reader::BitRange{} }, \
-        ::finale_mus_reader::VersionRange{}, \
+        nullptr, \
         nullptr, \
         nullptr, \
         [](void* instance, std::string_view value) { \
@@ -959,14 +934,14 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         ::finale_mus_reader::BitRange{}, \
-        ::finale_mus_reader::VersionRange{}, member)
+        nullptr, member)
 
-/// @brief A two-byte field restricted to a range of Finale major versions.
-#define MUS_WORD_V(Class, tagText, selector, incidence, slot, versionRange, member) \
+/// @brief A two-byte field restricted by a source gate.
+#define MUS_WORD_IF_SOURCE(Class, tagText, selector, incidence, slot, sourceGate, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
-        ::finale_mus_reader::BitRange{}, (versionRange), member)
+        ::finale_mus_reader::BitRange{}, (sourceGate), member)
 
 /// @brief A one-byte field, narrowed from its payload word.
 #define MUS_BYTE(Class, tagText, selector, incidence, slot, member) \
@@ -974,14 +949,14 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::ValueWidth::Byte, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         ::finale_mus_reader::BitRange{}, \
-        ::finale_mus_reader::VersionRange{}, member)
+        nullptr, member)
 
 /// @brief A four-byte field spanning two consecutive payload words.
 #define MUS_LONG(Class, tagText, selector, incidence, slot, order, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
         ::finale_mus_reader::ValueWidth::Long, (order), \
         ::finale_mus_reader::BitRange{}, \
-        ::finale_mus_reader::VersionRange{}, member)
+        nullptr, member)
 
 /// @brief A single bit of a payload word.
 #define MUS_BIT(Class, tagText, selector, incidence, slot, bitIndex, member) \
@@ -989,7 +964,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         (::finale_mus_reader::BitRange{static_cast<std::uint8_t>(bitIndex), 1}), \
-        ::finale_mus_reader::VersionRange{}, member)
+        nullptr, member)
 
 /// @brief A contiguous bit range of a payload word.
 #define MUS_BITS(Class, tagText, selector, incidence, slot, firstBit, bitCount, member) \
@@ -998,7 +973,7 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         (::finale_mus_reader::BitRange{ \
             static_cast<std::uint8_t>(firstBit), static_cast<std::uint8_t>(bitCount)}), \
-        ::finale_mus_reader::VersionRange{}, member)
+        nullptr, member)
 
 /// @brief A two-byte field a record carries only when it selects that layout.
 #define MUS_WORD_IF(Class, tagText, selector, incidence, slot, applies, member) \
@@ -1006,4 +981,4 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         ::finale_mus_reader::BitRange{}, \
-        ::finale_mus_reader::VersionRange{}, (applies), member)
+        nullptr, (applies), member)

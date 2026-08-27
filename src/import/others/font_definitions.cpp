@@ -102,8 +102,6 @@ const FieldMapping fontFields[] = {
 // present.
 //
 // Where between 3.0 and 3.2 the header arrived is **open**; no Finale 3.1 file is available.
-constexpr std::uint8_t headerFirstVersion = 3;
-constexpr std::uint8_t headerFirstMinor = 2;
 
 const FieldMapping earlyFontFields[] = {
     MUS_TEXT(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*firstIncidence*/ 0, name),
@@ -134,6 +132,17 @@ const FieldMapping classFontFields[] = {
     MUS_CLASS_TEXT(FontDefinitionTarget, fontDefinitionClass, nameOffset, name),
 };
 
+bool sourceHasFontHeader(const SourceProfile& profile)
+{
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy,
+        versions::finale3_2);
+}
+
+bool sourcePredatesFontHeader(const SourceProfile& profile)
+{
+    return profile.version && !sourceHasFontHeader(profile);
+}
+
 // The Coda-banner epoch, which needs no version test at all.
 //
 // That epoch lies entirely below the header boundary, so the early layout always applies to it
@@ -148,7 +157,6 @@ const MappingTable& codaFontDefinitionsTable()
     static const MappingTable table{
         .reportPrefix = "others.fontName",
         .epochs = EpochMask::CodaBanner,
-        .versions = versions::any(),
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
         .createTarget = &createOthersTarget<FontDefinitionTarget>,
@@ -180,7 +188,7 @@ const MappingTable& fontDefinitionsTable()
         // Fixed-row epochs only. A Coda-banner document can never be Finale 3.2 or later, so
         // listing that epoch here could only ever be satisfied by a misread version.
         .epochs = EpochMask::FixedRow,
-        .versions = versions::from(headerFirstVersion, headerFirstMinor),
+        .sourceApplies = &sourceHasFontHeader,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
         .createTarget = &createOthersTarget<FontDefinitionTarget>,
@@ -196,7 +204,7 @@ const MappingTable& earlyFontDefinitionsTable()
         .reportPrefix = "others.fontName",
         // The uncompressed epoch straddles the boundary, so here the version decides.
         .epochs = EpochMask::FixedRow,
-        .versions = versions::upTo(headerFirstVersion, headerFirstMinor - 1),
+        .sourceApplies = &sourcePredatesFontHeader,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
         .createTarget = &createOthersTarget<FontDefinitionTarget>,

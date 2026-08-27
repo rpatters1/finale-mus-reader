@@ -57,8 +57,6 @@ std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& 
         return RecordFamilySource{&fixedPool, fixedTag, false};
     case FormatEpoch::ZlibLegacy:
         return RecordFamilySource{&classPool, classId, true};
-    case FormatEpoch::Unknown:
-        return std::nullopt;
     }
     return std::nullopt;
 }
@@ -164,6 +162,9 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
+        // ChordOptions follows its source-owned fret definitions so its default references
+        // can be accepted only when their targets exist.
+        FINALE_MUS_READER_IMPORTER(ImportChordOptions, &options::importChordOptions),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
@@ -356,8 +357,8 @@ std::vector<EffectiveTable> buildEffectiveTables(
 {
     std::vector<EffectiveTable> result;
     for (const auto* table : tables) {
-        const bool tableApplies = epochMatches(table->epochs, profile.epoch)
-            && table->versions.includes(profile.version)
+        const bool tableApplies = sourceMatches(profile, table->epochs)
+            && (!table->sourceApplies || table->sourceApplies(profile))
             && (!table->applies || table->applies(index, profile));
         const auto found = std::find_if(result.begin(), result.end(),
             [&](const EffectiveTable& candidate) {
@@ -376,7 +377,8 @@ std::vector<EffectiveTable> buildEffectiveTables(
         }
         for (std::size_t i = 0; i < table->fieldCount; ++i) {
             const auto* field = table->fields + i;
-            const bool readable = tableApplies && field->versions.includes(profile.version);
+            const bool readable = tableApplies
+                && (!field->sourceApplies || field->sourceApplies(profile));
             const auto existing = std::find_if(effective.fields.begin(), effective.fields.end(),
                 [&](const EffectiveField& candidate) {
                     return std::string_view(candidate.reporting->fieldName) == field->fieldName;
@@ -426,28 +428,6 @@ musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
     static_cast<void>(report);
     return {};
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-}
-
-bool epochMatches(EpochMask mask, FormatEpoch epoch)
-{
-    auto bit = EpochMask::None;
-    switch (epoch) {
-    case FormatEpoch::CodaBanner:
-        bit = EpochMask::CodaBanner;
-        break;
-    case FormatEpoch::UncompressedLegacy:
-        bit = EpochMask::Uncompressed;
-        break;
-    case FormatEpoch::DclLegacy:
-        bit = EpochMask::Dcl;
-        break;
-    case FormatEpoch::ZlibLegacy:
-        bit = EpochMask::Zlib;
-        break;
-    case FormatEpoch::Unknown:
-        return false;
-    }
-    return (static_cast<std::uint8_t>(mask) & static_cast<std::uint8_t>(bit)) != 0;
 }
 
 std::optional<ResolvedValue> readSourceValue(

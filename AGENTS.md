@@ -73,6 +73,11 @@ scaffolding creates them.
 
 ## Nothing is implemented more than once
 
+Every line of code is a liability that must be checked and maintained in perpetuity. Prefer
+solutions that centralize reuse and avoid boilerplate without introducing overly complex
+abstractions. A change with more red deletions than green insertions is a win. Every line of
+code should earn its place.
+
 In library and reader code, every fact and every behaviour has exactly one
 implementation. A second copy is a defect even when both copies are currently
 correct, because the two will diverge and the divergence will be silent.

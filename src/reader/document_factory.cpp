@@ -102,8 +102,7 @@ musx::dom::DocumentPtr createDocument(
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::MacSymbolFonts);
         return text::parseMacSymbolFonts(options.macSymbolFonts);
     }();
-    SourceProfile profile;
-    profile.epoch = report.formatEpoch;
+    SourceProfile profile(report.formatEpoch);
     profile.version = report.sourceVersion;
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;

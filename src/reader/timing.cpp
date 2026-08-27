@@ -26,6 +26,7 @@ std::string_view phaseName(Phase phase)
     case Phase::RecordIndex: return "record_index";
     case Phase::ImportFontDefinitions: return "font_definitions";
     case Phase::ImportFontOptions: return "font_options";
+    case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";

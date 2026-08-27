@@ -52,7 +52,6 @@ const char* epochName(FormatEpoch epoch)
     case FormatEpoch::UncompressedLegacy: return "uncompressed";
     case FormatEpoch::DclLegacy: return "dcl";
     case FormatEpoch::ZlibLegacy: return "zlib";
-    case FormatEpoch::Unknown: break;
     }
     return "unknown";
 }

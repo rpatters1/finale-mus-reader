@@ -20,6 +20,7 @@
 #include <zlib.h>
 
 #include "finale_mus_reader/reader.h"
+#include "support/finale_version.h"
 #include "musx/musx.h"
 
 #ifndef MUSX_USE_PUGIXML
@@ -38,6 +39,7 @@ namespace {
 
 using finale_mus_reader::BlockInfo;
 using finale_mus_reader::ByteOrder;
+using musx::dom::MUSX_GLOBALS_CMPER;
 using finale_mus_reader::FieldInfo;
 using finale_mus_reader::FormatEpoch;
 using finale_mus_reader::ImportResult;
@@ -164,7 +166,7 @@ std::vector<std::uint8_t> makeUncompressedMus()
     appendOther(others, 1, "LA", words(-12, 0, 0, 0, 0, 0), byteOrder);
     appendOther(others, 2, "LA", words(13, 0, 0, 0, 0, 0), byteOrder);
     appendOther(others, 3, "LA", words(-14, 0, 0, 0, 0, 0), byteOrder);
-    appendOther(others, 0xfffe, "94", words(2, 361, 1801, 13, 49, 0), byteOrder);
+    appendOther(others, MUSX_GLOBALS_CMPER, "94", words(2, 361, 1801, 13, 49, 0), byteOrder);
     appendUncompressedBlock(result, 1, others, byteOrder);
     appendUncompressedBlock(result, 2, {}, byteOrder);
     appendUncompressedBlock(result, 3, {}, byteOrder);
@@ -184,8 +186,8 @@ std::vector<std::uint8_t> makeUncompressedMusWithFontOptions()
     appendOther(others, 0, "FN", words(0x1fff, 0, 0, 0, 0, 0), byteOrder);
     appendOther(others, 0, "FN", words(0x4d61, 0x6573, 0x7472, 0x6f00, 0, 0), byteOrder);
     // Two incidences of selector 24: four three-word tuples, music/key/clef/time.
-    appendOther(others, 0xfffe, "24", words(0, 28, 0, 0, 26, 0), byteOrder);
-    appendOther(others, 0xfffe, "24", words(0, 24, 0, 0, 22, 1), byteOrder);
+    appendOther(others, MUSX_GLOBALS_CMPER, "24", words(0, 28, 0, 0, 26, 0), byteOrder);
+    appendOther(others, MUSX_GLOBALS_CMPER, "24", words(0, 24, 0, 0, 22, 1), byteOrder);
     appendUncompressedBlock(result, 1, others, byteOrder);
     appendUncompressedBlock(result, 2, {}, byteOrder);
     appendUncompressedBlock(result, 3, {}, byteOrder);
@@ -216,14 +218,14 @@ std::vector<std::uint8_t> makeCodaBannerMus(
     for (std::size_t i = 0; i < clefs.size(); ++i) {
         const char tag[2] = {static_cast<char>('0' + (28 + i) / 10),
             static_cast<char>('0' + (28 + i) % 10)};
-        appendOther(pool, 0xfffe, std::string_view(tag, 2),
+        appendOther(pool, MUSX_GLOBALS_CMPER, std::string_view(tag, 2),
             words(clefs[i][0], clefs[i][1], clefs[i][2], clefs[i][3], 0, 0), byteOrder);
     }
     // Scalars the era does record: the default clef, the end-of-measure percent and offset,
     // and the spacing before and after a clef.
-    appendOther(pool, 0xfffe, "01", words(0, 0, 0, 0, 0, 0), byteOrder);
-    appendOther(pool, 0xfffe, "13", words(4, 24, 75, -12, 0, 0), byteOrder);
-    appendOther(pool, 0xfffe, "19", words(24, 0, 0, 0, 0, 0), byteOrder);
+    appendOther(pool, MUSX_GLOBALS_CMPER, "01", words(0, 0, 0, 0, 0, 0), byteOrder);
+    appendOther(pool, MUSX_GLOBALS_CMPER, "13", words(4, 24, 75, -12, 0, 0), byteOrder);
+    appendOther(pool, MUSX_GLOBALS_CMPER, "19", words(24, 0, 0, 0, 0, 0), byteOrder);
     if (includeBlankShape) {
         appendOther(pool, 19, "SD", words(19, 19, 0, 0, -584, 868), byteOrder);
         appendOther(pool, 19, "SL", words(0, 0, 0, 0, 0, 0), byteOrder);
@@ -474,7 +476,8 @@ void testControlledDclFile()
     expect(header.created.year == 2026 && header.created.month == 8 && header.created.day == 5,
         "F2002 creation date was not recovered");
     expect(header.created.application == "FIN", "F2002 creator application was not recovered");
-    expect(header.created.finaleVersion.major == 7 && header.created.finaleVersion.minor == 0
+    expect(header.created.finaleVersion.major == finale_mus_reader::versions::finale2002.major
+            && header.created.finaleVersion.minor == finale_mus_reader::versions::finale2002.minor
             && header.created.finaleVersion.maint == 1,
         "F2002 internal creator version was not recovered");
     expect(result.document->getSourcePath() == path, "Source path was not retained");
@@ -1565,7 +1568,10 @@ void testLyricOptionsRecovery()
         // selector 57 word 4 instead: all six tracked fixtures clear it, matching companions
         // that omit the element.
         const bool isFinale2012 = fixture.epoch == FormatEpoch::ZlibLegacy
-            && result.report.sourceVersion && result.report.sourceVersion->major >= 17;
+            && result.report.sourceVersion
+            && finale_mus_reader::VersionBound{result.report.sourceVersion->major,
+                   result.report.sourceVersion->minor}
+                >= finale_mus_reader::versions::finale2012;
         expect(lyrics->lyricUseEdgePunctuation == !isFinale2012,
             wrong("syllable edge punctuation setting"));
         expect(field(result, "options.lyricOptions.lyricUseEdgePunctuation").origin
@@ -2001,7 +2007,8 @@ void testUncompressedFixtures()
     expect(f2000.report.formatEpoch == FormatEpoch::UncompressedLegacy,
         "Finale 2000 fixture was not classified as uncompressed");
     expect(f2000.report.savingProduct == "2000", "Finale 2000 product was not recovered");
-    expect(f2000.report.sourceVersion && f2000.report.sourceVersion->major == 5,
+    expect(f2000.report.sourceVersion
+            && f2000.report.sourceVersion->major == finale_mus_reader::versions::finale2000.major,
         "Finale 2000 should record internal major version 5");
     expect(field(f2000, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
         "Finale 2000 music spacing was not recovered");
@@ -2016,8 +2023,10 @@ void testUncompressedFixtures()
     for (const auto* result : {&shortInfo, &longInfo}) {
         expect(result->report.formatEpoch == FormatEpoch::UncompressedLegacy,
             "A Finale 97 fixture was not classified as uncompressed");
-        expect(result->report.sourceVersion && result->report.sourceVersion->major == 3
-                && result->report.sourceVersion->minor == 8,
+        expect(result->report.sourceVersion
+                && finale_mus_reader::VersionBound{result->report.sourceVersion->major,
+                       result->report.sourceVersion->minor}
+                    == finale_mus_reader::versions::finale97,
             "Finale 97 should record internal version 3.8");
     }
     expect(longInfo.report.blocks.size() == shortInfo.report.blocks.size(),
@@ -2043,7 +2052,8 @@ void testClassRecordEra()
             / "evidence/F2012/F2012-upstem-flags.mus");
     expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
         "The Finale 2012 fixture was not classified as zlib era");
-    expect(result.report.sourceVersion && result.report.sourceVersion->major == 17,
+    expect(result.report.sourceVersion
+            && result.report.sourceVersion->major == finale_mus_reader::versions::finale2012.major,
         "Finale 2012 should record internal major version 17");
 
     using musx::dom::others::FontDefinition;
@@ -2071,7 +2081,8 @@ void testBigEndianClassRecords()
         "The Finale 2007 fixture was not classified as zlib era");
     expect(result.report.byteOrder == ByteOrder::BigEndian,
         "The Finale 2007 fixture should be big-endian");
-    expect(result.report.sourceVersion && result.report.sourceVersion->major == 12,
+    expect(result.report.sourceVersion
+            && result.report.sourceVersion->major == finale_mus_reader::versions::finale2007.major,
         "Finale 2007 should record internal major version 12");
 
     using musx::dom::others::FontDefinition;
@@ -2361,7 +2372,9 @@ void testCodaBannerEpoch()
     expect(result.report.savingProduct == "2.6",
         "Coda-banner product was not recovered from the banner text");
     expect(result.report.sourceVersion
-        && result.report.sourceVersion->major == 2 && result.report.sourceVersion->minor == 6,
+            && finale_mus_reader::VersionBound{result.report.sourceVersion->major,
+                   result.report.sourceVersion->minor}
+                == finale_mus_reader::versions::finale2_6,
         "Coda-banner version was not recovered from the banner text");
     expect(result.report.sourceVersion->raw == 0,
         "A Coda-banner version was reported as though it came from a header tuple");
@@ -2371,7 +2384,9 @@ void testCodaBannerEpoch()
     // application that wrote the file, so it belongs to the last saver. Nothing identifies
     // the creator, so that block stays empty rather than repeating a version it never held.
     const auto& header = *result.document->getHeader();
-    expect(header.modified.finaleVersion.major == 2 && header.modified.finaleVersion.minor == 6,
+    expect(header.modified.finaleVersion.major == finale_mus_reader::versions::finale2_6.major
+            && header.modified.finaleVersion.minor
+                == finale_mus_reader::versions::finale2_6.minor,
         "The Coda-banner version did not reach the document header");
     expect(header.created.finaleVersion.major == 0,
         "A creator version was invented for a file that records none");
@@ -2514,13 +2529,14 @@ void testCodaBannerByteOrder()
 
 void testMalformedInput()
 {
-    // Failure is returned, not thrown: a null document is the signal, and the reason
-    // arrives as an Error diagnostic in the same report every other message uses. A caller
-    // sweeping a corpus can therefore skip a bad file without wrapping each call.
-    const auto result = Reader::readWithReport<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4});
-    expect(result.document == nullptr, "Arbitrary input was accepted as a MUS file");
-    expect(hasDiagnostic(result.report, musx::util::Logger::LogLevel::Error),
-        "A failed import did not report why at error level");
+    bool rejected = false;
+    try {
+        static_cast<void>(Reader::readWithReport<TestXmlDocument>(
+            std::vector<std::uint8_t>{1, 2, 3, 4}));
+    } catch (const std::invalid_argument&) {
+        rejected = true;
+    }
+    expect(rejected, "Arbitrary input was accepted as a MUS file");
     // Error is the one level with an absolute meaning, so it must not appear when a
     // document was produced. Every other level accompanies a usable result.
     const auto good = Reader::readWithReport<TestXmlDocument>(
@@ -3278,8 +3294,8 @@ TEST_CASE("Finale 1.0.0 banner spelling", "[banner]")
 
     const auto version = finale_mus_reader::banner::versionFromProduct(parsed.product);
     REQUIRE(version.has_value());
-    CHECK(version->major == 1);
-    CHECK(version->minor == 0);
+    CHECK(version->major == finale_mus_reader::versions::finale1_0.major);
+    CHECK(version->minor == finale_mus_reader::versions::finale1_0.minor);
     CHECK(version->maint == 0);
 }
 

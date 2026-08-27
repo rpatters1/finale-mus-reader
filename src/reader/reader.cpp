@@ -20,28 +20,12 @@ namespace finale_mus_reader {
 namespace {
 
 ImportResult readImpl(std::span<const std::uint8_t> data,
+    const container::ParsedContainer& parsed,
     const std::optional<std::filesystem::path>& sourcePath,
     const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
-    if (data.empty()) {
-        throw std::invalid_argument("MUS input is empty");
-    }
-
-    const auto parsed = [&] {
-        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ContainerParse);
-        return container::parse(data.data(), data.size());
-    }();
-    if (parsed.formatEpoch == FormatEpoch::Unknown) {
-        // A document whose body framing cannot be classified has nothing dependable to
-        // recover fallbacks against, so this exits before attempting framing, options, or
-        // clef recovery rather than after producing a document built entirely from Finale 27
-        // defaults. Whether a banner was found narrows why internally but is not surfaced:
-        // either way this input is not something the caller can treat as a document.
-        throw std::invalid_argument("This file does not appear to be a Finale MUS document.");
-    }
-
-    ImportResult result;
+    ImportResult result(parsed.formatEpoch);
     {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::SourceReport);
         result.report.formatEpoch = parsed.formatEpoch;
@@ -73,7 +57,9 @@ ImportResult readImpl(std::span<const std::uint8_t> data,
     return result;
 }
 
-// Runs an import and converts a thrown failure into a returned one.
+// Runs an import after container classification and converts a thrown recovery failure into
+// a returned one. Classification and file-access failures occur before this boundary and
+// propagate to the caller because no valid source epoch exists for their report.
 //
 // Error is the only level that can be asserted rather than judged: inside this catch there
 // is provably no document, because the sole path that produces one has already unwound. The
@@ -86,20 +72,20 @@ ImportResult readImpl(std::span<const std::uint8_t> data,
 // have to wrap each one to keep going, and a corpus run stopping on its first bad file is
 // the wrong default for that job.
 template <typename Body>
-ImportResult runGuarded(Body&& body)
+ImportResult runGuarded(FormatEpoch epoch, Body&& body)
 {
     try {
         return body();
     } catch (const std::exception& error) {
         musx::util::Logger::log(musx::util::Logger::LogLevel::Error, error.what());
-        ImportResult failed;
+        ImportResult failed(epoch);
         failed.report.diagnostics.push_back(
             {musx::util::Logger::LogLevel::Error, error.what()});
         return failed;
     } catch (...) {
         constexpr auto unknown = "MUS import failed with an unrecognized exception.";
         musx::util::Logger::log(musx::util::Logger::LogLevel::Error, unknown);
-        ImportResult failed;
+        ImportResult failed(epoch);
         failed.report.diagnostics.push_back(
             {musx::util::Logger::LogLevel::Error, unknown});
         return failed;
@@ -113,7 +99,6 @@ ImportResult Reader::readWithParser(
     const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
-    return runGuarded([&] {
     auto data = [&] {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::FileIo);
         std::ifstream input(path, std::ios::binary | std::ios::ate);
@@ -139,16 +124,28 @@ ImportResult Reader::readWithParser(
         }
         return result;
     }();
-    return readImpl(data, path, options, parseXml, parseDocument);
-    });
+    const auto parsed = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ContainerParse);
+        return container::parse(data.data(), data.size());
+    }();
+    return runGuarded(parsed.formatEpoch,
+        [&] { return readImpl(data, parsed, path, options, parseXml, parseDocument); });
 }
 
 ImportResult Reader::readWithParser(
     std::span<const std::uint8_t> data, const ReaderOptions& options,
     XmlParser parseXml, DocumentParser parseDocument)
 {
-    return runGuarded(
-        [&] { return readImpl(data, std::nullopt, options, parseXml, parseDocument); });
+    if (data.empty()) {
+        throw std::invalid_argument("MUS input is empty");
+    }
+    const auto parsed = [&] {
+        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::ContainerParse);
+        return container::parse(data.data(), data.size());
+    }();
+    return runGuarded(parsed.formatEpoch, [&] {
+        return readImpl(data, parsed, std::nullopt, options, parseXml, parseDocument);
+    });
 }
 
 } // namespace finale_mus_reader

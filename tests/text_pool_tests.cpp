@@ -94,8 +94,7 @@ const finale_mus_reader::FieldInfo& textField(
 
 finale_mus_reader::container::ParsedContainer makeTextContainer(std::string_view stream)
 {
-    finale_mus_reader::container::ParsedContainer parsed;
-    parsed.formatEpoch = FormatEpoch::UncompressedLegacy;
+    finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::UncompressedLegacy);
     parsed.byteOrder = ByteOrder::BigEndian;
     finale_mus_reader::container::DecodedBlock block;
     block.info.type = 0x0004;
@@ -140,6 +139,8 @@ musx::dom::DocumentPtr makeTextDocument()
 
 struct SyntheticImport
 {
+    SyntheticImport() : report(FormatEpoch::UncompressedLegacy) {}
+
     musx::dom::DocumentPtr document;
     ImportReport report;
 };
@@ -158,8 +159,7 @@ SyntheticImport importStream(std::string_view stream)
     result.document = makeTextDocument();
     const auto reference = makeTextDocument();
     const auto index = LegacyRecordIndex::build(makeTextContainer(stream));
-    SourceProfile profile;
-    profile.epoch = FormatEpoch::UncompressedLegacy;
+    SourceProfile profile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     profile.platform = SourcePlatform::MacOS;
     finale_mus_reader::PendingReferences pending;

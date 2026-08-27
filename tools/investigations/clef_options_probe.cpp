@@ -27,13 +27,14 @@
 
 #include "container/mus_container.h"
 #include "import/header.h"
+#include "musx/dom/Fundamentals.h"
 #include "records/legacy_record_index.h"
 
 using namespace finale_mus_reader;
 
 namespace {
 
-constexpr std::uint16_t globalsCmper = 65534;
+constexpr auto globalsCmper = musx::dom::MUSX_GLOBALS_CMPER;
 constexpr std::uint16_t clefSelector = 95;
 constexpr std::uint16_t clefClassId = clefSelector + 0x000e;
 constexpr std::uint16_t earlyFirstSelector = 28;
@@ -90,7 +91,7 @@ int main(int argc, char** argv)
         try {
             const auto parsed = container::parse(data.data(), data.size());
             const auto index = records::LegacyRecordIndex::build(parsed);
-            ImportReport report;
+            ImportReport report(parsed.formatEpoch);
             header::describeSourceIdentity(data.data(), data.size(), report);
             const int major = report.sourceVersion ? report.sourceVersion->major : -1;
             std::printf("%s\tv%d ", path.c_str(), major);

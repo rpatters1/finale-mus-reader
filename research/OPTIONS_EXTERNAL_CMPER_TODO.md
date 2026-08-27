@@ -6,11 +6,10 @@ outside that pool and are not yet recovered by this reader.
 Keep this list terse and actionable. Record completed items only in the short
 section below; do not expand the TODO bullets into investigation notes.
 
-- `ChordOptions::fretStyleId`, `fretInstId` -> `details::FretboardStyle`,
-  `details::FretInstrument`. Recover and resolve the two default fretboard
-  references.
 ## Completed
 
+- `ChordOptions::fretStyleId`, `fretInstId` — source-owned fretboard styles and
+  instruments retain their comparators; missing referents use the pinned defaults.
 - `FontDefinition`
 - default `FontOptions` font IDs
 - `ClefOptions::ClefDef::font`

@@ -65,7 +65,6 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
     case FormatEpoch::DclLegacy:
         return PoolTypes{0x000f, 0x0010};
     case FormatEpoch::ZlibLegacy:
-    case FormatEpoch::Unknown:
         break;
     }
     return std::nullopt;
@@ -90,7 +89,6 @@ std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
     case FormatEpoch::ZlibLegacy:
         return 0x0017;
     case FormatEpoch::CodaBanner:
-    case FormatEpoch::Unknown:
         break;
     }
     return std::nullopt;
