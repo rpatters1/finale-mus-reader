@@ -55,7 +55,7 @@ const std::unordered_set<std::string> metadataKeys = {
     "error"};
 
 const std::unordered_set<std::string> excludedClasses = {
-    "header", "layer_atts", "relationships", "spacing_options"};
+    "header", "layer_atts", "relationships"};
 
 bool equalChordScalingPercent(
     std::string_view path, const Value& source, const Value& companion)
@@ -1310,7 +1310,17 @@ bool isDifferentDefault(const std::string& path, const std::string& category,
     const std::string& origin, const Value& sourceValue, const Value& companionValue,
     FormatEpoch epoch, const SourceVersion* sourceVersion)
 {
-    if (category != "differs" || origin != "finale27-default") return false;
+    if (category != "differs") return false;
+    if (path == "music_spacing_options.min_dist_grace"
+            && origin == "legacy-behavior"
+            && (sourceIsVersion(epoch, sourceVersion,
+                    FormatEpoch::UncompressedLegacy, versions::finale2000)
+                || (sourceIsVersion(epoch, sourceVersion, FormatEpoch::DclLegacy)
+                    && sourcePredatesVersion(
+                        sourceVersion, versions::finale2005)))) {
+        return true;
+    }
+    if (origin != "finale27-default") return false;
     static const std::set<std::string_view> smartShapePaths{
         "smart_shape_options.cresc_horizontal",
         "smart_shape_options.cresc_line_width",
@@ -1347,6 +1357,23 @@ bool isDifferentDefault(const std::string& path, const std::string& category,
         return true;
     }
     return false;
+}
+
+bool isMissingExpectedMusicSpacingSelector(const std::string& path,
+    const std::string& category, const Leaves& source, FormatEpoch epoch,
+    const SourceVersion* sourceVersion)
+{
+    if (category != "differs" || !startsWith(path, "music_spacing_options.")) {
+        return false;
+    }
+    const auto minWidth = source.find("music_spacing_options.min_width");
+    if (minWidth == source.end() || minWidth->second.second != "legacy-behavior") {
+        return false;
+    }
+    return (sourceIsVersion(epoch, sourceVersion, FormatEpoch::UncompressedLegacy)
+               && !sourcePredatesVersion(sourceVersion, versions::finale2000))
+        || sourceIsVersion(epoch, sourceVersion, FormatEpoch::DclLegacy)
+        || sourceIsVersion(epoch, sourceVersion, FormatEpoch::ZlibLegacy);
 }
 
 bool isBaselineFontCharsetNormalization(const std::string& path,
@@ -1501,6 +1528,10 @@ std::optional<std::string> expectedDifference(const std::string& path,
     if (isFinaleUpgradeLoss(path, category, origin, sourceValue, companionValue,
             source, companion, epoch, byteOrder, sourceVersion)) {
         return std::string(finaleUpgradeLossRule);
+    }
+    if (isMissingExpectedMusicSpacingSelector(
+            path, category, source, epoch, sourceVersion)) {
+        return "missing-selector";
     }
     if (const auto omitted = omittedSlurConnectionStyleDifference(
             path, category, source, companion)) {

@@ -27,11 +27,15 @@ or stale, stop and use `inventory-a-corpus`; do not rescan the corpus here.
 inventory and remains in place until that survey is regenerated. Never put recovery-coverage probe
 captures, rendered reports, or other development-cycle analysis artifacts there.
 
-Recovery-coverage output is transient. Keep probe JSONL and probe/report stdout and stderr under
-`private/reports/`, which the local private repository ignores. Use stable names for a target so a
-later run against that same target replaces the earlier run; do not accumulate numbered snapshots.
-These files are working evidence, not survey state, and are intended to be deleted at the end of the
-development cycle.
+Recovery-coverage output is transient. Keep one flat artifact family per requested report target
+under `private/reports/`. `tracked-evidence.*` and `all-corpus.*` are the standing targets; a user may
+explicitly request another separately named target. Each family may contain the target's current
+JSONL, rendered report, probe stdout/stderr, and report stderr. A later run of the same target
+replaces that family's files in place. Do not create report subdirectories or encode a hypothesis,
+date, sequence number, or result label in a filename. Put unrequested focused cohorts, record dumps,
+disposable manifests, and every other intermediate artifact under `/tmp`, then remove them after
+answering the immediate question. These files are working evidence, not survey state or a historical
+archive.
 
 Treat `private/active_corpora.txt` as user-managed state: do not use or modify it unless the user
 explicitly asks for that exact manifest. The probe CLI already accepts the full range of useful
@@ -45,8 +49,8 @@ inputs, so choose the narrowest one that answers the question:
 - a single source path when the CLI recognizes it directly. For a single source whose extension
   would be interpreted as a manifest, use a one-row analysis-local TSV.
 
-Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifests under
-`private/reports/` or `/tmp`. Always build and run the coverage probe from the instrumented Release
+Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifests under `/tmp`.
+Always build and run the coverage probe from the instrumented Release
 tree, normally `build-release`; the Debug probe is never appropriate for coverage captures. Coverage
 and timing use the same instrumentation. Inspect `--help`, and write every capture stream to
 `private/reports/`. A normal one-corpus capture is:
@@ -56,10 +60,10 @@ mkdir -p private/reports
 cmake --build build-release --target recovery_coverage_probe
 build-release/tools/coverage/recovery_coverage_probe --progress \
   --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
-  private/generated/corpus-rpatters1-installs.tsv \
-  private/reports/rpatters1-installs.recovery_coverage.jsonl \
-  > private/reports/rpatters1-installs.probe.stdout.txt \
-  2> private/reports/rpatters1-installs.probe.stderr.txt
+  private/generated/corpus-tracked-evidence.tsv \
+  private/reports/tracked-evidence.recovery_coverage.jsonl \
+  > private/reports/tracked-evidence.probe.stdout.txt \
+  2> private/reports/tracked-evidence.probe.stderr.txt
 ```
 
 **Every probe capture must supply Finale's `MacSymbolFonts.txt` with
@@ -91,9 +95,9 @@ Capture report output under `private/reports/` as well, for example:
 
 ```bash
 python3 scripts/recovery_coverage_report.py \
-  private/reports/rpatters1-installs.recovery_coverage.jsonl \
-  > private/reports/rpatters1-installs.report.txt \
-  2> private/reports/rpatters1-installs.report.stderr.txt
+  private/reports/tracked-evidence.recovery_coverage.jsonl \
+  > private/reports/tracked-evidence.report.txt \
+  2> private/reports/tracked-evidence.report.stderr.txt
 ```
 
 Always state which snapshot was analyzed, its row/status/companion counts, selected surveys, and
@@ -188,8 +192,9 @@ its member-by-member accounting also has no remaining recovery scope.
 - Ensure candidate counts equal matched plus explicitly classified unmatched/excluded counts.
 - Run syntax checks for changed analysis scripts and focused/full tests when production or surveyor
   code changed.
-- Remove obsolete `private/reports/` artifacts at the end of the development cycle; they are not a
-  historical archive.
+- Confirm `private/reports/` contains only one current flat artifact family per requested report
+  target; remove superseded runs and unrequested investigative artifacts immediately. They are not
+  a historical archive.
 - Inspect `git status --short` and `git diff --check`; preserve unrelated worktree changes.
 
 Lead the result with the selection funnel, then the finding, contrary/unresolved evidence,
