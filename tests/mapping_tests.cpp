@@ -144,6 +144,9 @@ musx::dom::DocumentPtr makeDocument(Spacing** instanceOut)
     spacing->maxWidth = 222;
     spacing->referenceDuration = 333;
     spacing->avoidColNotes = false;
+    spacing->avoidColStems = true;
+    spacing->avoidColUnisons = Spacing::ColUnisonsChoice::DiffNoteheads;
+    spacing->ignoreHidden = false;
     *instanceOut = spacing.get();
     document->getOptions()->add(Spacing::XmlNodeName, spacing);
     return std::move(session).finish();
@@ -553,6 +556,130 @@ MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size
         .enumerateTargets = &finale_mus_reader::enumerateOptionsTarget<Spacing>,
         .fields = fields,
         .fieldCount = count};
+}
+
+void testMusicSpacingOptionsLayouts()
+{
+    using ColUnisonsChoice = Spacing::ColUnisonsChoice;
+    using GraceNoteSpacing = Spacing::GraceNoteSpacing;
+    using ManualPositioning = Spacing::ManualPositioning;
+    const std::vector<std::int16_t> words{
+        0, 216, 1800, 12, 24, 0x78ef,
+        1, 1024, 0, 96, 0, 14141,
+        0, 0, 7, 0, 1,
+    };
+
+    const auto run = [&](FormatEpoch epoch) {
+        finale_mus_reader::container::ParsedContainer parsed = epoch == FormatEpoch::ZlibLegacy
+            ? makeClassContainer({
+                  {finale_mus_reader::numericGlobalClass(39), {36, 12}},
+                  {finale_mus_reader::numericGlobalClass(94), words},
+              }, ByteOrder::LittleEndian)
+            : makeContainer({
+                  {GLOBALS_CMPER, "39", {36, 12, 0, 0, 0, 0}},
+                  {GLOBALS_CMPER, "94", {0, 216, 1800, 12, 24, 0x78ef}},
+                  {GLOBALS_CMPER, "94", {1, 1024, 0, 96, 0, 14141}},
+                  {GLOBALS_CMPER, "94", {0, 0, 7, 0, 1, 0}},
+              }, epoch);
+        Spacing* spacing = nullptr;
+        Spacing* referenceSpacing = nullptr;
+        const auto document = makeDocument(&spacing);
+        const auto reference = makeDocument(&referenceSpacing);
+        auto profile = profileFor(epoch == FormatEpoch::ZlibLegacy ? 12 : 9);
+        profile.epoch = epoch;
+        profile.byteOrder = parsed.byteOrder;
+        ImportReport report(epoch);
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
+            profile, noSource, document, reference, report, pending, construction};
+        finale_mus_reader::options::importMusicSpacingOptions(context);
+
+        expectMapping(spacing->minWidth == 216 && spacing->maxWidth == 1800
+                && spacing->minDistance == 12 && spacing->minDistTiedNotes == 24,
+            "Music spacing dimensions were not recovered");
+        expectMapping(spacing->avoidColNotes && spacing->avoidColLyrics
+                && spacing->avoidColChords && spacing->avoidColArtics
+                && spacing->avoidColClefs && spacing->avoidColSeconds
+                && spacing->avoidColLedgers
+                && spacing->avoidColUnisons == ColUnisonsChoice::All,
+            "Music spacing collision flags were not decoded");
+        expectMapping(spacing->manualPositioning == ManualPositioning::Incorporate
+                && spacing->ignoreHidden && spacing->interpolateAllotments
+                && spacing->usePrinter && spacing->useAllottmentTables,
+            "Music spacing mode flags were not decoded");
+        expectMapping(!spacing->avoidColStems
+                && field(report, "options.musicSpacing.avoidColStems").origin
+                    == ValueOrigin::LegacyBehavior,
+            "Legacy stem-collision behavior did not override the seeded MUSX setting");
+        expectMapping(spacing->referenceDuration == 1024 && spacing->referenceWidth == 96
+                && spacing->scalingFactor == 1.4141
+                && spacing->minDistGrace
+                    == (epoch == FormatEpoch::ZlibLegacy ? 7 : 12)
+                && spacing->graceNoteSpacing
+                    == (epoch == FormatEpoch::ZlibLegacy
+                            ? GraceNoteSpacing::KeepCurrent
+                            : GraceNoteSpacing::Automatic)
+                && spacing->musFront == 36 && spacing->musBack == 12,
+            "Music spacing scaling and grace-note fields were not decoded");
+        expectMapping(field(report, "options.musicSpacing.minDistGrace").origin
+                == (epoch == FormatEpoch::ZlibLegacy
+                        ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior),
+            "The grace-note minimum-distance origin did not follow its version behavior");
+        expectMapping(field(report, "options.musicSpacing.graceNoteSpacing").origin
+                == (epoch == FormatEpoch::ZlibLegacy
+                        ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior),
+            "The grace-note spacing origin did not follow its version behavior");
+        expectMapping(field(report, "options.musicSpacing.scalingFactor").origin
+                == ValueOrigin::LegacyMus,
+            "The music spacing scaling factor was not reported as recovered");
+        expectMapping(field(report, "options.musicSpacing.defaultAllotment").origin
+                == ValueOrigin::Finale27Default,
+            "The non-UI allotment default was not retained from the Finale 27 seed");
+    };
+
+    run(FormatEpoch::UncompressedLegacy);
+    run(FormatEpoch::DclLegacy);
+    run(FormatEpoch::ZlibLegacy);
+
+    const auto parsed = makeContainer({}, FormatEpoch::CodaBanner);
+    Spacing* spacing = nullptr;
+    Spacing* referenceSpacing = nullptr;
+    const auto document = makeDocument(&spacing);
+    const auto reference = makeDocument(&referenceSpacing);
+    SourceProfile profile(FormatEpoch::CodaBanner);
+    profile.byteOrder = parsed.byteOrder;
+    ImportReport report(FormatEpoch::CodaBanner);
+    finale_mus_reader::PendingReferences pending;
+    musx::factory::ConstructionContext construction;
+    const auto index = LegacyRecordIndex::build(parsed);
+    const finale_mus_reader::ImportContext context{index, profile,
+        noSource, document, reference, report, pending, construction};
+    finale_mus_reader::options::importMusicSpacingOptions(context);
+    expectMapping(spacing->minWidth == 360
+            && field(report, "options.musicSpacing.minWidth").origin
+                == ValueOrigin::LegacyBehavior,
+        "The pre-selector-94 minimum-width behavior was not applied");
+    expectMapping(spacing->useAllottmentTables
+            && field(report, "options.musicSpacing.useAllottmentTables").origin
+                == ValueOrigin::LegacyBehavior,
+        "The pre-selector-94 allotment-table behavior was not applied");
+    expectMapping(spacing->avoidColUnisons == ColUnisonsChoice::None
+            && spacing->ignoreHidden
+            && field(report, "options.musicSpacing.avoidColUnisons").origin
+                == ValueOrigin::LegacyBehavior
+            && field(report, "options.musicSpacing.ignoreHidden").origin
+                == ValueOrigin::LegacyBehavior,
+        "The pre-selector-94 collision behaviors were not applied");
+
+    spacing->avoidColStems = false;
+    ImportReport falseSeedReport(FormatEpoch::CodaBanner);
+    const finale_mus_reader::ImportContext falseSeedContext{index, profile, noSource,
+        document, reference, falseSeedReport, pending, construction};
+    finale_mus_reader::options::importMusicSpacingOptions(falseSeedContext);
+    expectMapping(field(falseSeedReport, "options.musicSpacing.avoidColStems").origin
+            == ValueOrigin::MusxOnly,
+        "A false MUSX seed was incorrectly reported as a legacy override");
 }
 
 // A four-byte value whose words straddle an incidence boundary: the low word is the last
@@ -3936,6 +4063,10 @@ TEST_CASE("Lyric post-format assertions", "[mapping]")
     testLyricPostFormatAssertions();
 }
 TEST_CASE("Version gating", "[mapping]") { testVersionGating(); }
+TEST_CASE("Music spacing options span the located layouts", "[mapping]")
+{
+    testMusicSpacingOptionsLayouts();
+}
 TEST_CASE("Minor version ordering", "[mapping]") { testMinorVersionOrdering(); }
 TEST_CASE("Table layering", "[mapping]") { testTableLayering(); }
 TEST_CASE("Text options scalars", "[mapping]") { testTextOptionsScalars(); }

@@ -2394,8 +2394,8 @@ void testCodaBannerEpoch()
         && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
     expect(field(result, "options.musicSpacing.minWidth").origin
-        == ValueOrigin::Finale27Default,
-        "Unsupported Coda-banner option was not retained as a default");
+        == ValueOrigin::LegacyBehavior,
+        "The Coda-banner minimum-width behavior was not applied");
     const auto fonts = result.document->getOptions()
         ->get<musx::dom::options::FontOptions>();
     expect(fonts && fonts->fontOptions.size() == 45,
@@ -2413,8 +2413,8 @@ void testZlibEpoch()
     expect(result.report.blocks.front().decodedSize == 3,
         "Synthetic zlib decoded size is incorrect");
     expect(field(result, "options.musicSpacing.minWidth").origin
-        == ValueOrigin::Finale27Default,
-        "Unsupported zlib-era option was not retained as a default");
+        == ValueOrigin::LegacyBehavior,
+        "Selector-94-absent music spacing behavior was not applied");
     expectNoScoreContent(result);
 }
 
