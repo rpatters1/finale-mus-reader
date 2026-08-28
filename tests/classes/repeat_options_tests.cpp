@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 musx::dom::DocumentPtr makeRepeatOptionsDocument()
 {
@@ -172,7 +172,7 @@ void testRepeatOptionsAcrossEpochs()
         "An uncompressed file without the family reported an incorrect RepeatOptions origin");
 }
 
-TEST_CASE("Repeat options span the located epochs", "[mapping]") { testRepeatOptionsAcrossEpochs(); }
+TEST_CASE("Repeat options span the located epochs", "[class]") { testRepeatOptionsAcrossEpochs(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

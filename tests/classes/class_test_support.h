@@ -8,6 +8,7 @@
 #include <span>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
+#include <filesystem>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include "container/mus_container.h"
+#include "finale_mus_reader/reader.h"
 #include "import/support/embedded_graphics.h"
 #include "import/details.h"
 #include "import/support/legacy_mapping.h"
@@ -38,11 +40,14 @@
 #endif // defined(FINALE_MUS_READER_MAPPING_UNDEFINE_MUSX_USE_PUGIXML)
 
 namespace finale_mus_reader_tests {
-namespace mapping {
+namespace classes {
 
 using finale_mus_reader::ByteOrder;
 using finale_mus_reader::FormatEpoch;
+using finale_mus_reader::FieldInfo;
 using finale_mus_reader::ImportReport;
+using finale_mus_reader::ImportResult;
+using finale_mus_reader::Reader;
 using finale_mus_reader::SourceVersion;
 using finale_mus_reader::ValueOrigin;
 using finale_mus_reader::EpochMask;
@@ -55,6 +60,7 @@ using finale_mus_reader::TargetKind;
 using finale_mus_reader::SourceGate;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
+using TestXmlDocument = musx::xml::pugi::Document;
 
 constexpr auto sourceMatchTestProfile = [] {
     SourceProfile result(FormatEpoch::ZlibLegacy);
@@ -102,6 +108,17 @@ inline void expectMapping(bool condition, const std::string& message)
     if (!condition) {
         throw std::runtime_error(message);
     }
+}
+
+inline void expect(bool condition, const std::string& message)
+{
+    expectMapping(condition, message);
+}
+
+inline ImportResult readFixture(const std::filesystem::path& relativePath)
+{
+    return Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relativePath);
 }
 
 /// @brief One synthetic 16-byte legacy row.
@@ -214,7 +231,6 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
     return makeClassContainer({SyntheticClassRow{classId, words, cmper}}, byteOrder);
 }
 
-
 inline finale_mus_reader::container::ParsedContainer makeDetailContainer(
     FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
     const std::vector<std::int16_t>& words, const char* tag = "mg")
@@ -304,7 +320,6 @@ inline SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0)
     return profile;
 }
 
-
 // The target is taken by value rather than by const reference so that a literal call site
 // does not create a temporary bound to a reference parameter. GCC cannot prove the returned
 // reference does not alias such a temporary and rejects the binding under
@@ -360,6 +375,12 @@ inline const finale_mus_reader::FieldInfo& field(const ImportReport& report, std
     throw std::runtime_error(std::move(message));
 }
 
+inline const finale_mus_reader::FieldInfo& field(
+    const ImportResult& result, std::string_view target)
+{
+    return field(result.report, target);
+}
+
 /// @brief Whether the report names a target at all, for a field a record is not expected to have.
 inline bool fieldPresent(const ImportReport& report, std::string_view target)
 {
@@ -386,6 +407,12 @@ inline bool anyMappingReportedField(const ImportReport& report, Predicate predic
     return false;
 }
 
+template <typename Predicate>
+inline bool anyReportedField(const ImportReport& report, Predicate predicate)
+{
+    return anyMappingReportedField(report, std::move(predicate));
+}
+
 inline std::size_t reportedFieldCount(const ImportReport& report)
 {
     std::size_t result = 0;
@@ -409,6 +436,5 @@ inline MappingTable makeTable(const char* prefix, const FieldMapping* fields, st
         .fieldCount = count};
 }
 
-
-} // namespace mapping
+} // namespace classes
 } // namespace finale_mus_reader_tests

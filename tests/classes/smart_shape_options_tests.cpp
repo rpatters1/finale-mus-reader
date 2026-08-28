@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 musx::dom::DocumentPtr makeSmartShapeOptionsDocument()
 {
@@ -658,10 +658,10 @@ void testSmartShapeHookLengthBehaviorGate()
     }
 }
 
-TEST_CASE("Smart Shape options span the located epochs", "[mapping]") { testSmartShapeOptionsAcrossEpochs(); }
-TEST_CASE("Smart Shape custom-line fallback gate", "[mapping]") { testSmartShapeCustomLineFallbackGate(); }
-TEST_CASE("Smart Shape direction gate", "[mapping]") { testSmartShapeDirectionGate(); }
-TEST_CASE("Smart Shape hook-length behavior gate", "[mapping]") { testSmartShapeHookLengthBehaviorGate(); }
+TEST_CASE("Smart Shape options span the located epochs", "[class]") { testSmartShapeOptionsAcrossEpochs(); }
+TEST_CASE("Smart Shape custom-line fallback gate", "[class]") { testSmartShapeCustomLineFallbackGate(); }
+TEST_CASE("Smart Shape direction gate", "[class]") { testSmartShapeDirectionGate(); }
+TEST_CASE("Smart Shape hook-length behavior gate", "[class]") { testSmartShapeHookLengthBehaviorGate(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

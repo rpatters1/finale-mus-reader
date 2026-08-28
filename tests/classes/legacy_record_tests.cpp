@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 void testClassRecordContinuationSegment()
 {
@@ -150,9 +150,9 @@ void testOtherRowsRemainSearchable()
         "Word addressing ran past the last incidence");
 }
 
-TEST_CASE("Class-record continuation segment", "[mapping]") { testClassRecordContinuationSegment(); }
-TEST_CASE("Detail row shape", "[mapping]") { testDetailRowShape(); }
-TEST_CASE("Other rows remain searchable", "[mapping]") { testOtherRowsRemainSearchable(); }
+TEST_CASE("Class-record continuation segment", "[class]") { testClassRecordContinuationSegment(); }
+TEST_CASE("Detail row shape", "[class]") { testDetailRowShape(); }
+TEST_CASE("Other rows remain searchable", "[class]") { testOtherRowsRemainSearchable(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

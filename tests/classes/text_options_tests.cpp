@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 /// @brief A document whose TextOptions carries the pinned baseline's line spacing.
 /// @details The baseline seeds the percent spelling, which is what a source stating the
@@ -349,8 +349,8 @@ void testTextOptionsSymbolInserts()
     }
 }
 
-TEST_CASE("Text options scalars", "[mapping]") { testTextOptionsScalars(); }
-TEST_CASE("Text options symbol inserts", "[mapping]") { testTextOptionsSymbolInserts(); }
+TEST_CASE("Text options scalars", "[class]") { testTextOptionsScalars(); }
+TEST_CASE("Text options symbol inserts", "[class]") { testTextOptionsSymbolInserts(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

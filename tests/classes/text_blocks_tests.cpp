@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 std::vector<SyntheticRow> textBlockFixedRows(
     std::uint16_t cmper, const std::vector<std::int16_t>& words)
@@ -219,9 +219,8 @@ void testCodaTextBlockSynthesis()
         "Coda stored identity and era behavior were not reported separately");
 }
 
-
-TEST_CASE("Stored text blocks span three epochs", "[mapping]") { testStoredTextBlocksAcrossEpochs(); }
-TEST_CASE("Coda text blocks are assembled from text structure", "[mapping]") { testCodaTextBlockSynthesis(); }
+TEST_CASE("Stored text blocks span three epochs", "[class]") { testStoredTextBlocksAcrossEpochs(); }
+TEST_CASE("Coda text blocks are assembled from text structure", "[class]") { testCodaTextBlockSynthesis(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests
