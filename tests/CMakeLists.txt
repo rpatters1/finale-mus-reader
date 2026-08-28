@@ -23,27 +23,27 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
     reader_tests.cpp
-    classes/augmentation_dot_options_tests.cpp
-    classes/accidental_options_tests.cpp
-    classes/alternate_notation_options_tests.cpp
-    classes/clef_options_tests.cpp
-    classes/font_options_tests.cpp
-    classes/fretboard_tests.cpp
-    classes/graphic_assignments_tests.cpp
+    classes/options/augmentation_dot_options_tests.cpp
+    classes/options/accidental_options_tests.cpp
+    classes/options/alternate_notation_options_tests.cpp
+    classes/options/clef_options_tests.cpp
+    classes/options/font_options_tests.cpp
+    classes/others/fretboard_tests.cpp
+    classes/others/graphic_assignments_tests.cpp
     classes/legacy_record_tests.cpp
-    classes/lyric_options_tests.cpp
+    classes/options/lyric_options_tests.cpp
     classes/mapping_framework_tests.cpp
-    classes/measure_graphic_assign_tests.cpp
-    classes/multimeasure_rest_options_tests.cpp
-    classes/repeat_options_tests.cpp
-    classes/shape_definitions_tests.cpp
-    classes/smart_shape_custom_lines_tests.cpp
-    classes/smart_shape_options_tests.cpp
-    classes/stem_options_tests.cpp
-    classes/text_blocks_tests.cpp
-    classes/text_options_tests.cpp
+    classes/details/measure_graphic_assign_tests.cpp
+    classes/options/multimeasure_rest_options_tests.cpp
+    classes/options/repeat_options_tests.cpp
+    classes/others/shape_definitions_tests.cpp
+    classes/others/smart_shape_custom_lines_tests.cpp
+    classes/options/smart_shape_options_tests.cpp
+    classes/options/stem_options_tests.cpp
+    classes/others/text_blocks_tests.cpp
+    classes/options/text_options_tests.cpp
     text_encoding_tests.cpp
-    text_pool_tests.cpp)
+    classes/texts/text_pool_tests.cpp)
 finale_mus_reader_enable_unity(finale_mus_reader_tests)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
@@ -55,6 +55,7 @@ target_link_libraries(finale_mus_reader_tests PRIVATE
 # The class import framework is internal, so its tests reach into the private source tree
 # rather than driving every case through a synthetic MUS file.
 target_include_directories(finale_mus_reader_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/classes"
     "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE
