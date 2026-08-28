@@ -217,3 +217,25 @@ F100-lyric-text.musx
     `^nfx` per half. Both are one statement of one style, and the spaces are
     literal text belonging before the single command. This is the only document
     that states the case.
+
+F100-dont-leftbarline.mus
+    sha256 6adf5023e4d10705b1040ee09e11eb42f9d64a1358e83c96a57d899e8fa19dd5
+F100-dont-leftbarline.etf
+    sha256 9a9ba5280279a51325fc67989a55945dc5a717c2c8f5a4a5035d60ec45f34f68
+F100-dont-leftbarline.musx
+    sha256 5e54b8c01b41334fded96c594a5295bd2525802780c152817f1dd540a3b23a40
+    Controlled from F100-baseline by clearing the Coda-era dialog's one left-barline
+    checkbox. Only selector 36 word 3 changes, from one to zero. Finale 27 converts the
+    baseline with both modern left-barline fields enabled and this edit with both disabled,
+    establishing that the one stored switch supplies both fields before the split layout.
+
+F100-dont-barline.mus
+    sha256 44cef98577ce8036fb0c131b2c27363a7ccaf7ef868265342b854bc63e3ad2f1
+F100-dont-barline.etf
+    sha256 1cd68b86717653dcf1f57746973ae1b8fcb2732a42e7800e579286cb9bfe7347
+F100-dont-barline.musx
+    sha256 7aecf77cf1463054f22afca40bc07cf9e916acccb5c34ec2ce20af744864202e
+    Controlled from F100-baseline by clearing only the general draw-barlines checkbox.
+    Selector 36 word 4 changes from one to zero while the left-barline word 3 remains one.
+    The ETF repeats that tuple, and Finale 27 disables drawBarlines while leaving both modern
+    left-barline fields enabled, establishing the two Coda controls as independent.

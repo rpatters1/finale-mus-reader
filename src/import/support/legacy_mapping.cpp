@@ -153,6 +153,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAccidentalOptions, &options::importAccidentalOptions),
         FINALE_MUS_READER_IMPORTER(ImportAlternateNotationOptions, &options::importAlternateNotationOptions),
         FINALE_MUS_READER_IMPORTER(ImportAugmentationDotOptions, &options::importAugmentationDotOptions),
+        FINALE_MUS_READER_IMPORTER(ImportBarlineOptions, &options::importBarlineOptions),
         FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
