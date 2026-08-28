@@ -2124,6 +2124,52 @@ companion sets `<noHorizontalStretch/>`. The reader asserts it as `LegacyBehavio
 leaving it to the pinned baseline, which also says false but says it as one Finale 27 document's setting rather
 than as a fact about the formats.
 
+### Accidental options
+
+**Implemented in full.** The accidental preferences are fields of the
+omnibus distance-preferences class rather than one legacy record. The Framework mapping supplied for
+interoperability identified the numeric globals below; it was initially `private-framework-derived`. The
+tracked-evidence survey independently verifies every value against all 132 exact Finale 27 companions, with
+34 Coda-banner, 27 uncompressed, 47 DCL, and 24 zlib sources. The zlib epoch reaches the same word slots through
+the usual `numericGlobalClass` relationship.
+
+| musxdom field | Selector | Incidence | Word | Width |
+|---|---:|---:|---:|---:|
+| `minOverlap` | `21` | 0 | 3 | 2 |
+| `multiCharSpace` | `21` | 0 | 5 | 2 |
+| `crossLayerPositioning` | `22` | 0 | 0 | 2 |
+| `acciNoteSpace` | `59` | 0 | 3 | 2 |
+| `acciAcciSpace` | `59` | 0 | 4 | 2 |
+| `startMeasureSepar` | `41` | 2 | 2 | 2 |
+
+The cross-layer word is used as a boolean. Before it was mapped, the pinned Finale 27 baseline supplied true
+and disagreed with 81 companions. Reading selector `22` word 0 resolves every one of those differences and
+preserves the other 50 documents' enabled state, with no contrary tracked fixture in any epoch.
+
+`startMeasureSepar` (`<frontAcciSepar>`, "Adjustment at Start of Measure") is independently located by the
+controlled F2005 save: changing 24 to 27 moves only selector `41`, incidence 2, word 2; its ETF and Finale 27
+companion carry 27 as well. The mapping is structural rather than version-gated: a source that contains that
+incidence and slot recovers it, while an absent or short selector family leaves the pinned baseline untouched.
+This resolves the 41 former source/companion differences, and all 792 field comparisons now agree.
+
+The broader three-survey pass exposes 11 distinct Finale 3.0 documents in which selector `59` words 3 and 4
+are both zero while their Finale 27 companions store 8. The reader supplies the effective value 8 as `LegacyBehavior`
+only when selector `59` exists, both words are zero, and the source predates 3.7.
+A nonzero source value is always recovered normally. Across 16,229 selected occurrences all 27,240
+`AccidentalOptions` comparisons agree.
+
+**Weak working hypothesis:** the zeros are not stored preference values. Finale 3.0 through 3.6 may already
+allocate the two slots without parameterizing the corresponding settings, leaving initialized storage unwritten
+while Finale uses a hard-coded legacy spacing of 8. No running version from that interval is available to test
+the UI or a controlled save directly. The behavior rule models that pre-parameter behavior, corroborated by
+every Finale 27 companion, without claiming that zero encodes 8. A future direct specimen can revise this
+interpretation without changing the located later mapping.
+
+Word 5 belongs to another class. Before Engraver Slurs introduce independent controls, it is the shared slur
+thickness that supplies both `SmartShapeOptions` vertical thickness-control values. The controlled Finale 2000
+edit locating that field is described in the Smart Shape section below. Its zero in the Finale 3.0 rows is
+consistent with the same early layout, but is not part of the accidental-spacing behavior gate.
+
 ### Text options
 
 The framework preference tables name three of this class's fields and nothing else, so the rest was located by

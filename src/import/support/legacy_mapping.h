@@ -301,6 +301,17 @@ struct SourceProfile
         && VersionBound{profile.version->major, profile.version->minor} >= boundaryVersion;
 }
 
+/// @brief Whether a source is earlier than a version boundary within the boundary epoch.
+/// @details Earlier epochs pass without needing a version. The boundary epoch passes only
+/// when its recovered version is earlier; an absent version fails closed.
+[[nodiscard]] constexpr bool sourcePredatesVersion(const SourceProfile& profile,
+    FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
+{
+    if (profile.epoch != boundaryEpoch) return !sourceAtOrAfter(profile, boundaryEpoch);
+    return profile.version
+        && VersionBound{profile.version->major, profile.version->minor} < boundaryVersion;
+}
+
 using SourceGate = bool (*)(const SourceProfile& profile);
 
 /// @brief One numeric global's whole payload, in whichever encoding the source uses.
