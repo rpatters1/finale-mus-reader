@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 musx::dom::DocumentPtr makeAccidentalOptionsDocument()
 {
@@ -147,7 +147,7 @@ void testAccidentalOptionsAcrossEpochs()
         "Finale 3.7 accidental spacing crossed the legacy-behavior boundary incorrectly");
 }
 
-TEST_CASE("Accidental options span the located epochs", "[mapping]") { testAccidentalOptionsAcrossEpochs(); }
+TEST_CASE("Accidental options span the located epochs", "[class]") { testAccidentalOptionsAcrossEpochs(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

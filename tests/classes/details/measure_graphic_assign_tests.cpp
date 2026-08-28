@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 void testMeasureGraphicAssignmentsAcrossEpochs()
 {
@@ -87,7 +87,31 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
         "A part-owned zlib detail was imported into the score pool");
 }
 
-TEST_CASE("Measure graphic assignments span four epochs", "[mapping]") { testMeasureGraphicAssignmentsAcrossEpochs(); }
+void testFinale372MeasureGraphic()
+{
+    const auto result = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F372/F372-measure-graphic.mus");
+    const auto assignment = result.document->getDetails()
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 3, musx::dom::Inci(0));
+    expect(assignment && assignment->version == 0x100
+            && assignment->left == 116 && assignment->bottom == -348
+            && assignment->width == 336 && assignment->height == 168
+            && assignment->fDescId == 1 && assignment->savedRecord
+            && assignment->origWidth == 336 && assignment->origHeight == 168
+            && assignment->graphicCmper == 0,
+        "The Finale 3.7.2 linked measure graphic was not recovered");
+    expect(result.document->getEmbeddedGraphics().empty(),
+        "A Finale 3.7.2 linked graphic was mistaken for an embedded payload");
+}
+
+TEST_CASE("Finale 3.7.2 measure graphic", "[class][reader]")
+{
+    testFinale372MeasureGraphic();
+}
+
+TEST_CASE("Measure graphic assignments span four epochs", "[class]") { testMeasureGraphicAssignmentsAcrossEpochs(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

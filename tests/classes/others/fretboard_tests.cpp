@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 void testFretClassesAreSourceOwned()
 {
@@ -261,9 +261,8 @@ void testFretboardGroupUnicodeLayout()
         "A Finale 2012 FretboardGroup did not use its 204-byte UTF-16LE tuple");
 }
 
-
-TEST_CASE("Fret classes are source owned", "[mapping]") { testFretClassesAreSourceOwned(); }
-TEST_CASE("Fretboard group Unicode layout", "[mapping]") { testFretboardGroupUnicodeLayout(); }
+TEST_CASE("Fret classes are source owned", "[class]") { testFretClassesAreSourceOwned(); }
+TEST_CASE("Fretboard group Unicode layout", "[class]") { testFretboardGroupUnicodeLayout(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

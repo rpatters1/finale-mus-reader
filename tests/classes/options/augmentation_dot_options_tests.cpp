@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 musx::dom::DocumentPtr makeAugmentationDotOptionsDocument()
 {
@@ -119,13 +119,41 @@ void testCodaAugmentationDotOffset()
         "The Coda dot-offset mapping disturbed unresolved augmentation-dot fields");
 }
 
+void testCodaAugmentationDotOffsetFixture()
+{
+    using musx::dom::options::AugmentationDotOptions;
+    const auto result = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F263/F263-dotoff-13.mus");
+    const auto options = result.document->getOptions()->get<AugmentationDotOptions>();
+    expect(options && options->dotOffset == 13,
+        "The controlled Finale 2.6.3 augmentation-dot offset was not recovered");
+
+    const auto& source = field(result, "options.augmentationDotOptions.dotOffset");
+    expect(source.origin == ValueOrigin::LegacyMus && source.rawValue == 13
+            && source.blockOffset == 0x208 && source.decodedOffset == 0x22d0,
+        "The Finale 2.6.3 dot offset reported the wrong selector-row provenance");
+    expect(field(result, "options.augmentationDotOptions.dotUpFlagOffset").origin
+                == ValueOrigin::Finale27Default
+            && field(result, "options.augmentationDotOptions.dotNoteOffset").origin
+                == ValueOrigin::Finale27Default
+            && field(result, "options.augmentationDotOptions.dotLift").origin
+                == ValueOrigin::Finale27Default,
+        "The single located Coda augmentation-dot field widened into unresolved words");
+}
+
+TEST_CASE("Coda augmentation-dot offset", "[class][reader]")
+{
+    testCodaAugmentationDotOffsetFixture();
+}
+
 TEST_CASE("Augmentation-dot options apply legacy flipped-stem positioning as LegacyBehavior",
-    "[mapping]")
+    "[class]")
 {
     testAugmentationDotOptionsLegacyFlippedStemPositioning();
 }
 
-TEST_CASE("Augmentation-dot options recover the Coda-era dot offset", "[mapping]")
+TEST_CASE("Augmentation-dot options recover the Coda-era dot offset", "[class]")
 {
     testCodaAugmentationDotOffset();
 }

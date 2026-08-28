@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 void testGraphicAssignmentsAcrossEpochs()
 {
@@ -219,9 +219,139 @@ void testShapeGraphicAssignmentsAcrossEpochs()
     }
 }
 
-TEST_CASE("Graphic assignments span four epochs", "[mapping]") { testGraphicAssignmentsAcrossEpochs(); }
-TEST_CASE("Embedded graphic framing", "[mapping]") { testEmbeddedGraphicFraming(); }
-TEST_CASE("Shape graphic assignments span four epochs", "[mapping]") { testShapeGraphicAssignmentsAcrossEpochs(); }
+void testFinale2006EmbeddedTiff()
+{
+    const auto evidence = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F2006";
+    const auto linked = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-linked-tiff.mus");
+    const auto embeddedTif = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-embedded-tif.mus");
+    const auto embeddedTiff = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-embedded-tiff.mus");
+    const auto epsThenTiff = Reader::readWithReport<TestXmlDocument>(evidence / "F2006-eps-then-tiff.mus");
+
+    expect(linked.document->getEmbeddedGraphics().empty(),
+        "A linked Finale 2006 TIFF was mistaken for an embedded file");
+    const auto& oneGraphic = embeddedTif.document->getEmbeddedGraphics();
+    expect(oneGraphic.size() == 1 && oneGraphic.at(1).extension == "tif"
+            && oneGraphic.at(1).bytes.size() == 458252,
+        "The Finale 2006 .tif embedded payload was not recovered");
+    const auto& twoGraphics = embeddedTiff.document->getEmbeddedGraphics();
+    expect(twoGraphics.size() == 2 && twoGraphics.at(1).extension == "tif"
+            && twoGraphics.at(2).extension == "tif"
+            && twoGraphics.at(1).bytes == twoGraphics.at(2).bytes
+            && twoGraphics.at(1).bytes == oneGraphic.at(1).bytes,
+        "The Finale 2006 page and ShapeDef TIFF payloads did not preserve encounter order");
+    const auto shapeAssignments = embeddedTiff.document->getOthers()
+        ->getArray<musx::dom::others::ShapeGraphicAssign>(musx::dom::SCORE_PARTID);
+    expect(std::any_of(shapeAssignments.begin(), shapeAssignments.end(), [&](const auto& assignment) {
+        return twoGraphics.contains(assignment->graphicCmper);
+    }), "The Finale 2006 ShapeDef graphic assignment did not resolve to an embedded TIFF");
+    const auto& orderedGraphics = epsThenTiff.document->getEmbeddedGraphics();
+    expect(orderedGraphics.size() == 2 && orderedGraphics.at(1).extension == "eps"
+            && orderedGraphics.at(1).bytes.size() == 82381
+            && orderedGraphics.at(2).extension == "tif"
+            && orderedGraphics.at(2).bytes == oneGraphic.at(1).bytes,
+        "Finale 2006 embedded comparators did not follow EPS-then-TIFF insertion order");
+    const auto measureGraphic = epsThenTiff.document->getDetails()
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
+    expect(measureGraphic && measureGraphic->version == 0x100
+            && measureGraphic->left == 120 && measureGraphic->bottom == -324
+            && measureGraphic->width == 336 && measureGraphic->height == 168
+            && measureGraphic->fDescId == 1 && measureGraphic->savedRecord
+            && measureGraphic->origWidth == 336 && measureGraphic->origHeight == 168
+            && measureGraphic->graphicCmper == 1
+            && orderedGraphics.contains(measureGraphic->graphicCmper),
+        "The Finale 2006 measure graphic did not resolve to its embedded EPS");
+}
+
+TEST_CASE("Finale 2006 embedded TIFF", "[class][reader]")
+{
+    testFinale2006EmbeddedTiff();
+}
+
+void testFinale372PageGraphic()
+{
+    using PageGraphicAssign = musx::dom::others::PageGraphicAssign;
+    const auto result = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F372/F372-page-graphic.mus");
+    const auto assignment = result.document->getOthers()
+        ->get<PageGraphicAssign>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
+    expect(assignment && assignment->version == 0x100
+            && assignment->left == 920 && assignment->bottom == -508
+            && assignment->width == 727 && assignment->height == 764
+            && assignment->fDescId == 1 && !assignment->hidden
+            && assignment->displayType == PageGraphicAssign::PageAssignType::One
+            && assignment->hAlign == PageGraphicAssign::HorizontalAlignment::Left
+            && assignment->vAlign == PageGraphicAssign::VerticalAlignment::Top
+            && assignment->posFrom == PageGraphicAssign::PositionFrom::PageEdge
+            && assignment->startPage == 1 && assignment->endPage == 1
+            && assignment->savedRecord
+            && assignment->origWidth == 727 && assignment->origHeight == 764
+            && assignment->graphicCmper == 0,
+        "The Finale 3.7.2 linked page graphic was not recovered");
+    expect(result.document->getEmbeddedGraphics().empty(),
+        "A Finale 3.7.2 linked TIFF was mistaken for an embedded payload");
+}
+
+TEST_CASE("Finale 3.7.2 page graphic", "[class][reader]")
+{
+    testFinale372PageGraphic();
+}
+
+void testFinale2012GraphicTypes()
+{
+    const auto result = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+            / "evidence/F2012/F2012-graphics-types.mus");
+    const auto& graphics = result.document->getEmbeddedGraphics();
+    expect(graphics.size() == 6
+            && graphics.at(1).extension == "gif"
+            && graphics.at(2).extension == "jpg"
+            && graphics.at(3).extension == "jpg"
+            && graphics.at(4).extension == "gif"
+            && graphics.at(5).extension == "tif"
+            && graphics.at(6).extension == "pdf"
+            && graphics.at(1).bytes == graphics.at(4).bytes
+            && graphics.at(2).bytes == graphics.at(3).bytes,
+        "The Finale 2012 graphic types or per-assignment copies were not recovered");
+
+    const auto page = result.document->getOthers()
+        ->get<musx::dom::others::PageGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
+    const auto gifMeasure = result.document->getDetails()
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 2, musx::dom::Inci(0));
+    const auto pdfMeasure = result.document->getDetails()
+        ->get<musx::dom::details::MeasureGraphicAssign>(
+            musx::dom::SCORE_PARTID, 1, 10, musx::dom::Inci(0));
+    expect(page && page->graphicCmper == 2 && graphics.contains(page->graphicCmper)
+            && gifMeasure && gifMeasure->graphicCmper == 1
+            && graphics.contains(gifMeasure->graphicCmper)
+            && pdfMeasure && pdfMeasure->graphicCmper == 6
+            && graphics.contains(pdfMeasure->graphicCmper),
+        "A Finale 2012 page or measure assignment did not resolve its embedded graphic");
+
+    const auto shapeAssignments = result.document->getOthers()
+        ->getArray<musx::dom::others::ShapeGraphicAssign>(musx::dom::SCORE_PARTID);
+    expect(shapeAssignments.size() == 3
+            && shapeAssignments[0]->graphicCmper == 3
+            && shapeAssignments[1]->graphicCmper == 4
+            && shapeAssignments[2]->graphicCmper == 5
+            && std::all_of(shapeAssignments.begin(), shapeAssignments.end(), [&](const auto& item) {
+                return graphics.contains(item->graphicCmper);
+            }),
+        "The Finale 2012 ShapeDef assignments did not resolve all three embedded graphics");
+}
+
+TEST_CASE("Finale 2012 graphic types", "[class][reader]")
+{
+    testFinale2012GraphicTypes();
+}
+
+TEST_CASE("Graphic assignments span four epochs", "[class]") { testGraphicAssignmentsAcrossEpochs(); }
+TEST_CASE("Embedded graphic framing", "[class]") { testEmbeddedGraphicFraming(); }
+TEST_CASE("Shape graphic assignments span four epochs", "[class]") { testShapeGraphicAssignmentsAcrossEpochs(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

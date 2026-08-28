@@ -23,26 +23,27 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
     reader_tests.cpp
-    mapping/augmentation_dot_options_tests.cpp
-    mapping/accidental_options_tests.cpp
-    mapping/alternate_notation_options_tests.cpp
-    mapping/clef_options_tests.cpp
-    mapping/font_options_tests.cpp
-    mapping/fretboard_tests.cpp
-    mapping/graphic_assignments_tests.cpp
-    mapping/legacy_record_tests.cpp
-    mapping/lyric_options_tests.cpp
-    mapping/mapping_framework_tests.cpp
-    mapping/measure_graphic_assign_tests.cpp
-    mapping/multimeasure_rest_options_tests.cpp
-    mapping/repeat_options_tests.cpp
-    mapping/smart_shape_custom_lines_tests.cpp
-    mapping/smart_shape_options_tests.cpp
-    mapping/stem_options_tests.cpp
-    mapping/text_blocks_tests.cpp
-    mapping/text_options_tests.cpp
+    classes/options/augmentation_dot_options_tests.cpp
+    classes/options/accidental_options_tests.cpp
+    classes/options/alternate_notation_options_tests.cpp
+    classes/options/clef_options_tests.cpp
+    classes/options/font_options_tests.cpp
+    classes/others/fretboard_tests.cpp
+    classes/others/graphic_assignments_tests.cpp
+    classes/common/legacy_record_tests.cpp
+    classes/options/lyric_options_tests.cpp
+    classes/common/mapping_framework_tests.cpp
+    classes/details/measure_graphic_assign_tests.cpp
+    classes/options/multimeasure_rest_options_tests.cpp
+    classes/options/repeat_options_tests.cpp
+    classes/others/shape_definitions_tests.cpp
+    classes/others/smart_shape_custom_lines_tests.cpp
+    classes/options/smart_shape_options_tests.cpp
+    classes/options/stem_options_tests.cpp
+    classes/others/text_blocks_tests.cpp
+    classes/options/text_options_tests.cpp
     text_encoding_tests.cpp
-    text_pool_tests.cpp)
+    classes/texts/text_pool_tests.cpp)
 finale_mus_reader_enable_unity(finale_mus_reader_tests)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
@@ -51,9 +52,10 @@ target_link_libraries(finale_mus_reader_tests PRIVATE
     ${FINALE_MUS_READER_PUGIXML_TARGET}
     ZLIB::ZLIB)
 
-# The mapping framework is internal, so its tests reach into the private source tree
+# The class import framework is internal, so its tests reach into the private source tree
 # rather than driving every case through a synthetic MUS file.
 target_include_directories(finale_mus_reader_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/classes/common"
     "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE

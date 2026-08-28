@@ -1,12 +1,12 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "mapping_test_support.h"
+#include "class_test_support.h"
 
 namespace finale_mus_reader_tests {
 namespace {
 
-using namespace mapping;
+using namespace classes;
 
 void testMusicSpacingOptionsLayouts()
 {
@@ -358,15 +358,14 @@ void testUncoveredEpochStillReports()
 // character, which the corpus has but the published fixtures do not, and the payload size
 // that both tuple widths divide evenly.
 
-
-TEST_CASE("Music spacing options span the located layouts", "[mapping]") { testMusicSpacingOptionsLayouts(); }
-TEST_CASE("Four-byte incidence straddling", "[mapping]") { testFourByteStraddlesIncidence(); }
-TEST_CASE("Long word order", "[mapping]") { testLongWordOrder(); }
-TEST_CASE("Bit extraction", "[mapping]") { testBitExtraction(); }
-TEST_CASE("Absent record keeps seeded default", "[mapping]") { testAbsentRecordKeepsSeededDefault(); }
-TEST_CASE("Version gating", "[mapping]") { testVersionGating(); }
-TEST_CASE("Minor version ordering", "[mapping]") { testMinorVersionOrdering(); }
-TEST_CASE("Table layering", "[mapping]") { testTableLayering(); }
-TEST_CASE("Uncovered epoch still reports", "[mapping]") { testUncoveredEpochStillReports(); }
+TEST_CASE("Music spacing options span the located layouts", "[class]") { testMusicSpacingOptionsLayouts(); }
+TEST_CASE("Four-byte incidence straddling", "[class]") { testFourByteStraddlesIncidence(); }
+TEST_CASE("Long word order", "[class]") { testLongWordOrder(); }
+TEST_CASE("Bit extraction", "[class]") { testBitExtraction(); }
+TEST_CASE("Absent record keeps seeded default", "[class]") { testAbsentRecordKeepsSeededDefault(); }
+TEST_CASE("Version gating", "[class]") { testVersionGating(); }
+TEST_CASE("Minor version ordering", "[class]") { testMinorVersionOrdering(); }
+TEST_CASE("Table layering", "[class]") { testTableLayering(); }
+TEST_CASE("Uncovered epoch still reports", "[class]") { testUncoveredEpochStillReports(); }
 } // namespace
 } // namespace finale_mus_reader_tests
