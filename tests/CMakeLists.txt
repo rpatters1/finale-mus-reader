@@ -23,6 +23,7 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
     reader_tests.cpp
+    mapping/augmentation_dot_options_tests.cpp
     mapping/accidental_options_tests.cpp
     mapping/alternate_notation_options_tests.cpp
     mapping/clef_options_tests.cpp
