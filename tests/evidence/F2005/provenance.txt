@@ -93,3 +93,14 @@ F2005/-finale27/F2005-staffname-lineperc0.musx
     therefore loses the source unit selector when the value is zero. Reopening the upgraded
     package in Finale 27 shows zero EVPU: percentage zero is converted to zero EVPU, while
     absolute zero remains zero EVPU.
+
+F2005-acci-adjstart.mus
+    sha256 a3f0bb2ba8a3de16b755e048099ae4df18a3f837a60ef972a5c44647b778bd03
+F2005-acci-adjstart.etf
+    sha256 80f9521cd1df1a1aa52927920b0d2cd52cf4af2b708700a69391c80fd70d9e1c
+F2005/-finale27/F2005-acci-adjstart.musx
+    sha256 d069d14bdab4cd2f06c123228cfa0a30237f60ff257d1b84ceb6d15a72699c58
+    From F2005-baseline, Document Options > Accidentals > Adjust Starting Measure Position
+    changed from 24 to 27 EVPU. Selector 41 incidence 2 word 2 is the only decoded source
+    word that changes, 24 -> 27; the ETF prints the same value and the Finale 27 companion
+    writes <frontAcciSepar>27</frontAcciSepar>.

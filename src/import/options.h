@@ -16,6 +16,10 @@ namespace options {
 // Individual stages that a test drives on their own are declared in options/test_access.h,
 // which no library code includes. A stage no test drives is file-local to its class.
 
+/// @brief Recovers the located scalar fields of options::AccidentalOptions.
+/// @details Fields without an established legacy location retain the pinned baseline value.
+void importAccidentalOptions(const ImportContext& context);
+
 /// @brief Recovers options::ChordOptions, including source-owned default fret references.
 void importChordOptions(const ImportContext& context);
 
