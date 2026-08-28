@@ -76,6 +76,10 @@ enum class ValueOrigin
     MusxOnly,
     /// @brief Read from the source file's own bytes.
     LegacyMus,
+    /// @brief Read from the source file and adjusted for source-era behavior.
+    /// @details The raw stored value and its offsets remain available in @ref FieldInfo, but
+    /// the document receives a semantically equivalent value in the modern coordinate system.
+    LegacyMusAdjusted,
     /// @brief Supplied from how the source version behaved, because it had no option to
     /// store.
     /// @details A field that later Finale versions expose as a setting is often fixed

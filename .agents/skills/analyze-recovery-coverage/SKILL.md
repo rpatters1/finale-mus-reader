@@ -121,6 +121,11 @@ statistical unit; occurrences describe corpus reach and duplication.
   in EnigmaXML or was introduced by musxdom, the XML backend, a surveyor, or comparison logic. A
   dependency or observation bug must remain unexpected until fixed and recaptured; never make an
   expected-difference rule that merely conceals it.
+- Classify the format behavior, not the finite table of values the current corpus happened to
+  exercise. Prefer a broad rule stated in terms of the relevant class, source structure, era, and
+  difference category. Do not enumerate observed source/companion value pairs or construct a gate
+  from unrelated records merely because either approach fits every current row. Use a value
+  predicate only when the value itself defines the behavior being classified.
 - Match cmper-keyed objects by same-side semantic content or referents, never by assuming cmpers or
   ordering survive a save.
 - Compare every font reference by its resolved, normalized font face on each side, never by its

@@ -7,7 +7,7 @@ notice. Reading all three is why 1.0.0, 1.8.7, 2.0.1, and 2.6 appear as products
 one `unknown` bucket. Counts include archive members, which is where nearly all the pre-3.x material lives.
 “ETF likely” means the file should be tested with the earliest compatible application available; it is not a
 guarantee. Fifteen local ETF exports are now available across private and tracked evidence, including two saves of
-the same Finale 2000 template by Finale 2000 and Finale 2005, the exact Finale 2000 `tremolos` pair, plus controlled
+the same Finale 2000 template by Finale 2000 and Finale 2005, the exact Finale 2000 `mus-3a8b724cf3adba80` pair, plus controlled
 Finale 2002–2005 pairs. Three targeted Finale 27 conversions now cover the ETF-backed 1.8.7, 2.0.1, and 2.6 sources.
 
 Counts are given per survey, since no one corpus sees the whole format. `rpatters1-main` is documents and is the
@@ -36,7 +36,7 @@ is `Finale 2000`. They are listed separately because the banner really does diff
 | Finale 97 | 238 | 41 | 68 | uncompressed fixed-row | four big-endian typed pools | yes | |
 | Finale 98 | 0 | 56 | 0 | uncompressed fixed-row | median body entropy 3.68, no compressed member | yes | first Finale 98 material in any survey; application major 4, Enigma version mixed 3.8/4.0, see below |
 | Finale 99 | 0 | 4 | 0 | uncompressed fixed-row | median body entropy 2.21, no compressed member | yes | **not a distinct release**: same Enigma 5.0 line as Finale 2000, see *Renamed releases* |
-| Finale 2000 | 449 | 68 | 91 | uncompressed fixed-row | four typed pools; predominantly big-endian, Windows-origin files little-endian | analyzed | exact `tremolos` ETF pair; same fixed rows as 2001–06; template resave evidence remains |
+| Finale 2000 | 449 | 68 | 91 | uncompressed fixed-row | four typed pools; predominantly big-endian, Windows-origin files little-endian | analyzed | exact `mus-3a8b724cf3adba80` ETF pair; same fixed rows as 2001–06; template resave evidence remains |
 | Finale 2001 | 24 | 967 | 4 | DCL-compressed legacy | big-endian typed/length/CRC blocks; 3/4 framed files, all 9 members DCL/CRC-valid | yes | major codec boundary; resolved direct files retain 16-byte other/detail rows |
 | Finale 2002 | 201 | 5399 | 47 | DCL-compressed legacy | same framing; 47/48 files, all 181 members DCL/CRC-valid | yes | controlled pairs prove 16-byte other/detail and 38-byte entry rows; `IS` uses three rows |
 | Finale 2003 | 513 | 334 | 163 | DCL-compressed legacy | same framing; 168/168 files, all 659 members DCL/CRC-valid | yes | fixed physical rows persist; controlled `IS` expands to six rows |

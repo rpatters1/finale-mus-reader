@@ -28,6 +28,7 @@ function(finale_mus_reader_add_tool name)
 endfunction()
 
 finale_mus_reader_add_tool(clef_options_probe PRIVATE_HEADERS)
+finale_mus_reader_add_tool(alternate_notation_options_probe PRIVATE_HEADERS)
 finale_mus_reader_add_tool(font_header_words PRIVATE_HEADERS)
 finale_mus_reader_add_tool(globals_census PRIVATE_HEADERS)
 finale_mus_reader_add_tool(record_dump PRIVATE_HEADERS)

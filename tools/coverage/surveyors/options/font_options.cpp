@@ -139,6 +139,7 @@ Value observeFontOptions(const SurveyContext& ctx)
         case finale_mus_reader::ValueOrigin::Unmapped: ++unmappedCount; break;
         case finale_mus_reader::ValueOrigin::MusxOnly: ++musxOnlyCount; break;
         case finale_mus_reader::ValueOrigin::LegacyMus: ++recoveredCount; break;
+        case finale_mus_reader::ValueOrigin::LegacyMusAdjusted: ++recoveredCount; break;
         case finale_mus_reader::ValueOrigin::LegacyBehavior: ++behaviorCount; break;
         case finale_mus_reader::ValueOrigin::Finale27Default: ++defaultCount; break;
         }
