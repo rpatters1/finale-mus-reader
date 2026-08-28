@@ -3164,6 +3164,29 @@ void testLegacyCharacterFonts()
     CHECK(parentStems->stemConnections.size() == 1);
 }
 
+void testCodaAugmentationDotOffset()
+{
+    using musx::dom::options::AugmentationDotOptions;
+    const auto result = Reader::readWithReport<TestXmlDocument>(
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F263/F263-dotoff-13.mus");
+    const auto options = result.document->getOptions()->get<AugmentationDotOptions>();
+    expect(options && options->dotOffset == 13,
+        "The controlled Finale 2.6.3 augmentation-dot offset was not recovered");
+
+    const auto& source = field(result, "options.augmentationDotOptions.dotOffset");
+    expect(source.origin == ValueOrigin::LegacyMus && source.rawValue == 13
+            && source.blockOffset == 0x208 && source.decodedOffset == 0x22d0,
+        "The Finale 2.6.3 dot offset reported the wrong selector-row provenance");
+    expect(field(result, "options.augmentationDotOptions.dotUpFlagOffset").origin
+                == ValueOrigin::Finale27Default
+            && field(result, "options.augmentationDotOptions.dotNoteOffset").origin
+                == ValueOrigin::Finale27Default
+            && field(result, "options.augmentationDotOptions.dotLift").origin
+                == ValueOrigin::Finale27Default,
+        "The single located Coda augmentation-dot field widened into unresolved words");
+}
+
 } // namespace
 
 TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
@@ -3171,6 +3194,10 @@ TEST_CASE("Font definitions", "[reader]") { testFontDefinitions(); }
 TEST_CASE("Font options capture", "[reader]") { testFontOptionsCapture(); }
 TEST_CASE("Clef options capture", "[reader]") { testClefOptionsCapture(); }
 TEST_CASE("Legacy character fonts", "[reader]") { testLegacyCharacterFonts(); }
+TEST_CASE("Coda augmentation-dot offset", "[reader]")
+{
+    testCodaAugmentationDotOffset();
+}
 TEST_CASE("Stem connection capture", "[reader]") { testStemConnectionCapture(); }
 TEST_CASE("Stem scalar recovery", "[reader]") { testStemScalarRecovery(); }
 TEST_CASE("Multimeasure rest recovery", "[reader]") { testMultimeasureRestRecovery(); }

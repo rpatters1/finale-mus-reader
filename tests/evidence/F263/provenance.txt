@@ -44,6 +44,14 @@ F263-dateform-tab.mus
     reading <dateFormat>abbrev</dateFormat>. The value distinguishes the third DateFormat
     member from the second, which the Finale 1.0.0 save fixes.
 
+F263-dotoff-13.mus / .etf / .musx
+    sha256 6625e38f27a4565ac33b6874d5b78a963a18a694a47ab770aca3907c123de1be (.mus)
+    sha256 ff87400a54a160e127be57676c979f99679add8f37d24bb09eaffd03c014122a (.etf)
+    sha256 f6ab773dfe046fcdfda4dbe95fe7ed8644356b30f315d6794532fc1325410951 (.musx)
+    From F263-baseline, changes only the augmentation-dot offset from 8 to 13. The MUS files
+    differ in one byte: selector 21 incidence 0 word 1 moves 8 -> 13. The era ETF carries the
+    same edited word, and the Finale 27 companion reads <dotOffset>13</dotOffset>.
+
 F263-curve-opt.mus / .etf
     sha256 e0d207b83365f47d8a2ba8774f727ed268ac8293a719258fbedf1617d8ae2b52 (.mus)
     sha256 9c2f8b6ef1d06f9cdc6dd60e27e644b283bab06c5cac21ce110bc62119dba309 (.etf)

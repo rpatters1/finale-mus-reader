@@ -437,6 +437,21 @@ the word through a dialog offering "Offset" beside the two stem lengths
 (`tests/evidence/F100/F100-stemopts-changed.mus`, 4 -> 5), which is consistent with the same option
 under an older label but does not establish it.
 
+`MiscDocPrefs.dotAdjustForMultipleVoices`, selector `27(65534)` word 0, maps to
+`AugmentationDotOptions::adjMultipleVoices` beginning with the evidenced Finale 3.5 layout. The
+three-survey recovery capture found 17 distinct companion-backed Finale 3.0-3.2 documents in which
+the source location did not supply the field: the importer retained the pinned `true` default while
+Finale 27 wrote `false`. This reviewed transformation is classified as `different_defaults` only
+for the uncompressed epoch before Finale 3.5, with `Finale27Default` origin and the observed
+`true`-to-`false` direction. Three Finale 3.5 documents are the earliest agreeing evidence. Finale
+3.3 and 3.4 are absent from every survey, so the exact introduction release inside that bracket
+remains **open**.
+
+`DistancePrefs.dotOffset`, selector `21(65534)` word 1, is also present in the Coda-banner
+epoch. The controlled Finale 2.6.3 fixture changes only that option from 8 to 13; its era ETF
+preserves selector 21 word 1 as 13 and its Finale 27 companion carries `dotOffset` 13. No other
+Coda-era `AugmentationDotOptions` field is located by this fixture.
+
 ### MMRestDefaultsPrefs: right for Finale 3.5 on, and a different record before it
 
 **Confirmed 2026-08-16** against every adjacent-exact Finale 27 companion in the reference corpus. The group's

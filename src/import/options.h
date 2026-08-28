@@ -23,6 +23,9 @@ void importAccidentalOptions(const ImportContext& context);
 /// @brief Recovers options::AlternateNotationOptions across all four epochs.
 void importAlternateNotationOptions(const ImportContext& context);
 
+/// @brief Recovers options::AugmentationDotOptions.
+void importAugmentationDotOptions(const ImportContext& context);
+
 /// @brief Recovers options::ChordOptions, including source-owned default fret references.
 void importChordOptions(const ImportContext& context);
 
