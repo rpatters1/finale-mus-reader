@@ -26,6 +26,9 @@ void importAlternateNotationOptions(const ImportContext& context);
 /// @brief Recovers options::AugmentationDotOptions.
 void importAugmentationDotOptions(const ImportContext& context);
 
+/// @brief Recovers options::BarlineOptions across all four epochs.
+void importBarlineOptions(const ImportContext& context);
+
 /// @brief Recovers options::ChordOptions, including source-owned default fret references.
 void importChordOptions(const ImportContext& context);
 

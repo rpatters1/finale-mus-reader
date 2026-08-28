@@ -19,6 +19,18 @@ Rerun `recovery_coverage_probe` only when its observations may have changed, suc
 - importer, surveyor, musxdom, comparison, or classification behavior changed;
 - the selected corpus/cohort changed.
 
+**Before every capture cycle, including `tracked-evidence`, pass the surveyor-name preflight.**
+Manually inspect only surveyor source files changed or untracked relative to the current branch's
+`HEAD`; unchanged committed surveyors are outside this preflight. For each ordinary member in those
+files, pair the emitted `field("snake_case", &Target::memberName)` with exactly
+`origin_memberName`, and verify that `snake_case` is the mechanical snake-case conversion of the
+exact musxdom C++ member spelling. Do not expand abbreviations, substitute an XML name, or choose a
+clearer alias. Check that neither list has an orphan or duplicate. A contained or synthetic leaf
+that cannot follow this rule must have an explicit pairing in the production comparison model.
+This is an inspection prerequisite, not a requirement to add a focused test. If the names do not
+match, stop and fix them before reading any corpus manifest. Never launch a probe, even over tracked
+evidence, to discover whether surveyor names match.
+
 Require current `private/generated/<survey_id>/corpus_locations.csv`, the public manifest, and the
 generated `private/generated/corpus-<survey_id>.tsv` for every selected survey. If these are absent
 or stale, stop and use `inventory-a-corpus`; do not rescan the corpus here.

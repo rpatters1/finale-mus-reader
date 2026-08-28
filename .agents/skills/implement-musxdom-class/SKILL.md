@@ -62,6 +62,19 @@ revise one layer without destabilizing the others.
   rather than a decoding error.
 - Keep corpora read-only and paths private. Use controlled tracked evidence or ignored
   `private/` output according to repository policy.
+- **Do not run a full-corpus recovery probe/report cycle without the user's explicit
+  authorization.**
+  Implementing a class, invoking this skill, asking for corpus validation, or authorizing an
+  earlier cycle does not authorize a new full-corpus invocation. Treat any probe over private
+  corpora, multiple registered surveys, an all-corpus manifest, or every registered survey, and
+  any generation or refresh of a report from such results, as full-corpus. This prohibition
+  includes reruns made only to refresh output after a surveyor, schema, field name, metadata, or
+  report change. Ask before each cycle and wait for approval; authorization covers the requested
+  probe and its immediate analysis, not a later refresh. This authorization boundary overrides
+  any broader-run default in the coverage-analysis skill. Iterating `recovery_coverage_probe` and
+  its report over the controlled
+  `tracked-evidence` survey is permitted without separate authorization; use that smallest
+  reproducible cohort while developing and correcting the implementation.
 - Record recovered and synthesized values separately in `ImportReport`, and distinguish a
   third case from both. A field that a later Finale exposes as a setting is often fixed
   behavior in an earlier one: the value is known exactly, no record stores it, and the
@@ -373,6 +386,17 @@ or reinterprets a field on the importer side updates the surveyor in the same co
 the two are two views of the same document, and they drift the moment only one of them is
 told about a change.
 
+**Make surveyor leaf names mechanical, never editorial.** For an ordinary musxdom member,
+the serialized leaf key is the exact snake-case spelling of that C++ member and the origin
+key names that exact member after `origin_`. For example,
+`drawFinalBarlineOnLastMeas` pairs `draw_final_barline_on_last_meas` with
+`origin_drawFinalBarlineOnLastMeas`. Do not expand abbreviations, improve wording, substitute
+an XML alias, or otherwise paraphrase either side. `tools/coverage/comparison.cpp` converts the
+leaf key back to camel case to locate its origin; a plausible alias silently loses that
+association. For contained or synthetic leaves that cannot follow this rule, establish the
+explicit pairing in the production comparison model and cover it with a focused test rather
+than relying on a naming resemblance.
+
 ## Step 6 — Prove the draft on controlled evidence
 
 Add focused tests for:
@@ -397,6 +421,15 @@ comparison alone cannot prove that the original bytes were decoded correctly.
 
 Run the focused test, the full test suite, generated-resource checks when relevant,
 `git diff --check`, and `git status --short`. Do not disturb unrelated worktree changes.
+
+The leaf/origin name inspection is a prerequisite for **every** recovery-coverage probe cycle,
+including `tracked-evidence`. Before invoking the probe, inspect only surveyor source files changed
+or untracked relative to the current branch's `HEAD`; unchanged committed surveyors require no
+repeat review. In those files, inspect each `field("snake_case", &Target::memberName)` beside its exact
+`origin_memberName`; verify the leaf is the mechanical snake-case spelling of that C++ member and
+that neither list has an orphan or duplicate. This is a required agent check, not a requirement to
+add a focused test. A corpus capture is never the mechanism for discovering or validating a
+surveyor spelling.
 
 ## Step 7 — Integrate the class into the maintained coverage report
 
@@ -445,12 +478,15 @@ it recovers, which epochs it fails, where companions disagree with it -- and non
 those questions has a meaning yet if the class exists only as notes, or if it has an
 importer but no surveyor to report what the importer did. A survey run early is not a
 head start; it is Step 8 performed on nothing, and it has to be run again afterwards
-anyway. Define the cohort with the user: all fixtures, loose only, ETF-backed,
-Finale-27-backed, or an explicit union or intersection.
+anyway. Start with `tracked-evidence` and iterate there as needed. Define any broader cohort
+with the user and obtain explicit authorization immediately before launching its probe: all
+fixtures, loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
+Authorization for one broader run does not cover a later rerun.
 
 **Name the surveys as well as the cohort, and say what each one can and cannot answer.**
-Every registered survey in `research/data/surveys.csv` is in scope, and they are not
-interchangeable. The reference corpus has the companions and the volume but starts at Finale
+When the user authorizes a broader cohort, account for every included survey registered in
+`research/data/surveys.csv`; surveys are not interchangeable. The reference corpus has the
+companions and the volume but starts at Finale
 1.8.7. The installs corpus has no authored documents and thin companion coverage, but it is
 the only place several releases exist at all, and the only place the Coda-era Windows
 documents that state no version are found — the population any version gate silently drops.
@@ -493,13 +529,15 @@ and wait for the user's interpretation before classifying any of them as expecte
 approved rule may continue to classify the behavior it already describes, but a new class must
 not be fitted to those rules by analogy without review.
 
-**Before calling the work complete, re-run the regression over every registered survey**,
-not only the cohort the class was developed against, and present the per-survey import
-table from `recovery_coverage_report.py`'s output with the results. The regression is
-only as wide as its surveyor list, and a class recovering correctly for its own fixtures
-can still break another class for every document in a corpus -- a shared decoder touched
-along the way (the text encoding, a font lookup, the record index) is exactly what a
-full-survey run catches and what per-class tests cannot.
+Before calling the work complete, ask the user whether to run the regression over every
+registered survey. Run it only after explicit authorization for that invocation, then present
+the per-survey import table from `recovery_coverage_report.py`'s output. If authorization is
+not given, do not run it: report that broad regression was not performed and base the handoff
+on tracked evidence and ordinary tests. The regression is only as wide as its surveyor list,
+and a class recovering correctly for its own fixtures can still break another class for every
+document in a corpus -- a shared decoder touched along the way (the text encoding, a font
+lookup, the record index) is exactly what an authorized full-survey run can catch and what
+per-class tests cannot.
 
 ## Transferable lessons from FontOptions
 
@@ -530,9 +568,9 @@ Finish with a concise account of the implemented class and fields, supported epo
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, every still-unmapped field, every MUSX-only field, remaining open layouts, and the next
 smallest evidence request.
-**Include the full-regression import table from Step 8, per survey.** A completion report
-without it is not a completion report: nothing else in this procedure would notice that the
-work broke a class it never mentions.
+If the user authorized the full regression in Step 8, include its per-survey import table.
+Otherwise state plainly that no full-corpus probe was authorized or run; absence of that table
+must never be used as a reason to launch the probe without permission.
 Call the result partial whenever any epoch or field remains unsupported.
 
 **State every completely uncovered epoch explicitly, every time.** Name the epoch, say
