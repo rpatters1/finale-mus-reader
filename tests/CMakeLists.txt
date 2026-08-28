@@ -30,9 +30,9 @@ add_executable(finale_mus_reader_tests
     classes/options/font_options_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
-    classes/legacy_record_tests.cpp
+    classes/common/legacy_record_tests.cpp
     classes/options/lyric_options_tests.cpp
-    classes/mapping_framework_tests.cpp
+    classes/common/mapping_framework_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
     classes/options/multimeasure_rest_options_tests.cpp
     classes/options/repeat_options_tests.cpp
@@ -55,7 +55,7 @@ target_link_libraries(finale_mus_reader_tests PRIVATE
 # The class import framework is internal, so its tests reach into the private source tree
 # rather than driving every case through a synthetic MUS file.
 target_include_directories(finale_mus_reader_tests PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/classes"
+    "${CMAKE_CURRENT_SOURCE_DIR}/classes/common"
     "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE
