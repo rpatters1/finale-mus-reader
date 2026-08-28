@@ -42,12 +42,11 @@ set(FINALE_MUS_READER_MUSXDOM_SOURCE_DIR "" CACHE PATH
 
 include(FetchContent)
 
-# A unity build is this project's invariant, not a dependency's. -DCMAKE_UNITY_BUILD=ON is a
-# smoke test of project-owned translation units, and it must not impose an amalgamation policy
-# on code this repository does not own: a dependency that does not amalgamate would otherwise
-# turn the smoke test into a build failure that says nothing about this project. zlib is the
-# standing example -- its inftrees.h is included by several of its sources and is not
-# idempotent -- but the rule is about ownership rather than about zlib.
+# Unity compilation is this project's normal build, not a dependency's. Each project-owned
+# target opts in explicitly below so the setting cannot impose an amalgamation policy on code
+# this repository does not own. zlib is the standing example -- its inftrees.h is included by
+# several of its sources and is not idempotent -- but the rule is about ownership rather than
+# about zlib.
 #
 # Stated once here and applied at each dependency, so a target added later is opted out by
 # calling this rather than by remembering a policy written somewhere else.
@@ -58,6 +57,10 @@ function(finale_mus_reader_keep_out_of_unity)
                 UNITY_BUILD OFF)
         endif()
     endforeach()
+endfunction()
+
+function(finale_mus_reader_enable_unity target)
+    set_target_properties(${target} PROPERTIES UNITY_BUILD ON)
 endfunction()
 
 if(TARGET ZLIB::ZLIB)
@@ -140,10 +143,6 @@ message(STATUS
     "Legacy Finale MUS Reader musxdom: ${FINALE_MUS_READER_MUSXDOM_ORIGIN} at ${FINALE_MUS_READER_MUSXDOM_SOURCE}")
 
 finale_mus_reader_keep_out_of_unity(musx)
-if(CMAKE_UNITY_BUILD)
-    message(STATUS
-        "Legacy Finale MUS Reader: unity build limited to project-owned translation units")
-endif()
 
 add_library(finale_mus_reader_blast OBJECT
     third_party/blast/blast.c)
@@ -202,6 +201,7 @@ add_library(finale_mus_reader STATIC
     src/records/legacy_others.cpp
     src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
+finale_mus_reader_enable_unity(finale_mus_reader)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 
 set(FINALE_MUS_READER_INSTRUMENTATION_ENABLED OFF)

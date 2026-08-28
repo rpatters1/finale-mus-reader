@@ -19,6 +19,7 @@ add_executable(recovery_coverage_probe
     support/relationships.cpp
     ${COVERAGE_SURVEYOR_SOURCES}
 )
+finale_mus_reader_enable_unity(recovery_coverage_probe)
 
 # The coverage probe measures the reader as well as surveying it. The timing scopes are compiled
 # into the reader target that the probe exercises; ordinary clients get them only by selecting ON.

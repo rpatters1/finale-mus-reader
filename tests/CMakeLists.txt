@@ -11,20 +11,38 @@ FetchContent_Declare(Catch2
 FetchContent_MakeAvailable(Catch2)
 
 # Catch2 is intentionally consumed as a normal library, but its implementation is split
-# across many translation units. Unity compilation keeps those upstream files together
-# without merging this project's independent test files, where separate diagnostics and
-# translation-unit boundaries are useful.
+# across many translation units. Unity compilation reduces the cost of building those
+# upstream files just as it does for this project's test target below.
 #
-# This is a deliberate choice about one dependency's build time, made in both configurations,
-# and is not the same thing as letting -DCMAKE_UNITY_BUILD=ON reach code this repository does
-# not own. Its companion target has no such reason, so it follows the general rule.
+# This is a deliberate choice about one dependency's build time. Its companion target has no
+# such reason, so it follows the general rule for code this repository does not own.
 set_target_properties(Catch2 PROPERTIES
     UNITY_BUILD ON
     UNITY_BUILD_BATCH_SIZE 15)
 finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
-add_executable(finale_mus_reader_tests reader_tests.cpp mapping_tests.cpp
-    text_encoding_tests.cpp text_pool_tests.cpp)
+add_executable(finale_mus_reader_tests
+    reader_tests.cpp
+    mapping/accidental_options_tests.cpp
+    mapping/alternate_notation_options_tests.cpp
+    mapping/clef_options_tests.cpp
+    mapping/font_options_tests.cpp
+    mapping/fretboard_tests.cpp
+    mapping/graphic_assignments_tests.cpp
+    mapping/legacy_record_tests.cpp
+    mapping/lyric_options_tests.cpp
+    mapping/mapping_framework_tests.cpp
+    mapping/measure_graphic_assign_tests.cpp
+    mapping/multimeasure_rest_options_tests.cpp
+    mapping/repeat_options_tests.cpp
+    mapping/smart_shape_custom_lines_tests.cpp
+    mapping/smart_shape_options_tests.cpp
+    mapping/stem_options_tests.cpp
+    mapping/text_blocks_tests.cpp
+    mapping/text_options_tests.cpp
+    text_encoding_tests.cpp
+    text_pool_tests.cpp)
+finale_mus_reader_enable_unity(finale_mus_reader_tests)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE
     finale_mus_reader::finale_mus_reader

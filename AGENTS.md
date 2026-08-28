@@ -348,14 +348,14 @@ The build uses CMake. Keep these properties intact when extending it:
 - Compile every object with `/utf-8` under MSVC, also directory-wide. Sources
   carry UTF-8 string literals and no byte-order mark; without the flag MSVC reads
   them in the machine's active code page and silently produces different bytes.
-- Keep every project-owned translation unit unity-build clean even though unity
-  builds are not the default. CMake may combine unrelated source files into one
+- Keep every project-owned translation unit unity-build clean. Unity compilation
+  is the normal build for the library, tests, and recovery-coverage probe. CMake
+  may combine unrelated source files into one
   translation unit, so an anonymous namespace does not make file-local names
   unique after amalgamation; use distinctive names for aliases, helpers, and
   constants when needed. Do not let unity-only fixes change runtime behavior.
-- Periodically smoke-test this invariant in a fresh temporary build directory
-  with `-DCMAKE_UNITY_BUILD=ON` and the normal test suite. The smoke test applies
-  to project-owned targets; external dependencies retain their own build policy.
+- Project-owned targets enable unity compilation themselves; external dependencies
+  retain their own build policy.
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging
@@ -377,20 +377,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-For a unity-build smoke test, use a separate temporary build directory and retain
-the same local musxdom source override, for example:
-
-```bash
-cmake -S . -B /tmp/finale-mus-reader-unity -G Ninja \
-  -DCMAKE_UNITY_BUILD=ON \
-  -DFINALE_MUS_READER_BUILD_TESTING=ON \
-  -DFINALE_MUS_READER_MUSXDOM_SOURCE_DIR=../musxdom
-cmake --build /tmp/finale-mus-reader-unity
-ctest --test-dir /tmp/finale-mus-reader-unity --output-on-failure
-```
-
-This runs against the fetched zlib, not an installed one, so the smoke test covers the
-default dependency configuration. **A unity build is this project's invariant and must never
+**A unity build is this project's invariant and must never
 be imposed on code this repository does not own.** `CMakeLists.txt` states that rule once, as
 `finale_mus_reader_keep_out_of_unity()`, and calls it at each dependency: the zlib targets,
 musxdom, pugixml, Catch2's companion target, and the pinned `blast` source. zlib is the
@@ -398,13 +385,12 @@ standing example of why -- its `inftrees.h` is included by several of its own so
 not idempotent -- but the rule is about ownership, not about zlib, and a dependency added
 later is opted out by calling that function rather than by remembering a policy written
 elsewhere. Catch2 itself is the one deliberate exception: `tests/CMakeLists.txt` amalgamates
-it in *both* configurations for build speed, which is a choice about one dependency rather
-than a consequence of the flag.
+it for build speed, which is a choice about one dependency rather than a consequence of the
+project-owned target policy.
 
-That leaves `-DCMAKE_UNITY_BUILD=ON` a single-flag test of project-owned translation units.
-Verify it by configuring the smoke build and confirming that no dependency target has a
-`Unity/` source: only `finale_mus_reader`, `finale_mus_reader_tests` and the deliberate
-Catch2 should appear.
+In a normal build, no dependency target should have a `Unity/` source: only
+`finale_mus_reader`, `finale_mus_reader_tests`, `recovery_coverage_probe` when tools are
+enabled, and the deliberate Catch2 should appear.
 
 Do not modify large evidence or default fixtures unless the task requires it.
 If exact-source files change intentionally, verify and document their hashes and
