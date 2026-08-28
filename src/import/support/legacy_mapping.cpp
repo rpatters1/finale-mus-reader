@@ -151,6 +151,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportFontOptions, &options::importFontOptions),
         // options
         FINALE_MUS_READER_IMPORTER(ImportAccidentalOptions, &options::importAccidentalOptions),
+        FINALE_MUS_READER_IMPORTER(ImportAlternateNotationOptions, &options::importAlternateNotationOptions),
         FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
@@ -720,9 +721,15 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     const auto resolved = readSourceValue(index, table.encoding, selector,
                         field.readable->source, profile.byteOrder);
                     if (resolved) {
-                        field.readable->apply(target.instance, resolved->value);
+                        const auto adjusted = field.readable->sourceAdjustment
+                            ? field.readable->sourceAdjustment(
+                                  resolved->value, index, profile)
+                            : std::nullopt;
+                        field.readable->apply(target.instance,
+                            adjusted.value_or(resolved->value));
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                        info.origin = ValueOrigin::LegacyMus;
+                        info.origin = adjusted ? ValueOrigin::LegacyMusAdjusted
+                                               : ValueOrigin::LegacyMus;
                         info.blockOffset = resolved->blockOffset;
                         info.decodedOffset = resolved->decodedOffset;
                         info.rawValue = resolved->value;

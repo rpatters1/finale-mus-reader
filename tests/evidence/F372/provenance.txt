@@ -150,3 +150,17 @@ F372-bookmarks.musx
 
     Reading `BK` is deferred until the bookmark class itself is imported, so this
     fixture's role for now is the assertion that nothing is synthesized from it.
+
+F372-altnot-offsets.mus
+    sha256 2c2ed9bc7d45065c194d813c379d1c35afe7d32bee16b3a97cabb6dbe2965010
+F372-altnot-offsets.etf
+    sha256 4d75f83ae9a3bcf48e83dfe1e286b542829ca5e556c73ea899a4fc984a726d53
+-finale27/F372-altnot-offsets.musx
+    sha256 a2db78bc06811e750c2320735d47b83097ed3a853484938564020c35b2e4fd9b
+    Created from F372-baseline by changing the four alternate-notation controls
+    exposed by this version. Within the relevant numeric-global families,
+    selector 43 words 3--5 move from 24, 12, 24 to 31, 17, 27 and selector 46
+    word 5 moves from 24 to 25; selector 22 remains zero in words 1--3. The ETF
+    confirms those stored values independently. Finale 27 writes the semantic
+    results -24, -24, -24, 7, -7, 3, and 25 in musxdom field order. Save noise
+    outside these option families is not used as evidence for the mapping.

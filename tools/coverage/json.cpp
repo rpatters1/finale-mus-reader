@@ -37,6 +37,7 @@ const char* originName(ValueOrigin origin)
     case ValueOrigin::Unmapped: return "unmapped";
     case ValueOrigin::MusxOnly: return "musx-only";
     case ValueOrigin::LegacyMus: return "legacy-mus";
+    case ValueOrigin::LegacyMusAdjusted: return "legacy-mus-adjusted";
     case ValueOrigin::LegacyBehavior: return "legacy-behavior";
     case ValueOrigin::Finale27Default: return "finale27-default";
     }

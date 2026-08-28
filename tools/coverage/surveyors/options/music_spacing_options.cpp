@@ -20,23 +20,19 @@ classifyMusicSpacingDifference(const DifferenceContext& context)
     }
     const auto minWidth = context.source.find("music_spacing_options.min_width");
     if (minWidth != context.source.end() && minWidth->second.second == "legacy-behavior" &&
-        ((sourceIsVersion(context.epoch, context.sourceVersion,
-                          finale_mus_reader::FormatEpoch::UncompressedLegacy) &&
-          !sourcePredatesVersion(context.sourceVersion, finale_mus_reader::versions::finale2000)) ||
-         sourceIsVersion(context.epoch, context.sourceVersion,
-                         finale_mus_reader::FormatEpoch::DclLegacy) ||
-         sourceIsVersion(context.epoch, context.sourceVersion,
-                         finale_mus_reader::FormatEpoch::ZlibLegacy))) {
+        sourceAtOrAfter(context.epoch, context.sourceVersion,
+                        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+                        finale_mus_reader::versions::finale2000)) {
         return DifferenceClassification::MissingSelector;
     }
     if (context.path == "music_spacing_options.min_dist_grace" &&
         context.origin == "legacy-behavior" &&
-        (sourceIsVersion(context.epoch, context.sourceVersion,
-                         finale_mus_reader::FormatEpoch::UncompressedLegacy,
-                         finale_mus_reader::versions::finale2000) ||
-         (sourceIsVersion(context.epoch, context.sourceVersion,
-                          finale_mus_reader::FormatEpoch::DclLegacy) &&
-          sourcePredatesVersion(context.sourceVersion, finale_mus_reader::versions::finale2005)))) {
+        sourceAtOrAfter(context.epoch, context.sourceVersion,
+                        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+                        finale_mus_reader::versions::finale2000) &&
+        sourcePredatesVersion(context.epoch, context.sourceVersion,
+                              finale_mus_reader::FormatEpoch::DclLegacy,
+                              finale_mus_reader::versions::finale2005)) {
         return DifferenceClassification::DifferentDefaults;
     }
     return std::nullopt;

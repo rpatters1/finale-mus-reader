@@ -53,3 +53,14 @@ F97-slurtieopts-changed.mus / .etf
 -finale27/F97-slurtieopts-changed.musx
     sha256 897be7eb865d0143eaff8224e77010b775f7d4a36f4aaf41c125622366e44aba
     Finale 27 companion used for the semantic conversion observations above.
+
+F97-altnot-offsets.mus
+    sha256 07d4e3306f487932f3722f693a0dd2063b62d6f5b01ee5cec397abd371e8db70
+F97-altnot-offsets.etf
+    sha256 39cbe7b9c6dd60665fc41b69382098ed774e9b829795a4803782a29ba6d1cf07
+-finale27/F97-altnot-offsets.musx
+    sha256 cb9ab40fd4080d7c6cf084b8dbb0e50e997a3b39fa99903133433c71896d0052
+    Created from Fin97-baseline by changing all seven alternate-notation
+    offsets. Selector 22 words 1--3 become -25, -26, -27; selector 43 words
+    3--5 become 7, -13, 17; and selector 46 word 5 becomes 11. The ETF and
+    Finale 27 companion preserve the same seven values directly.

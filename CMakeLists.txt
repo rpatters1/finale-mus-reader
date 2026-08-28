@@ -170,6 +170,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/measure_graphic_assign.cpp
     src/import/header/header.cpp
     src/import/options/accidental_options.cpp
+    src/import/options/alternate_notation_options.cpp
     src/import/options/chord_options.cpp
     src/import/options/clef_options.cpp
     src/import/options/font_options.cpp

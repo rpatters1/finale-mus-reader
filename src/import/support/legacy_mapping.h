@@ -293,26 +293,51 @@ struct SourceProfile
 /// @brief Whether a source is at or beyond a chronological epoch and version boundary.
 /// @details A later epoch passes without needing a version. The boundary epoch passes only
 /// when its recovered version is at least the requested version.
+[[nodiscard]] constexpr bool sourceAtOrAfter(FormatEpoch sourceEpoch,
+    const SourceVersion* sourceVersion, FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
+{
+    if (sourceEpoch != boundaryEpoch) {
+        return formatEpochOrdinal(sourceEpoch) >= formatEpochOrdinal(boundaryEpoch);
+    }
+    return sourceVersion
+        && VersionBound{sourceVersion->major, sourceVersion->minor} >= boundaryVersion;
+}
+
 [[nodiscard]] constexpr bool sourceAtOrAfter(const SourceProfile& profile,
     FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
 {
-    if (profile.epoch != boundaryEpoch) return sourceAtOrAfter(profile, boundaryEpoch);
-    return profile.version
-        && VersionBound{profile.version->major, profile.version->minor} >= boundaryVersion;
+    return sourceAtOrAfter(profile.epoch, profile.version ? &*profile.version : nullptr,
+        boundaryEpoch, boundaryVersion);
 }
 
 /// @brief Whether a source is earlier than a version boundary within the boundary epoch.
 /// @details Earlier epochs pass without needing a version. The boundary epoch passes only
 /// when its recovered version is earlier; an absent version fails closed.
+[[nodiscard]] constexpr bool sourcePredatesVersion(FormatEpoch sourceEpoch,
+    const SourceVersion* sourceVersion, FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
+{
+    if (sourceEpoch != boundaryEpoch) {
+        return formatEpochOrdinal(sourceEpoch) < formatEpochOrdinal(boundaryEpoch);
+    }
+    return sourceVersion
+        && VersionBound{sourceVersion->major, sourceVersion->minor} < boundaryVersion;
+}
+
 [[nodiscard]] constexpr bool sourcePredatesVersion(const SourceProfile& profile,
     FormatEpoch boundaryEpoch, VersionBound boundaryVersion)
 {
-    if (profile.epoch != boundaryEpoch) return !sourceAtOrAfter(profile, boundaryEpoch);
-    return profile.version
-        && VersionBound{profile.version->major, profile.version->minor} < boundaryVersion;
+    return sourcePredatesVersion(profile.epoch, profile.version ? &*profile.version : nullptr,
+        boundaryEpoch, boundaryVersion);
 }
 
 using SourceGate = bool (*)(const SourceProfile& profile);
+
+/// @brief Optionally adjusts a recovered number for source-era behavior.
+/// @details A disengaged result applies the stored value directly. An engaged result is
+/// applied instead and reports @ref ValueOrigin::LegacyMusAdjusted while preserving the
+/// stored value and source offsets in @ref FieldInfo.
+using SourceAdjustment = std::optional<std::int64_t> (*)(std::int64_t value,
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
 /// @brief One numeric global's whole payload, in whichever encoding the source uses.
 /// @details A capture pass reads a collection the field tables cannot express, and the two
@@ -409,7 +434,15 @@ struct FieldMapping
     /// The test belongs to the destination rather than to any one era, so every table that layers
     /// onto the same field must state the same one.
     bool (*targetApplies)(const void* instance){};
+    SourceAdjustment sourceAdjustment{};
 };
+
+[[nodiscard]] constexpr FieldMapping withSourceAdjustment(
+    FieldMapping field, SourceAdjustment adjustment)
+{
+    field.sourceAdjustment = adjustment;
+    return field;
+}
 
 /// @brief How a table finds the objects it writes to.
 enum class TargetKind : std::uint8_t
@@ -946,6 +979,11 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         ::finale_mus_reader::BitRange{}, \
         nullptr, member)
+
+/// @brief A two-byte field optionally adjusted for source-era behavior.
+#define MUS_WORD_ADJUSTED(Class, tagText, selector, incidence, slot, adjustment, member) \
+    ::finale_mus_reader::withSourceAdjustment( \
+        MUS_WORD(Class, tagText, selector, incidence, slot, member), (adjustment))
 
 /// @brief A two-byte field restricted by a source gate.
 #define MUS_WORD_IF_SOURCE(Class, tagText, selector, incidence, slot, sourceGate, member) \

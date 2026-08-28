@@ -30,6 +30,7 @@ enum class Phase : std::size_t
     ImportFontDefinitions,
     ImportFontOptions,
     ImportAccidentalOptions,
+    ImportAlternateNotationOptions,
     ImportChordOptions,
     ImportClefOptions,
     ImportLyricOptions,

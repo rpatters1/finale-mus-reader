@@ -638,7 +638,7 @@ font and `0x1000` for a Mac text font at payload offset 0, the pitch and family 
 and the name from offset 12 to the end of the payload. A longer name simply grows the payload:
 `Maestro Percussion` carries length 36 where short names carry 24.
 
-Verified against `Score-Fin12.mus` and the Finale 27 conversion of the same document, which agree
+Verified against a Finale 2012 corpus document and its Finale 27 conversion, which agree
 on every comparator, every gap in the comparator sequence, every name, and every character set
 value.
 
@@ -675,13 +675,13 @@ in the experiment log.
 
 | Evidence | Source era | ETF size | Observed sections | Selected observations |
 |---|---|---:|---|---|
-| `nestedTupletFin05RC2.etf` (`mus-d89e8fe12e271440`) | Finale 2005 | 16,893 bytes | header, others, details, entries, text, lyrics | Explicit ETF header identifies Finale 2005; six `eE` entry records and tuple/detail records expose the high-entropy era's logical model. |
-| `template-Fin2000-from-Fin2000.etf` (`mus-3597fd4fce0c272b`) | Finale 2000 | 27,945 bytes | header, others, details, entries, text, lyrics | Explicit header identifies Finale 2000; no `eE` entries; compact options/defaults and text blocks. |
-| `template-Fin2000-from-Fin2005.etf` | Finale 2000 source, Finale 2005 saver | 34,029 bytes | header, others, details, entries, text, lyrics | Same source document but Finale 2005 header; adds `&f`, `PD`, `XA`, expressions, and other records. This is direct evidence that resaving can synthesize/upgrade records. |
-| `tremolos-from-Fin2000.etf` (`mus-3a8b724cf3adba80`) | Finale 2000 | 28,718 bytes | header, others, details, entries, text, lyrics | Exact source-version pair: 1,107 others, 64 details, eight entries, and raw text match the uncompressed binary pools; includes `CN`, `GF`, and `TP`. |
-| `guitar pc.etf` (`mus-7aa45639c14b3864`) | Finale 1.8.7 | 123,084 bytes | others, details, entries, text, lyrics | 1,094 `eE` entry lines and 891 detail lines; no modern binary-style header section. |
-| `Dream of Summer I-from-Fin2.6.3.etf` (`mus-2c0a5e8897b436d5`) | Finale 2.0.1 source, Finale 2.6.3 exporter | 74,040 bytes | others, details, entries, text, lyrics | 549 `eE` entry lines and 497 detail lines; old ETF uses the same broad logical sections despite the Coda-banner binary family. |
-| `Score-from-sit-archive.etf` (`mus-bd0042f8e0354192` source class) | Finale 2.6 | 1,272,164 bytes | others, details, entries, text, lyrics | 9,446 `eE` entry lines and 6,814 detail lines; the large sample is suitable for testing whether early records scale regularly. The StuffIt copy was necessary because the ZIP copy lacked the resource fork. |
+| `mus-d89e8fe12e271440` ETF | Finale 2005 | 16,893 bytes | header, others, details, entries, text, lyrics | Explicit ETF header identifies Finale 2005; six `eE` entry records and tuple/detail records expose the high-entropy era's logical model. |
+| `mus-3597fd4fce0c272b` ETF, Finale 2000 exporter | Finale 2000 | 27,945 bytes | header, others, details, entries, text, lyrics | Explicit header identifies Finale 2000; no `eE` entries; compact options/defaults and text blocks. |
+| `mus-3597fd4fce0c272b` ETF, Finale 2005 exporter | Finale 2000 source, Finale 2005 saver | 34,029 bytes | header, others, details, entries, text, lyrics | Same source document but Finale 2005 header; adds `&f`, `PD`, `XA`, expressions, and other records. This is direct evidence that resaving can synthesize/upgrade records. |
+| `mus-3a8b724cf3adba80` ETF | Finale 2000 | 28,718 bytes | header, others, details, entries, text, lyrics | Exact source-version pair: 1,107 others, 64 details, eight entries, and raw text match the uncompressed binary pools; includes `CN`, `GF`, and `TP`. |
+| `mus-7aa45639c14b3864` ETF | Finale 1.8.7 | 123,084 bytes | others, details, entries, text, lyrics | 1,094 `eE` entry lines and 891 detail lines; no modern binary-style header section. |
+| `mus-2c0a5e8897b436d5` ETF | Finale 2.0.1 source, Finale 2.6.3 exporter | 74,040 bytes | others, details, entries, text, lyrics | 549 `eE` entry lines and 497 detail lines; old ETF uses the same broad logical sections despite the Coda-banner binary family. |
+| `mus-bd0042f8e0354192` ETF | Finale 2.6 | 1,272,164 bytes | others, details, entries, text, lyrics | 9,446 `eE` entry lines and 6,814 detail lines; the large sample is suitable for testing whether early records scale regularly. The StuffIt copy was necessary because the ZIP copy lacked the resource fork. |
 | `F2002-baseline.etf` | Finale 2002a.r1 | 14,068 bytes | header, others, details, entries, text, lyrics | Three `eE` entries; exact pair with `F2002-baseline.mus`. |
 | `F2002-changed-C-to-D.etf` | Finale 2002a.r1 | 14,075 bytes | header, others, details, entries, text, lyrics | Same three entries, with localized pitch-related field changes; exact pair with `F2002-changed-C-to-D.mus`. |
 | `F2003-baseline.etf` | Finale 2003a.r1 | 16,033 bytes | header, others, details, entries, text, lyrics | Three `eE` entries; exact pair with `F2003-baseline.mus`. |
@@ -695,12 +695,12 @@ Targeted Finale 27 conversions of the three earliest ETF-backed sources are reta
 
 | Private semantic reference | Size | SHA-256 | Finale 27 pool counts (others/details/entries) |
 |---|---:|---|---:|
-| `guitar pc.fin27.musx` | 60,732 | `4742e6fc35dd6892a6548c45c75c19dd139a6eb1be302733d8725a73d49ccd06` | 2,018 / 787 / 1,320 |
-| `Dream of Summer I.fin27.musx` | 38,937 | `07d9f18fae4973f31fc69c8f0ecc551cfb8aa79b2131d2ff6dbdbeb818ab1328` | 1,347 / 478 / 659 |
-| `Score-from-sit-archive.fin27.musx` | 392,491 | `bea52ad03c93c6ba5c7d6dd41c7a2c3ca57675ad5510bd68795963172cc1f311` | 14,913 / 6,095 / 11,153 |
+| `mus-7aa45639c14b3864` | 60,732 | `4742e6fc35dd6892a6548c45c75c19dd139a6eb1be302733d8725a73d49ccd06` | 2,018 / 787 / 1,320 |
+| `mus-2c0a5e8897b436d5` | 38,937 | `07d9f18fae4973f31fc69c8f0ecc551cfb8aa79b2131d2ff6dbdbeb818ab1328` | 1,347 / 478 / 659 |
+| `mus-bd0042f8e0354192` | 392,491 | `bea52ad03c93c6ba5c7d6dd41c7a2c3ca57675ad5510bd68795963172cc1f311` | 14,913 / 6,095 / 11,153 |
 
 The counts differ from ETF and binary physical rows, so these remain normalized semantic references rather than
-serialization maps. Finale 27 reported font issues for `Score`, but generated a valid MUSX container.
+serialization maps. Finale 27 reported font issues for the Finale 2.6 source, but generated a valid MUSX container.
 
 ETF records are textual and use explicit section names plus two-character (or extended) structure identifiers, with
 `(cmper)` for “other” records and `(cmper,inci)`-like keys for details. `eE` is the prominent entry structure in the
@@ -780,7 +780,7 @@ The deterministic probe recognizes 189/190 direct Finale 3.x–2000 files throug
 other rows and 770,960 detail rows are exact multiples of 16 bytes, and all 394,984 entries are exact multiples of
 38 bytes. The only unrecognized file is one Finale 97 sample; it requires separate integrity/classification work.
 
-The exact Finale 2000 pair `mus-3a8b724cf3adba80` (`tremolos.mus`) is decisive. Its blocks are:
+The exact Finale 2000 pair `mus-3a8b724cf3adba80` is decisive. Its blocks are:
 
 | File offset | Type | Total bytes | Payload interpretation |
 |---:|---:|---:|---|
@@ -2123,6 +2123,70 @@ the flags word any document uses, the word is exactly 0 or 1 in all 3,458 later-
 companion sets `<noHorizontalStretch/>`. The reader asserts it as `LegacyBehavior` in every era rather than
 leaving it to the pinned baseline, which also says false but says it as one Finale 27 document's setting rather
 than as a fact about the formats.
+
+### Alternate notation options
+
+**Implemented in full.** The seven scalar fields occupy three numeric-global families once their
+corresponding settings exist. Earlier layouts may reserve the same words before they become
+operative. The zlib epoch reaches the same word slots through the usual `numericGlobalClass`
+relationship.
+
+| musxdom field | Selector | Incidence | Word | Width |
+|---|---:|---:|---:|---:|
+| `halfSlashLift` | `22` | 0 | 1 | 2 |
+| `wholeSlashLift` | `22` | 0 | 2 | 2 |
+| `dWholeSlashLift` | `22` | 0 | 3 | 2 |
+| `halfSlashStemLift` | `43` | 0 | 3 | 2 |
+| `quartSlashStemLift` | `43` | 0 | 4 | 2 |
+| `quartSlashLift` | `43` | 0 | 5 | 2 |
+| `twoMeasNumLift` | `46` | 0 | 5 | 2 |
+
+The public [`FCDistancePrefs` documentation](https://pdk.finalelua.com/class_f_c_distance_prefs.html),
+accessed 2026-08-27, identifies the first three as the half-, whole-, and double-whole-note
+alternate-notation baseline adjustments. It does not expose their stored locations. Authorized
+read-only Framework history supplied selector `22` as the initial **private-framework-derived**
+lead.
+
+The controlled `tests/evidence/F97/F97-altnot-offsets.mus` edit independently confirms all seven
+mappings. Its legacy dialog values and Finale 27 companion are `-25`, `-26`, `-27`, `7`, `-13`, `17`, and `11` in
+the musxdom field order above. Against the untouched Finale 97 baseline, its MUS and ETF change
+only selector `22` words 1--3, selector `43` words 3--5, and selector `46` word 5. Direct zlib
+inspection of `tests/evidence/F2008/F2008-BE-text-inserts.mus` and
+`tests/evidence/F2011/F2011-baseline.mus` confirms the latter families as classes `0x0039`
+and `0x003c` in both byte orders. The mappings are therefore **confirmed**.
+
+The controlled Finale 3.7 `tests/evidence/F372/F372-altnot-offsets.mus` edit confirms that
+selector `43` words 3--5 can carry user-controlled values before Finale 97. Its source stores
+`31`, `17`, and `27`, while its Finale 27 companion explicitly writes `7`, `-7`, and `3`.
+Selector `22` words 1--3 remain zero while the companion writes `-24` for all three. A one-space
+subtraction reproduces that fixture. A three-survey capture also contains 93 leaves in 32 distinct
+Coda-banner and Finale 3.0--3.5 documents where Finale's upgrader chooses different defaults;
+selector presence does not identify a different source layout for those values.
+
+The structural model which preserves the most source information is:
+
+| Structure before Finale 97 | Six slash fields | `twoMeasNumLift` | Origin |
+|---|---|---:|---|
+| no selector `43` | fixed `-24` | `0` | `LegacyBehavior` |
+| selector `43`, no selector `46` | first three fixed `-24`; selector `43` values minus two staff spaces | `0` | fixed fields `LegacyBehavior`; adjusted fields `LegacyMusAdjusted` |
+| selector `46` present | stored values minus one staff space | stored value | slash fields `LegacyMusAdjusted`; number field `LegacyMus` |
+| Finale 97 and later | stored values directly | stored value | `LegacyMus` |
+
+`LegacyMusAdjusted` identifies a source-backed value combined with source-era behavior to
+produce the modern semantic value. Its diagnostics retain the stored number and source offsets;
+ordinary representation decoding remains `LegacyMus`. A review of the limited available Finale 2
+settings UI found no exposed alternate-notation controls, consistent with the fixed early behavior,
+although preferences hidden from the UI remain possible. The coordinate- or font-origin explanation
+is **weak**: the arithmetic reproduces substantially more corpus evidence than leaving the fields at
+modern defaults, but no consulted declaration states why the origin moved.
+
+The 134-document tracked capture agrees on all 938 leaves, including the controlled Finale 3.7
+and Finale 97 edits. The broader three-survey capture contains 31,701 equal and 93
+`different_defaults` leaves across 4,542 successful source/companion occurrences, with no
+unexpected differences. The classification expresses the general behavior rather than the values
+in that snapshot: before Finale 3.7, any differing source-backed alternate-notation value to which
+the legacy origin adjustment applies is a source-era default difference. It does not enumerate
+the observed source/companion pairs or gate on unrelated selectors.
 
 ### Accidental options
 

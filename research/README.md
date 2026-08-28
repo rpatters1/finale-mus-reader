@@ -66,7 +66,7 @@ result matched its stored CRC-32. Of the files tested, 410 traverse cleanly as c
 additional files yield valid leading DCL members before their outer framing stops matching the current probe. Public
 Finale 2000 PDK facts plus independent corpus checks establish fixed 16-byte other/detail rows and 38-byte entry rows
 from Finale 3.0 through Finale 2006; the former “16-word” hypothesis was a byte/word unit error. The exact Finale 2000
-`tremolos.mus`/ETF pair additionally proves one-for-one pool counts, ordered ordinary tags, selected detail and entry
+`mus-3a8b724cf3adba80` MUS/ETF pair additionally proves one-for-one pool counts, ordered ordinary tags, selected detail and entry
 values, and byte-identical text after removing ETF section separators. Tag-specific fields, later entries, options,
 and sharing remain incomplete. Finale 1.8.7–2.6 is now known to share the 16-byte logical-record cadence, exact
 32-byte entry bodies, tag vocabulary, and raw text with Finale 3.0, but its index/directory spans and generic pool

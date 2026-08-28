@@ -34,8 +34,9 @@ std::optional<DifferenceClassification> classifyLyricDifference(const Difference
     if (context.path == "lyric_options.word_ext_connect_styles.oneEntryEnd.x" &&
         context.sourceValue.isInteger() && context.companionValue.isInteger() &&
         context.sourceValue.asInteger() == 42 && context.companionValue.asInteger() == 44 &&
-        (context.epoch == finale_mus_reader::FormatEpoch::CodaBanner ||
-         sourcePredatesVersion(context.sourceVersion, finale_mus_reader::versions::finale2004)) &&
+        sourcePredatesVersion(context.epoch, context.sourceVersion,
+                              finale_mus_reader::FormatEpoch::DclLegacy,
+                              finale_mus_reader::versions::finale2004) &&
         comparisonEqualSurrounding(context.source, context.companion,
                                    "lyric_options.word_ext_connect_styles.", context.path)) {
         return DifferenceClassification::PreConnectionEndpoint;

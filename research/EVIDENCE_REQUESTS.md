@@ -78,37 +78,37 @@ document would additionally settle the two open version questions recorded in
 
 ### P1 — Analyzed — essential
 
-- **Source:** `mus-d89e8fe12e271440` (`nestedTupletFin05RC2.mus`)
+- **Source:** `mus-d89e8fe12e271440`
 - **Operation:** Open with the earliest available Finale version that accepts the file, without resaving first; export as Enigma Transportable/Portable (`.etf`). Record the exact application version/build and whether opening/export succeeds.
-- **Preferred output:** `nestedTupletFin05RC2.etf`
+- **Preferred output:** An ETF export associated privately with this corpus ID.
 - **Why:** This is a 3,351-byte, explicitly Finale 2005 file at the ETF compatibility boundary. Its Finale 27 export contains recognizable nested tuplet/entry data. DCL and physical rows are now solved, and the public Finale 2000 PDK identifies `TP` as the nested-tuplet entry-detail tag. This pair is retained to map the version-expanded `TP` fields and their relationship to the 38-byte entry rows.
 
 ### P2 — Analyzed — essential
 
-- **Source:** `mus-3597fd4fce0c272b` (`template.mus`)
+- **Source:** `mus-3597fd4fce0c272b`
 - **Operation:** Attempt to open with the earliest available compatible Finale version and export ETF without deliberately changing the document. Record success and the exact application version/build.
-- **Preferred output:** `template-Fin2000.etf`
-- **Why:** The header says Finale 2000 and the document is small (19,557 bytes) and template-like. It tests defaults and upgrade synthesis with little musical noise. The later exact `tremolos` pair and corpus-wide probe have now answered the physical question: Finale 3.x–2000 uses uncompressed 16-byte other/detail and 38-byte entry rows.
+- **Preferred output:** An ETF export associated privately with this corpus ID.
+- **Why:** The header says Finale 2000 and the document is small (19,557 bytes) and template-like. It tests defaults and upgrade synthesis with little musical noise. The later exact `mus-3a8b724cf3adba80` pair and corpus-wide probe have now answered the physical question: Finale 3.x–2000 uses uncompressed 16-byte other/detail and 38-byte entry rows.
 
 ### P3 — Proposed — important
 
-- **Source:** `mus-a23053bf74c5e11a` (`Freire2.mus`)
+- **Source:** `mus-a23053bf74c5e11a`
 - **Operation:** First try the earliest available compatible Finale version. Export ETF without resaving if it opens; report the exact version/build and, if it fails, the earliest version attempted.
-- **Preferred output:** `Freire2-Fin3.etf`
+- **Preferred output:** An ETF export associated privately with this corpus ID.
 - **Why:** This is the smallest file whose explicit banner says Finale 3.0 (38,565 bytes). The corpus probe now proves it is a Windows-origin, little-endian instance of the four uncompressed pools. Its ETF would test whether field values and logical identities are exactly byte-swapped equivalents of the Mac Finale 2000 pair.
 
 ### P4 — Supplied/Analyzed — essential
 
-- **Source:** `mus-3a8b724cf3adba80` (`tremolos.mus`)
+- **Source:** `mus-3a8b724cf3adba80`
 - **Operation:** Open directly in Finale 2000 without resaving and export Enigma Transportable/Portable.
-- **Supplied output:** `tremolos-from-Fin2000.etf`, stored locally under ignored `private/evidence/`
+- **Supplied output:** A 28,718-byte ETF export, stored locally under ignored `private/evidence/` (SHA-256 `c02e859d6026de960a44ea07bd0d3154e07e7f85d690cc5eaf5a84b623d3149d`).
 - **Why/result:** The musically small file contains entries, note alterations, tuplets, beams, and stem details. Its exact pair proves four uncompressed pools, one-for-one 16-byte other/detail rows, eight 38-byte entries, literal tag ordering, and byte-identical raw text after ETF separator removal. It triggered corpus-wide confirmation across 189 Finale 3.x–2000 files.
 
 ### P5 — Proposed — useful
 
-- **Source:** `mus-c7e0faa94df7fc67` (`v1v2beamFin04.mus`)
+- **Source:** `mus-c7e0faa94df7fc67`
 - **Operation:** Open and export ETF in Finale 2004 or Finale 2005; record application version.
-- **Preferred output:** `v1v2beamFin04.etf`
+- **Preferred output:** An ETF export associated privately with this corpus ID.
 - **Why:** At 3,294 bytes, this is an unusually small Finale 2004 file with recognizable beam/detail structures. DCL/framing is already confirmed for Finale 2004; the export would provide strong decoded detail-record candidates and field-level semantic correlations.
 
 ## Controlled-difference requests
@@ -116,8 +116,8 @@ document would additionally settle the two open version questions recorded in
 ### A1 — Supplied/Analyzed — essential for earliest banner-era files
 
 The archive survey found explicit pre-banner files labeled `Finale(TM) 1.8.7`, `2.0.1`, and `2.6`. The first three
-selected samples were exported and analyzed locally: `guitar pc` (`mus-7aa45639c14b3864`, 1.8.7), `Dream of
-Summer I` (`mus-2c0a5e8897b436d5`, 2.0.1), and `Score` (`mus-bd0042f8e0354192`, 2.6). The `Score` source had to
+selected samples were exported and analyzed locally: `mus-7aa45639c14b3864` (1.8.7),
+`mus-2c0a5e8897b436d5` (2.0.1), and `mus-bd0042f8e0354192` (2.6). The Finale 2.6 source had to
 come from the parallel StuffIt archive because the ZIP copy did not preserve its classic Mac resource fork. These
 are the earliest explicit-version binary samples currently identified. Finale 27 counterparts have now been supplied
 for all three after copies were given `.mus` suffixes; the extensionless originals were not recognized directly.
@@ -128,7 +128,7 @@ The installed `unar`/`lsar` 1.10.7 tools were used to inspect all 275 `.sit` arc
 
 ### A3 — Proposed — useful cross-era binary controls
 
-Use archive candidates `mus-ee1382238443129b` (`1ALightningStrike asv.mus`, Finale 2007, validated big-endian framing) and `mus-43c11614815f485c` (`1Heart asv.mus`, Finale 2008, validated little-endian framing) as controlled comparison targets if their documents can be opened. Export ETF where supported or save equivalent copies from the indicated Finale versions. The purpose is to test whether the observed endian transition changes only serialization or also record identities and payload meanings.
+Use archive candidates `mus-ee1382238443129b` (Finale 2007, validated big-endian framing) and `mus-43c11614815f485c` (Finale 2008, validated little-endian framing) as controlled comparison targets if their documents can be opened. Export ETF where supported or save equivalent copies from the indicated Finale versions. The purpose is to test whether the observed endian transition changes only serialization or also record identities and payload meanings.
 
 ### W1 — Proposed — essential platform coverage
 

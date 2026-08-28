@@ -20,6 +20,9 @@ namespace options {
 /// @details Fields without an established legacy location retain the pinned baseline value.
 void importAccidentalOptions(const ImportContext& context);
 
+/// @brief Recovers options::AlternateNotationOptions across all four epochs.
+void importAlternateNotationOptions(const ImportContext& context);
+
 /// @brief Recovers options::ChordOptions, including source-owned default fret references.
 void importChordOptions(const ImportContext& context);
 

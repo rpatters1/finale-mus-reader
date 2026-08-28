@@ -62,10 +62,10 @@ A first reader could explicitly support only score-level records and report part
 
 ## Highest-value additional evidence
 
-1. Field-level parsing of the exact Finale 2000 `tremolos` pair, especially `CN`, `TP`, entry flags, and the compact `#v*`/`#c*`/`#s*` detail identifiers.
+1. Field-level parsing of the exact Finale 2000 `mus-3a8b724cf3adba80` pair, especially `CN`, `TP`, entry flags, and the compact `#v*`/`#c*`/`#s*` detail identifiers.
 2. Exact minimal Finale 2.6.3 MUS/ETF pair to isolate early indexes and boundaries without exporter normalization.
 3. Exact minimal Finale 1.0 MUS/ETF pair, if ETF exists there, plus a recorded Finale 27 open attempt.
-4. Decoded-binary/ETF correlation for `nestedTupletFin05RC2.mus`: version-expanded tuplets and entry details.
+4. Decoded-binary/ETF correlation for `mus-d89e8fe12e271440`: version-expanded tuplets and entry details.
 5. Controlled Finale 2012 link/unlink files: sharing keys and overrides.
 6. A matched Windows corpus: equivalent documents saved by Windows Finale 3.x–2012, with at least one 2007/2008 transition pair and one pre-banner/early-version sample.
 
@@ -84,7 +84,7 @@ The viable endpoint is the existing musxdom class structure; there should be no 
 7. **Resolver/integrity pass:** reuse `Document`, `ObjectPool`, part IDs, entry references, and existing integrity errors after all pools are populated.
 8. **Capability report:** list skipped record codes, part scopes, unsupported options, and conversion confidence per file.
 
-The first proof of concept could now target the Finale 2000 `tremolos` pair or the controlled Finale 2002 document and populate header, entries,
+The first proof of concept could now target the Finale 2000 `mus-3a8b724cf3adba80` pair or the controlled Finale 2002 document and populate header, entries,
 measure attributes (`MS`), staff attributes (`IS`), staff use (`Iu`), page (`PS`), staff system (`SS`), and frame hold
 (`GF`) into existing musxdom classes. This is now a lower-risk target than starting with the 2007/2008 transition.
 It should explicitly report unsupported fields, text, and sharing.
@@ -107,10 +107,10 @@ the distilled mapping and its limits are documented in `LEGACY_OPTION_MAPPINGS.m
 
 ## Recommended next steps
 
-1. Complete field-level comparison of the Finale 2000 `tremolos` pair, including 38-byte `eE` rows, `CN`, `TP`, and compact pseudo-detail identifiers.
+1. Complete field-level comparison of the Finale 2000 `mus-3a8b724cf3adba80` pair, including 38-byte `eE` rows, `CN`, `TP`, and compact pseudo-detail identifiers.
 2. Assemble and field-map `MS`, `IS`, `Iu`, `PS`, `SS`, and `GF` from Finale 2000 through 2005, explicitly accounting for row-count growth.
 3. Decode the index/directory spans around the already correlated Finale 1.8.7–2.6 ordinary, detail, entry, and text regions.
 4. Determine the framing of nonempty DCL `0x0012` and separate raw text, lyrics, and any font/control tables.
 5. Confirm the automatic-note-spacing explanation for the F2004/F2005 `BC` rewrites with a matched disabled-spacing pair.
 6. Run the sharing C3 experiment and map part/shared key fields.
-7. Build only a disposable proof of concept for the exact Finale 2000 `tremolos` pair or controlled Finale 2002 file, populating existing musxdom classes and reporting every unsupported field/tag.
+7. Build only a disposable proof of concept for the exact Finale 2000 `mus-3a8b724cf3adba80` pair or controlled Finale 2002 file, populating existing musxdom classes and reporting every unsupported field/tag.
