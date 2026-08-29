@@ -277,3 +277,22 @@ F100-flagoff-neg3.mus / .etf / .musx
     word 3 is the only decoded source change, and the ETF repeats -3. Finale 27 retains
     `upHAdj`, `upHAdj2`, and `upHAdj16` at 1696, proving that selector 10 word 3 alone does
     not account for the three fields changing to zero in F100-flag-options.
+
+F100-grace-pct.mus / .etf / .musx
+    sha256 5fe0ea8c7d56b6b583abfe950b32bf2fe149933c3f38403699dfe8ddb787d43d (.mus)
+    sha256 c8642e7b62ba7b2451c152b2ea415dac105fac6ec112de8333be5b39e285cfd8 (.etf)
+    sha256 9f8f6ddea5164584e4384ab9a1fdbdb4835bceec73a94fa182acaaceebd80048 (.musx)
+    Controlled from F100-baseline by changing only Grace Note Size from 50 to 49 percent.
+    Selector 23 word 0 is the only decoded source-record change, and the ETF repeats 49.
+    The Finale 27 companion changes only `gracePerc`, from 50 to 49; its
+    `graceSlashWidth` remains 224, so the pair supplies no new location for that field.
+
+F100-deflne-625.mus / .etf / .musx
+    sha256 d8cc072c7270ae4fb83bd513808719984048039b0bac6195129e2a7a6e8d2cfa (.mus)
+    sha256 c7c87bc1ada7bc6357726a6130026945f070b55f03239fd33462ce29dd25824a (.etf)
+    sha256 bbac0745c2aa03f0259949d6d4f9abe43ef348bb0cf507a106c981f028be1cc3 (.musx)
+    Controlled from F100-baseline by changing only Def Lin Width from 0.5 to 0.625
+    points. Selector 54 word 0 is the only decoded source-record change, from the
+    single-precision value 0.5 to 0.625, and the ETF repeats 0.625. The Finale 27
+    companion retains `graceSlashWidth` at 224, so this general line-width setting is
+    not treated as a source for the modern grace-specific width.
