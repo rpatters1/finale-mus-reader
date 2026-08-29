@@ -52,6 +52,9 @@ void importMultimeasureRestOptions(const ImportContext& context);
 /// @brief Recovers options::MusicSpacingOptions.
 void importMusicSpacingOptions(const ImportContext& context);
 
+/// @brief Recovers options::PianoBraceBracketOptions.
+void importPianoBraceBracketOptions(const ImportContext& context);
+
 /// @brief Recovers the legacy scalar fields of options::RepeatOptions.
 /// @details The document-level staff-list selection has no located legacy field and remains
 /// seeded from the reference document.

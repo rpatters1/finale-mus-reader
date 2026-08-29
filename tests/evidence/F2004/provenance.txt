@@ -27,3 +27,16 @@ F2004-lyropts-needuscore.mus
     Both Finale 2004 saves also rewrote the word extension connection table as the dialog
     closed, giving its elements vertical offsets of 5, which is the same normalization the
     Finale 2012 and 3.7.2 lyric saves show.
+
+F2004-brakpos-17.mus
+    sha256 4971d753953a0569e2790fd8ddc79380b6cd4d44c3893b5266fea2ea27048e02
+F2004-brakpos-17.etf
+    sha256 14ff41a4e871a0c9715592819db3bf0da7ecc080d313bccbdd09d7e7d261517c
+F2004-brakpos-17.musx
+    sha256 cf622e2347d596884723b8e26f9826bc71639302261f6caae40ee8cb37d29d16
+    From F2004-baseline, changes Default Distance from Group Name to Bracket to 17. Selector
+    14 word 3 moves -12 to -17, the ETF repeats that row exactly, and the Finale 27 companion
+    reads defBracketPos -17. Saving also normalizes three existing brace fixed-point values:
+    centerThickness 2.0000 to 1.9987 and width, innerTipH, and innerBodyH 12.0000 to 12.0009.
+    Those source changes and the companion agree exactly and are not attributed to the edited
+    bracket-position control.

@@ -72,3 +72,17 @@ F263-curve-opt-3.mus / .etf / .pdf
     upgrade distorts the curve. The corrected companion has SHA-256
     e8f361373c9962ddae60844da1b597ecaf19494c0c05194d85d654333ee26e95 and stores
     SmartShapeOptions thickness values (131, 171, -173, -179), reproducing the legacy appearance.
+
+F263-brace-psvs.mus
+    sha256 239e15ff8c53abaca8a99c4cb70d7e01e42ae2907f436f3993b2db6ff6341bc7
+F263-brace-psvs.etf
+    sha256 ce3f3d69aa2cbdd8e466d89def04015c3a6110d9c0f1ba67267c2c9de3e5e0d1
+F263-brace-psvs.musx
+    sha256 3bda737c566b9ceffbac4d9bd180aca62c31100d279f33a276163af4114a9f35
+    Controlled from F263-baseline by changing Beam Depth to 11.5, Def Line Width to 1.3,
+    Piano Brace 1 to 12.7, and Piano Brace 2 to 13.1. Their stored IEEE-754 floats are
+    respectively 2.875 at selector 52 word 4, 0.325 at selector 54 word 0, and 3.175 and
+    3.275 at selector 55 words 2 and 4. Finale 27 changes only innerTipH and innerBodyH in
+    PianoBraceBracketOptions, to 12.6996 and 13.1 respectively. This establishes the two
+    selector-55 fields and their factor-four modern scale; the other two controls belong to
+    separate option classes.
