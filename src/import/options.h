@@ -47,6 +47,11 @@ void importFlagOptions(const ImportContext& context);
 /// @brief Recovers options::FontOptions and completes the modern type set.
 void importFontOptions(const ImportContext& context);
 
+/// @brief Recovers options::GraceNoteOptions.
+/// @details The Coda-banner layout has only one located field; the others retain their
+/// pinned baseline values and are identified as pinned defaults.
+void importGraceNoteOptions(const ImportContext& context);
+
 /// @brief Recovers options::LyricOptions: its two collections and its scalars.
 /// @details Its capture pass and its tables are file-local: no test drives either alone,
 /// because both collections and the era assertions around them are exercised through this

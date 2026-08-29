@@ -1975,6 +1975,85 @@ horizontal differences in that capture resulted from the now-refuted bitfield
 interpretation of selector `10` word 3. Those fields now retain `Finale27Default`; the
 all-corpus capture predates that correction and has not been rerun.
 
+### Grace note options
+
+**Implemented.** musxdom's `GraceNoteOptions` has six scalar fields. The public
+PDK documents their semantics across
+[`FCSizePrefs`](https://pdk.finalelua.com/class_f_c_size_prefs.html),
+[`FCDistancePrefs`](https://pdk.finalelua.com/class_f_c_distance_prefs.html), and
+[`FCMiscDocPrefs`](https://pdk.finalelua.com/class_f_c_misc_doc_prefs.html) (accessed
+2026-08-29): the two size percentages, slash thickness, entry spacing, playback duration,
+and always-slash switch. Those declarations are **public-PDK-derived** and expose no legacy
+record locations. Authorized read-only Framework history supplied the initial locations
+below; they remain **private-framework-derived** except where the binary and companion
+evidence independently supports them.
+
+| musxdom field | Preference property | Selector | Incidence | Word | Width |
+|---|---|---:|---:|---:|---:|
+| `tabGracePerc` | `graceTablatureNoteSize` | `14` | 0 | 2 | 2 |
+| `gracePerc` | `graceNoteSize` | `23` | 0 | 0 | 2 |
+| `playbackDuration` | `gracePlaybackDur` | `27` | 0 | 4 | 2 |
+| `entryOffset` (`graceBackup` in XML) | `graceNoteSpacing` | `27` | 0 | 5 | 2 |
+| `slashFlaggedGraceNotes` | `graceAlwaysSlash` | `44` | 0 | 4 | 2 |
+| `graceSlashWidth` | `graceSlashThickness` | `64` | 0 | 1 | 2 |
+
+The fixed-row mapping is **strong** for the uncompressed and DCL epochs. The tracked Finale
+97 baseline carries `85, 70, 128, 30, true, 128` at exactly these locations, and its
+independently parsed Finale 27 companion carries the same six semantic values. The Finale
+2003 DCL baseline likewise agrees at `85, 50, 128, 24, true, 224`. The zlib-era layout is
+also **strong**: the Finale 2012 baseline stores the same six values as Finale 2003 at the
+corresponding `numericGlobalClass(selector)` records and byte offsets, in a little-endian
+container, and its companion agrees. Synthetic tests exercise the class layout in both byte
+orders. Controlled non-default edits would be needed to raise the six individual mappings
+to confirmed.
+
+The Coda-banner layout is different and only `gracePerc` is presently located. In the
+Finale 1.0.0 baseline selector `23` word 0 is 50 and its companion's `gracePerc` is 50;
+selector `14` word 2 is zero rather than the companion's `tabGracePerc` of 85, selector `27`
+words 4 and 5 are 12 and 0 rather than 128 and 24, and selectors `44` and `64` are absent.
+Finale 2.6.3 repeats the incompatible selector shapes. Reading the later table in this era
+would therefore produce plausible but wrong values. The importer recovers only
+`gracePerc`. The other five fields retain their pinned baseline values and are reported as
+`Finale27Default`; they are intentionally not sought in Coda records. The source or upgrade
+rule for `graceSlashWidth` remains **open**, but it is outside the implemented Coda recovery
+scope.
+
+The Coda `gracePerc` location is **confirmed** by the controlled
+`F100-grace-pct` discriminator. Changing only Grace Note Size from 50 to 49 changes only
+selector `23` word 0 in the decoded MUS records; its ETF repeats 49, and the Finale 27
+companion changes only `gracePerc` from 50 to 49. The companion's `graceSlashWidth`
+remains 224. No adjacent selector-23 word moves, so this edit supplies no candidate for the
+unsourced line width; in particular, word 2 remains 512, the same value a Finale 2.6.3
+baseline carries beside a companion width of 64.
+
+Two observations do not justify a Coda width mapping. Among Finale 2.6.3 documents, selector
+`64` word 1 correlates with companion widths: 2500 accompanies 64, while 3249 accompanies 83.
+Those pairs are numerically compatible with converting ten-thousandths of a point to Efix,
+but they are not controlled width edits. Conversely, `F100-deflne-625` changes only the
+general Def Lin Width, moving selector `54` word 0 from the single-precision value 0.5 to
+0.625; its ETF repeats 0.625 while its companion leaves `graceSlashWidth` at 224. This
+excludes that general width as a direct grace-width source but does not establish why the
+companion uses 224. Neither observation is imported as a Coda `graceSlashWidth` rule.
+
+The 160-document `tracked-evidence` comparison therefore permits a default disagreement only
+for `graceSlashWidth` in the Coda epoch and only when the reader reports
+`Finale27Default`. The scope is intentionally exact: another GraceNoteOptions field, another
+epoch, or a source-owned width disagreement remains unexpected. The refreshed capture imports
+all 160 sources and companions successfully and compares 960 GraceNoteOptions leaves: 912 are
+equal, 48 Coda widths are `different_defaults`, and none is unexpected. Every observed
+uncompressed, DCL, and zlib GraceNoteOptions leaf agrees with its companion.
+
+The full three-survey capture selects 16,257 occurrences representing 7,223 distinct source
+ids. Of those, 16,168 occurrences representing 7,150 distinct ids import successfully; all
+4,568 companion-backed occurrences, representing 2,983 distinct ids, compare successfully.
+GraceNoteOptions has 27,260 equal leaves and 148 `different_defaults`, with no unexpected
+differences. Every expected leaf is a Coda `graceSlashWidth`: 55 occur under product 1.0.0,
+69 under 2.6, and 24 under the versionless Windows label PC 1.0+. The population is also
+distributed across all three surveys: 53 occurrences in `rpatters1-main`, 47 in
+`rpatters1-installs`, and 48 in `tracked-evidence`; all 148 have distinct content ids.
+The 89 failed source occurrences never reach companion comparison and are accounted for
+separately from these class totals.
+
 ### Beam options
 
 **Partially implemented.** All fourteen fields have mappings across the four readable epochs,

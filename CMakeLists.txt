@@ -177,6 +177,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/clef_options.cpp
     src/import/options/flag_options.cpp
     src/import/options/font_options.cpp
+    src/import/options/grace_note_options.cpp
     src/import/options/lyric_options.cpp
     src/import/options/multimeasure_rest_options.cpp
     src/import/options/music_spacing_options.cpp
