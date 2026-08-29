@@ -36,6 +36,7 @@ enum class Phase : std::size_t
     ImportBeamOptions,
     ImportChordOptions,
     ImportClefOptions,
+    ImportFlagOptions,
     ImportLyricOptions,
     ImportMultimeasureRestOptions,
     ImportMusicSpacingOptions,

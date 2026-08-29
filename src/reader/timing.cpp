@@ -33,6 +33,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportBeamOptions: return "beam_options";
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportClefOptions: return "clef_options";
+    case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";

@@ -254,3 +254,26 @@ F100-brackets.musx
     The later F263-brace-psvs discriminator identifies Piano Brace 1 and 2 as modern innerTipH
     and innerBodyH at four times the stored float. Finale 27 therefore loses the two deliberately
     changed values in this Finale 1 conversion rather than disproving their source semantics.
+
+F100-flag-options.mus / .etf / .musx
+    sha256 20893da92e5fc5a70acd1133e37ecef6839ae7041e2c61f961830b2c2ecb5952 (.mus)
+    sha256 0d2d7aba4b72100cbd0b95a4a9e42628b984d9e0973ba3d59cd734df97139a64 (.etf)
+    sha256 935bcd0f12cc488afa10ddd1d1dee2ba5b691e47165602fb94452bc443d53cf3 (.musx)
+    Controlled from F100-baseline through the release's Flag Options dialog. Only selector
+    10 word 3 and selector 36 word 5 move, from 7 to 11 and from 0 to 1. The first change
+    is the Flag Offset edit, while the second control remains unidentified. The Finale 27
+    companion changes all three modern upward horizontal adjustments from 1696 to zero, but
+    this pair does not identify which source change caused that conversion. The reader leaves
+    those fields at its pinned defaults. The creation notes initially called the second change a
+    straight-flags switch, but Finale 1.0.0 has no such control; selector 36 word 5 is
+    therefore not FlagOptions evidence and its meaning remains open. The era ETF
+    independently repeats both changed words.
+
+F100-flagoff-neg3.mus / .etf / .musx
+    sha256 3046b7ff8a35ab03d51ff90667f9d867cf4af82abdd8eede149a53e701bf1668 (.mus)
+    sha256 fa2a739bda2bd1eaf4ed5fd33135c0ca39e4b7b85b0704b82b4020c7e44181fe (.etf)
+    sha256 97cf8a82a62987baf35fd53cec1b0f78caa22cdd0258b401b203348e7300a51e (.musx)
+    Controlled from F100-baseline by changing only Flag Offset from 7 to -3. Selector 10
+    word 3 is the only decoded source change, and the ETF repeats -3. Finale 27 retains
+    `upHAdj`, `upHAdj2`, and `upHAdj16` at 1696, proving that selector 10 word 3 alone does
+    not account for the three fields changing to zero in F100-flag-options.

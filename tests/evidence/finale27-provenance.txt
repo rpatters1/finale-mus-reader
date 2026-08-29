@@ -226,6 +226,9 @@ F372/-finale27/F372-page-graphic.musx
 F372/-finale27/F372-revstem-halfstem.musx
     sha256 725da70a4e31b7080635857cad2ee5a0b98e78404dc9565de84c0e2264c99492
 
+F372/-finale27/F372-flagopts.musx
+    sha256 286d63bd2cd105040a64c00206be388ee181489421bfac375721585145e66d91
+
 F97/-finale27/F97-expword-off.musx
     sha256 45b68dd9420a75e64819fc9894daa5199e19585e7c5542f3c9107fbf3cb02110
 

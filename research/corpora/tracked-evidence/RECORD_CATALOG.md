@@ -197,6 +197,6 @@ This reference table records two-character tags identified from the publicly acc
 | `0x03f7` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 100 | `mus-eb742704c65232a2` (1:0xc2) |
 | `0x03f8` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 100 | `mus-eb742704c65232a2` (1:0x136) |
 | `0x0402` | unknown | unknown/options | open | 2012 | 20 | `mus-f95d2ea21b99022e` (1:0x1aa) |
-| `0x0414` | gfhold | details | moderate | 2011, 2012 | 20 | `mus-eb742704c65232a2` (1:0x1aa) |
+| `0x0414` | gfhold | details | strong | 2011, 2012 | 20 | `mus-eb742704c65232a2` (1:0x1aa) |
 | `0x041d` | unknown | unknown/options | open | 2012 | 40 | `mus-80f8c631de435726` (1:0x336) |
 | `0x0455` | activeLyric | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x1ce) |
