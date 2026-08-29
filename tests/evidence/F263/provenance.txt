@@ -30,6 +30,24 @@ F263-clef-baseline.etf
 
 Finale 27 companions are in `-finale27/`.
 
+F263-beams-inclrests.mus / .etf
+    sha256 67ef02f972814e8dd31a23f93fbd6e2db5d0abd5a8428e99a09caffc1b4a81d8 (.mus)
+    sha256 7971c039f77fe61427ab4d7a7bd858aa0a747605e6b61d53f6adadaa4f8c3c36 (.etf)
+    From F263-baseline, enables “Include Rests in Beam Groups.” Selector 16 word 4 moves
+    from 0 to 1 while selector 41 remains zero. The Finale 27 companion carries both
+    `<incEdgeRestsInBeamGroups/>` and `<extendSecBeamsOverRests/>`.
+
+F263-flatbams.mus / .etf
+    sha256 656fa553693abb49b2f2db5aac805361c1e65b60a6cd9b256f40ad047acde3 (.mus)
+    sha256 da1c8f5b2d55ec9d86a10f23a137cbe56d6051432cdbe2d4bd0a55a2604c6632 (.etf)
+    From F263-baseline, enables “Flat Beams.” Selector 41 word 0 moves from 0 to 1 while
+    selector 16 remains at its baseline. The Finale 27 companion carries
+    `<beamingStyle>alwaysFlat</beamingStyle>`.
+
+These are the two beam controls exposed by Finale 2.6.3. Neither save stores a common-time
+four-eighths switch. Finale 27 nevertheless enables both common-time canned options in both
+companions; those values are upgrade synthesis rather than source options.
+
 F263-courtesy-key-off.mus / .etf
     Only the courtesy key signature turned off. The change is selector 12 word 1,
     1 -> 0, not the packed courtesy word selector 44 uses from Finale 3.0 onward:

@@ -33,6 +33,26 @@ F372-revstem-halfstem.etf
     The matching Finale 3.7.2 ETF export, whose `^03(65534)` and `^41(65534)`
     rows confirm both edited words independently of the MUS decoding.
 
+F372-flatbeams.mus / .etf
+    sha256 MUS 6b032ee1be20a143e380b806d512ce55e72520d7ee9ee1c6284976bed85c27f9
+    sha256 ETF 9858261d639778150a58a3b753644e77c99c0b9d4673f3795790667ef5148345
+    Created from F372-baseline by selecting Flatten Beams. Selector 41 word 0 moves
+    from 0 to 1, and the companion writes `<beamingStyle>alwaysFlat</beamingStyle>`.
+
+F372-beams-inclrests.mus / .etf
+    sha256 MUS 09e92b7faf21297bec1c183035f99c5a102d48e6d754d0dfa8290e5bf3352455
+    sha256 ETF 820844ced3c43c0becbf59ecf77bc3c4cc85374d48854afccd21f8036970210f
+    Created from F372-baseline by enabling Include Rests in Beam Groups. Selector 16
+    word 4 moves from 0 to 1 while selector 41 remains unchanged. The companion adds
+    both `<incEdgeRestsInBeamGroups/>` and `<extendSecBeamsOverRests/>`, establishing
+    that the one legacy switch supplies both modern extend-over-rests options.
+
+F372-beams-resthalfstems.mus / .etf
+    sha256 MUS 8f4e3bbf5ccdd85a767ab2968e7af702928a680bac71005689f181bbc5099538
+    sha256 ETF 3ca0f3bd1126003013d5a44798fd441f961870de28186ceb1864fdd4905942f0
+    Created from F372-baseline by enabling Display Half Stems for Beamed Rests.
+    Selector 22 word 0 moves from 0 to 1, and the companion adds `<doStemStubs/>`.
+
 F372-measure-graphic.mus / .etf
     sha256 MUS 2dd081285a025b81aa3d9a5e96716d01cab8efe603be68f12f1fdcd0361bd2ea
     sha256 ETF 0723b5e2c37b11d7b2c3c4f60218e198435cc74cde3c60c5390c616813058590

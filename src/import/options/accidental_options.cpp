@@ -18,16 +18,26 @@ constexpr std::uint16_t accidentalCrossLayerSelector = 22;
 constexpr std::uint16_t accidentalSpacingSelector = 59;
 constexpr std::uint16_t accidentalStartMeasureSelector = 41;
 
-// The located fields occupy the same numeric-global word slots in every epoch. Fixed-row
-// encodings address them by selector and the zlib encoding coalesces each selector into the
-// class id derived by numericGlobalClass.
+bool sourceStoresCrossLayerPositioning(const SourceProfile& profile)
+{
+    // Finale 2004 introduces this option at selector 22 word 0. Earlier versions use that word
+    // for a beam option, so the version boundary is required within the DCL epoch.
+    return sourceAtOrAfter(profile, FormatEpoch::DclLegacy, versions::finale2004);
+}
+
+// Fixed-row encodings address these fields by selector and the zlib encoding coalesces each
+// selector into the class id derived by numericGlobalClass.
 const FieldMapping fixedRowAccidentalFields[] = {
     MUS_WORD(AccidentalOptionsTarget, "21", GLOBALS_CMPER, 0, 3, minOverlap),
     MUS_WORD(AccidentalOptionsTarget, "21", GLOBALS_CMPER, 0, 5, multiCharSpace),
-    MUS_WORD(AccidentalOptionsTarget, "22", GLOBALS_CMPER, 0, 0, crossLayerPositioning),
     MUS_WORD(AccidentalOptionsTarget, "59", GLOBALS_CMPER, 0, 3, acciNoteSpace),
     MUS_WORD(AccidentalOptionsTarget, "59", GLOBALS_CMPER, 0, 4, acciAcciSpace),
     MUS_WORD(AccidentalOptionsTarget, "41", GLOBALS_CMPER, 2, 2, startMeasureSepar),
+};
+
+const FieldMapping fixedRowCrossLayerFields[] = {
+    MUS_WORD_IF_SOURCE(AccidentalOptionsTarget, "22", GLOBALS_CMPER, 0, 0,
+        sourceStoresCrossLayerPositioning, crossLayerPositioning),
 };
 
 const FieldMapping classRecordAccidentalFields[] = {
@@ -68,6 +78,31 @@ const MappingTable& classRecordAccidentalTable()
     return table;
 }
 
+const MappingTable& fixedRowCrossLayerTable()
+{
+    static const MappingTable table{.reportPrefix = "options.accidentalOptions",
+        .epochs = EpochMask::Dcl,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<AccidentalOptionsTarget>,
+        .fields = fixedRowCrossLayerFields,
+        .fieldCount = std::size(fixedRowCrossLayerFields)};
+    return table;
+}
+
+void applyPreFinale2004CrossLayerBehavior(const ImportContext& context)
+{
+    if (!sourcePredatesVersion(context.profile,
+            FormatEpoch::DclLegacy, versions::finale2004)) return;
+
+    const auto pooled = context.document->getOptions()->get<AccidentalOptionsTarget>();
+    if (!pooled) return;
+    const auto target = std::const_pointer_cast<AccidentalOptionsTarget>(pooled);
+    target->crossLayerPositioning = false;
+    FINALE_MUS_READER_REPORT_FIELD(context.report,
+        instanceKey<AccidentalOptionsTarget>(), "crossLayerPositioning",
+        {ValueOrigin::LegacyBehavior, 0, 0, 0});
+}
+
 void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
 {
     // Believed: before 3.7 these settings are not parameterized; when both slots remain zero,
@@ -102,8 +137,10 @@ void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
 
 void importAccidentalOptions(const ImportContext& context)
 {
-    applyMappingTables({&fixedRowAccidentalTable(), &classRecordAccidentalTable()},
+    applyMappingTables({&fixedRowAccidentalTable(), &fixedRowCrossLayerTable(),
+                           &classRecordAccidentalTable()},
         context.index, context.profile, context.document, context.report);
+    applyPreFinale2004CrossLayerBehavior(context);
     applyEarlyAccidentalSpacingBehavior(context);
 }
 

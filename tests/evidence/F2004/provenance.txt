@@ -1,6 +1,14 @@
 Version 2004c.r1
 Mac OS X 10.4.11 running in QEMU PowerPC emulator
 
+F2004-no-xlayer-accis.mus
+    sha256 67e35945efcb8e4bb0b3f1852af816712f1c3dd170e829485632e1cef5bf4262
+F2004-no-xlayer-accis.etf
+    sha256 48b5cabf61b3995b8c468cb17a225047d4de906024c406a8fc989127afe93398
+    From F2004-baseline, "Use Cross-Layer Accidental Positioning" switched off. Selector 22
+    word 0 moves from 1 to 0 while words 1 through 5 remain unchanged; the ETF prints the same
+    preference row. The Finale 27 companion likewise leaves the corresponding option off.
+
 F2004-lyropts-nosmart-wext.mus
     sha256 8dd9c16c98f4baac780cff135192143af1088db2083612919bf837e32dd04804
     From F2004-baseline, "Use Smart Word Extensions" switched off. Selector 34 word 5 moves 1

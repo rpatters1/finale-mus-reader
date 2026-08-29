@@ -154,6 +154,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAlternateNotationOptions, &options::importAlternateNotationOptions),
         FINALE_MUS_READER_IMPORTER(ImportAugmentationDotOptions, &options::importAugmentationDotOptions),
         FINALE_MUS_READER_IMPORTER(ImportBarlineOptions, &options::importBarlineOptions),
+        FINALE_MUS_READER_IMPORTER(ImportBeamOptions, &options::importBeamOptions),
         FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
@@ -486,6 +487,46 @@ GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
     result.blockOffset = row->blockOffset;
     result.decodedOffset = row->decodedOffset;
     return result;
+}
+
+bool storesLoneStemFlagLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    if (profile.epoch != FormatEpoch::CodaBanner
+        && profile.epoch != FormatEpoch::UncompressedLegacy) {
+        return false;
+    }
+    constexpr std::uint16_t beamFlagsSelector = 41;
+    constexpr std::size_t beamFlagsSlot = 1;
+    const auto words = readNumericGlobalWords(index, beamFlagsSelector);
+    if (!words.present || words.words.size() <= beamFlagsSlot) return true;
+    constexpr std::uint16_t loneStemFlag = 0x0001;
+    return (static_cast<std::uint16_t>(words.words[beamFlagsSlot])
+        & ~loneStemFlag) == 0;
+}
+
+bool storesPackedBeamFlagLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return !storesLoneStemFlagLayout(index, profile);
+}
+
+bool storesPreFinale35StemAndBeamUnits(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    if (profile.epoch == FormatEpoch::ZlibLegacy) return false;
+    constexpr std::uint16_t stemConnectionSelector = 40;
+    constexpr std::size_t earlyConnectionCount = 32;
+    constexpr std::size_t connectionWords = 6;
+    const auto family = readNumericGlobalWords(index, stemConnectionSelector);
+    return family.present
+        && family.words.size() <= earlyConnectionCount * connectionWords;
+}
+
+bool storesFinale35StemAndBeamUnits(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return !storesPreFinale35StemAndBeamUnits(index, profile);
 }
 
 std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index)
