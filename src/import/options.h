@@ -40,6 +40,10 @@ void importChordOptions(const ImportContext& context);
 /// @brief Recovers options::ClefOptions: its definition collection and its scalars.
 void importClefOptions(const ImportContext& context);
 
+/// @brief Recovers the located scalar fields of options::FlagOptions.
+/// @details Fields without an established legacy location retain the pinned baseline value.
+void importFlagOptions(const ImportContext& context);
+
 /// @brief Recovers options::FontOptions and completes the modern type set.
 void importFontOptions(const ImportContext& context);
 

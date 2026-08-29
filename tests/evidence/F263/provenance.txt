@@ -104,3 +104,30 @@ F263-brace-psvs.musx
     PianoBraceBracketOptions, to 12.6996 and 13.1 respectively. This establishes the two
     selector-55 fields and their factor-four modern scale; the other two controls belong to
     separate option classes.
+
+F263-flagup-origy.mus / .etf / .musx
+    sha256 3e2009be43a7a6fe0c4192fd3b25be071193012768219372a2ffbb7be2558d24 (.mus)
+    sha256 c9fc3e5807f10e3a6dfedf062fe0c5932398847b28feb72906de47a03514b805 (.etf)
+    sha256 9cf20742293fd6bfe6196ca5fcb0d499a7c55d4250656d8d0f2b688279764c0a (.musx)
+    Controlled from F263-baseline by changing only Flag Up Origin Y. Selector 10 word 4
+    moves from 0 to 1. Finale 27 expands that choice by changing upVAdj and upVAdj16 from
+    5376 to 1536 while leaving the downward coordinates unchanged. The ETF repeats the
+    edited source word.
+
+F263-flagdn-origy.mus / .etf / .musx
+    sha256 92dbdeb23edcb9903c5d00a406e455a796e692f4fb0f8b02cfccc1219c6930aa (.mus)
+    sha256 6c937300e06fd152aab3e3f2a91928ba5d5f343c80524b2fdabfe7e563cb1a0d (.etf)
+    sha256 e7e44e918f36bf1910d40be621e87b564632257abb0912d8bbacda5f89d60851 (.musx)
+    Controlled from F263-baseline by changing only Flag Down Origin Y. Selector 10 word 5
+    moves from 0 to 1. Finale 27 expands that choice by changing downVAdj from -5376 to
+    -1536 and downVAdj16 from -5655 to -1536 while leaving the upward coordinates
+    unchanged. The ETF repeats the edited source word.
+
+F263-flagoff-neg3.mus / .etf / .musx
+    sha256 252c7ceb8af7384ed51e8c54bf37b5834158089886278eac198fef29de260776 (.mus)
+    sha256 9af1ec6aba8e0d72c2fe8992981b4d1e8d4a13ed23ffb9c844cdb0898feddddd (.etf)
+    sha256 b9561dd0fc9439e853466bdc79d0a65fb802ca2935b656e55a22b70d5c6f0a5f (.musx)
+    Controlled from F263-baseline by changing only Flag Offset from 7 to -3. Selector 10
+    word 3 is the only decoded source change, and the ETF repeats -3. Finale 27 retains
+    `upHAdj`, `upHAdj2`, and `upHAdj16` at 1696, independently confirming the Finale 1.0.0
+    result in F100-flagoff-neg3.

@@ -13,3 +13,16 @@ F2003-bendcnct-change-x.mus and F2003-bendcnct-change-x.etf
     Derived from F2003-empty. Distinct horizontal-offset edits change the same five selector 98
     tuple types. The Finale 27 companion resets every edited value. Together with the vertical
     fixture, this establishes lossy upgrade behavior for Finale 2003 bend-connection offsets.
+
+F2003-flagopts.mus
+    sha256 44ce5526eadd2824fae09d991ee3d0a0b08a27ccfeabaffbe3c546b73116553c
+F2003-flagopts.etf
+    sha256 c48be7f22080a30880719bc95cc3ba3e15566769d31f4486176e627aa3b65f0a
+-finale27/F2003-flagopts.musx
+    sha256 7d0b8232e251985f54a84befd5d313d8eefa7aac5b0fc7d61f8ebc9ca4ee5dbe
+    Derived from F2003-empty by enabling straight flags and assigning a distinct value to
+    every distance control in the Flag Options dialog. Selector 5 word 2 changes from zero
+    to one; selectors 73 and 74 contain the six curved horizontal and vertical pairs;
+    selector 75 words 2--5 contain the straight horizontal and vertical pairs; and selector
+    76 words 0--1 contain flag spacing and secondary-group adjustment. The ETF repeats all
+    nineteen values and the Finale 27 companion agrees on every edited semantic field.

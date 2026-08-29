@@ -184,3 +184,19 @@ F372-altnot-offsets.etf
     confirms those stored values independently. Finale 27 writes the semantic
     results -24, -24, -24, 7, -7, 3, and 25 in musxdom field order. Save noise
     outside these option families is not used as evidence for the mapping.
+
+F372-flagopts.mus
+    sha256 f2d5e88b48f7dec06f7af0d29958260a2ba0dbb7cd79a42feb29ae56d6d70bfa
+F372-flagopts.etf
+    sha256 80de755a5b94cd7d386ae2b1bf1731119aef14f8d7116cf09a989be8ca2ff1f9
+-finale27/F372-flagopts.musx
+    sha256 286d63bd2cd105040a64c00206be388ee181489421bfac375721585145e66d91
+    Created from F372-baseline by enabling straight flags and assigning a distinct
+    value to every numeric control exposed by Finale 3.7's Flag Options dialog.
+    Selector 5 word 2 changes from 0 to 1; selectors 73 and 74 contain the six
+    curved horizontal and vertical pairs; selector 75 words 2--5 contain the two
+    straight horizontal and vertical pairs; and selector 76 words 0--1 contain
+    flag spacing and secondary-group adjustment. The ETF repeats those words and
+    the Finale 27 companion agrees on all nineteen edited semantic values. Selector
+    65 word 1 also changes, but `eighthFlagHoist` is 1856 in both the baseline and
+    edited companions, so that word is not evidence for a FlagOptions mapping.

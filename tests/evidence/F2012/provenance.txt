@@ -24,6 +24,17 @@ F2012-upstem-flags.mus
     rather than fixed 16-byte rows. It carries sixteen font definitions and is
     the regression test for that separate decoding pathway.
 
+F2012-flagopts.mus
+    sha256 11dcc68037d9e842165d61c60a3736d67c46a29cb14b5a0cad21df029dba7cf7
+-finale27/F2012-flagopts.musx
+    sha256 68bd084896215b540af4af642051fcfba20638bdc2a1a43682400fdb0b10ae5a
+    A controlled edit that enables straight flags and gives all eighteen exposed
+    distances distinct non-default values. Numeric-global classes 0x0057 through
+    0x005a carry the same logical slots as fixed-row selectors 73 through 76, while
+    class 0x000f word 2 carries the switch. The independently parsed Finale 27
+    companion agrees on all nineteen edited values. Finale 2012 cannot export ETF,
+    so the source record and modern semantic companion are the two witnesses.
+
 GifSample.gif — Public domain, released by author Cuddlyable3. https://commons.wikimedia.org/wiki/File:GifSample.gif
 
 Example-retouch-1.jpg — Public domain; derived from a public-domain Library of Congress photograph. https://commons.wikimedia.org/wiki/File:Example-retouch-1.jpg
