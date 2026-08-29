@@ -36,6 +36,7 @@ add_executable(finale_mus_reader_tests
     classes/common/mapping_framework_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
     classes/options/multimeasure_rest_options_tests.cpp
+    classes/options/piano_brace_bracket_options_tests.cpp
     classes/options/repeat_options_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp

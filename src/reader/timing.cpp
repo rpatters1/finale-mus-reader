@@ -35,6 +35,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";
+    case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatOptions: return "repeat_options";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";
     case Phase::ImportStemOptions: return "stem_options";

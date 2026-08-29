@@ -239,3 +239,18 @@ F100-dont-barline.musx
     Selector 36 word 4 changes from one to zero while the left-barline word 3 remains one.
     The ETF repeats that tuple, and Finale 27 disables drawBarlines while leaving both modern
     left-barline fields enabled, establishing the two Coda controls as independent.
+
+F100-brackets.mus
+    sha256 2fe6d119a5b81d0f0b64c412ee3e352c25aacb3929cec28df025d81ca8113624
+F100-brackets.etf
+    sha256 91ef1b55e516a47cb7d92e3966e0f6976f8a519f53942e37380ccb632083635a
+F100-brackets.musx
+    sha256 701ba147f7fec55bfcf6e4d46f8169e5d7157cb1b970d869565f99098be4b5b3
+    Controlled from F100-baseline by changing Beam Depth to 1.61803, Piano Brace 1 to
+    3.14159, and Piano Brace 2 to 2.71828. Only three 32-bit IEEE-754 values move: selector 52
+    word 4 stores Beam Depth, while selector 55 words 2 and 4 store Piano Brace 1 and Piano
+    Brace 2. The ETF repeats those words exactly.
+    Finale 27 leaves every PianoBraceBracketOptions field at the baseline conversion's value.
+    The later F263-brace-psvs discriminator identifies Piano Brace 1 and 2 as modern innerTipH
+    and innerBodyH at four times the stored float. Finale 27 therefore loses the two deliberately
+    changed values in this Finale 1 conversion rather than disproving their source semantics.
