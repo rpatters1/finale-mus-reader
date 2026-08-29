@@ -114,6 +114,7 @@ const MappingTable& fixedFlagTable()
     return table;
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportCodaFlagField(const ImportContext& context, const char* member,
     ValueOrigin origin, std::size_t blockOffset, std::size_t decodedOffset,
     std::int64_t rawValue)
@@ -122,6 +123,7 @@ void reportCodaFlagField(const ImportContext& context, const char* member,
         instanceKey<FlagOptionsTarget>(), member,
         {origin, blockOffset, decodedOffset, rawValue});
 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void importCodaFlagOptions(const ImportContext& context)
 {
@@ -156,6 +158,7 @@ void importCodaFlagOptions(const ImportContext& context)
     target->flagSpacing = codaFlagSpacing;
     target->secondaryGroupAdj = 0;
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     const auto reportDefault = [&](const char* member, std::int64_t value) {
         reportCodaFlagField(context, member, ValueOrigin::Finale27Default,
             0, 0, value);
@@ -185,6 +188,7 @@ void importCodaFlagOptions(const ImportContext& context)
         reportCodaFlagField(context, member, ValueOrigin::LegacyMusAdjusted,
             position.blockOffset, position.decodedOffset, position.words[5]);
     }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 const MappingTable& classFlagTable()
