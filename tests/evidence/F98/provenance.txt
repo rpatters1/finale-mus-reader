@@ -1,0 +1,41 @@
+Finale 98, classic Mac OS.
+    The files identify their source version as 4.0.0.10 and platform as MAC. The baseline
+    and two one-variable edits were created in a working Finale 98 installation.
+
+F98-baseline.mus
+    sha256 b95b0f822266c68569033e08c2221fe0da0564fdada19ce7064870f7e6371389
+F98-baseline.etf
+    sha256 cf5470413551d56673786752857b7f6913eb1fa48286105b5318d6cb68c73ce1
+-finale27/F98-baseline.musx
+    sha256 e6acfee933e7da9fcd823097fe41cab622e7fb97594e5f47fc9e73e655dff232
+    The unedited document. Selector 09 word 5 is one, selector 23 word 5 is zero,
+    and selector 41 word 1 is zero. The Finale 27 companion enables
+    beamFourEighthsInCommonTime and disables incRestsInFourGroups.
+
+F98-beams-inclrestsin4.mus
+    sha256 624b472d48acbd35fa7a771fb71204896024e24f3c5b9afa24650511c6959ce8
+F98-beams-inclrestsin4.etf
+    sha256 d24ccbe3af1d56b708c8748453f2b1e1d0b3c7e7bbe75cf65c77136524d5c799
+-finale27/F98-beams-inclrestsin4.musx
+    sha256 96448164be1f1f131d462a61aa01d376459f5f74db196ebbb1b24cea6f6547d5
+    Created from the baseline by enabling Include Rests in Groups of Four. The MUS
+    changes exactly one byte, and the ETF identifies it as selector 23 word 5 moving
+    from zero to one; selector 41 remains unchanged. Finale 27 does not preserve this
+    enabled setting: its companion has the same BeamOptions elements as the baseline.
+    Finale 98 itself also clears the setting when the saved document is closed and
+    reopened, so the written bit is not persistent document behavior.
+
+F98-beams-no4-8thcommon.mus
+    sha256 811a93743bd67a5cb006ba2cd145b589d96be5b21c7e07842aba93760581e5f9
+F98-beams-no4-8thcommon.etf
+    sha256 fe0daae88daf3fb0bcf2e4075da11f5acf67c88579c6fd37a50d11995cba7231
+-finale27/F98-beams-no4-8thcommon.musx
+    sha256 db597a4d3de4e8895807b293508a632b16c66d44ce2f3b8cd9a3a73acc84500c
+    Created from the baseline by disabling Beam Four Eighth Notes Together in Common
+    Time. The MUS changes exactly one byte, and the ETF identifies it as selector 09
+    word 5 moving from one to zero; selector 41 remains unchanged. Finale 27 preserves
+    the disabled setting by omitting beamFourEighthsInCommonTime.
+
+finale27-upgrade.log
+    sha256 fb1ab5581d1133674a5fd2c3fbcce54d665a2b8d85b65b2eb9b43ea1ada61457
+    Log from creating the three Finale 27 semantic companions.

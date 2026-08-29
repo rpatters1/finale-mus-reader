@@ -172,6 +172,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/alternate_notation_options.cpp
     src/import/options/augmentation_dot_options.cpp
     src/import/options/barline_options.cpp
+    src/import/options/beam_options.cpp
     src/import/options/chord_options.cpp
     src/import/options/clef_options.cpp
     src/import/options/font_options.cpp

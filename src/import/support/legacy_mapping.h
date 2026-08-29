@@ -283,6 +283,22 @@ struct SourceProfile
     return epochMatches(epochs, profile.epoch);
 }
 
+/// @brief Whether a source belongs to one exact format epoch and recovered major/minor version.
+/// @details A source without a recovered version does not match.
+[[nodiscard]] constexpr bool sourceMatchesVersion(FormatEpoch sourceEpoch,
+    const SourceVersion* sourceVersion, FormatEpoch expectedEpoch, VersionBound expectedVersion)
+{
+    return sourceEpoch == expectedEpoch && sourceVersion
+        && VersionBound{sourceVersion->major, sourceVersion->minor} == expectedVersion;
+}
+
+[[nodiscard]] constexpr bool sourceMatchesVersion(const SourceProfile& profile,
+    FormatEpoch expectedEpoch, VersionBound expectedVersion)
+{
+    return sourceMatchesVersion(profile.epoch, profile.version ? &*profile.version : nullptr,
+        expectedEpoch, expectedVersion);
+}
+
 /// @brief Whether a source is at or beyond a chronological format epoch.
 [[nodiscard]] constexpr bool sourceAtOrAfter(
     const SourceProfile& profile, FormatEpoch boundaryEpoch)
@@ -346,6 +362,27 @@ using SourceAdjustment = std::optional<std::int64_t> (*)(std::int64_t value,
 /// capture pass describing its collection rather than restating that relationship.
 [[nodiscard]] GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
     const SourceProfile& profile, std::uint16_t selector);
+
+/// @brief Whether selector 41 word 1 uses its early lone-stem-flag layout.
+/// @details The compressed epochs always use the later packed layout. In the earlier epochs,
+/// any bit above the lone flag identifies the packed layout; an absent, zero, or bit-zero-only
+/// word remains ambiguous and is treated as the early layout.
+[[nodiscard]] bool storesLoneStemFlagLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
+
+/// @brief Whether selector 41 word 1 uses its packed beam-and-stem flag layout.
+[[nodiscard]] bool storesPackedBeamFlagLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
+
+/// @brief Whether the stem-and-beam option family uses its pre-Finale-3.5 units.
+/// @details The early layout identifies itself with a 32-element stem-connection collection;
+/// the later layout has 128 elements. A missing collection is treated as the later layout.
+[[nodiscard]] bool storesPreFinale35StemAndBeamUnits(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
+
+/// @brief Whether the stem-and-beam option family uses Finale-3.5-or-later units.
+[[nodiscard]] bool storesFinale35StemAndBeamUnits(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
 /// @brief A decoded mapping value together with the physical row that supplied it.
 struct ResolvedValue

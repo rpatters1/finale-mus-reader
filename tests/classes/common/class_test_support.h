@@ -71,6 +71,14 @@ static_assert(finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask
 static_assert(!finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask::Dcl));
 static_assert(finale_mus_reader::sourceAtOrAfter(
     sourceMatchTestProfile, FormatEpoch::DclLegacy));
+static_assert(finale_mus_reader::sourceMatchesVersion(
+    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(
+    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 0}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(
+    sourceMatchTestProfile, FormatEpoch::DclLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(FormatEpoch::ZlibLegacy, nullptr,
+    FormatEpoch::ZlibLegacy, {15, 1}));
 constexpr SourceProfile earlierSourceMatchTestProfile(FormatEpoch::DclLegacy);
 static_assert(!finale_mus_reader::sourceAtOrAfter(
     earlierSourceMatchTestProfile, FormatEpoch::ZlibLegacy));

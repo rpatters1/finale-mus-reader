@@ -29,6 +29,11 @@ void importAugmentationDotOptions(const ImportContext& context);
 /// @brief Recovers options::BarlineOptions across all four epochs.
 void importBarlineOptions(const ImportContext& context);
 
+/// @brief Recovers options::BeamOptions across all four epochs.
+/// @details Stored values are overlaid on the pinned defaults; early behavior that differs
+/// from those defaults is supplied explicitly.
+void importBeamOptions(const ImportContext& context);
+
 /// @brief Recovers options::ChordOptions, including source-owned default fret references.
 void importChordOptions(const ImportContext& context);
 

@@ -30,6 +30,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportAlternateNotationOptions: return "alternate_notation_options";
     case Phase::ImportAugmentationDotOptions: return "augmentation_dot_options";
     case Phase::ImportBarlineOptions: return "barline_options";
+    case Phase::ImportBeamOptions: return "beam_options";
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportLyricOptions: return "lyric_options";

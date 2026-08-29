@@ -16,7 +16,7 @@ musx::dom::DocumentPtr makeAccidentalOptionsDocument()
     auto options = std::make_shared<Target>(document);
     options->minOverlap = 91;
     options->multiCharSpace = 92;
-    options->crossLayerPositioning = true;
+    options->crossLayerPositioning = false;
     options->startMeasureSepar = 93;
     options->acciNoteSpace = 94;
     options->acciAcciSpace = 95;
@@ -44,7 +44,7 @@ void testAccidentalOptionsAcrossEpochs()
         return document->getOptions()->get<Target>();
     };
     const auto verify = [](const auto& options, const ImportReport& report,
-                            bool startMeasureStored) {
+                            bool startMeasureStored, ValueOrigin crossLayerOrigin) {
         expectMapping(options->minOverlap == 7 && options->multiCharSpace == -11
                 && options->acciNoteSpace == 13 && options->acciAcciSpace == 17,
             "Accidental options did not recover the four located numeric fields");
@@ -54,7 +54,7 @@ void testAccidentalOptionsAcrossEpochs()
         expectMapping(field(report, "options.accidentalOptions.minOverlap").origin
                     == ValueOrigin::LegacyMus
                 && field(report, "options.accidentalOptions.crossLayerPositioning").origin
-                    == ValueOrigin::LegacyMus
+                    == crossLayerOrigin
                 && field(report, "options.accidentalOptions.startMeasureSepar").origin
                     == (startMeasureStored ? ValueOrigin::LegacyMus
                                            : ValueOrigin::Finale27Default),
@@ -65,7 +65,7 @@ void testAccidentalOptionsAcrossEpochs()
         {GLOBALS_CMPER, "21", {0, 0, 0, 7, 0, -11}},
         {GLOBALS_CMPER, "22", {0, 0, 0, 0, 0, 0}},
         {GLOBALS_CMPER, "59", {0, 0, 0, 13, 17, 0}},
-        {GLOBALS_CMPER, "41", {0, 0, 0, 0, 0, 0}},
+        {GLOBALS_CMPER, "41", {0, 2, 0, 0, 0, 0}},
         {GLOBALS_CMPER, "41", {0, 0, 0, 0, 0, 0}},
         {GLOBALS_CMPER, "41", {0, 0, 27, 0, 0, 0}},
     };
@@ -78,17 +78,18 @@ void testAccidentalOptionsAcrossEpochs()
                 ? finale_mus_reader::versions::finale2005
                 : finale_mus_reader::versions::finale2000;
         verify(runImport(makeContainer(fixedRows, epoch), epoch, version, report), report,
-            true);
+            true, epoch == FormatEpoch::DclLegacy
+                ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior);
     }
 
     {
         auto rowsWithoutStartMeasure = fixedRows;
-        rowsWithoutStartMeasure.resize(3);
+        rowsWithoutStartMeasure.resize(4);
         ImportReport report(FormatEpoch::UncompressedLegacy);
         verify(runImport(makeContainer(rowsWithoutStartMeasure, FormatEpoch::UncompressedLegacy),
                    FormatEpoch::UncompressedLegacy,
                    finale_mus_reader::versions::finale2000, report),
-            report, false);
+            report, false, ValueOrigin::LegacyBehavior);
     }
 
     const std::vector<SyntheticClassRow> classRows{
@@ -102,18 +103,30 @@ void testAccidentalOptionsAcrossEpochs()
         ImportReport report(FormatEpoch::ZlibLegacy);
         verify(runImport(makeClassContainer(classRows, byteOrder),
                    FormatEpoch::ZlibLegacy,
-                   finale_mus_reader::versions::finale2007, report), report, true);
+                   finale_mus_reader::versions::finale2007, report), report, true,
+            ValueOrigin::LegacyMus);
     }
 
     auto enabledRows = fixedRows;
     enabledRows[1].words[0] = 1;
-    ImportReport enabledReport(FormatEpoch::UncompressedLegacy);
-    expectMapping(runImport(makeContainer(enabledRows), FormatEpoch::UncompressedLegacy,
-                      finale_mus_reader::versions::finale2000,
+    ImportReport enabledReport(FormatEpoch::DclLegacy);
+    expectMapping(runImport(makeContainer(enabledRows, FormatEpoch::DclLegacy),
+                      FormatEpoch::DclLegacy, finale_mus_reader::versions::finale2004,
                       enabledReport)->crossLayerPositioning,
         "Accidental options did not recover the enabled cross-layer flag");
 
+    ImportReport preFinale2004Report(FormatEpoch::DclLegacy);
+    const auto preFinale2004 = runImport(
+        makeContainer(enabledRows, FormatEpoch::DclLegacy), FormatEpoch::DclLegacy,
+        finale_mus_reader::versions::finale2003, preFinale2004Report);
+    expectMapping(!preFinale2004->crossLayerPositioning
+            && field(preFinale2004Report,
+                   "options.accidentalOptions.crossLayerPositioning").origin
+                == ValueOrigin::LegacyBehavior,
+        "The pre-Finale-2004 selector word was mistaken for cross-layer positioning");
+
     auto earlyRows = fixedRows;
+    earlyRows[3].words[1] = 0;
     earlyRows[2].words[3] = 0;
     earlyRows[2].words[4] = 0;
     ImportReport earlyReport(FormatEpoch::UncompressedLegacy);
@@ -148,6 +161,23 @@ void testAccidentalOptionsAcrossEpochs()
 }
 
 TEST_CASE("Accidental options span the located epochs", "[class]") { testAccidentalOptionsAcrossEpochs(); }
+
+TEST_CASE("Finale 2004 stores accidental cross-layer positioning", "[class]")
+{
+    using Target = musx::dom::options::AccidentalOptions;
+    const auto baseline = readFixture("evidence/F2004/F2004-baseline.mus");
+    const auto disabled = readFixture("evidence/F2004/F2004-no-xlayer-accis.mus");
+
+    expect(baseline.document->getOptions()->get<Target>()->crossLayerPositioning,
+        "The enabled Finale 2004 cross-layer option was not recovered");
+    expect(!disabled.document->getOptions()->get<Target>()->crossLayerPositioning,
+        "The disabled Finale 2004 cross-layer option was not recovered");
+    expect(field(baseline, "options.accidentalOptions.crossLayerPositioning").origin
+                == ValueOrigin::LegacyMus
+            && field(disabled, "options.accidentalOptions.crossLayerPositioning").origin
+                == ValueOrigin::LegacyMus,
+        "The Finale 2004 cross-layer option reported an incorrect origin");
+}
 
 } // namespace
 } // namespace finale_mus_reader_tests

@@ -134,80 +134,6 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
         blockOffset, decodedOffset);
 }
 
-// How many connection slots the table held before Finale 3.5.
-constexpr std::size_t earlySlotCount = 32;
-
-/// @brief Whether this source predates the Finale 3.5 units for the whole stem family.
-/// @details Finale 3.5 changed every unit in this option family at once: the connection
-/// collection grew from 32 slots to 128, its four adjustments became Efix where they had
-/// been Evpu, and the scalar lengths became Evpu where they had been staff positions. One
-/// marker therefore decides all of them, and it is the collection's own size.
-///
-/// A version range would also work, so this is a preference rather than a necessity, and it is
-/// the same preference that decides the clef tuple width from its payload size. Three things
-/// recommend it. **The boundary version is unobserved**: no Finale 3.3 or 3.4 document is
-/// available to place the cut, while the slot count is something each file states outright.
-/// **One fact decides three questions**, so the collection size, the connection unit and the
-/// scalar unit cannot drift out of step. And **the Coda era states no version at all in its
-/// Windows documents**, so a version range would have to be split across two tables by epoch to
-/// reach them, where one marker spans both.
-///
-/// A source with no connection family at all reads as modern, which is the common case and
-/// the one that leaves values alone rather than scaling them.
-bool statesPreFinale35Units(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        return false;
-    }
-    const auto family = readNumericGlobalWords(index, stemConnectionSelector);
-    return family.present
-        && family.words.size() <= earlySlotCount * narrowElementWords;
-}
-
-bool statesFinale35Units(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    return !statesPreFinale35Units(index, profile);
-}
-
-// The selector and word that carry the reverse-stemming flag in every era.
-constexpr std::uint16_t beamFlagsSelector = 41;
-constexpr std::uint32_t beamFlagsSlot = 1;
-
-/// @brief Whether this source keeps the reverse-stemming flag alone in its word.
-/// @details The flag's own boundary is not the Finale 3.5 unit boundary. Selector 41 word 1 is
-/// exactly zero through Finale 97 and carries packed beam options from Finale 2000 on, so the
-/// word acquires other tenants at that release. The file states which layout it is in: any bit
-/// above bit 0 means the packed one, whose flag sits at bit 2.
-///
-/// A content test rather than a version range, because what a file shows directly is whether
-/// its word is packed, not which release began packing it. The test costs nothing when the word
-/// is zero, where both spellings answer false, and it can only mislead on a packed-era file
-/// whose beam options are exactly bit 0 alone -- a value not seen. The compressed epochs are
-/// all Finale 2001 or later and are settled by their epoch without consulting the word.
-bool statesLoneStemFlag(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    if (profile.epoch != FormatEpoch::CodaBanner
-        && profile.epoch != FormatEpoch::UncompressedLegacy) {
-        return false;
-    }
-    const auto* row = index.getOthers().get(
-        numericGlobalTag(beamFlagsSelector), GLOBALS_CMPER, 0, 0);
-    if (!row || row->wordCount <= beamFlagsSlot) {
-        return true;
-    }
-    constexpr std::uint16_t loneFlagBit = 0x0001;
-    return (static_cast<std::uint16_t>(row->words[beamFlagsSlot]) & ~loneFlagBit) == 0;
-}
-
-bool statesPackedBeamFlags(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    return !statesLoneStemFlag(index, profile);
-}
-
 // One staff position is one half space, so the pre-3.5 lengths convert through musxdom's own
 // constant rather than through a 12 written here.
 constexpr int evpuPerStaffPosition = musx::dom::EVPU_PER_STAFF_POSITION;
@@ -258,7 +184,7 @@ const FieldMapping earlyStemScalarFields[] = {
 // the only stem field known to move. Before the packed era it is **bit 0**, the word holding
 // nothing else. From the packed era it is bit 2, bit 0 there being another beam option
 // entirely; reading bit 0 in that era would report reverse stemming as off for documents that
-// leave it on. See @ref statesLoneStemFlag for which spelling a document is in.
+// leave it on. See @ref storesLoneStemFlagLayout for which spelling a document is in.
 //
 // The sense is the same on both sides: set means reverse stemming is not displayed.
 const FieldMapping loneStemFlagFields[] = {
@@ -299,7 +225,7 @@ const MappingTable& stemScalarsTable()
     static const MappingTable table{
         .reportPrefix = "options.stemOptions",
         .epochs = EpochMask::FixedRow,
-        .applies = &statesFinale35Units,
+        .applies = &storesFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = stemScalarFields,
@@ -312,7 +238,7 @@ const MappingTable& earlyStemScalarsTable()
     static const MappingTable table{
         .reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner | EpochMask::Uncompressed,
-        .applies = &statesPreFinale35Units,
+        .applies = &storesPreFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = earlyStemScalarFields,
@@ -325,7 +251,7 @@ const MappingTable& loneStemFlagTable()
     static const MappingTable table{
         .reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner | EpochMask::Uncompressed,
-        .applies = &statesLoneStemFlag,
+        .applies = &storesLoneStemFlagLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = loneStemFlagFields,
@@ -338,7 +264,7 @@ const MappingTable& packedStemFlagTable()
     static const MappingTable table{
         .reportPrefix = "options.stemOptions",
         .epochs = EpochMask::FixedRow,
-        .applies = &statesPackedBeamFlags,
+        .applies = &storesPackedBeamFlagLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = packedStemFlagFields,
@@ -351,7 +277,7 @@ const MappingTable& earlyStemSizesTable()
     static const MappingTable table{
         .reportPrefix = "options.stemOptions",
         .epochs = EpochMask::Uncompressed,
-        .applies = &statesPreFinale35Units,
+        .applies = &storesPreFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = earlyStemSizeFields,
@@ -452,7 +378,7 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
             break;
         }
         insertRecoveredConnection(document, target, stored,
-            statesPreFinale35Units(index, profile), blockOffset, decodedOffset, report,
+            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report,
             profile.symbolFontNames);
     }
 }

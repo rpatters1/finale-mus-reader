@@ -27,6 +27,7 @@ add_executable(finale_mus_reader_tests
     classes/options/accidental_options_tests.cpp
     classes/options/alternate_notation_options_tests.cpp
     classes/options/barline_options_tests.cpp
+    classes/options/beam_options_tests.cpp
     classes/options/clef_options_tests.cpp
     classes/options/font_options_tests.cpp
     classes/others/fretboard_tests.cpp

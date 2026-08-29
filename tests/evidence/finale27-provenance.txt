@@ -103,6 +103,9 @@ F2004/-finale27/F2004-baseline.musx
 F2004/-finale27/F2004-changed-C-to-D.musx
     sha256 38595a1b68af70ee4a4110f5a70ccaaadb925e0a92af50741fe13a73b6a134b9
 
+F2004/-finale27/F2004-no-xlayer-accis.musx
+    sha256 f42b5ab77c0e3bb59eaa8b2052961591e57e76993f167b9f0e7821064e0a3e22
+
 F2005/-finale27/F2005-baseline.musx
     sha256 d53f7daee2c09adff6adf477437eae14ed199b8d7b4f401dbfdd6e6e9125a4df
 
@@ -175,6 +178,12 @@ F2012/-finale27/F2012-upstem-flags.musx
 F263/-finale27/F263-baseline.musx
     sha256 a087c90317baa93f77a90f376d3e5b52dadb01aa146963cc6c89877d9eb4dc1d
 
+F263/-finale27/F263-beams-inclrests.musx
+    sha256 9cc571fb7b5813c9be945c64f57079edca56f6ef1b5a317264e5674567d5d7a4
+
+F263/-finale27/F263-flatbams.musx
+    sha256 aebc6c48294bd40aa41f25dbffef6b7c11ce3b047a5bede883d2c66f8dd96164
+
 F263/-finale27/F263-clef-baseline.musx
     sha256 7276a73aab2c689bf6b2f1f9b3a18e9fad74814f48a1fe40d8da7dd4c87596ac
 
@@ -189,6 +198,15 @@ F263/-finale27/F263-music-font.musx
 
 F372/-finale27/F372-baseline.musx
     sha256 300b230f76fd105f0ae11b73f6cb83cc1808e0751afa5b3618d6bd4e5752cb6f
+
+F372/-finale27/F372-flatbeams.musx
+    sha256 1f35e208996d5548dc029a000de70410a0b10fc19e8e9cb9c54131166ebc33f0
+
+F372/-finale27/F372-beams-inclrests.musx
+    sha256 81c092f0571bd6d13d6d5fc0d80840dad7a04e56444045cab3cd21a1acf62b4f
+
+F372/-finale27/F372-beams-resthalfstems.musx
+    sha256 207008ed6b937f65176a2f549d9d267cd64ea03d9bd3d4798685ac78c652ecfe
 
 F372/-finale27/F372-clef-baseline.musx
     sha256 07ff5e0114a6ec4bfa02304efaca1f83a55f305fe1012580b94c346675710abc
