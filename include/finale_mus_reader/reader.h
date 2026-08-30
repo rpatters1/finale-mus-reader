@@ -179,10 +179,22 @@ template <typename T>
 
 struct FieldInfo
 {
+    FieldInfo() = default;
+    FieldInfo(ValueOrigin fieldOrigin, std::size_t fieldBlockOffset,
+        std::size_t fieldDecodedOffset, std::int64_t fieldRawValue,
+        std::optional<std::uint16_t> fieldSourceIdentity = std::nullopt)
+        : origin(fieldOrigin), blockOffset(fieldBlockOffset),
+          decodedOffset(fieldDecodedOffset), rawValue(fieldRawValue),
+          sourceIdentity(fieldSourceIdentity)
+    {
+    }
+
     ValueOrigin origin = ValueOrigin::Unmapped;
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
     std::int64_t rawValue{};
+    /// @brief The normalized tag or class id of the record that supplied the value.
+    std::optional<std::uint16_t> sourceIdentity;
 };
 
 /// @brief Provenance for formatting commands completed on one imported text field.

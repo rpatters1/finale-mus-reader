@@ -4,6 +4,8 @@
 #include "import/support/legacy_mapping.h"
 
 #include <algorithm>
+#include <bit>
+#include <cmath>
 #include <stdexcept>
 #include <map>
 #include <string>
@@ -18,6 +20,24 @@
 #include "reader/timing.h"
 
 namespace finale_mus_reader {
+
+double legacySinglePrecision(std::int64_t value)
+{
+    return static_cast<double>(
+        std::bit_cast<float>(static_cast<std::uint32_t>(value)));
+}
+
+musx::dom::Efix legacyPointsToEfix(double value)
+{
+    return static_cast<musx::dom::Efix>(std::llround(
+        value * musx::dom::EVPU_PER_POINT * musx::dom::EFIX_PER_EVPU));
+}
+
+musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value)
+{
+    constexpr double storedUnitsPerPoint = 10000.0;
+    return legacyPointsToEfix(static_cast<double>(value) / storedUnitsPerPoint);
+}
 
 namespace {
 
@@ -159,6 +179,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportFlagOptions, &options::importFlagOptions),
         FINALE_MUS_READER_IMPORTER(ImportGraceNoteOptions, &options::importGraceNoteOptions),
         FINALE_MUS_READER_IMPORTER(ImportKeySignatureOptions, &options::importKeySignatureOptions),
+        FINALE_MUS_READER_IMPORTER(ImportLineCurveOptions, &options::importLineCurveOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
@@ -485,6 +506,20 @@ GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
     return result;
 }
 
+bool storesCodaMigratedPointSizes(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return profile.epoch == FormatEpoch::CodaBanner
+        && readGlobalWords(index, profile, codaMigratedPointSizeSelector).present;
+}
+
+bool storesCodaFloatPointSizes(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return profile.epoch == FormatEpoch::CodaBanner
+        && !storesCodaMigratedPointSizes(index, profile);
+}
+
 bool storesLoneStemFlagLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
@@ -773,6 +808,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                         info.blockOffset = resolved->blockOffset;
                         info.decodedOffset = resolved->decodedOffset;
                         info.rawValue = resolved->value;
+                        info.sourceIdentity = field.readable->source.identity;
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                     }
                 }

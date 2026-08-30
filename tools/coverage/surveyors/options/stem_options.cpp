@@ -8,6 +8,7 @@
 
 #include "coverage/registry.h"
 #include "coverage/schema.h"
+#include "import/support/legacy_mapping.h"
 #include "musx/musx.h"
 
 namespace {
@@ -18,6 +19,19 @@ std::optional<DifferenceClassification> classifyStemDifference(const DifferenceC
 {
     using enum DifferenceCategory;
     using enum DifferenceClassification;
+    if (context.category == Differs &&
+        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
+        context.origin == "legacy-mus" &&
+        (context.path == "stem_options.stem_width" ||
+         context.path == "stem_options.stem_offset")) {
+        using Target = musx::dom::options::StemOptions;
+        const auto* width = context.sourceReport.findField<Target>("stemWidth");
+        if (width && width->sourceIdentity &&
+            *width->sourceIdentity != finale_mus_reader::numericGlobalTag(
+                finale_mus_reader::codaMigratedPointSizeSelector)) {
+            return FinaleUpgradeLoss;
+        }
+    }
     if (context.category == CompanionOnly &&
         comparisonPathStartsWith(context.path, "stem_options.stem_connections[")) {
         return StemConnectionPastTerminator;
@@ -30,18 +44,6 @@ std::optional<DifferenceClassification> classifyStemDifference(const DifferenceC
         comparisonEqualSurrounding(context.source, context.companion,
                                    "stem_options.stem_connections[0].", context.path)) {
         return StemHorizontalCorrection;
-    }
-    if (context.path == "stem_options.stem_width" && context.category == Differs &&
-        context.origin == "finale27-default" &&
-        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner) {
-        return CodaStemWidth;
-    }
-    if (context.path == "stem_options.stem_offset" && context.category == Differs &&
-        context.origin == "finale27-default" &&
-        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
-        context.sourceValue.isInteger() && context.sourceValue.asInteger() == 256 &&
-        context.companionValue.isInteger() && context.companionValue.asInteger() == 128) {
-        return CodaStemOffset;
     }
     return std::nullopt;
 }

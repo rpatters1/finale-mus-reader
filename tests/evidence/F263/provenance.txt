@@ -154,3 +154,38 @@ F263-flagoff-neg3.mus / .etf / .musx
     word 3 is the only decoded source change, and the ETF repeats -3. Finale 27 retains
     `upHAdj`, `upHAdj2`, and `upHAdj16` at 1696, independently confirming the Finale 1.0.0
     result in F100-flagoff-neg3.
+
+F263-curves.mus / .etf / .musx
+    sha256 300eb1b2ce621c4041653177e691e244c2540072e8ff17b4b1fcbf00559294e5 (.mus)
+    sha256 e22fc2ae8d5dc679b96d9cafca2b458c642be75a3dbfce0007ae2707b6f8f3ca (.etf)
+    sha256 3f7a6979e02ddcc2191c5e83941a92bc9e69cf6a6e9b031634a66cf673a07229 (.musx)
+    Selector 15 word 4 changes from 16 to 67, and the Finale 27 companion changes only
+    LineCurveOptions `bezierStep` from 16 to 67 among that class's fields. The ETF repeats
+    67. Word 5 also changes from 0 to 2 but has no corresponding LineCurveOptions change.
+
+F263-from-F100-lines.mus / .etf / .musx
+    sha256 4e033fc079f447269855e104a5c6d53c34435dc4f140c69f4c0c063746d6de51 (.mus)
+    sha256 7c21765677b0955babbbb6b25c9d4f452e8f4560eb402a88e134fd073face2db (.etf)
+    sha256 ec2d01abf146d6ed32c102db620ccd9566a3c2d43bde2b5dd219d93072535f7e (.musx)
+    F100-lines opened and saved in Finale 2.6.3. Selector 52 retains the Finale 1
+    single-precision bits for -0.3700000047683716 and 0.07129999995231628. Finale 2.6.3
+    also writes selector 62's fixed-point values as -3700 and 712, representing -0.37
+    and 0.0712. The Finale 27 companion preserves those later values as `psUlDepth` and
+    `psUlWidth`; Finale 2.6.3's factor-three UI display is not stored in either record.
+
+F263-F100-stemdef-lines.mus / .etf / .musx
+    sha256 14fb7ef267ef4deb1d8647fe83b3531265d98c742a7160203726647518419b26 (.mus)
+    sha256 5e4529f6ccc578ac7c824c04b15134a499cc9fc49477c6b3d9bfc48d1dad30ce (.etf)
+    sha256 0a7dca69f92caa5e421923c119db25a13246846d3f8b975365b5deecf5a84a85 (.musx)
+    F100-stemdef-lines opened and saved in Finale 2.6.3. The original selector-54
+    and selector-55 floats remain, while selector 64 words 1 and 5 receive 31415 and
+    27182 and selector 65 long 0 receives 16180. The Finale 27 companion converts
+    these to `graceSlashWidth = 804`, `stemWidth = 696`, and `stemLift = 414`.
+
+F263-F100-stemoffset-23.mus / .etf / .musx
+    sha256 5e267cf3abfc97d25e57330fffeecf67475053ef6d67162367810fdbb367ce1e (.mus)
+    sha256 1f508f8825ce96a0bfe4f27acde18bb0243e51dee4b8526fdb8d605856cffae0 (.etf)
+    sha256 84ec71ee5293fbac29f559ec8492a91a8595d592991c764152ede0e8473f3bab (.musx)
+    F100-stemoffset-23 opened and saved in Finale 2.6.3. Selector 21 word 0 retains
+    23, but selector 65 remains at 5000 and the Finale 27 companion contains modern
+    XML `stemLift = 128`; the obsolete edit is preserved without semantic migration.

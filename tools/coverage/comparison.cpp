@@ -290,6 +290,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                   const musx::dom::DocumentPtr& companionDocument,
                                   FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
                                   const SourceVersion* sourceVersion,
+                                  const ImportReport& sourceReport,
                                   const text::SymbolFontNames* symbolFontNames)
 {
     ComparisonResult result;
@@ -441,7 +442,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const DifferenceContext differenceContext{
                 path,         category,        origin,      sourceValue,     companionValue,
                 sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
-                relatedDifference};
+                sourceReport, relatedDifference};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;

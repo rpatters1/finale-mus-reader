@@ -44,6 +44,15 @@ enum class ValueWidth : std::uint8_t
     Long = 4
 };
 
+/// @brief Interprets a recovered 32-bit value as an IEEE-754 single-precision value.
+[[nodiscard]] double legacySinglePrecision(std::int64_t value);
+
+/// @brief Converts a legacy point measurement into musxdom's Efix units.
+[[nodiscard]] musx::dom::Efix legacyPointsToEfix(double value);
+
+/// @brief Converts a legacy point measurement stored in ten-thousandths into Efix units.
+[[nodiscard]] musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value);
+
 /// @brief Which of a four-byte value's two payload words comes first.
 /// @details The distilled framework mapping names these `MACFOURBYTE` and `WINFOURBYTE`.
 /// This is independent of container byte order, which the record index has already
@@ -367,6 +376,18 @@ using SourceAdjustment = std::optional<std::int64_t> (*)(std::int64_t value,
 /// capture pass describing its collection rather than restating that relationship.
 [[nodiscard]] GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
     const SourceProfile& profile, std::uint16_t selector);
+
+inline constexpr std::uint16_t codaMigratedPointSizeSelector = 64;
+
+/// @brief Whether a Coda document carries the later point-valued size layout.
+/// @details The selector named by @ref codaMigratedPointSizeSelector is the structural marker.
+/// When absent, the corresponding values occupy single-precision fields on selectors 54 and 55.
+[[nodiscard]] bool storesCodaMigratedPointSizes(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
+
+/// @brief Whether a Coda document uses the original single-precision point-size layout.
+[[nodiscard]] bool storesCodaFloatPointSizes(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
 /// @brief Whether selector 41 word 1 uses its early lone-stem-flag layout.
 /// @details The compressed epochs always use the later packed layout. In the earlier epochs,
@@ -947,15 +968,16 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
             static_cast<Class*>(instance)->member.assign(value); } \
     }
 
-/// @brief The counterpart of @ref MUS_FIELD_IF for a value that needs converting on the way
-/// in. `value` names the extracted source value.
-#define MUS_FIELD_AS_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                        orderValue, bitsValue, sourceGateValue, appliesValue, member, ...) \
+/// @brief Declares an explicitly identified numeric field that converts its extracted value.
+/// @details `value` names the extracted source value in the assignment expression.
+#define MUS_IDENTIFIED_FIELD_AS_IF(Class, identityValue, selectorValue, incidenceValue, \
+                                   slotValue, widthValue, orderValue, bitsValue, \
+                                   sourceGateValue, appliesValue, member, ...) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
+            (identityValue), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
         (sourceGateValue), \
@@ -967,6 +989,21 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         nullptr, \
         (appliesValue) \
     }
+
+/// @brief The counterpart of @ref MUS_FIELD_IF for a value that needs converting on the way
+/// in. `value` names the extracted source value.
+#define MUS_FIELD_AS_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+                        orderValue, bitsValue, sourceGateValue, appliesValue, member, ...) \
+    MUS_IDENTIFIED_FIELD_AS_IF(Class, ::finale_mus_reader::records::packTag(tagText), \
+        selectorValue, incidenceValue, slotValue, widthValue, orderValue, bitsValue, \
+        sourceGateValue, appliesValue, member, __VA_ARGS__)
+
+/// @brief Converts a numeric-global field while deriving its tag from its selector.
+#define MUS_NUMERIC_FIELD_AS_IF(Class, selectorValue, incidenceValue, slotValue, widthValue, \
+                                orderValue, bitsValue, sourceGateValue, appliesValue, member, ...) \
+    MUS_IDENTIFIED_FIELD_AS_IF(Class, ::finale_mus_reader::numericGlobalTag(selectorValue), \
+        ::finale_mus_reader::GLOBALS_CMPER, incidenceValue, slotValue, widthValue, orderValue, \
+        bitsValue, sourceGateValue, appliesValue, member, __VA_ARGS__)
 
 /// @brief A bit range assigned through an explicit conversion expression.
 /// @details Use where the stored encoding does not match the destination type, such as an

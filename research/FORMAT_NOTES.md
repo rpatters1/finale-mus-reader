@@ -2007,52 +2007,34 @@ container, and its companion agrees. Synthetic tests exercise the class layout i
 orders. Controlled non-default edits would be needed to raise the six individual mappings
 to confirmed.
 
-The Coda-banner layout is different and only `gracePerc` is presently located. In the
-Finale 1.0.0 baseline selector `23` word 0 is 50 and its companion's `gracePerc` is 50;
-selector `14` word 2 is zero rather than the companion's `tabGracePerc` of 85, selector `27`
-words 4 and 5 are 12 and 0 rather than 128 and 24, and selectors `44` and `64` are absent.
-Finale 2.6.3 repeats the incompatible selector shapes. Reading the later table in this era
-would therefore produce plausible but wrong values. The importer recovers only
-`gracePerc`. The other five fields retain their pinned baseline values and are reported as
-`Finale27Default`; they are intentionally not sought in Coda records. The source or upgrade
-rule for `graceSlashWidth` remains **open**, but it is outside the implemented Coda recovery
-scope.
+The Coda-banner layout is different. In the original layout, `graceSlashWidth` is the general
+Def Line Width stored as the first single-precision value of selector `54`. Finale 2.6.3 adds
+the later semantic field at selector `64` word 1 in ten-thousandths of a point; selector `64`'s
+presence selects that representation and makes it authoritative. Both forms convert points to
+modern Efix. The importer therefore recovers `gracePerc` and `graceSlashWidth`; the other four
+fields retain their pinned baseline values and are reported as `Finale27Default`.
 
 The Coda `gracePerc` location is **confirmed** by the controlled
 `F100-grace-pct` discriminator. Changing only Grace Note Size from 50 to 49 changes only
 selector `23` word 0 in the decoded MUS records; its ETF repeats 49, and the Finale 27
 companion changes only `gracePerc` from 50 to 49. The companion's `graceSlashWidth`
 remains 224. No adjacent selector-23 word moves, so this edit supplies no candidate for the
-unsourced line width; in particular, word 2 remains 512, the same value a Finale 2.6.3
+separately stored line width; in particular, word 2 remains 512, the same value a Finale 2.6.3
 baseline carries beside a companion width of 64.
 
-Two observations do not justify a Coda width mapping. Among Finale 2.6.3 documents, selector
-`64` word 1 correlates with companion widths: 2500 accompanies 64, while 3249 accompanies 83.
-Those pairs are numerically compatible with converting ten-thousandths of a point to Efix,
-but they are not controlled width edits. Conversely, `F100-deflne-625` changes only the
-general Def Lin Width, moving selector `54` word 0 from the single-precision value 0.5 to
-0.625; its ETF repeats 0.625 while its companion leaves `graceSlashWidth` at 224. This
-excludes that general width as a direct grace-width source but does not establish why the
-companion uses 224. Neither observation is imported as a Coda `graceSlashWidth` rule.
+The controlled migration chain confirms both representations. `F100-deflne-625` moves the
+selector-`54` float from 0.5 to 0.625, which recovers as Efix 160. A second Finale 1.0.0 save
+stores 3.14159 there. Finale 2.6.3 retains that float and writes 31415 at selector `64` word 1;
+Finale 3.7.2 converts it to Efix 804, and both the Finale 2.6.3 and 3.7.2 modern companions
+contain `graceSlashWidth = 804`. The direct Finale 1.0.0 companions instead normalize the
+width to 224. That direct-upgrade conversion loss is classified only for a Coda source whose
+source-owned field came from the original layout, which structurally means selector `64` was
+absent. Later Coda documents use the authoritative selector-`64` value and agree with their
+companions. **Confirmed.**
 
-The 160-document `tracked-evidence` comparison therefore permits a default disagreement only
-for `graceSlashWidth` in the Coda epoch and only when the reader reports
-`Finale27Default`. The scope is intentionally exact: another GraceNoteOptions field, another
-epoch, or a source-owned width disagreement remains unexpected. The refreshed capture imports
-all 160 sources and companions successfully and compares 960 GraceNoteOptions leaves: 912 are
-equal, 48 Coda widths are `different_defaults`, and none is unexpected. Every observed
-uncompressed, DCL, and zlib GraceNoteOptions leaf agrees with its companion.
-
-The full three-survey capture selects 16,257 occurrences representing 7,223 distinct source
-ids. Of those, 16,168 occurrences representing 7,150 distinct ids import successfully; all
-4,568 companion-backed occurrences, representing 2,983 distinct ids, compare successfully.
-GraceNoteOptions has 27,260 equal leaves and 148 `different_defaults`, with no unexpected
-differences. Every expected leaf is a Coda `graceSlashWidth`: 55 occur under product 1.0.0,
-69 under 2.6, and 24 under the versionless Windows label PC 1.0+. The population is also
-distributed across all three surveys: 53 occurrences in `rpatters1-main`, 47 in
-`rpatters1-installs`, and 48 in `tracked-evidence`; all 148 have distinct content ids.
-The 89 failed source occurrences never reach companion comparison and are accounted for
-separately from these class totals.
+The 173-document tracked capture imports every source and companion. GraceNoteOptions has 1,000
+equal leaves and 38 expected Finale-upgrade-loss leaves, all `graceSlashWidth` disagreements from
+original-layout Coda sources. There are no unexpected GraceNoteOptions differences.
 
 ### Key signature options
 
@@ -2375,8 +2357,8 @@ Finale 27 companions per era:
 | `stemLength` | `20(65534)` word 4 | every era |
 | `shortStemLength` | `20(65534)` word 5 | every era |
 | `revStemAdj` | `21(65534)` word 2 | every era |
-| `stemWidth` | `64(65534)` word 5 | Finale 3.0 |
-| `stemOffset` | `65(65534)` words 0–1, high word first | Finale 3.0 |
+| `stemWidth` | Coda `54` float 2 or `64` word 5; later `64` word 5 | every era |
+| `stemOffset` | Coda `55` float 0 or `65` long 0; later `65` long 0 | every era |
 | `useStemConnections` | `31(65534)` word 5 | every era |
 | `noReverseStems` | `41(65534)` word 1, bit 2 | every era |
 
@@ -2457,19 +2439,38 @@ so a version range would need splitting across two tables by epoch to reach them
 splits all 741 fixed-row files into 69 early and 672 later, and every file whose companion could be
 compared agrees with the unit that marker predicts.
 
-Two locations are era-scoped rather than universal, in the same way the clef scalars were:
+One location is era-scoped rather than universal, in the same way the clef scalars were:
 
 - `halfStemLength` is not stored before Finale 3.5. Selector `03` carries no row at all in the
   Finale 3.0 and 3.2 files, and in the Coda era its word 2 is zero while the companion shows 18.
-- `stemWidth` and `stemOffset` hold their later locations only from Finale 3.0. In the Coda era
-  both selectors read 5000 against a companion showing 128, on both platforms, and Finale 1.0.0
-  carries neither selector. The reader excludes that era by epoch, which needs no version test and
-  so cannot fail on the Coda-banner Windows documents that state no version.
 
-Finale's own conversion of a Coda document invents a stem thickness that is in neither the source
-nor the pinned baseline. The full three-corpus snapshot observes 224 for Finale 1.0.0, 128 for
-Finale 2.6, and 118, 123, or 128 for the Windows `PC 1.0+` banner. Those varying synthesized
-values are why stem width and offset are left at the baseline rather than matched to a companion.
+The two Coda stem sizes have an original floating-point layout and a migrated fixed-point layout.
+Finale 1.0.0 stores Stem Line Width as selector `54` float 2 and Stem Lift as selector `55`
+float 0, both in points. Finale 2.6.3 retains those floats and also writes the corresponding
+semantic values at selector `64` word 5 and selector `65` long 0 in ten-thousandths of a point.
+Selector `64`'s presence identifies the migrated layout and makes the later pair authoritative;
+otherwise the original floats are used. Both representations convert to modern Efix.
+
+A controlled three-stage upgrade confirms the migration. The Finale 1.0.0 source stores 2.71828
+and 1.618 in the two floats. Finale 2.6.3 writes 27182 and 16180 in the later locations, Finale
+3.7.2 converts them to 696 and 414 Efix, and both later modern companions preserve those exact
+values as `stemWidth` and XML `stemLift`. The direct Finale 1.0.0 companion instead normalizes
+them to 224 and 256. Those source-owned direct-upgrade disagreements are conversion loss rather
+than defaults. They are classified only when the Coda source uses the original layout, as shown by
+the absence of selector `64`. **Confirmed.**
+
+The tracked capture reports 76 expected Finale-upgrade-loss StemOptions leaves: one `stemWidth`
+and one `stemOffset` for each of the 38 original-layout Coda sources. There are no unexpected
+StemOptions differences. The Finale 2.6.3 migration and Finale 3.7.2 resave agree with their
+companions.
+
+The obsolete Coda Stem Offset control itself is selector `21` word 0. A controlled Finale 1.0.0
+edit from 4 to 23 changes that word to 23, and opening and saving the document in Finale 2.6.3
+retains 23 in the same location. The resave nevertheless leaves selector `65` at 5000, and neither
+upgrade carries the edit into modern `stemLift`: the direct Finale 1.0.0 companion contains 256,
+while the Finale 2.6.3 companion contains 128. The importer therefore does not transfer selector
+`21` word 0 into musxdom `stemOffset`; it remains evidence of source behavior that Finale's own
+modern conversion discarded. **Confirmed.**
 
 The zlib era reaches the same eight through `numericGlobalClass` and byte offsets. The stem offset
 is the field that proved four-byte class-record values are **not** a plain four-byte read: they
@@ -3658,6 +3659,95 @@ Finale 27 resets every discriminating Finale 2003 X and Y edit during upgrade an
 three hidden Y values of 48 with 40. The coverage rule is restricted to DCL files whose source major
 version is 8, `LegacyMus` bend-connection offsets, and the X and Y leaves. Connection indices are
 excluded because no controlled Finale 2003 fixture varies them.
+
+### Line and curve options
+
+The later fixed-row layout recovers eleven of `LineCurveOptions`' thirteen fields, and the zlib
+layout retains the same payload organization under the numeric-global class transform. The
+locations are:
+
+| musxdom member | fixed selector and word | stored form |
+| --- | --- | --- |
+| `bezierStep` | `15` word 4 | signed word |
+| `enclosureWidth` | `27` word 3 | Efix word |
+| `staffLineWidth` | `58` word 5 | Efix word |
+| `legerLineWidth` | `59` word 0 | Efix word |
+| `legerFrontLength`, `legerBackLength` | `59` words 1, 2 | EVPU words |
+| `restLegerFrontLength`, `restLegerBackLength` | `01` words 2, 3 | EVPU words |
+| `psUlDepth`, `psUlWidth` | `62` long words 0, 2 | high-word-first, divided by 10,000 |
+| `pathSlurTipWidth` | `97` long word 0 | high-word-first, divided by 10,000 |
+
+These locations are **private-framework-derived** and independently agree with the record shapes
+in the controlled evidence. The public `FCSizePrefs` API supplies the semantic types for enclosure,
+staff, ledger, and Shape Designer slur-tip widths; `FCMiscDocPrefs` supplies curve resolution and
+PostScript underline depth and thickness. See the public
+[`FCSizePrefs`](https://pdk.finalelua.com/class_f_c_size_prefs.html) and
+[`FCMiscDocPrefs`](https://pdk.finalelua.com/class_f_c_misc_doc_prefs.html) documentation, accessed
+2026-08-29. The source locations were checked against the authorized read-only
+Framework preference tables on 2026-08-30. No declaration or source text
+was copied. Confidence is **strong** for the table as a whole and **confirmed** where the controlled
+Finale 2.6.3 curve-options pair varies the value.
+
+Availability is structural rather than date-only. Selector `62` is already present in the
+Finale 2.6.3 evidence but absent from Finale 1.0.0. Where it is present, its two PostScript underline
+values use the later ten-thousandths representation. Without selector `62`, Coda stores the same
+fields as the first two single-precision values of selector `52`. The controlled Finale 1.0.0 edit
+moves them from -0.25 and 0.0416 to -0.37 and 0.0713 in both MUS and ETF, while Finale 27 discards
+the edits and retains -1.5 and 0.5. Selector presence therefore selects the representation without
+depending on a recovered version. Selector `97` and meaningful selector-`01` rest-ledger lengths
+appear only in the compressed evidence. All 38 tracked uncompressed companions use rest-ledger
+length 3 while their selector-`01` words are zero, so the importer leaves the pinned baseline's
+matching value rather than claiming those zero words. DCL and zlib files recover the later stored
+values directly.
+
+Opening that edited Finale 1 document and saving it in Finale 2.6.3 retains selector `52`'s
+original float bits and adds selector `62` with fixed-point values -3700 and 712. The corresponding
+semantic values are -0.37 and 0.0712, and Finale 27 preserves both. The one-ten-thousandth width
+loss comes from truncating the single-precision value just below 0.0713, not from the factor-three
+presentation used by the Finale 2.6.3 UI.
+
+Direct Finale 1.0.0 upgrades discard both recovered selector-52 values. Recovery coverage therefore
+classifies the two source-owned disagreements in each of the 38 tracked Finale 1.0.0 fixtures as
+`finale-upgrade-loss`. The rule is limited to that release, `LegacyMus` origin, and the two underline
+paths; the Finale 2.6.3 resave's selector-62 values compare equal and are not classified. A future
+non-Finale-1 source without selector `62` remains visible until its upgrade behavior is established.
+
+Coda curve resolution uses its own zero sentinel. All 38 tracked Finale 1.0.0 documents store zero
+at selector `15` word 4 and upgrade to 16; the controlled Finale 2.6.3 edit changes an explicit 16
+to 33 in both MUS and ETF and the modern companion preserves 33. The importer therefore reports a
+zero Coda word as sixteen-step `LegacyBehavior` and preserves any nonzero word as `LegacyMus`.
+
+Rounded-enclosure and corner-radius controls are MUSX-only features: neither the public PDK surface
+nor the authorized legacy preference tables contains either field. The corresponding legacy
+behavior is square corners and radius zero, which every one of the 173 tracked companions across
+all four epochs preserves. The importer therefore sets `enclosureRoundCorners = false` and
+`enclosureCornerRadius = 0` as **confirmed** `LegacyBehavior`; these are not claimed as stored
+fields.
+
+Coda predates the enclosure-, staff-, and ledger-line width controls available by Finale 3.7.2.
+The source locations used later are absent or have colliding meanings there. Upgrading the
+controlled Finale 1.0.0 line-options document through Finale 3.7.2 assigns 118 to all three
+fields. Independently, the Finale 3.7.2 baseline stores 118 at selector `27` word 3, selector `58`
+word 5, and selector `59` word 0. The importer therefore assigns the common value 118 as
+`LegacyBehavior`; it differs from the pinned Finale 27 value 115, while a historical behavior
+matching that baseline would remain `Finale27Default`. All 60 tracked direct-to-Finale-27 Coda
+companions instead contain 224 for all three fields, so coverage classifies only the exact Coda
+`LegacyBehavior` transition 118 to 224 as `different_defaults`. **Confirmed.**
+
+The first authorized full-corpus capture for this class exposed the corresponding early
+uncompressed boundary. Seventeen distinct Finale 3.0-3.2 sources have no selector `27`; the reader
+therefore retained the pinned value 115, while every companion explicitly stores
+`enclosureWidth = 224`. A representative source record stream confirms selector `27` is absent,
+and the representative raw EnigmaXML confirms 224 is stored rather than synthesized by musxdom.
+Selector `27` presence is consequently the structural boundary in the uncompressed epoch: when it
+is absent, `enclosureWidth` receives the same historical value 118 as `LegacyBehavior`; when it is
+present, word 3 remains authoritative. Coverage classifies only the exact legacy-behavior value
+118 to companion 224 as `different_defaults`. The other two widths remain source-controlled in
+that epoch. **Strong:** the seventeen sources agree, but no controlled Finale 3.0-3.2 UI fixture
+varies or directly displays the historical enclosure width.
+
+The other five Coda geometry fields whose later selectors are absent remain at the pinned defaults
+and agree in the tracked capture.
 
 ### Repeat options: the document staff-list reference
 
