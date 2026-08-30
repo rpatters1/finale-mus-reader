@@ -35,6 +35,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportGraceNoteOptions: return "grace_note_options";
+    case Phase::ImportKeySignatureOptions: return "key_signature_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";

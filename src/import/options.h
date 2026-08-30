@@ -52,6 +52,10 @@ void importFontOptions(const ImportContext& context);
 /// pinned baseline values and are identified as pinned defaults.
 void importGraceNoteOptions(const ImportContext& context);
 
+/// @brief Recovers options::KeySignatureOptions across all four epochs.
+/// @details The Coda-banner layout stores a smaller field set than later layouts.
+void importKeySignatureOptions(const ImportContext& context);
+
 /// @brief Recovers options::LyricOptions: its two collections and its scalars.
 /// @details Its capture pass and its tables are file-local: no test drives either alone,
 /// because both collections and the era assertions around them are exercised through this
