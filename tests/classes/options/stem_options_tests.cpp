@@ -380,16 +380,17 @@ void testStemScalarRecovery()
         int stemOffset;
         bool useStemConnections;
     };
-    // Coda banner: the three lengths are stated in staff positions and scale by twelve, the
-    // half-stem length is not stored at all, and the thickness and offset selectors hold
-    // something else entirely, so all three keep the pinned baseline's 18, 115 and 256.
-    // Finale 1.0.0 does not even carry the latter two selectors. Note that Finale 27's own
-    // conversion of these files invents a thickness of its own -- 224 for the Finale 1.0.0
-    // fixture and 128 for the Finale 2.6.3 one -- which is why the companion is not the
-    // expectation here: neither number is in the source.
+    // Coda banner: the three lengths are stated in staff positions and scale by twelve, while
+    // the half-stem length is not stored at all. Finale 1.0.0 stores point-valued stem width
+    // and lift floats; Finale 2.6.3 migrates them into ten-thousandths fields, whose presence
+    // makes them authoritative. Both forms convert to modern Efix here.
     const Expected fixtures[] = {
-        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", 18, 84, 60, 216, 115, 256, false},
-        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", 18, 84, 60, 216, 115, 256, true},
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", 18, 84, 60, 216, 128, 128, false},
+        {"evidence/F100/F100-stemdef-lines.mus", "edited Finale 1.0.0", 18, 84, 60, 216,
+            696, 414, false},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", 18, 84, 60, 216, 128, 128, true},
+        {"evidence/F263/F263-F100-stemdef-lines.mus", "migrated Finale 2.6.3", 18, 84, 60,
+            216, 696, 414, false},
         // Finale 3.7 onward: every field in its own place, in Evpu and Efix.
         {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", 18, 84, 60, 432, 118, 128, false},
         {"evidence/F97/Fin97-baseline.mus", "Finale 97", 18, 84, 60, 216, 128, 128, true},
@@ -423,18 +424,30 @@ void testStemScalarRecovery()
 
     // What separates the two eras is provenance, not the value. Before Finale 3.5 the stored
     // word is a twelfth of the Evpu it becomes, and the report keeps that stored word; the
-    // half-stem length and the two sizes report as Finale 27 defaults, because that era
-    // states none of them.
+    // half-stem length reports as a Finale 27 default, while both sizes are source owned.
     const auto f263 = read("evidence/F263/F263-baseline.mus");
     expect(field(f263, "options.stemOptions.stemLength").rawValue == 7
             && field(f263, "options.stemOptions.stemLength").origin == ValueOrigin::LegacyMus,
         "The stored staff-position stem length was not reported for the Coda era");
-    for (const char* target : {"options.stemOptions.halfStemLength",
+    expect(field(f263, "options.stemOptions.halfStemLength").origin
+            == ValueOrigin::Finale27Default,
+        "The unstated Coda half-stem length was not kept as a pinned default");
+    for (const char* target : {
              "options.stemOptions.stemWidth", "options.stemOptions.stemOffset"}) {
-        expect(field(f263, target).origin == ValueOrigin::Finale27Default,
-            std::string("A Coda-era field the source does not state was claimed as read: ")
-                + target);
+        expect(field(f263, target).origin == ValueOrigin::LegacyMus,
+            std::string("A stored Coda stem size was not reported as source owned: ") + target);
     }
+    expect(field(f263, "options.stemOptions.stemWidth").sourceIdentity
+                == finale_mus_reader::numericGlobalTag(64)
+            && field(f263, "options.stemOptions.stemOffset").sourceIdentity
+                == finale_mus_reader::numericGlobalTag(65),
+        "The migrated Coda stem sizes did not report their later selectors");
+    const auto f100 = read("evidence/F100/F100-stemdef-lines.mus");
+    expect(field(f100, "options.stemOptions.stemWidth").sourceIdentity
+                == finale_mus_reader::numericGlobalTag(54)
+            && field(f100, "options.stemOptions.stemOffset").sourceIdentity
+                == finale_mus_reader::numericGlobalTag(55),
+        "The original Coda stem sizes did not report their float selectors");
     const auto f97 = read("evidence/F97/Fin97-baseline.mus");
     expect(field(f97, "options.stemOptions.stemLength").rawValue == 84,
         "A Finale 97 stem length was scaled as though it were staff positions");

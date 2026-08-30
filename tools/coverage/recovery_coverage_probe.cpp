@@ -921,6 +921,7 @@ int main(int argc, char** argv)
                         sourceDocument, companionDocument, sourceReport->formatEpoch,
                         sourceReport->byteOrder,
                         sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr,
+                        *sourceReport,
                         &symbolFontNames);
                     writeCompactComparison(out, comparison);
                     out << '}';

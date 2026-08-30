@@ -3,7 +3,6 @@
 
 #include "import/options.h"
 
-#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -46,9 +45,7 @@ std::optional<std::int64_t> adjustEarlyBeamDistance(std::int64_t value,
 std::optional<std::int64_t> adjustCodaBeamWidth(std::int64_t value,
     const records::LegacyRecordIndex&, const SourceProfile&)
 {
-    constexpr double storedUnitsPerPoint = 10000.0;
-    return std::llround(value * musx::dom::EVPU_PER_POINT
-        * musx::dom::EFIX_PER_EVPU / storedUnitsPerPoint);
+    return legacyTenThousandthsPointToEfix(value);
 }
 
 bool sourceStoresSeparateFourEighthsBeamOption(const SourceProfile& profile)

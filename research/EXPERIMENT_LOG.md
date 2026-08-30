@@ -187,14 +187,12 @@
 
 ## 2026-08-08 — Private PDK Framework option-map audit
 
-- **Authorization and boundary:** Inspected `RGPPDKFramework` and `JWPDKFramework` histories read-only under explicit
-  authorization. No source was copied. Only distilled interoperability facts are published, labeled
-  `private-framework-derived`.
-- **Snapshots:** Current mapping from `RGPPDKFramework` commit
-  `44650a9a11cc8a5f86628b52a1ae75cc523a19a6`; historical comparison at `JWPDKFramework` commit
-  `d8a4c7782a7213bfd7350e3f03976b12afb1d2ab` and initial import
-  `37326071691ba6ce67a4c894ec3c5a0a616ab434`. The original pre-Finale-2014-oriented line was checked explicitly at
-  branch `RGP-JWOriginalCleanup`, commit `982939e1c14b4dfcb9fe73ce2369fdd77e88392f`.
+- **Authorization and boundary:** Inspected authorized current and historical Framework histories
+  read-only under explicit authorization. No source was copied. Only distilled interoperability
+  facts are published, labeled `private-framework-derived`.
+- **Snapshots:** Compared the current mapping with a historical snapshot and its initial imported
+  state. The original pre-Finale-2014-oriented line was checked explicitly at
+  the corresponding point in the historical Framework history.
 - **Question:** Do the framework's synthetic preference structures explain how ETF `^NN(65534)` globals map to
   modern logical options?
 - **Method:** Reduced each compatibility-table row to a neutral tuple of group, semantic field, tag/global number,
@@ -1848,6 +1846,92 @@
   product labels 1.0.0 (55), 2.6 (69), and versionless Windows PC 1.0+ (24), and all three
   surveys contribute to the population. The 89 failed source occurrences are outside the
   companion-comparison totals.
+
+## 2026-08-30 — LineCurveOptions legacy preference families
+
+- **Question:** Which `LineCurveOptions` members have legacy preference locations, which locations
+  reach the Coda-banner epoch, and which members instead describe fixed legacy behavior?
+- **Public semantics:** The public `FCSizePrefs` and `FCMiscDocPrefs` documentation identifies the
+  enclosure, staff, ledger, Shape Designer slur-tip, curve-resolution, and PostScript-underline
+  properties and their units. The pages were accessed 2026-08-29.
+- **Authorized private lead:** The authorized read-only Framework preference tables
+  locate the eleven stored fields at selectors `01`, `15`, `27`, `58`, `59`, `62`, and `97`. The
+  corrected Framework tree contains no rounded-enclosure or corner-radius preference. These facts
+  remain **private-framework-derived** except where controlled evidence independently confirms them.
+- **Controlled Coda result:** Finale 2.6.3 curve-options edits move selector `15` word 4 from 16
+  to 33 and 67, and both modern companions preserve the edited value. All tracked Finale 1.0.0
+  sources store zero there and upgrade to 16, establishing the Coda zero sentinel. Finale 2.6.3
+  also carries selector `62`; its high-word-first values decode to `psUlDepth = -0.25` and
+  `psUlWidth = 0.0419`. The controlled Finale 1.0.0 line-options edit identifies the earlier
+  representation at selector `52`: its first two single-precision values move from -0.25 and
+  0.0416 to -0.37 and 0.0713 in both MUS and ETF. Finale 27 discards both edits.
+- **Finale 2.6.3 resave:** Opening that edited Finale 1 document and saving it in Finale 2.6.3
+  retains selector `52`'s float bits and adds selector `62`'s later fixed-point values. Depth
+  becomes -3700 exactly, while the stored float just below 0.0713 truncates to width 712. Thus
+  the later semantic values are -0.37 and 0.0712, and the Finale 27 companion preserves both.
+  Finale 2.6.3's factor-three UI presentation does not enter either stored representation.
+- **Later-layout result:** Uncompressed, DCL, and zlib synthetic tests cover every located field;
+  the zlib test covers both byte orders. Rest-ledger words are treated as stored only from DCL
+  onward. All 37 tracked uncompressed sources carry zero while their companions and the pinned
+  baseline use 3, so those earlier fields remain synthesized defaults.
+- **Legacy behavior:** Rounded-enclosure and corner-radius controls are MUSX-only features. No public
+  or authorized private legacy preference names them, and all 173 tracked companions across Coda,
+  uncompressed, DCL, and zlib agree on square corners and radius zero. The importer reports that
+  corresponding legacy behavior rather than pretending either value was recovered. Coda predates
+  the enclosure-, staff-, and ledger-line width controls present by Finale 3.7.2. Upgrading the
+  controlled Finale 1.0.0 line-options document through Finale 3.7.2 assigns 118 to all three, and
+  the Finale 3.7.2 baseline independently stores 118 at the three later selectors. This supersedes
+  the initial Finale 97 default hypothesis of 128 and 256. Because 118 differs from the pinned
+  Finale 27 value 115, all three are reported as `LegacyBehavior` rather than `Finale27Default`.
+  This applies the repository-wide origin rule: an unstored historical behavior remains
+  `Finale27Default` whenever the pinned baseline already supplies the same value, regardless of
+  epoch.
+- **Tracked result:** The instrumented Release capture reads all 173 sources and all 173 companions:
+  60 Coda, 38 uncompressed, 50 DCL, and 25 zlib; 171 source contents are distinct. `LineCurveOptions`
+  has 1,993 equal leaves, 256 expected leaves, and no unexpected leaves. With the owner's approval,
+  the two source-owned underline differences in each of the 38 Finale 1.0.0 fixtures are classified
+  as `finale-upgrade-loss`; the controlled edit contributes -0.37 and 0.0713 rather than the stock
+  -0.25 and 0.0416. The Finale 2.6.3 resave is the converse: both selector-62 values equal its
+  companion and receive no classification. The 56 each for Coda enclosure, staff, and ledger width
+  118 → 224 are classified as `different_defaults`; the rule requires the Coda epoch,
+  `LegacyBehavior` origin, the exact values, and one of those three paths. No all-corpus probe was
+  run at that stage.
+- **Full-corpus refinement:** The subsequently authorized three-survey capture selected 16,270
+  occurrences representing 7,234 distinct source ids. It imported 16,181 occurrences representing
+  7,161 distinct ids, and all 4,581 companion-backed occurrences representing 2,994 distinct ids
+  compared successfully. Its only 17 unexpected leaves were distinct uncompressed Finale 3.0-3.2
+  sources with no selector `27`: `enclosureWidth` retained the pinned 115 while the raw companions
+  explicitly stored 224. The importer now treats selector-`27` absence in the uncompressed epoch
+  as enclosure-width behavior 118 and the exact 118-to-224 disagreement as `different_defaults`.
+  The authorized post-change recapture preserved the same selection funnel and moved all 17 leaves
+  into the approved classification: `LineCurveOptions` now reports 58,936 equal leaves, 617 expected
+  leaves, and no unexpected leaves. The full report has no unexpected differences in any surveyed
+  class. The same 89 source occurrences fail before comparison: 58 LIB files and 31 inputs that do
+  not identify as MUS documents.
+
+## 2026-08-30 — Coda line-width and stem-size migration through Finale 2.6.3
+
+- **Question:** Whether the original Coda Def Line Width, Stem Line Width, and Stem Lift floats
+  have later semantic equivalents despite being discarded by a direct Finale 27 upgrade.
+- **Controlled source:** A Finale 1.0.0 save sets the three fields to 3.14159, 2.71828, and 1.618.
+  Its MUS and ETF store them as selector `54` floats 0 and 2 and selector `55` float 0. The direct
+  modern companion normalizes the related fields to `graceSlashWidth = 224`, `stemWidth = 224`,
+  and `stemLift = 256`.
+- **Finale 2.6.3 migration:** Opening and saving that source retains the floats and writes 31415 at
+  selector `64` word 1, 27182 at selector `64` word 5, and 16180 at selector `65` long 0. Its
+  modern companion contains 804, 696, and 414 respectively.
+- **Finale 3.7.2 migration:** A second staged save converts the same values into Efix 804, 696, and
+  414 at the later locations; its modern companion agrees exactly.
+- **Decision:** Selector `64` presence selects the Coda ten-thousandths layout and makes it
+  authoritative. Without it, the original floats are converted directly from points to Efix.
+  Def Line Width recovers `graceSlashWidth`, Stem Line Width recovers `stemWidth`, and Stem Lift
+  recovers musxdom `stemOffset` (XML `stemLift`). A disagreement on those three fields is classified
+  as Finale upgrade loss only in the Coda epoch when selector `64` is absent and the original-layout
+  field is source-owned. The unrelated obsolete selector-`21` Stem Offset remains unmapped.
+- **Tracked result:** All 173 sources and companions import. The three migrated fields produce
+  exactly 114 expected Finale-upgrade-loss leaves: 38 each for `graceSlashWidth`, `stemWidth`, and
+  `stemOffset`, all in original-layout Coda sources. The Finale 2.6.3 and Finale 3.7.2 migration
+  fixtures compare equal on all three fields.
 
 ## Commands
 

@@ -33,6 +33,7 @@ add_executable(finale_mus_reader_tests
     classes/options/font_options_tests.cpp
     classes/options/grace_note_options_tests.cpp
     classes/options/key_signature_options_tests.cpp
+    classes/options/line_curve_options_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/common/legacy_record_tests.cpp

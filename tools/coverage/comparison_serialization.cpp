@@ -23,10 +23,6 @@ std::string_view differenceName(DifferenceClassification classification)
         return "17-byte-accidental-insert";
     case BaselineFont:
         return "baseline-font";
-    case CodaStemOffset:
-        return "coda-stem-offset";
-    case CodaStemWidth:
-        return "coda-stem-width";
     case CodaTextBlockUpgrade:
         return "coda-text-block-upgrade";
     case DefaultShapeId:

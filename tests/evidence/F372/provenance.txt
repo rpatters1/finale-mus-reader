@@ -200,3 +200,12 @@ F372-flagopts.etf
     the Finale 27 companion agrees on all nineteen edited semantic values. Selector
     65 word 1 also changes, but `eighthFlagHoist` is 1856 in both the baseline and
     edited companions, so that word is not evidence for a FlagOptions mapping.
+
+F372-F263-F100-stemdf-lines.mus / .etf / .musx
+    sha256 91b3afcc962c8d7f7639c13c5b044d9bfa752c069121a0492fb96d1e5f367269 (.mus)
+    sha256 7ce311b2b51f80070d582cbbb3caaad420e2edb375f1e0009cb29bc56f43aee4 (.etf)
+    sha256 9c523c49180bcb53e212d2dda2e9fe39fd0cfa6b38f28cda0d5e4293c26b13e9 (.musx)
+    F263-F100-stemdef-lines opened and saved in Finale 3.7.2. Selector 64 words 1
+    and 5 become Efix 804 and 696, and selector 65 long 0 becomes 414. The Finale 27
+    companion preserves those values as `graceSlashWidth`, `stemWidth`, and XML
+    `stemLift`, completing the two-stage migration from the original Coda floats.

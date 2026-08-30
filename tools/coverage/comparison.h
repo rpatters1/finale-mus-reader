@@ -50,6 +50,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                   const musx::dom::DocumentPtr& companionDocument,
                                   FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
                                   const SourceVersion* sourceVersion,
+                                  const ImportReport& sourceReport,
                                   const text::SymbolFontNames* symbolFontNames);
 
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison);

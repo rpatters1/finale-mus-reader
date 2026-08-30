@@ -18,10 +18,22 @@ constexpr std::uint16_t tablatureGraceSizeSelector = 14;
 constexpr std::uint16_t graceSizeSelector = 23;
 constexpr std::uint16_t graceTimingSelector = 27;
 constexpr std::uint16_t graceSlashBehaviorSelector = 44;
-constexpr std::uint16_t graceSlashWidthSelector = 64;
+constexpr std::uint16_t codaLineWidthSelector = 54;
 
 const FieldMapping codaGraceNoteFields[] = {
     MUS_WORD(GraceNoteOptionsTarget, "23", GLOBALS_CMPER, 0, 0, gracePerc),
+};
+
+const FieldMapping codaFloatGraceSlashWidthFields[] = {
+    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaLineWidthSelector, 0, 0,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        graceSlashWidth, legacyPointsToEfix(legacySinglePrecision(value))),
+};
+
+const FieldMapping codaMigratedGraceSlashWidthFields[] = {
+    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1,
+        ValueWidth::Word, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        graceSlashWidth, legacyTenThousandthsPointToEfix(value)),
 };
 
 const FieldMapping fixedGraceNoteFields[] = {
@@ -30,7 +42,8 @@ const FieldMapping fixedGraceNoteFields[] = {
     MUS_WORD(GraceNoteOptionsTarget, "27", GLOBALS_CMPER, 0, 4, playbackDuration),
     MUS_WORD(GraceNoteOptionsTarget, "27", GLOBALS_CMPER, 0, 5, entryOffset),
     MUS_WORD(GraceNoteOptionsTarget, "44", GLOBALS_CMPER, 0, 4, slashFlaggedGraceNotes),
-    MUS_WORD(GraceNoteOptionsTarget, "64", GLOBALS_CMPER, 0, 1, graceSlashWidth),
+    MUS_NUMERIC_WORD(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1,
+        graceSlashWidth),
 };
 
 const FieldMapping classGraceNoteFields[] = {
@@ -44,7 +57,7 @@ const FieldMapping classGraceNoteFields[] = {
         classWordOffset(5), entryOffset),
     MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSlashBehaviorSelector),
         GLOBALS_CMPER, classWordOffset(4), slashFlaggedGraceNotes),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSlashWidthSelector),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector),
         GLOBALS_CMPER, classWordOffset(1), graceSlashWidth),
 };
 
@@ -69,6 +82,32 @@ const MappingTable& fixedGraceNoteTable()
         .enumerateTargets = &enumerateOptionsTarget<GraceNoteOptionsTarget>,
         .fields = fixedGraceNoteFields,
         .fieldCount = std::size(fixedGraceNoteFields)};
+    return table;
+}
+
+const MappingTable& codaFloatGraceSlashWidthTable()
+{
+    static const MappingTable table{
+        .reportPrefix = graceNoteOptionsReportPrefix,
+        .epochs = EpochMask::CodaBanner,
+        .applies = &storesCodaFloatPointSizes,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<GraceNoteOptionsTarget>,
+        .fields = codaFloatGraceSlashWidthFields,
+        .fieldCount = std::size(codaFloatGraceSlashWidthFields)};
+    return table;
+}
+
+const MappingTable& codaMigratedGraceSlashWidthTable()
+{
+    static const MappingTable table{
+        .reportPrefix = graceNoteOptionsReportPrefix,
+        .epochs = EpochMask::CodaBanner,
+        .applies = &storesCodaMigratedPointSizes,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<GraceNoteOptionsTarget>,
+        .fields = codaMigratedGraceSlashWidthFields,
+        .fieldCount = std::size(codaMigratedGraceSlashWidthFields)};
     return table;
 }
 
@@ -103,7 +142,6 @@ void reportCodaDefaults(const ImportContext& context)
     reportDefault("playbackDuration", target->playbackDuration);
     reportDefault("entryOffset", target->entryOffset);
     reportDefault("slashFlaggedGraceNotes", target->slashFlaggedGraceNotes);
-    reportDefault("graceSlashWidth", target->graceSlashWidth);
 }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
@@ -114,7 +152,8 @@ void importGraceNoteOptions(const ImportContext& context)
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     reportCodaDefaults(context);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    applyMappingTables({&codaGraceNoteTable(), &fixedGraceNoteTable(),
+    applyMappingTables({&codaGraceNoteTable(), &codaFloatGraceSlashWidthTable(),
+                           &codaMigratedGraceSlashWidthTable(), &fixedGraceNoteTable(),
                            &classGraceNoteTable()},
         context.index, context.profile, context.document, context.report);
 }

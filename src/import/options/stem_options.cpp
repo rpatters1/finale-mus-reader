@@ -26,6 +26,9 @@ using StemConnection = StemOptionsTarget::StemConnection;
 // characters of its selector through Finale 2006, and from 2007 the class id the shared
 // numericGlobalClass rule derives from that same selector.
 constexpr std::uint16_t stemConnectionSelector = 40;
+constexpr std::uint16_t codaStemSizeSelector = 54;
+constexpr std::uint16_t codaStemOffsetSelector = 55;
+constexpr std::uint16_t stemOffsetSelector = 65;
 
 // One connection occupies one fixed row, so the element is exactly the six-word payload of
 // one incidence: font, symbol, and the four adjustments. From Finale 2012 the symbol is a
@@ -144,9 +147,10 @@ const FieldMapping stemScalarFields[] = {
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, stemLength),
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, shortStemLength),
     MUS_WORD(StemOptionsTarget, "21", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, revStemAdj),
-    MUS_WORD(StemOptionsTarget, "64", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, stemWidth),
-    MUS_LONG(StemOptionsTarget, "65", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0,
-        LongWordOrder::HighFirst, stemOffset),
+    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5,
+        stemWidth),
+    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, stemOffset),
     MUS_WORD(StemOptionsTarget, "31", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
         useStemConnections),
 };
@@ -192,16 +196,35 @@ const FieldMapping loneStemFlagFields[] = {
         /*bit*/ 0, noReverseStems),
 };
 
-// The stem thickness and offset hold their later locations from Finale 3.0, but not before it:
-// in the Coda era both slots hold 5000 against an effective 128, on both platforms, and the
-// earliest release carries neither selector at all. The epoch alone excludes that era, so this
-// needs no version test -- which is what makes it safe for Coda-banner Windows documents, none
-// of which state a version.
-//
+// Finale 3.0 through 3.4 use the later locations with the same modern units. The Coda era has
+// its own two layouts below, so the epoch alone keeps those distinct without depending on a
+// version that its Windows documents do not state.
 const FieldMapping earlyStemSizeFields[] = {
-    MUS_WORD(StemOptionsTarget, "64", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, stemWidth),
-    MUS_LONG(StemOptionsTarget, "65", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0,
-        LongWordOrder::HighFirst, stemOffset),
+    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5,
+        stemWidth),
+    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, stemOffset),
+};
+
+// The original Coda layout stores point measurements as single-precision values. A later
+// Coda layout copies them into ten-thousandths fields on selectors 64 and 65; selector 64's
+// presence selects that representation, and the later fields are authoritative when present.
+const FieldMapping codaFloatStemSizeFields[] = {
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemSizeSelector, 0, 4,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        stemWidth, legacyPointsToEfix(legacySinglePrecision(value))),
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemOffsetSelector, 0, 0,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        stemOffset, legacyPointsToEfix(legacySinglePrecision(value))),
+};
+
+const FieldMapping codaMigratedStemSizeFields[] = {
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaMigratedPointSizeSelector, 0, 5,
+        ValueWidth::Word, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        stemWidth, legacyTenThousandthsPointToEfix(value)),
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, stemOffsetSelector, 0, 0,
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        stemOffset, legacyTenThousandthsPointToEfix(value)),
 };
 
 // Finale 2007 and later: the same eight logical options, reached through the shared
@@ -211,8 +234,9 @@ const FieldMapping classStemScalarFields[] = {
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(20), GLOBALS_CMPER, classWordOffset(4), stemLength),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(20), GLOBALS_CMPER, classWordOffset(5), shortStemLength),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(2), revStemAdj),
-    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(64), GLOBALS_CMPER, classWordOffset(5), stemWidth),
-    MUS_CLASS_LONG(StemOptionsTarget, numericGlobalClass(65), GLOBALS_CMPER, classWordOffset(0),
+    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector),
+        GLOBALS_CMPER, classWordOffset(5), stemWidth),
+    MUS_CLASS_LONG(StemOptionsTarget, numericGlobalClass(stemOffsetSelector), GLOBALS_CMPER, classWordOffset(0),
         LongWordOrder::HighFirst, stemOffset),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(31), GLOBALS_CMPER, classWordOffset(5),
         useStemConnections),
@@ -282,6 +306,32 @@ const MappingTable& earlyStemSizesTable()
         .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
         .fields = earlyStemSizeFields,
         .fieldCount = std::size(earlyStemSizeFields)};
+    return table;
+}
+
+const MappingTable& codaFloatStemSizesTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "options.stemOptions",
+        .epochs = EpochMask::CodaBanner,
+        .applies = &storesCodaFloatPointSizes,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
+        .fields = codaFloatStemSizeFields,
+        .fieldCount = std::size(codaFloatStemSizeFields)};
+    return table;
+}
+
+const MappingTable& codaMigratedStemSizesTable()
+{
+    static const MappingTable table{
+        .reportPrefix = "options.stemOptions",
+        .epochs = EpochMask::CodaBanner,
+        .applies = &storesCodaMigratedPointSizes,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<StemOptionsTarget>,
+        .fields = codaMigratedStemSizeFields,
+        .fieldCount = std::size(codaMigratedStemSizeFields)};
     return table;
 }
 
@@ -413,8 +463,9 @@ void importStemOptions(const ImportContext& context)
     // their fields, so a document from an era a table does not cover shows its supported
     // fields sitting at their synthesized defaults rather than not at all.
     captureStemOptions(context.index, context.profile, context.document, context.report);
-    applyMappingTables({&earlyStemScalarsTable(), &earlyStemSizesTable(), &stemScalarsTable(),
-                           &loneStemFlagTable(), &packedStemFlagTable(),
+    applyMappingTables({&earlyStemScalarsTable(), &codaFloatStemSizesTable(),
+                           &codaMigratedStemSizesTable(), &earlyStemSizesTable(),
+                           &stemScalarsTable(), &loneStemFlagTable(), &packedStemFlagTable(),
                            &classStemScalarsTable()},
         context.index, context.profile, context.document, context.report);
     validateStemOptions(context.document, context.construction);

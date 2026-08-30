@@ -56,6 +56,11 @@ void importGraceNoteOptions(const ImportContext& context);
 /// @details The Coda-banner layout stores a smaller field set than later layouts.
 void importKeySignatureOptions(const ImportContext& context);
 
+/// @brief Recovers the located scalar fields of options::LineCurveOptions.
+/// @details Fields unavailable in one legacy layout retain the pinned baseline value; MUSX-only
+/// enclosure-corner controls are replaced with the corresponding legacy behavior.
+void importLineCurveOptions(const ImportContext& context);
+
 /// @brief Recovers options::LyricOptions: its two collections and its scalars.
 /// @details Its capture pass and its tables are file-local: no test drives either alone,
 /// because both collections and the era assertions around them are exercised through this

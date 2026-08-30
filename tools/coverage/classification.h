@@ -37,8 +37,6 @@ enum class DifferenceClassification
     Unexpected,
     AccidentalInsert17Byte,
     BaselineFont,
-    CodaStemOffset,
-    CodaStemWidth,
     CodaTextBlockUpgrade,
     DefaultShapeId,
     DifferentDefaults,
@@ -128,6 +126,7 @@ struct DifferenceContext
     FormatEpoch epoch;
     ByteOrder byteOrder;
     const SourceVersion* sourceVersion;
+    const ImportReport& sourceReport;
     RelatedDifference relatedDifference{};
 };
 

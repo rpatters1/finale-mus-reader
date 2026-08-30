@@ -184,7 +184,7 @@ TEST_CASE("Grace-note options match controlled cross-epoch baselines", "[class]"
         ValueOrigin tabGraceOrigin;
     };
     const ExpectedGraceNoteOptions expected[] = {
-        {"evidence/F100/F100-baseline.mus", 85, 50, 128, 24, true, 115,
+        {"evidence/F100/F100-baseline.mus", 85, 50, 128, 24, true, 128,
             ValueOrigin::Finale27Default},
         {"evidence/F97/Fin97-baseline.mus", 85, 70, 128, 30, true, 128, ValueOrigin::LegacyMus},
         {"evidence/F2003/F2003-baseline.mus", 85, 50, 128, 24, true, 224, ValueOrigin::LegacyMus},
@@ -227,13 +227,13 @@ TEST_CASE("Finale 1 grace-note percentage is source owned", "[class]")
     expectMapping(changedField.origin == ValueOrigin::LegacyMus
             && changedField.blockOffset == 0x208 && changedField.decodedOffset == 0x5b0,
         "The controlled Finale 1 grace-note percentage reported incorrect provenance");
-    expectMapping(changedOptions->graceSlashWidth == 115
+    expectMapping(changedOptions->graceSlashWidth == 128
             && field(changed, "options.graceNoteOptions.graceSlashWidth").origin
-                == ValueOrigin::Finale27Default,
+                == ValueOrigin::LegacyMus,
         "The percentage edit was incorrectly interpreted as a grace-slash width");
 }
 
-TEST_CASE("Finale 1 default line width is not a grace-slash-width source", "[class]")
+TEST_CASE("Finale 1 default line width supplies the grace-slash width", "[class]")
 {
     const auto baseline = readFixture("evidence/F100/F100-baseline.mus");
     const auto changed = readFixture("evidence/F100/F100-deflne-625.mus");
@@ -242,27 +242,34 @@ TEST_CASE("Finale 1 default line width is not a grace-slash-width source", "[cla
     const auto changedOptions =
         changed.document->getOptions()->get<GraceNoteOptionsTarget>();
 
-    expectMapping(baselineOptions->graceSlashWidth == 115 &&
-                      changedOptions->graceSlashWidth == 115,
-                  "The Coda default-line edit disturbed the pinned grace-slash width");
-    expectMapping(field(changed, "options.graceNoteOptions.graceSlashWidth").origin ==
-                      ValueOrigin::Finale27Default,
-                  "The Coda grace-slash width was not retained as a pinned default");
+    expectMapping(baselineOptions->graceSlashWidth == 128 &&
+                      changedOptions->graceSlashWidth == 160,
+                  "The Coda default-line width was not converted from points to Efix");
+    const auto& changedWidth = field(changed, "options.graceNoteOptions.graceSlashWidth");
+    expectMapping(changedWidth.origin == ValueOrigin::LegacyMus &&
+                      changedWidth.sourceIdentity == finale_mus_reader::numericGlobalTag(54),
+                  "The Coda grace-slash width was not reported as source owned");
 }
 
-TEST_CASE("Coda selector 64 is not imported without controlled width evidence", "[class]")
+TEST_CASE("Coda selector 64 supersedes the original default-line float", "[class]")
 {
-    for (const auto* path : {"evidence/F263/F263-clef-baseline.mus",
-                             "evidence/F263/F263-brace-psvs.mus"}) {
-        const auto result = readFixture(path);
+    struct Expected
+    {
+        const char* path;
+        int width;
+    };
+    for (const auto& item : {Expected{"evidence/F263/F263-clef-baseline.mus", 64},
+             Expected{"evidence/F263/F263-brace-psvs.mus", 83}}) {
+        const auto result = readFixture(item.path);
         const auto options = result.document->getOptions()->get<GraceNoteOptionsTarget>();
-        expectMapping(options->graceSlashWidth == 115,
-                      std::string("A Coda selector-64 correlation replaced the pinned width: ") +
-                          path);
-        expectMapping(field(result, "options.graceNoteOptions.graceSlashWidth").origin ==
-                          ValueOrigin::Finale27Default,
-                      std::string("A Coda selector-64 correlation acquired source ownership: ") +
-                          path);
+        expectMapping(options->graceSlashWidth == item.width,
+                      std::string("The migrated Coda grace-slash width was not recovered: ") +
+                          item.path);
+        const auto& width = field(result, "options.graceNoteOptions.graceSlashWidth");
+        expectMapping(width.origin == ValueOrigin::LegacyMus &&
+                          width.sourceIdentity == finale_mus_reader::numericGlobalTag(64),
+                      std::string("The migrated Coda grace-slash width was not source owned: ") +
+                          item.path);
     }
 }
 

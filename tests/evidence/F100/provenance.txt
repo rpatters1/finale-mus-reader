@@ -294,8 +294,9 @@ F100-deflne-625.mus / .etf / .musx
     Controlled from F100-baseline by changing only Def Lin Width from 0.5 to 0.625
     points. Selector 54 word 0 is the only decoded source-record change, from the
     single-precision value 0.5 to 0.625, and the ETF repeats 0.625. The Finale 27
-    companion retains `graceSlashWidth` at 224, so this general line-width setting is
-    not treated as a source for the modern grace-specific width.
+    companion retains `graceSlashWidth` at 224, but the staged F100-stemdef-lines migration
+    shows that Finale 2.6.3 copies this value into the later grace-slash-width field. The
+    direct companion therefore records conversion loss rather than a lack of equivalence.
 
 F100-keyopts-vals.mus / .etf / .musx
     sha256 902a0c6f0eba3cf2d0f5929f19a3373712e7403ab4fc7583bf2cff5659831fbc (.mus)
@@ -314,3 +315,31 @@ F100-cleftime-separs.mus / .etf / .musx
     19 and 7; the Finale 27 companion preserves those values in TimeSignatureOptions and
     ClefOptions. Selector 39 word 2 remains 100 in both source ETFs, so this fixture rejects
     that word as the location of any edited key, time, or clef separation.
+
+F100-lines.mus / .etf / .musx
+    sha256 fd53d6ef257ab61af51f428a73409c325df4dc1e2e0f6298075eee1a5adbd94f (.mus)
+    sha256 86484815c580b51d26295b35c5bbb298c331e7a0a415182f2f0cd6cefe038ac1 (.etf)
+    sha256 489d1d9b854463f5aad3186c6a78d119f9134db1a239259112662121d8218bfe (.musx)
+    Changes the PostScript underline depth and width among other line settings. Selector 52
+    words 0..1 change from the single-precision value -0.25 to -0.37, and words 2..3
+    change from 0.0416 to 0.0713. The ETF independently repeats both values. Finale 27
+    retains its converted baseline values -1.5 and 0.5, so the source values are recovered
+    despite that conversion loss.
+
+F100-stemdef-lines.mus / .etf / .musx
+    sha256 8fcf0e9362d6b2e9c4cc76824158158e0071f973679d12280ead908154381409 (.mus)
+    sha256 e7d2d4ee142e7190d62d4308ade8dfc52a915a149ea595d2a9e17d05059acb80 (.etf)
+    sha256 a3bed924389f7b3625b5e89f501ed3d2f396c67a255ff0f2dac4e4b80c8e4327 (.musx)
+    Sets Def Line Width to 3.14159, Stem Line Width to 2.71828, and Stem Lift to
+    1.618. Selector 54 floats 0 and 2 and selector 55 float 0 contain those values,
+    and the ETF repeats their exact single-precision words. The direct Finale 27
+    companion normalizes the related modern fields to 224, 224, and 256; the staged
+    Finale 2.6.3 fixture records their semantic migration.
+
+F100-stemoffset-23.mus / .etf / .musx
+    sha256 aca518fb53f96053ee0a92810dfba82fb666bcccd241fc806d74e230512d4b8e (.mus)
+    sha256 ad1218001d85bb1c82dd7a5cb2b9a95e01b12d9e563fada39cf86547a06270eb (.etf)
+    sha256 a009c54acd828df86fddd1c0417c186d75e533d0096492b6042591601452e6ac (.musx)
+    Changes only the obsolete Stem Offset control from 4 to 23. Selector 21 word 0
+    changes to 23 and the ETF repeats it, while the direct Finale 27 companion leaves
+    modern XML `stemLift` at 256.

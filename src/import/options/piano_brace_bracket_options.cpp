@@ -3,7 +3,6 @@
 
 #include "import/options.h"
 
-#include <bit>
 #include <cstdint>
 #include <iterator>
 
@@ -34,7 +33,7 @@ double pianoBraceBracketFixedPoint(std::int64_t value)
 
 double pianoBraceBracketCodaFloat(std::int64_t value)
 {
-    return static_cast<double>(std::bit_cast<float>(static_cast<std::uint32_t>(value))) * 4.0;
+    return legacySinglePrecision(value) * 4.0;
 }
 
 bool hasCodaPianoBraceLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)

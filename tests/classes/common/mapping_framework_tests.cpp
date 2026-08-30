@@ -158,8 +158,10 @@ void testFourByteStraddlesIncidence()
 
     expectMapping(spacing->referenceDuration == 0x12345678,
         "Four-byte value straddling an incidence boundary was not assembled");
-    expectMapping(field(report, "options.spacing.referenceDuration").origin == ValueOrigin::LegacyMus,
-        "Straddling four-byte value was not reported as recovered");
+    const auto& recovered = field(report, "options.spacing.referenceDuration");
+    expectMapping(recovered.origin == ValueOrigin::LegacyMus &&
+            recovered.sourceIdentity == finale_mus_reader::numericGlobalTag(94),
+        "Straddling four-byte value was not reported with its source identity");
 }
 
 // The same two words, read with each word order, must disagree.
