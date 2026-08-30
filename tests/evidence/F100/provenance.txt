@@ -296,3 +296,21 @@ F100-deflne-625.mus / .etf / .musx
     single-precision value 0.5 to 0.625, and the ETF repeats 0.625. The Finale 27
     companion retains `graceSlashWidth` at 224, so this general line-width setting is
     not treated as a source for the modern grace-specific width.
+
+F100-keyopts-vals.mus / .etf / .musx
+    sha256 902a0c6f0eba3cf2d0f5929f19a3373712e7403ab4fc7583bf2cff5659831fbc (.mus)
+    sha256 19950177bdda3ab924beafa5557c20ecaa7c67fbb1dc62b9bf6ddc34ee64589a (.etf)
+    sha256 82560e60e50ec4c4c679428807ef03ecca11878dc85e411eb85cf4bc1b80bf61 (.musx)
+    Exercises the three editable Coda key-signature distances. The era ETF records selector
+    18 words 0..2 as 23, -7, and 11, and the Finale 27 companion preserves all three values.
+    Selector 21 word 4 and the companion's acciAdd both remain 4.
+
+F100-cleftime-separs.mus / .etf / .musx
+    sha256 397a165919cafdfec068c5a06cfea872d8fd8b92188873970709b105ebdaf1da (.mus)
+    sha256 ba932f419eab4411603c365b97c7eea3df4d3b234dbe5dd4657feb42d2c0552f (.etf)
+    sha256 efe7da17cfcae6b7d94c72f323dc4cad347479dd05880fcce2cb1dc4be9f2270 (.musx)
+    Exercises Coda clef and time-signature distances. Relative to F100-keyopts-vals,
+    selector 18 words 3..5 change to 23, 11, and 1 and selector 19 words 0..1 change to
+    19 and 7; the Finale 27 companion preserves those values in TimeSignatureOptions and
+    ClefOptions. Selector 39 word 2 remains 100 in both source ETFs, so this fixture rejects
+    that word as the location of any edited key, time, or clef separation.

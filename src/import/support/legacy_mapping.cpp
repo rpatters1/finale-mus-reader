@@ -158,6 +158,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
         FINALE_MUS_READER_IMPORTER(ImportFlagOptions, &options::importFlagOptions),
         FINALE_MUS_READER_IMPORTER(ImportGraceNoteOptions, &options::importGraceNoteOptions),
+        FINALE_MUS_READER_IMPORTER(ImportKeySignatureOptions, &options::importKeySignatureOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
@@ -445,13 +446,6 @@ std::optional<ResolvedValue> readSourceValue(
     return encoding == RecordEncoding::ClassRecord
         ? readClassValue(index, cmper, source, byteOrder)
         : readValue(index, cmper, source);
-}
-
-records::LegacyTag numericGlobalTag(std::uint16_t selector)
-{
-    const char text[2] = {static_cast<char>('0' + (selector / 10) % 10),
-        static_cast<char>('0' + selector % 10)};
-    return records::packTag(std::string_view(text, std::size(text)));
 }
 
 GlobalSelectorWords readNumericGlobalWords(

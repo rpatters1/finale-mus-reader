@@ -145,7 +145,12 @@ inline constexpr musx::dom::Cmper CMPER_FROM_TARGET = 0;
 /// spelled as the digits ETF prints, so selector 40 is the tag `40`, and only from Finale
 /// 2007 does it become the class id @ref numericGlobalClass derives. Deriving the spelling
 /// keeps a selector stated once as a number rather than again as a two-character literal.
-[[nodiscard]] records::LegacyTag numericGlobalTag(std::uint16_t selector);
+[[nodiscard]] constexpr records::LegacyTag numericGlobalTag(std::uint16_t selector)
+{
+    return static_cast<records::LegacyTag>(
+        (static_cast<std::uint16_t>('0' + (selector / 10U) % 10U) << 8U)
+        | static_cast<std::uint16_t>('0' + selector % 10U));
+}
 
 /// @brief One numeric global's whole incidence family, read as a single word stream.
 struct GlobalSelectorWords
@@ -737,13 +742,14 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @details `member` names the destination as the C++ path that reaches it from `Class`, so a
 /// field inside a contained object is written `charParams->lineChar` and needs no second
 /// spelling: the report turns that path into the dotted one it prints.
-#define MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
-                     orderValue, bitsValue, sourceGateValue, appliesValue, member) \
+#define MUS_IDENTIFIED_FIELD_IF(Class, identityValue, selectorValue, incidenceValue, \
+                                slotValue, widthValue, orderValue, bitsValue, \
+                                sourceGateValue, appliesValue, member) \
     ::finale_mus_reader::FieldMapping { \
         #member, \
         ::finale_mus_reader::FieldKind::Number, \
         ::finale_mus_reader::SourceLocation{ \
-            ::finale_mus_reader::records::packTag(tagText), static_cast<std::uint16_t>(selectorValue), \
+            (identityValue), static_cast<std::uint16_t>(selectorValue), \
             static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), \
             (widthValue), (orderValue), (bitsValue) }, \
         (sourceGateValue), \
@@ -756,6 +762,18 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         nullptr, \
         (appliesValue) \
     }
+
+#define MUS_FIELD_IF(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
+                     orderValue, bitsValue, sourceGateValue, appliesValue, member) \
+    MUS_IDENTIFIED_FIELD_IF(Class, ::finale_mus_reader::records::packTag(tagText), \
+        selectorValue, incidenceValue, slotValue, widthValue, orderValue, bitsValue, \
+        sourceGateValue, appliesValue, member)
+
+#define MUS_NUMERIC_FIELD(Class, selectorValue, incidenceValue, slotValue, widthValue, \
+                          orderValue, bitsValue, sourceGateValue, member) \
+    MUS_IDENTIFIED_FIELD_IF(Class, ::finale_mus_reader::numericGlobalTag(selectorValue), \
+        ::finale_mus_reader::GLOBALS_CMPER, incidenceValue, slotValue, widthValue, \
+        orderValue, bitsValue, sourceGateValue, nullptr, member)
 
 /// @brief Declares a numeric field mapping with every column stated explicitly.
 #define MUS_FIELD(Class, tagText, selectorValue, incidenceValue, slotValue, widthValue, \
@@ -1017,6 +1035,13 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         ::finale_mus_reader::BitRange{}, \
         nullptr, member)
 
+/// @brief A two-byte field addressed by its numeric global selector.
+#define MUS_NUMERIC_WORD(Class, selector, incidence, slot, member) \
+    MUS_NUMERIC_FIELD(Class, selector, incidence, slot, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        ::finale_mus_reader::BitRange{}, nullptr, member)
+
 /// @brief A two-byte field optionally adjusted for source-era behavior.
 #define MUS_WORD_ADJUSTED(Class, tagText, selector, incidence, slot, adjustment, member) \
     ::finale_mus_reader::withSourceAdjustment( \
@@ -1047,6 +1072,14 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 /// @brief A single bit of a payload word.
 #define MUS_BIT(Class, tagText, selector, incidence, slot, bitIndex, member) \
     MUS_FIELD(Class, tagText, selector, incidence, slot, \
+        ::finale_mus_reader::ValueWidth::Word, \
+        ::finale_mus_reader::LongWordOrder::HighFirst, \
+        (::finale_mus_reader::BitRange{static_cast<std::uint8_t>(bitIndex), 1}), \
+        nullptr, member)
+
+/// @brief A single bit addressed by its numeric global selector.
+#define MUS_NUMERIC_BIT(Class, selector, incidence, slot, bitIndex, member) \
+    MUS_NUMERIC_FIELD(Class, selector, incidence, slot, \
         ::finale_mus_reader::ValueWidth::Word, \
         ::finale_mus_reader::LongWordOrder::HighFirst, \
         (::finale_mus_reader::BitRange{static_cast<std::uint8_t>(bitIndex), 1}), \

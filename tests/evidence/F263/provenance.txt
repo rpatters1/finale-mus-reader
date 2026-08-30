@@ -49,11 +49,34 @@ four-eighths switch. Finale 27 nevertheless enables both common-time canned opti
 companions; those values are upgrade synthesis rather than source options.
 
 F263-courtesy-key-off.mus / .etf
-    Only the courtesy key signature turned off. The change is selector 12 word 1,
-    1 -> 0, not the packed courtesy word selector 44 uses from Finale 3.0 onward:
-    the Coda era stores the three courtesies as separate boolean words. Which word
-    holds the clef's is still open, so the reader leaves cautionaryClefChanges at the
-    Finale 27 default for this era.
+    This earlier attribution is superseded. The MUS is byte-identical to
+    F263-nokeycxl.mus, and both Finale 27 companions clear doKeyCancel while retaining
+    cautionaryKeyChanges. Selector 12 word 1 is therefore Cancel Outgoing Key Signature,
+    not the courtesy-key option.
+
+F263-key-restrikeC.mus / .etf / .musx
+    sha256 1054342dfdf8dcdeac864dc5da458763a1770a29e9eed3a8c97760d43c872510 (.mus)
+    sha256 1e4bc9f2d8b97d0b5194561b11921a0f061614b463106e804e4445f64f429662 (.etf)
+    sha256 b745ae1b8194e934ae884f71e4dc8f300174b881d04709bac936bcf88b238125 (.musx)
+    From F263-baseline, enables In C, Display Naturals at Start of Staff System. The MUS
+    differs in one byte: selector 12 word 2 moves 0 -> 1. The ETF repeats the word and the
+    Finale 27 companion carries doCStart.
+
+F263-key-trackbank.mus / .etf / .musx
+    sha256 ec910badddfa669988bf81f532335fb738bc90b8ba60e70211b0ae06cd22622f (.mus)
+    sha256 b8ea15f09fb7e66726f00d498dd8f00301a04ed1a9d0d7de0f8c38f82104e359 (.etf)
+    sha256 3eda10c3cdffcea8c4c2e6695903f40303a92fdcb5a98871acac35feeda8243c (.musx)
+    Captures Redisplay Key Signature If Only Mode is Changing enabled. The MUS is
+    byte-identical to F263-baseline, whose selector 12 word 3 is already 1; this records
+    the UI and companion interpretation but is not a before/after discriminator.
+
+F263-nokeycxl.mus / .etf / .musx
+    sha256 cff46412ab1775a2f6a8dd4fabcb58902e0191f1172c2121690037594bd111d5 (.mus)
+    sha256 bcb7a8669b618560095efd1d6b6457754871cb0ced35fdd348c7c6db68203b9f (.etf)
+    sha256 83f1effc3a4f986fb2ffc32c2f2f69eab68be53de462b929921ec871144fb13d (.musx)
+    From F263-baseline, disables Cancel Outgoing Key Signature. The MUS differs in one
+    byte: selector 12 word 1 moves 1 -> 0. The ETF repeats the word; the Finale 27
+    companion omits doKeyCancel while retaining cautionaryKeyChanges.
 
 F263-dateform-tab.mus
     sha256 f87de69e8e79ea9a15d222a3e18c26894d2d702462b5fedf16ec490986807016
