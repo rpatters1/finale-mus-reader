@@ -183,3 +183,20 @@ F2012-rptopts-3lists-sel2.mus
     Finale 27 preserves all three repeat staff-list families and identifies the
     class 0x00e5 cmper 2 record as repeatStaffListScoreOverride. It again writes
     Top Staff Only and no showOnStaffListNumber.
+
+F2012-F2005-rpts-forparts.mus
+    sha256 aaff1568ec2bb9ef3a1a042953bc59ecbf60ea52d852703f59b801f8a3268b4e
+-finale27/F2012-F2005-rpts-forparts.musx
+    sha256 6b700da38f6b838e34640b65ee526d469a6394d44eeceb6aeed64dcc08445f4b
+    F2005-rpts-forparts opened and saved in Finale 2012. The enabled Show Repeats for
+    Parts setting moves from selector 16 comparator 65534 word 5 to class 0x001e with the
+    same comparator and word, where it remains 1. The Finale 27 companion preserves it.
+
+F2012-F372-activelayer-only.mus
+    sha256 6d806dd76063eac0b074c90d82f33d85da3e9b3de99cd0f0daca03ed42f0e0d5
+-finale27/F2012-F372-activelayer-only.musx
+    sha256 4bbeee94e3079f7499cbc4f58aba03025696ddda01aae2de5d233642034771f4
+    F372-activelayer-only opened and saved in Finale 2012. The enabled Show Active
+    Layer Only setting moves from FI comparator 10 word 4 to class 0x008d with the
+    same comparator and word, where it remains 1. The Finale 27 companion writes
+    `<showCurrentLayerOnly/>`. Other upgrade changes are not used as mapping evidence.

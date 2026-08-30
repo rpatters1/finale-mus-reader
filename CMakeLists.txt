@@ -181,6 +181,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/key_signature_options.cpp
     src/import/options/line_curve_options.cpp
     src/import/options/lyric_options.cpp
+    src/import/options/misc_options.cpp
     src/import/options/multimeasure_rest_options.cpp
     src/import/options/music_spacing_options.cpp
     src/import/options/piano_brace_bracket_options.cpp

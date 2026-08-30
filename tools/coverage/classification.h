@@ -37,6 +37,7 @@ enum class DifferenceClassification
     Unexpected,
     AccidentalInsert17Byte,
     BaselineFont,
+    BetaDiscrepancy,
     CodaTextBlockUpgrade,
     DefaultShapeId,
     DifferentDefaults,

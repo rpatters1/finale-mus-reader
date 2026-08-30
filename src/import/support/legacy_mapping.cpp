@@ -181,6 +181,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportKeySignatureOptions, &options::importKeySignatureOptions),
         FINALE_MUS_READER_IMPORTER(ImportLineCurveOptions, &options::importLineCurveOptions),
         FINALE_MUS_READER_IMPORTER(ImportLyricOptions, &options::importLyricOptions),
+        FINALE_MUS_READER_IMPORTER(ImportMiscOptions, &options::importMiscOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
         FINALE_MUS_READER_IMPORTER(ImportPianoBraceBracketOptions, &options::importPianoBraceBracketOptions),

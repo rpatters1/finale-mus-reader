@@ -343,3 +343,11 @@ F100-stemoffset-23.mus / .etf / .musx
     Changes only the obsolete Stem Offset control from 4 to 23. Selector 21 word 0
     changes to 23 and the ETF repeats it, while the direct Finale 27 companion leaves
     modern XML `stemLift` at 256.
+
+F100-pickup-512.mus / .etf / .musx
+    sha256 31c33732e6076a7f9774fd7016230cc94ceba5e483bcf82d404d4bf4f227733f (.mus)
+    sha256 0827d5e14493ba09dea73086acbc722869c46855309debe55ec059d26fe15367 (.etf)
+    sha256 06833036e750d251709e2f39bf9736c4368fda3141875820f238f2b730d6afe0 (.musx)
+    Controlled from F100-baseline by setting the pickup duration to 512 EDU. Selector 17
+    comparator 65534 word 5 is the only decoded source change, from 0 to 512, and the ETF
+    repeats the same value. The Finale 27 companion preserves the pickup duration.

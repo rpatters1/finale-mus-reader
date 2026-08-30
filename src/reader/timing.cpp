@@ -38,6 +38,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportKeySignatureOptions: return "key_signature_options";
     case Phase::ImportLineCurveOptions: return "line_curve_options";
     case Phase::ImportLyricOptions: return "lyric_options";
+    case Phase::ImportMiscOptions: return "misc_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
