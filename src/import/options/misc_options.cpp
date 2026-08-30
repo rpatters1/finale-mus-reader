@@ -115,8 +115,8 @@ void applyLegacyMiscBehavior(const ImportContext &context) {
 void reportRemainingMiscFields(
     const ImportContext &context,
     const std::shared_ptr<const MiscOptionsTarget> &target) {
-  const auto instance = instanceKey<MiscOptionsTarget>();
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+  const auto instance = instanceKey<MiscOptionsTarget>();
   FINALE_MUS_READER_REPORT_FIELD(
       context.report, instance, "shapeDesignerDashLength",
       {ValueOrigin::Finale27Default, 0, 0, target->shapeDesignerDashLength});
@@ -139,7 +139,7 @@ void reportRemainingMiscFields(
         {ValueOrigin::Finale27Default, 0, 0, target->showActiveLayerOnly});
   }
 #else
-  static_cast<void>(instance);
+  static_cast<void>(context);
   static_cast<void>(target);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }

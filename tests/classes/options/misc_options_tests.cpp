@@ -34,7 +34,8 @@ importMiscOptions(const finale_mus_reader::container::ParsedContainer &parsed,
                   std::uint8_t sourceMajor = 0) {
   const auto document = makeMiscOptionsDocument();
   const auto reference = makeMiscOptionsDocument();
-  const auto defaultMajor = epoch == FormatEpoch::ZlibLegacy ? 17 : 9;
+  const std::uint8_t defaultMajor =
+      epoch == FormatEpoch::ZlibLegacy ? 17 : 9;
   auto profile = profileFor(sourceMajor ? sourceMajor : defaultMajor);
   profile.epoch = epoch;
   profile.byteOrder = parsed.byteOrder;
