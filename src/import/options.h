@@ -67,6 +67,10 @@ void importLineCurveOptions(const ImportContext& context);
 /// entry point.
 void importLyricOptions(const ImportContext& context);
 
+/// @brief Recovers the located scalar fields of options::MiscOptions.
+/// @details Unlocated legacy fields retain the pinned baseline value.
+void importMiscOptions(const ImportContext& context);
+
 /// @brief Recovers options::MultimeasureRestOptions across all four epochs.
 /// @details Its two stages are file-local: no test drives either one alone, because the class
 /// has no collection to build and both are exercised through this entry point.

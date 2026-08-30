@@ -175,7 +175,7 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         ["source font", "companion font", "count"], substitution_rows)
     print_table("Recognized companion transformations", ["transformation", "count"],
         ([name, str(count)] for name, count in transformations.most_common()))
-    expected_rows = [[name, str(count)] for name, count in expected.most_common()]
+    expected_rows = [[name, str(expected[name])] for name in sorted(expected)]
     expected_rows.append(["TOTAL", str(sum(expected.values()))])
     print_table("Expected differences", ["rule", "count"], expected_rows)
 

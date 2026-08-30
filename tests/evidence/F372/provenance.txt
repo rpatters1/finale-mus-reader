@@ -209,3 +209,13 @@ F372-F263-F100-stemdf-lines.mus / .etf / .musx
     and 5 become Efix 804 and 696, and selector 65 long 0 becomes 414. The Finale 27
     companion preserves those values as `graceSlashWidth`, `stemWidth`, and XML
     `stemLift`, completing the two-stage migration from the original Coda floats.
+
+F372-activelayer-only.mus / .etf / .musx
+    sha256 d7b7f74500574477011fedbb937f7bbe756917ca432885b28abec8c555a8a3ad (.mus)
+    sha256 86d840f88166eda6d66a01b1f74d7d2980d32b8fe9b735c71daba67e60f6475b (.etf)
+    sha256 909263bf9648798adcb39f77f35bd7e532898e1a6013796fa2cc8e4f7f39efcc (.musx)
+    Controlled from F372-baseline by enabling Show Active Layer Only. FI comparator 10
+    word 4 is the only decoded source change, from 0 to 1, and the ETF repeats the same
+    value. The Finale 27 companion writes `<showCurrentLayerOnly/>`. This proves the
+    setting and location by Finale 3.7.2; its availability in Finale 3.0--3.7.1 remains
+    provisional because no earlier controlled UI edit is available.

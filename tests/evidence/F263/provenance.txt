@@ -189,3 +189,12 @@ F263-F100-stemoffset-23.mus / .etf / .musx
     F100-stemoffset-23 opened and saved in Finale 2.6.3. Selector 21 word 0 retains
     23, but selector 65 remains at 5000 and the Finale 27 companion contains modern
     XML `stemLift = 128`; the obsolete edit is preserved without semantic migration.
+
+F263-concert-pitch.mus / .etf / .musx
+    sha256 e9d689503aee17b1a2212a8a940e7e6d86300e402f1fc2f6ebf9ffce9de973c0 (.mus)
+    sha256 2c923341e84ab4ff861e1fdbfe9ca1dc593a93363a085791f7835a9e194295d0 (.etf)
+    sha256 34cfeb285fae3857bd2b63a21b3040172fa46418c6615719d08d03a75ca34ee5 (.musx)
+    Controlled from F263-baseline by changing Display Concert Pitch. This setting belongs
+    to the unimplemented PartGlobals class and is distinct from MiscOptions Keep Octave
+    Transposition in Concert Pitch. Physical record analysis is deferred to the PartGlobals
+    investigation.

@@ -10,10 +10,10 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**39 done, 3 partial, 148 to do, 190 total.** Verified class for class against the registry on
+**39 done, 4 partial, 147 to do, 190 total.** Verified class for class against the registry on
 2026-08-24: every registered type appears here and nothing here is unregistered.
 
-## options  (20 done, 0 partial, 8 to do, 28 total)
+## options  (20 done, 1 partial, 7 to do, 28 total)
 
     [x] AccidentalOptions                       accidental_options.cpp
     [x] AlternateNotationOptions                alternate_notation_options.cpp
@@ -28,7 +28,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] KeySignatureOptions                     key_signature_options.cpp
     [x] LineCurveOptions                        line_curve_options.cpp
     [x] LyricOptions                            lyric_options.cpp
-    [ ] MiscOptions
+    [x] MiscOptions                             misc_options.cpp
     [x] MultimeasureRestOptions                 multimeasure_rest_options.cpp
     [x] MusicSpacingOptions                     music_spacing_options.cpp
     [ ] MusicSymbolOptions

@@ -104,3 +104,13 @@ F2005/-finale27/F2005-acci-adjstart.musx
     changed from 24 to 27 EVPU. Selector 41 incidence 2 word 2 is the only decoded source
     word that changes, 24 -> 27; the ETF prints the same value and the Finale 27 companion
     writes <frontAcciSepar>27</frontAcciSepar>.
+
+F2005-rpts-forparts.mus
+    sha256 3b8e743c56390247d733669d93660c3a84ffaad748b18fc59fda880140ea901a
+F2005-rpts-forparts.etf
+    sha256 5fe1cdb182679cfd4b69d135c82870cf912cb98066692375d059f17366bc7366
+F2005/-finale27/F2005-rpts-forparts.musx
+    sha256 beca3e5908dece4d423c11d921591b8710a5214d9b6a1cec0ef432445d1ba901
+    From F2005-baseline, Show Repeats for Parts enabled and nothing else requested. Selector
+    16 comparator 65534 word 5 is the only decoded source word that changes, 0 -> 1, and
+    the ETF prints the same value. The Finale 27 companion preserves the enabled setting.
