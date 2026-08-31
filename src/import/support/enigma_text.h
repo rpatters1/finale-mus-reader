@@ -74,8 +74,6 @@ struct EnigmaTextSource
     /// @details Its face also supplies the initial font command when the record omits one, and
     /// its size and effects complete an otherwise partial initial formatting state.
     std::shared_ptr<const musx::dom::FontInfo> initialFont;
-    /// @brief Optional names whose character values are symbol glyph numbers.
-    const SymbolFontNames* symbolFontNames{};
     /// @brief Optional cache shared by records whose font definitions cannot change.
     EnigmaFontResolutionCache* fontResolutionCache{};
 };

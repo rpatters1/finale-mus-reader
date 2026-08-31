@@ -184,6 +184,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMiscOptions, &options::importMiscOptions),
         FINALE_MUS_READER_IMPORTER(ImportMultimeasureRestOptions, &options::importMultimeasureRestOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
+        FINALE_MUS_READER_IMPORTER(ImportMusicSymbolOptions, &options::importMusicSymbolOptions),
         FINALE_MUS_READER_IMPORTER(ImportPianoBraceBracketOptions, &options::importPianoBraceBracketOptions),
         FINALE_MUS_READER_IMPORTER(ImportRepeatOptions, &options::importRepeatOptions),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeOptions, &options::importSmartShapeOptions),
@@ -759,7 +760,6 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     std::nullopt, std::nullopt};
                 const auto member = reportMember(*field.reporting);
                 FieldInfo info;
-                info.origin = ValueOrigin::Finale27Default;
                 // A capture pass runs before the tables and may already have established
                 // this field, most often as era behavior that no record stores. Claiming it
                 // as a synthesized default afterwards would both duplicate the entry and

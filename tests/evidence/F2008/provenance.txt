@@ -1,9 +1,11 @@
-Finale 2008 (internal version 13.x), zlib era, big-endian.
+Finale 2008 (internal version 13.x), zlib era. The fixtures below include both
+byte orders.
 
-Origin: a controlled test document created by Robert G. Patterson in Finale 2008
-running under Mac OS X 10.4 hosted by QEMU, and released by its author under this
-repository's MIT license. The same save attempted under Mac OS X 10.7 in UTM
-crashed, which is why the specimen is a PowerPC one.
+Origin of the big-endian fixtures: controlled test documents created by Robert
+G. Patterson in Finale 2008 running under Mac OS X 10.4 hosted by QEMU, and
+released by their author under this repository's MIT license. The same save
+attempted under Mac OS X 10.7 in UTM crashed, which is why those specimens are
+PowerPC ones.
 
 The `BE` in the name is the point of it. Finale 2007 and 2008 straddle the Intel
 transition and this repository's notes record byte order as varying across it, but
@@ -57,6 +59,15 @@ F2008-empty.mus
     sha256 d9321c0564199287238185f0952bd282ee4abaed8c65d72a099f7d62f96fea3e
 F2008-empty.musx
     sha256 a2a890b97ef4c3044fb26717b43d50a4c22c626aad8436b14baf0ead3523532a
+F2008-timesig-plusparts.mus
+    sha256 23a91fcc4d98768cb94a5903836e43181362a6fc6ce85aa2e40cef9c27616100
+F2008-timesig-plusparts.musx
+    sha256 e7fb46e4bbb4204cdca29686c6ddc6d14567e4d9296ced3df2987c2c125ce8c9
+    A controlled little-endian document supplied and released by Robert G.
+    Patterson, setting the linked-parts abbreviated common, abbreviated cut,
+    and plus symbols to 98, 69, and 42 while the score symbols remain 99, 67,
+    and 43. Numeric selector 18 class 0x0020 stores the parts values as
+    unpacked words 12, 13, and 11 respectively.
 F2008-defss-over.mus
     sha256 d0d5b2138ca33127cf8b9a5314642a32029d19394eedfa0559c2c1b0cbac71ef
 F2008-defss-over.musx

@@ -654,9 +654,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         // The code page's bank comes from the document's own platform, as it does for a font
         // definition that carries no charset of its own. That is the only source available
         // here, this text belonging to no font record.
-        const bool unicodeTail = profile.version
-            && VersionBound{profile.version->major, profile.version->minor}
-                >= versions::finale2012;
+        const bool unicodeTail = versions::storesUnicodeCodepoints(profile.version);
         std::string ignored;
         std::size_t units = 0;
         if (unicodeTail) {

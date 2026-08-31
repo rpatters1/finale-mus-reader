@@ -124,8 +124,7 @@ std::optional<std::string> decodeRawCodepointsAsMacRoman(const std::string& valu
 
 bool symbolFontEncodingGlitch(const std::vector<TextChunk>& source,
                               const std::vector<TextChunk>& companion,
-                              bool companionHasExplicitSymbolCharset,
-                              const text::SymbolFontNames* symbolFontNames)
+                              bool companionHasExplicitSymbolCharset)
 {
     if (source.empty() || source.size() != companion.size()) return false;
     bool affected = false;
@@ -139,10 +138,6 @@ bool symbolFontEncodingGlitch(const std::vector<TextChunk>& source,
             if (!font) continue;
             try {
                 symbolFont = symbolFont || font->calcIsSymbolFont();
-                if (symbolFontNames) {
-                    symbolFont =
-                        symbolFont || symbolFontNames->contains(canonicalFontName(font->getName()));
-                }
             } catch (const std::invalid_argument&) {
             }
         }
@@ -349,7 +344,7 @@ TextComparison compareText(const std::string& className, const std::string& path
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
-                           const text::SymbolFontNames* symbolFontNames, bool partNameText);
+                           bool partNameText);
 
 void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
@@ -424,8 +419,7 @@ bool enigmaTextIsPageInsertOnly(const std::string& value)
 
 std::map<std::string, ReferentComparison>
 compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
-                          const musx::dom::DocumentPtr& companionDocument,
-                          const text::SymbolFontNames* symbolFontNames)
+                          const musx::dom::DocumentPtr& companionDocument)
 {
     using TextBlock = musx::dom::others::TextBlock;
     std::map<std::string, ReferentComparison> result;
@@ -465,7 +459,7 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
         }
         const auto comparison =
             compareText("block_texts", {}, *sourceText, *companionText, sourceDocument,
-                        companionDocument, symbolFontNames, false);
+                        companionDocument, false);
         if (comparison.differences.contains(TextDifferenceClassification::Other) ||
             comparison.differences.contains(TextDifferenceClassification::MissingRun)) {
             result[prefix] = ReferentComparison::Renumbered;
@@ -517,7 +511,7 @@ TextComparison compareText(const std::string& className, const std::string& path
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
-                           const text::SymbolFontNames* symbolFontNames, bool partNameText)
+                           bool partNameText)
 {
     const auto normalizeWhitespaceControls = [](std::string value) {
         std::erase_if(
@@ -583,8 +577,7 @@ TextComparison compareText(const std::string& className, const std::string& path
         R"(\^(?:font|fontid|Font|fontMus|fontTxt|fontNum)\([^,)]*,(?:8191|8192)\))");
     if (wrongPlatformEncodingGlitch(*sourceChunks, *companionChunks) ||
         symbolFontEncodingGlitch(*sourceChunks, *companionChunks,
-                                 std::regex_search(normalizedCompanion, explicitSymbolCharset),
-                                 symbolFontNames)) {
+                                 std::regex_search(normalizedCompanion, explicitSymbolCharset))) {
         std::set<TextDifferenceClassification> differences{
             TextDifferenceClassification::KnownEncodingGlitch};
         if (removedWhitespaceControl) {

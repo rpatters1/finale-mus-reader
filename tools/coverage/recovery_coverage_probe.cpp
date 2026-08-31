@@ -615,8 +615,6 @@ int main(int argc, char** argv)
         }
     }
     const finale_mus_reader::ReaderOptions readerOptions{macSymbolFonts};
-    const auto symbolFontNames = finale_mus_reader::text::parseMacSymbolFonts(macSymbolFonts);
-
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
     std::map<std::string, std::vector<CompanionConvention>> corpusCompanions;
@@ -769,11 +767,13 @@ int main(int argc, char** argv)
                 << ",\"source_version\":" << jsonString(versionName(result.report))
                 << ",\"warning_count\":" << loggerCaptured.size();
             auto survey = runAllSurveyors(
-                SurveyContext{result.document, result.report});
+                SurveyContext{result.document, *sourceReport});
             sourceSurveyTimings = std::move(survey.timings);
             sourceSnapshot = std::move(survey.snapshot);
             writeSurveyErrors(out, survey.errors);
             sourceOk = true;
+        } catch (const finale_mus_reader::coverage::ProbeInvariantError&) {
+            throw;
         } catch (const std::exception& error) {
             if (!readerDurationMs) {
                 const std::chrono::duration<double, std::milli> readerElapsed =
@@ -874,7 +874,7 @@ int main(int argc, char** argv)
                     const std::chrono::duration<double, std::milli> documentLoadElapsed =
                         std::chrono::steady_clock::now() - documentLoadStarted;
                     documentLoadDurationMs = documentLoadElapsed.count();
-                    const ImportReport emptyReport(sourceReport->formatEpoch);
+                    ImportReport emptyReport(sourceReport->formatEpoch);
                     companionOut << "\"status\":\"ok\""
                         << ",\"warning_count\":" << loggerCaptured.size();
                     auto survey = runAllSurveyors(
@@ -882,6 +882,8 @@ int main(int argc, char** argv)
                     companionSurveyTimings = std::move(survey.timings);
                     companionSnapshot = std::move(survey.snapshot);
                     writeSurveyErrors(companionOut, survey.errors);
+                } catch (const finale_mus_reader::coverage::ProbeInvariantError&) {
+                    throw;
                 } catch (const std::exception& error) {
                     companionOut << "\"status\":\"error\""
                         << ",\"error\":" << jsonString(error.what());
@@ -921,8 +923,7 @@ int main(int argc, char** argv)
                         sourceDocument, companionDocument, sourceReport->formatEpoch,
                         sourceReport->byteOrder,
                         sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr,
-                        *sourceReport,
-                        &symbolFontNames);
+                        *sourceReport);
                     writeCompactComparison(out, comparison);
                     out << '}';
                 }

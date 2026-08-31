@@ -190,13 +190,13 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0132` | categoryStaffListScore | others | weak | 2011, 2012 | 12 | `mus-eb742704c65232a2` (0:0x26de) |
 | `0x013b` | unknown | unknown/options | open | 2012 | 12 | `mus-f95d2ea21b99022e` (0:0x355a) |
 | `0x013c` | unknown | unknown/options | open | 2012 | 12 | `mus-f95d2ea21b99022e` (0:0x3644) |
-| `0x03f2` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x0) |
-| `0x03f3` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x1a) |
-| `0x03f4` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x34) |
-| `0x03f6` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 100 | `mus-eb742704c65232a2` (1:0x4e) |
-| `0x03f7` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 100 | `mus-eb742704c65232a2` (1:0xc2) |
-| `0x03f8` | baselinesExprBelowStaff | details | weak | 2011, 2012 | 100 | `mus-eb742704c65232a2` (1:0x136) |
+| `0x03f2` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 10 | `mus-23a91fcc4d98768c` (1:0x0) |
+| `0x03f3` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 10 | `mus-23a91fcc4d98768c` (1:0x1a) |
+| `0x03f4` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 10 | `mus-23a91fcc4d98768c` (1:0x34) |
+| `0x03f6` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 100 | `mus-23a91fcc4d98768c` (1:0x4e) |
+| `0x03f7` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 100 | `mus-23a91fcc4d98768c` (1:0xc2) |
+| `0x03f8` | baselinesExprBelowStaff | details | weak | 2008, 2011, 2012 | 100 | `mus-23a91fcc4d98768c` (1:0x136) |
 | `0x0402` | unknown | unknown/options | open | 2012 | 20 | `mus-f95d2ea21b99022e` (1:0x1aa) |
-| `0x0414` | gfhold | details | strong | 2011, 2012 | 20 | `mus-eb742704c65232a2` (1:0x1aa) |
+| `0x0414` | gfhold | details | strong | 2008, 2011, 2012 | 20 | `mus-23a91fcc4d98768c` (1:0x1aa) |
 | `0x041d` | unknown | unknown/options | open | 2012 | 40 | `mus-80f8c631de435726` (1:0x336) |
 | `0x0455` | activeLyric | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x1ce) |

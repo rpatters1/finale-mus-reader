@@ -4,6 +4,7 @@
 #include "import/others.h"
 
 #include <iterator>
+#include <memory>
 
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
@@ -29,6 +30,42 @@ void convertNameToUtf8(void* instance, const SourceProfile&, const musx::dom::Do
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
     font->name = text::toUtf8(font->name, font->charsetBank, font->charsetVal);
+}
+
+int symbolCharsetForBank(FontDefinitionTarget::CharacterSetBank bank)
+{
+    return bank == FontDefinitionTarget::CharacterSetBank::Windows
+        ? FontDefinitionTarget::SYMBOL_CHARSET_WIN
+        : FontDefinitionTarget::SYMBOL_CHARSET_MAC;
+}
+
+// MacSymbolFonts names faces whose stored charset may not express their glyph-number
+// semantics. Normalizing each matching definition once makes the constructed document
+// self-describing, so every later decoder and document consumer can rely on the font itself.
+void applyConfiguredSymbolFonts(const ImportContext& context)
+{
+    if (!context.profile.symbolFontNames) return;
+    for (const auto& font : context.document->getOthers()
+             ->getArray<FontDefinitionTarget>(musx::dom::SCORE_PARTID)) {
+        if (!context.profile.symbolFontNames->contains(
+                musx::dom::normalizeFontName(font->name))) {
+            continue;
+        }
+        const auto adjusted = symbolCharsetForBank(font->charsetBank);
+        if (font->charsetVal == adjusted) continue;
+        const auto mutableFont = std::const_pointer_cast<FontDefinitionTarget>(font);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        const auto key = instanceKey<FontDefinitionTarget>(
+            musx::dom::SCORE_PARTID, font->getCmper());
+        if (auto* info = context.report.findField(key, "charsetVal")) {
+            info->origin = ValueOrigin::LegacyMusAdjusted;
+        } else {
+            FINALE_MUS_READER_REPORT_FIELD(context.report, key, "charsetVal",
+                {ValueOrigin::LegacyMusAdjusted, 0, 0, font->charsetVal});
+        }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        mutableFont->charsetVal = adjusted;
+    }
 }
 
 // Before Finale 3.2 the font record carries no charset at all, so `charsetBank` and
@@ -225,6 +262,7 @@ void importFontDefinitions(const ImportContext& context)
     applyMappingTables({&fontDefinitionsTable(), &earlyFontDefinitionsTable(),
                            &codaFontDefinitionsTable(), &classFontDefinitionsTable()},
         context.index, context.profile, context.document, context.report);
+    applyConfiguredSymbolFonts(context);
 }
 
 } // namespace others

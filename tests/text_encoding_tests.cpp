@@ -135,24 +135,6 @@ TEST_CASE("MacSymbolFonts contents normalize one font name per line", "[text]")
     CHECK(names.contains("gracenotes"));
 }
 
-TEST_CASE("MacSymbolFonts overrides a font definition's text charset", "[text]")
-{
-    auto session = musx::factory::DocumentFactory::begin();
-    const auto document = session.getDocument();
-    auto font = std::make_shared<musx::dom::others::FontDefinition>(document,
-        musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(23));
-    font->name = "Pmusic";
-    font->charsetBank = Bank::MacOS;
-    font->charsetVal = 0;
-    document->getOthers()->add(musx::dom::others::FontDefinition::XmlNodeName, font);
-
-    const std::string input = "P music\r\n";
-    const std::vector<std::uint8_t> bytes(input.begin(), input.end());
-    const auto names = parseMacSymbolFonts(bytes);
-    CHECK(toUtf8("\xb0", document, 23, UnresolvedFontFallback::Text) == "∞");
-    CHECK(toUtf8("\xb0", document, 23, UnresolvedFontFallback::Text, &names) == "°");
-}
-
 TEST_CASE("Seven-bit names survive conversion unchanged", "[text]")
 {
     // These go through a converter like everything else rather than short-circuiting on

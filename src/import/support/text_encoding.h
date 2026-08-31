@@ -26,6 +26,8 @@ SymbolFontNames parseMacSymbolFonts(std::span<const std::uint8_t> contents);
 
 inline constexpr std::uint8_t legacyCharsetBankBit = 13;
 inline constexpr std::uint8_t legacyCharsetValueBits = 12;
+inline constexpr int windowsAnsiCharset = 0;
+inline constexpr int windowsDefaultCharset = 1;
 
 /// @brief What bytes using a font absent from the document are known to represent.
 enum class UnresolvedFontFallback
@@ -81,8 +83,7 @@ std::string utf16LeToUtf8(std::span<const std::uint8_t> source);
 /// font is absent, @p unresolvedFontFallback supplies that fact. Text uses the source
 /// platform's default encoding; symbol bytes retain their numeric glyph values.
 std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
-    const SymbolFontNames* symbolFontNames = nullptr);
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
 
 /// @brief Whether a byte is ASCII whitespace, for whichever integral or character type it
 /// arrives as (`char`, `unsigned char`, `std::uint8_t`, and so on).
@@ -110,8 +111,7 @@ std::string normalizeLineBreaks(std::string source);
 
 /// @brief Converts one legacy font character to the code point musxdom stores.
 char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
-    const SymbolFontNames* symbolFontNames = nullptr);
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
 
 } // namespace text
 } // namespace finale_mus_reader

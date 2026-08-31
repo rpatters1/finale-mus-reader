@@ -36,7 +36,10 @@ enum class DifferenceClassification
 {
     Unexpected,
     AccidentalInsert17Byte,
-    BaselineFont,
+    CharsetEquivalence,
+    CharsetPitchDifference,
+    FontPlatformShift,
+    SymbolFontEquivalence,
     BetaDiscrepancy,
     CodaTextBlockUpgrade,
     DefaultShapeId,
@@ -137,8 +140,13 @@ using DifferenceEquivalenceFn = bool (*)(const DifferenceContext& context);
 
 bool comparisonPathStartsWith(std::string_view path, std::string_view prefix);
 bool comparisonPathEndsWith(std::string_view path, std::string_view suffix);
-std::optional<std::int64_t> comparisonIntegerLeaf(const ComparisonLeaves& leaves,
-                                                  std::string_view path);
+inline std::optional<std::int64_t> comparisonIntegerLeaf(
+    const ComparisonLeaves& leaves, std::string_view path)
+{
+    const auto found = leaves.find(std::string(path));
+    if (found == leaves.end() || !found->second.first.isInteger()) return std::nullopt;
+    return found->second.first.asInteger();
+}
 bool comparisonEqualSurrounding(const ComparisonLeaves& source, const ComparisonLeaves& companion,
                                 std::string_view prefix, std::string_view excluded);
 

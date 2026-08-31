@@ -232,7 +232,7 @@ namespace versions {
 /// earlier epoch stores the narrow form regardless of what its header says.
 [[nodiscard]] inline bool storesUnicodeCodepoints(const std::optional<SourceVersion>& version)
 {
-    return version && VersionBound{version->major, version->minor} >= finale2012;
+    return version && VersionBound{version->major, version->minor, version->maint} >= finale2012;
 }
 } // namespace versions
 
@@ -330,7 +330,8 @@ struct SourceProfile
         return formatEpochOrdinal(sourceEpoch) >= formatEpochOrdinal(boundaryEpoch);
     }
     return sourceVersion
-        && VersionBound{sourceVersion->major, sourceVersion->minor} >= boundaryVersion;
+        && VersionBound{sourceVersion->major, sourceVersion->minor, sourceVersion->maint}
+            >= boundaryVersion;
 }
 
 [[nodiscard]] constexpr bool sourceAtOrAfter(const SourceProfile& profile,
@@ -350,7 +351,8 @@ struct SourceProfile
         return formatEpochOrdinal(sourceEpoch) < formatEpochOrdinal(boundaryEpoch);
     }
     return sourceVersion
-        && VersionBound{sourceVersion->major, sourceVersion->minor} < boundaryVersion;
+        && VersionBound{sourceVersion->major, sourceVersion->minor, sourceVersion->maint}
+            < boundaryVersion;
 }
 
 [[nodiscard]] constexpr bool sourcePredatesVersion(const SourceProfile& profile,

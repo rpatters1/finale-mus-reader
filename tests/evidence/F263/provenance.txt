@@ -30,6 +30,18 @@ F263-clef-baseline.etf
 
 Finale 27 companions are in `-finale27/`.
 
+F263-musechars.mus / .etf / .musx
+    sha256 f730245934b1aaf1ddf758d5298f553f2795090bd4b561f375385e7ea17eefa1 (.mus)
+    sha256 88f8ee19b81bd8dd26313f34f9524c1888f88a52e02e010110c0194f23b1bfee (.etf)
+    sha256 6e05f92561e03a440dc7f6a670ba9d9868800258222a1ec0a366d59c12d68592 (.musx)
+    From F263-baseline, changes the quarter notehead and four flag characters by 16:
+    selector 6 word 1 moves 207 -> 191, selector 7 word 5 moves 106 -> 90,
+    selector 8 word 0 moves 74 -> 58, and selector 10 words 1 and 2 move
+    251/240 -> 235/224. The ETF and Finale 27 companion preserve all five changes.
+    The 128th-rest control was also changed, but the MUS and ETF remained byte-identical
+    to the five-change save, the companion retained 229, and Finale 2.6.3 restored the
+    prior setting after relaunch. This control is visible but is not a persisted Coda option.
+
 F263-beams-inclrests.mus / .etf
     sha256 67ef02f972814e8dd31a23f93fbd6e2db5d0abd5a8428e99a09caffc1b4a81d8 (.mus)
     sha256 7971c039f77fe61427ab4d7a7bd858aa0a747605e6b61d53f6adadaa4f8c3c36 (.etf)

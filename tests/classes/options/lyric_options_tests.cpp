@@ -369,7 +369,8 @@ void testLyricOptionsRecovery()
         const bool isFinale2012 = fixture.epoch == FormatEpoch::ZlibLegacy
             && result.report.sourceVersion
             && finale_mus_reader::VersionBound{result.report.sourceVersion->major,
-                   result.report.sourceVersion->minor}
+                   result.report.sourceVersion->minor,
+                   result.report.sourceVersion->maint}
                 >= finale_mus_reader::versions::finale2012;
         expect(lyrics->lyricUseEdgePunctuation == !isFinale2012,
             wrong("syllable edge punctuation setting"));

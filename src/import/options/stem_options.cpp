@@ -101,8 +101,7 @@ void reportConnectionField(ImportReport& report, std::size_t index, const char* 
 void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<StemOptionsTarget>& target,
     const PhysicalConnection& stored, bool adjustmentsAreEvpu,
-    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report,
-    const text::SymbolFontNames* symbolFontNames)
+    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report)
 {
     const auto index = target->stemConnections.size();
     const auto toEfix = [adjustmentsAreEvpu](std::int16_t stored) {
@@ -114,8 +113,7 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     connection->symbol = stored.symbolIsCodepoint
         ? static_cast<char32_t>(stored.symbol)
         : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol),
-            document, connection->fontId, text::UnresolvedFontFallback::Symbol,
-            symbolFontNames);
+            document, connection->fontId, text::UnresolvedFontFallback::Symbol);
     connection->upStemVert = toEfix(stored.upStemVert);
     connection->downStemVert = toEfix(stored.downStemVert);
     connection->upStemHorz = toEfix(stored.upStemHorz);
@@ -428,8 +426,7 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
             break;
         }
         insertRecoveredConnection(document, target, stored,
-            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report,
-            profile.symbolFontNames);
+            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report);
     }
 }
 

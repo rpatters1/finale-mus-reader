@@ -65,10 +65,10 @@ enum class SourcePlatform
 enum class ValueOrigin
 {
     /// @brief A possible legacy source for this field has not yet been mapped.
-    /// @details The value is the musxdom default for a source-owned object or the seeded Finale
-    /// 27 value for an options object. This differs from @ref Finale27Default, which identifies
-    /// a known mapping that does not supply a value for the current source, and from @ref
-    /// MusxOnly, which identifies a field known to postdate every supported legacy layout.
+    /// @details This origin is assigned explicitly while format coverage is incomplete. It
+    /// differs from @ref Finale27Default, which is the default provenance of a retained seeded
+    /// value, and from @ref MusxOnly, which identifies a field known to postdate every supported
+    /// legacy layout.
     Unmapped,
     /// @brief The field postdates every supported legacy MUS layout.
     /// @details No source value can be recovered. The value remains default-initialized for a
@@ -92,8 +92,7 @@ enum class ValueOrigin
     /// the option and every such document shows a courtesy clef, so the value is known
     /// exactly while nothing in the file records it.
     LegacyBehavior,
-    /// @brief Left at the value the pinned Finale 27 baseline supplies, because this source
-    /// neither records the field nor determines it by behavior.
+    /// @brief Retained from the pinned Finale 27 baseline because no explicit origin replaced it.
     Finale27Default
 };
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -189,7 +188,7 @@ struct FieldInfo
     {
     }
 
-    ValueOrigin origin = ValueOrigin::Unmapped;
+    ValueOrigin origin = ValueOrigin::Finale27Default;
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
     std::int64_t rawValue{};
@@ -269,6 +268,20 @@ struct ImportReport
         return fields[instance].insert_or_assign(std::move(member), std::move(info)).first->second;
     }
 
+    /// @brief Returns a field's provenance, creating its retained-default record if necessary.
+    /// @details An explicit field report replaces this record. Otherwise an instance origin is
+    /// inherited when one exists, and a seeded field retains @ref ValueOrigin::Finale27Default.
+    FieldInfo& fieldProvenance(const InstanceKey& instance, std::string_view member)
+    {
+        auto [found, inserted] = fields[instance].try_emplace(std::string(member));
+        if (inserted) {
+            if (const auto* origin = findInstanceOrigin(instance)) {
+                found->second.origin = *origin;
+            }
+        }
+        return found->second;
+    }
+
     void setInstanceOrigin(const InstanceKey& instance, ValueOrigin origin)
     {
         instanceOrigins.insert_or_assign(instance, origin);
@@ -337,6 +350,8 @@ struct ReaderOptions
     /// @brief Contents of Finale's `MacSymbolFonts.txt`, if available.
     /// @details The reader parses the bytes during the call and does not retain the span.
     /// Each nonblank line names a font whose stored character values are glyph numbers.
+    /// A matching font definition retains its charset bank and receives that bank's symbol
+    /// charset in the returned document.
     std::span<const std::uint8_t> macSymbolFonts;
 };
 

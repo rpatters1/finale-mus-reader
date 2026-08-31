@@ -3,10 +3,10 @@
 
 #include <cstddef>
 #include <map>
-#include <set>
 #include <string>
 #include <utility>
 
+#include "coverage/common/font_info.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
@@ -14,33 +14,6 @@
 namespace {
 
 using namespace finale_mus_reader::coverage;
-
-bool isBaselineCharsetNormalization(const DifferenceContext& context)
-{
-    if (!context.sourceValue.isInteger() || !context.companionValue.isInteger()) return false;
-    const auto values =
-        std::pair{context.sourceValue.asInteger(), context.companionValue.asInteger()};
-    if (comparisonPathEndsWith(context.path, "].charset_bank")) {
-        return std::set<std::pair<std::int64_t, std::int64_t>>{{0, 1}, {1, 0}}.contains(values);
-    }
-    if (comparisonPathEndsWith(context.path, "].charset_value")) {
-        return std::set<std::pair<std::int64_t, std::int64_t>>{{0, 2},    {0, 4095}, {1, 2},
-                                                               {1, 4095}, {2, 4095}, {6, 4095}}
-            .contains(values);
-    }
-    return false;
-}
-
-std::optional<DifferenceClassification>
-classifyFontDefinitionDifference(const DifferenceContext& context)
-{
-    using enum DifferenceCategory;
-    if (context.category == Differs &&
-        (context.origin != "legacy-mus" || isBaselineCharsetNormalization(context))) {
-        return DifferenceClassification::BaselineFont;
-    }
-    return std::nullopt;
-}
 
 Value observeFontDefinitions(const SurveyContext& ctx)
 {
@@ -79,9 +52,11 @@ Value observeFontDefinitions(const SurveyContext& ctx)
             field("normalized_name",
                   [](const auto& value) { return musx::dom::normalizeFontName(value.name); }),
             field("charset_bank", &musx::dom::others::FontDefinition::charsetBank),
-            field("charset_value", &musx::dom::others::FontDefinition::charsetVal),
+            field("charset_val", &musx::dom::others::FontDefinition::charsetVal),
             field("pitch", &musx::dom::others::FontDefinition::pitch),
             field("family", &musx::dom::others::FontDefinition::family),
+            field(fontDefinitionIsSymbolField,
+                &musx::dom::others::FontDefinition::calcIsSymbolFont),
             field("origin_name",
                   [&ctx](const auto& value) {
                       return fieldOrigin<musx::dom::others::FontDefinition>(ctx, "name",
@@ -92,7 +67,7 @@ Value observeFontDefinitions(const SurveyContext& ctx)
                       return fieldOrigin<musx::dom::others::FontDefinition>(ctx, "charsetBank",
                                                                             value.getCmper());
                   }),
-            field("origin_charsetValue",
+            field("origin_charsetVal",
                   [&ctx](const auto& value) {
                       return fieldOrigin<musx::dom::others::FontDefinition>(ctx, "charsetVal",
                                                                             value.getCmper());
@@ -113,6 +88,6 @@ Value observeFontDefinitions(const SurveyContext& ctx)
 }
 
 COVERAGE_CLASS("others", "font_definitions", observeFontDefinitions,
-               classifyFontDefinitionDifference);
+    classifyFontDefinitionDifference);
 
 } // namespace

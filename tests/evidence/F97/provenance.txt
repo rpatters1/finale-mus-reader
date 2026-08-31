@@ -76,3 +76,15 @@ F97-beams-inclrests.etf
     the ETF repeats that isolated change. Finale 27 converts the one source
     switch into both incEdgeRestsInBeamGroups and extendSecBeamsOverRests, and
     does not enable incRestsInFourGroups.
+
+F97-def-measrest.mus
+    sha256 8279f870a52987762d620361edaba52aefeeb22a2f4c97c344b26b5110a11070
+F97-def-measrest.etf
+    sha256 bd1f77414593a3e1b9ae4546b317a787ead5af8aa133baccf9f09e4cf23e6401
+-finale27/F97-def-measrest.musx
+    sha256 738cef02ac721fd31071e010da06e8219507f05b3bf99773ab74ffd58369f0f2
+    Created from Fin97-baseline by changing the default measure-rest character
+    from 183 to 206. Selector 9 word 4 makes the same isolated change, and the
+    ETF repeats it. Finale 97 is the first version whose UI exposes this setting.
+    Finale uses the selected character only when it recognizes the glyph as a
+    rest; otherwise it displays the whole-rest glyph.

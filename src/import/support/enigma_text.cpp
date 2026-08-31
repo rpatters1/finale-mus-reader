@@ -787,8 +787,8 @@ private:
         if (m_source.utf8) {
             m_result.text.append(m_literal);
         } else if (m_font) {
-            m_result.text.append(toUtf8(m_literal, m_source.document, *m_font,
-                UnresolvedFontFallback::Text, m_source.symbolFontNames));
+            m_result.text.append(toUtf8(
+                m_literal, m_source.document, *m_font, UnresolvedFontFallback::Text));
         } else {
             m_result.text.append(toUtf8(m_literal, m_source.platform));
         }
