@@ -13,23 +13,23 @@ namespace finale_mus_reader_tests {
 namespace {
 
 using namespace classes;
-using Target = finale_mus_reader::options::MusicSymbolOptionsTarget;
+using MusicSymbolOptionsTestTarget = finale_mus_reader::options::MusicSymbolOptionsTarget;
 
 musx::dom::DocumentPtr makeMusicSymbolOptionsDocument()
 {
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    auto options = std::make_shared<Target>(document);
+    auto options = std::make_shared<MusicSymbolOptionsTestTarget>(document);
     for (std::size_t index = 0;
          index < finale_mus_reader::options::musicSymbolOptionsFields().size(); ++index) {
         options.get()->*finale_mus_reader::options::musicSymbolOptionsFields()[index].member =
             static_cast<char32_t>(1000 + index);
     }
-    document->getOptions()->add(Target::XmlNodeName, options);
+    document->getOptions()->add(MusicSymbolOptionsTestTarget::XmlNodeName, options);
     return std::move(session).finish();
 }
 
-std::shared_ptr<const Target> runMusicSymbolImport(
+std::shared_ptr<const MusicSymbolOptionsTestTarget> runMusicSymbolImport(
     const finale_mus_reader::container::ParsedContainer& parsed,
     ImportReport& report, std::optional<SourceVersion> sourceVersion = std::nullopt)
 {
@@ -50,7 +50,7 @@ std::shared_ptr<const Target> runMusicSymbolImport(
     const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed), profile,
         noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importMusicSymbolOptions(context);
-    return document->getOptions()->get<Target>();
+    return document->getOptions()->get<MusicSymbolOptionsTestTarget>();
 }
 
 TEST_CASE("Finale 2012 music-symbol long array is selected by payload shape", "[class]")
@@ -74,7 +74,7 @@ TEST_CASE("Finale 2012 music-symbol long array is selected by payload shape", "[
                 finale_mus_reader::options::musicSymbolOptionsFields()[index];
             const auto expected = static_cast<char32_t>(0x10000 + index * 17);
             REQUIRE(result.get()->*descriptor.member == expected);
-            const auto* info = report.findField<Target>(descriptor.memberName);
+            const auto* info = report.findField<MusicSymbolOptionsTestTarget>(descriptor.memberName);
             REQUIRE(info);
             REQUIRE(info->origin == ValueOrigin::LegacyMus);
             REQUIRE(info->rawValue == static_cast<std::int64_t>(expected));
@@ -94,12 +94,12 @@ TEST_CASE("Pre-2012 class 0x0059 recovers its two straight-flag symbols", "[clas
     for (std::size_t index = 0;
          index < finale_mus_reader::options::musicSymbolOptionsFields().size(); ++index) {
         const auto& descriptor = finale_mus_reader::options::musicSymbolOptionsFields()[index];
-        const auto isStraightUp = descriptor.member == &Target::flagStraightUp;
-        const auto isStraightDown = descriptor.member == &Target::flagStraightDown;
+        const auto isStraightUp = descriptor.member == &MusicSymbolOptionsTestTarget::flagStraightUp;
+        const auto isStraightDown = descriptor.member == &MusicSymbolOptionsTestTarget::flagStraightDown;
         const auto expected = isStraightUp ? 115
             : isStraightDown ? 83 : static_cast<int>(1000 + index);
         REQUIRE(result.get()->*descriptor.member == static_cast<char32_t>(expected));
-        const auto* info = report.findField<Target>(descriptor.memberName);
+        const auto* info = report.findField<MusicSymbolOptionsTestTarget>(descriptor.memberName);
         REQUIRE(info);
         REQUIRE(info->origin == (isStraightUp || isStraightDown
                 ? ValueOrigin::LegacyMus
@@ -194,7 +194,7 @@ TEST_CASE("Narrow music-symbol selectors recover in every pre-Unicode epoch", "[
             const auto& descriptor =
                 finale_mus_reader::options::musicSymbolOptionsFields()[index];
             INFO(descriptor.memberName);
-            const auto* info = report.findField<Target>(descriptor.memberName);
+            const auto* info = report.findField<MusicSymbolOptionsTestTarget>(descriptor.memberName);
             REQUIRE(info);
             const auto applies = descriptor.narrowSource
                 && (descriptor.narrowEra
@@ -269,7 +269,7 @@ TEST_CASE("Expanded music-symbol characters begin with Finale 3.5", "[class]")
             INFO(memberName);
             REQUIRE(options.get()->*field->member == static_cast<char32_t>(
                 recovers ? 20 + index : 1000 + index));
-            REQUIRE(report.findField<Target>(memberName)->origin ==
+            REQUIRE(report.findField<MusicSymbolOptionsTestTarget>(memberName)->origin ==
                 (recovers ? ValueOrigin::LegacyMus : ValueOrigin::Finale27Default));
         }
     }
@@ -310,7 +310,7 @@ TEST_CASE("Later expanded music-symbol characters begin with Finale 3.5.1", "[cl
             INFO(memberName);
             REQUIRE(options.get()->*field->member == static_cast<char32_t>(
                 recovers ? 20 + index : 1000 + index));
-            REQUIRE(report.findField<Target>(memberName)->origin ==
+            REQUIRE(report.findField<MusicSymbolOptionsTestTarget>(memberName)->origin ==
                 (recovers ? ValueOrigin::LegacyMus : ValueOrigin::Finale27Default));
         }
     }
@@ -320,13 +320,13 @@ TEST_CASE("Coda key-signature characters decode ordinary accidental bytes throug
     "[class][reader]")
 {
     const auto result = readFixture("evidence/F263/F263-musechars.mus");
-    const auto options = result.document->getOptions()->get<Target>();
+    const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
     for (const auto member : {std::string_view("keySigNatural"),
              std::string_view("keySigFlat"), std::string_view("keySigSharp"),
              std::string_view("keySigDblFlat"),
              std::string_view("keySigDblSharp")}) {
-        const auto* info = result.report.findField<Target>(member);
+        const auto* info = result.report.findField<MusicSymbolOptionsTestTarget>(member);
         INFO(member);
         REQUIRE(info);
         REQUIRE(info->origin == ValueOrigin::LegacyBehavior);
@@ -343,11 +343,11 @@ TEST_CASE("Coda leaves 8vb-down at the pinned default", "[class][reader]")
     for (const auto fixture : {"evidence/F100/F100-baseline.mus",
              "evidence/F263/F263-musechars.mus"}) {
         const auto result = readFixture(fixture);
-        const auto options = result.document->getOptions()->get<Target>();
+        const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
         REQUIRE(options);
         INFO(fixture);
         REQUIRE(options->eightVbDown == 195);
-        const auto* info = result.report.findField<Target>("eightVbDown");
+        const auto* info = result.report.findField<MusicSymbolOptionsTestTarget>("eightVbDown");
         REQUIRE(info);
         REQUIRE(info->origin == ValueOrigin::Finale27Default);
         REQUIRE(info->rawValue == 195);
@@ -358,7 +358,7 @@ TEST_CASE("Finale 1 flag character controls map to primary and second flags",
     "[class][reader]")
 {
     const auto result = readFixture("evidence/F100/F100-flagchars.mus");
-    const auto options = result.document->getOptions()->get<Target>();
+    const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
 
     CHECK(options->flagUp == 115);
@@ -368,14 +368,14 @@ TEST_CASE("Finale 1 flag character controls map to primary and second flags",
     for (const auto member : {std::string_view("flagUp"), std::string_view("flagDown"),
              std::string_view("flag2Up"), std::string_view("flag2Down")}) {
         INFO(member);
-        REQUIRE(result.report.findField<Target>(member)->origin == ValueOrigin::LegacyMus);
+        REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>(member)->origin == ValueOrigin::LegacyMus);
     }
 
     CHECK(options->flag16Up == 114);
     CHECK(options->flag16Down == 82);
-    CHECK(result.report.findField<Target>("flag16Up")->origin
+    CHECK(result.report.findField<MusicSymbolOptionsTestTarget>("flag16Up")->origin
         == ValueOrigin::Finale27Default);
-    CHECK(result.report.findField<Target>("flag16Down")->origin
+    CHECK(result.report.findField<MusicSymbolOptionsTestTarget>("flag16Down")->origin
         == ValueOrigin::Finale27Default);
 }
 
@@ -383,7 +383,7 @@ TEST_CASE("Pre-Unicode music symbols use their category font encodings",
     "[class][reader]")
 {
     const auto accidentalResult = readFixture("evidence/F100/F100-accis.mus");
-    const auto accidentalOptions = accidentalResult.document->getOptions()->get<Target>();
+    const auto accidentalOptions = accidentalResult.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(accidentalOptions);
     CHECK(accidentalOptions->dblFlat == 0xba);
     CHECK(accidentalOptions->dblSharp == 0xdc);
@@ -391,33 +391,33 @@ TEST_CASE("Pre-Unicode music symbols use their category font encodings",
     CHECK(accidentalOptions->chordDblSharp == 0x2039);
 
     const auto keyResult = readFixture("evidence/F100/F100-key-font.mus");
-    const auto keyOptions = keyResult.document->getOptions()->get<Target>();
+    const auto keyOptions = keyResult.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(keyOptions);
     CHECK(keyOptions->dblFlat == 0xba);
     CHECK(keyOptions->dblSharp == 0xdc);
     CHECK(keyOptions->keySigDblFlat == 0x222b);
     CHECK(keyOptions->keySigDblSharp == 0x2039);
-    CHECK(keyResult.report.findField<Target>("keySigDblFlat")->rawValue == 0xba);
-    CHECK(keyResult.report.findField<Target>("keySigDblSharp")->rawValue == 0xdc);
+    CHECK(keyResult.report.findField<MusicSymbolOptionsTestTarget>("keySigDblFlat")->rawValue == 0xba);
+    CHECK(keyResult.report.findField<MusicSymbolOptionsTestTarget>("keySigDblSharp")->rawValue == 0xdc);
 }
 
 TEST_CASE("Time-signature symbols are shared with parts before the zlib epoch",
     "[class][reader]")
 {
     const auto result = readFixture("evidence/F2006/F2006-timesig-plus.mus");
-    const auto options = result.document->getOptions()->get<Target>();
+    const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
     REQUIRE(options->timeSigPlus == 44);
     REQUIRE(options->timeSigPlusParts == 44);
     REQUIRE(options->timeSigAbrvCommonParts == options->timeSigAbrvCommon);
     REQUIRE(options->timeSigAbrvCutParts == options->timeSigAbrvCut);
-    REQUIRE(result.report.findField<Target>("timeSigPlus")->origin
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigPlus")->origin
         == ValueOrigin::LegacyMus);
-    REQUIRE(result.report.findField<Target>("timeSigPlusParts")->origin
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigPlusParts")->origin
         == ValueOrigin::LegacyBehavior);
-    REQUIRE(result.report.findField<Target>("timeSigAbrvCommonParts")->origin
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigAbrvCommonParts")->origin
         == ValueOrigin::LegacyBehavior);
-    REQUIRE(result.report.findField<Target>("timeSigAbrvCutParts")->origin
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigAbrvCutParts")->origin
         == ValueOrigin::LegacyBehavior);
 }
 
@@ -425,7 +425,7 @@ TEST_CASE("Zlib music-symbol options store separate parts time-signature symbols
     "[class][reader]")
 {
     const auto result = readFixture("evidence/F2008/F2008-timesig-plusparts.mus");
-    const auto options = result.document->getOptions()->get<Target>();
+    const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
     REQUIRE(options->timeSigPlus == 43);
     REQUIRE(options->timeSigPlusParts == 42);
@@ -436,27 +436,27 @@ TEST_CASE("Zlib music-symbol options store separate parts time-signature symbols
     for (const auto member : {std::string_view("timeSigPlusParts"),
              std::string_view("timeSigAbrvCommonParts"),
              std::string_view("timeSigAbrvCutParts")}) {
-        const auto* info = result.report.findField<Target>(member);
+        const auto* info = result.report.findField<MusicSymbolOptionsTestTarget>(member);
         REQUIRE(info);
         REQUIRE(info->origin == ValueOrigin::LegacyMus);
         REQUIRE(info->sourceIdentity == 0x0020);
     }
-    REQUIRE(result.report.findField<Target>("timeSigPlusParts")->rawValue == 42);
-    REQUIRE(result.report.findField<Target>("timeSigAbrvCommonParts")->rawValue == 98);
-    REQUIRE(result.report.findField<Target>("timeSigAbrvCutParts")->rawValue == 69);
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigPlusParts")->rawValue == 42);
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigAbrvCommonParts")->rawValue == 98);
+    REQUIRE(result.report.findField<MusicSymbolOptionsTestTarget>("timeSigAbrvCutParts")->rawValue == 69);
 }
 
 TEST_CASE("Controlled Finale 2012 music symbols recover all persisted fields", "[class][reader]")
 {
     const auto result = readFixture("evidence/F2012/F2012-baseline.mus");
-    const auto options = result.document->getOptions()->get<Target>();
+    const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
     REQUIRE(options->noteheadQuarter == 207);
     REQUIRE(options->flag2Down == 0xF0EF);
     REQUIRE(options->flagStraightDown == 0);
     for (const auto& descriptor : finale_mus_reader::options::musicSymbolOptionsFields()) {
         INFO(descriptor.memberName);
-        const auto* info = result.report.findField<Target>(descriptor.memberName);
+        const auto* info = result.report.findField<MusicSymbolOptionsTestTarget>(descriptor.memberName);
         REQUIRE(info);
         REQUIRE(info->origin == ValueOrigin::LegacyMus);
     }
@@ -466,23 +466,23 @@ TEST_CASE("Controlled straight flags use selector 75 before and after Unicode ex
     "[class][reader]")
 {
     const auto narrow = readFixture("evidence/F2000/F2000-lyropts-align-just.mus");
-    const auto narrowOptions = narrow.document->getOptions()->get<Target>();
+    const auto narrowOptions = narrow.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(narrowOptions);
     REQUIRE(narrowOptions->flagStraightUp == 115);
     REQUIRE(narrowOptions->flagStraightDown == 83);
-    REQUIRE(narrow.report.findField<Target>("flagStraightUp")->origin
+    REQUIRE(narrow.report.findField<MusicSymbolOptionsTestTarget>("flagStraightUp")->origin
         == ValueOrigin::LegacyMus);
-    REQUIRE(narrow.report.findField<Target>("flagStraightDown")->origin
+    REQUIRE(narrow.report.findField<MusicSymbolOptionsTestTarget>("flagStraightDown")->origin
         == ValueOrigin::LegacyMus);
 
     const auto unicode = readFixture("evidence/F2012/F2012-upstem-flags.mus");
-    const auto unicodeOptions = unicode.document->getOptions()->get<Target>();
+    const auto unicodeOptions = unicode.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(unicodeOptions);
     REQUIRE(unicodeOptions->flagStraightUp == 183);
     REQUIRE(unicodeOptions->flagStraightDown == 183);
-    REQUIRE(unicode.report.findField<Target>("flagStraightUp")->sourceIdentity
+    REQUIRE(unicode.report.findField<MusicSymbolOptionsTestTarget>("flagStraightUp")->sourceIdentity
         == 0x0059);
-    REQUIRE(unicode.report.findField<Target>("flagStraightDown")->sourceIdentity
+    REQUIRE(unicode.report.findField<MusicSymbolOptionsTestTarget>("flagStraightDown")->sourceIdentity
         == 0x0059);
 }
 
@@ -494,11 +494,11 @@ TEST_CASE("Finale 97 stores the default measure rest in selector 9 word 4",
              std::pair{"evidence/F97/F97-def-measrest.mus", char32_t{206}},
          }) {
         const auto result = readFixture(fixture);
-        const auto options = result.document->getOptions()->get<Target>();
+        const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
         REQUIRE(options);
         INFO(fixture);
         REQUIRE(options->restDefMeas == expected);
-        const auto* info = result.report.findField<Target>("restDefMeas");
+        const auto* info = result.report.findField<MusicSymbolOptionsTestTarget>("restDefMeas");
         REQUIRE(info);
         REQUIRE(info->origin == ValueOrigin::LegacyMus);
         REQUIRE(info->rawValue == static_cast<std::int64_t>(expected));
@@ -520,7 +520,7 @@ TEST_CASE("A zero default measure rest uses the stored whole-rest glyph", "[clas
 
     REQUIRE(options->restWhole == 183);
     REQUIRE(options->restDefMeas == options->restWhole);
-    const auto* info = report.findField<Target>("restDefMeas");
+    const auto* info = report.findField<MusicSymbolOptionsTestTarget>("restDefMeas");
     REQUIRE(info);
     REQUIRE(info->origin == ValueOrigin::LegacyMusAdjusted);
     REQUIRE(info->rawValue == 0);
