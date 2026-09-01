@@ -753,9 +753,9 @@ const MappingTable& classPartsLittleEndianDimensionsTable()
 void applyPageFormatBehavior(const ImportContext& context,
     PageFormatOptionsTarget& target)
 {
-    const auto instance = instanceKey<PageFormatOptionsTarget>();
     const auto reportBehavior = [&](const char* member, std::int64_t value) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instance, member,
+        FINALE_MUS_READER_REPORT_FIELD(context.report,
+            instanceKey<PageFormatOptionsTarget>(), member,
             {ValueOrigin::LegacyBehavior, 0, 0, value});
     };
 
@@ -874,6 +874,7 @@ void applyPageFormatBehavior(const ImportContext& context,
 void reportRemainingPageFormatFields(const ImportContext& context,
     const PageFormatOptionsTarget& target)
 {
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     const auto instance = instanceKey<PageFormatOptionsTarget>();
     context.report.setField(instance, "adjustPageScope",
         {ValueOrigin::Finale27Default, 0, 0,
@@ -882,6 +883,10 @@ void reportRemainingPageFormatFields(const ImportContext& context,
         reportUnmappedField<PageFormatOptionsTarget>(context.report, instance,
             "avoidSystemMarginCollisions", target.avoidSystemMarginCollisions);
     }
+#else
+    static_cast<void>(context);
+    static_cast<void>(target);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 } // namespace
