@@ -369,3 +369,14 @@ F100-pickup-512.mus / .etf / .musx
     Controlled from F100-baseline by setting the pickup duration to 512 EDU. Selector 17
     comparator 65534 word 5 is the only decoded source change, from 0 to 512, and the ETF
     repeats the same value. The Finale 27 companion preserves the pickup duration.
+
+F100-pageformat.mus / .etf / .musx
+    sha256 525d666eac03a12f72b1463b9ed8cddd0c797f0c4d50570808aae3bcb6e5906e (.mus)
+    sha256 0c21acc10b7fb376a6c6829e7b907083b22fdb2faf0ca8fc7b5fdc8d2023cf6d (.etf)
+    sha256 f755c025f9f8c7fc53146621cc24b6f9914cc810b42aed078aa8aecf70435c19 (.musx)
+    Exercises the single page-format set exposed by Finale 1.0.0. The source and ETF
+    identify page dimensions 3167 by 2449, page scaling 91, staff height 96 EVPUs,
+    left/right page margins (-141, 142, 143, -145), and system geometry (-80, 9,
+    -201, -11, 7). Finale 27 converts the staff height to 1536 sixteenths of an EVPU,
+    derives the first-system top margin as -73, and writes the same complete format to
+    both the score and parts objects because the source UI has no separate parts set.

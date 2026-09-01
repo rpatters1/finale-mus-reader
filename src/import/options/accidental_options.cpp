@@ -105,10 +105,10 @@ void applyPreFinale2004CrossLayerBehavior(const ImportContext& context)
 
 void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
 {
-    // Believed: before 3.7 these settings are not parameterized; when both slots remain zero,
-    // Finale uses the hard-coded legacy spacing of 8. A nonzero word remains source data.
+    // Finale 3.5 introduces adjustable accidental spacing. Believed: when both earlier slots
+    // remain zero, Finale uses the hard-coded legacy spacing of 8. A nonzero word remains data.
     if (!sourcePredatesVersion(context.profile,
-            FormatEpoch::UncompressedLegacy, versions::finale3_7)) return;
+            FormatEpoch::UncompressedLegacy, versions::finale3_5)) return;
 
     const auto family = readNumericGlobalWords(context.index, accidentalSpacingSelector);
     if (!family.present || family.words.size() <= 4

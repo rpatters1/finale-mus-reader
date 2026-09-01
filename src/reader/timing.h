@@ -46,6 +46,7 @@ enum class Phase : std::size_t
     ImportMusicSpacingOptions,
     ImportMusicSymbolOptions,
     ImportNoteRestOptions,
+    ImportPageFormatOptions,
     ImportPianoBraceBracketOptions,
     ImportRepeatOptions,
     ImportSmartShapeOptions,

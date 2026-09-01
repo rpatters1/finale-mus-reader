@@ -16,10 +16,6 @@ using MiscOptionsTarget = musx::dom::options::MiscOptions;
 constexpr const char *miscOptionsReportPrefix = "options.miscOptions";
 constexpr std::uint16_t showRepeatsForPartsSelector = 16;
 constexpr std::uint16_t pickupSelector = 17;
-constexpr std::string_view figureTag = "FI";
-// The zlib record model replaces the named FI family with this class while
-// retaining its comparators and payloads.
-constexpr records::LegacyTag zlibFigureClass = 0x008d;
 
 const FieldMapping fixedMiscFields[] = {
     MUS_NUMERIC_WORD(MiscOptionsTarget, pickupSelector, 0, 5, pickupValue),

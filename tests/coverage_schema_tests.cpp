@@ -10,6 +10,7 @@
 #include "coverage/common/font_info.h"
 #include "coverage/common/music_symbol_info.h"
 #include "coverage/common/note_rest_info.h"
+#include "coverage/common/page_format_info.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -368,6 +369,31 @@ TEST_CASE("Seeded rest-drop differences are different defaults", "[coverage]")
         leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
         finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
     REQUIRE_FALSE(classifyNoteRestOptionsDifference(unrelated));
+}
+
+TEST_CASE("Page adjustment scope differences are different defaults", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(0);
+    const Value companionValue(1);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
+    DifferenceContext context{"page_format_options.adjust_page_scope",
+        DifferenceCategory::Differs, "finale27-default", sourceValue, companionValue,
+        leaves, leaves, finale_mus_reader::FormatEpoch::DclLegacy,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+
+    REQUIRE(classifyPageFormatOptionsDifference(context) ==
+        DifferenceClassification::DifferentDefaults);
+
+    context.origin = "legacy-mus";
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
+    context.origin = "finale27-default";
+    context.category = DifferenceCategory::ReaderOnly;
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
+    context.category = DifferenceCategory::Differs;
+    context.path = "page_format_options.avoid_system_margin_collisions";
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
 }
 
 } // namespace

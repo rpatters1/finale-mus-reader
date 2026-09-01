@@ -139,7 +139,6 @@ constexpr std::string_view legacySlurThicknessTag = "59";
 constexpr std::string_view lineStyleTag = "92";
 constexpr std::string_view slurTipTag = "93";
 constexpr std::string_view guitarBendTag = "97";
-constexpr std::string_view figureTag = "FI";
 constexpr std::uint16_t smartShapeSlurConnectionSelector = 26;
 constexpr std::uint16_t smartShapeTabSlideConnectionSelector = 90;
 constexpr std::uint16_t smartShapeGlissandoConnectionSelector = 91;
@@ -152,9 +151,6 @@ constexpr std::uint16_t slurAdjustmentSelector = smartShapeSelector(slurAdjustme
 constexpr std::uint16_t lineStyleSelector = smartShapeSelector(lineStyleTag);
 constexpr std::uint16_t slurTipSelector = smartShapeSelector(slurTipTag);
 constexpr std::uint16_t guitarBendSelector = smartShapeSelector(guitarBendTag);
-// The zlib record model replaces the named FI family with this class while retaining
-// its comparators and payloads.
-constexpr records::LegacyTag zlibFigureClass = 0x008d;
 
 constexpr std::size_t controlStyleCount = 4;
 constexpr std::size_t controlStyleWords = 3;

@@ -220,6 +220,25 @@ F372-activelayer-only.mus / .etf / .musx
     setting and location by Finale 3.7.2; its availability in Finale 3.0--3.7.1 remains
     provisional because no earlier controlled UI edit is available.
 
+F372-noavoid-margincoll.mus / .etf / .musx
+    sha256 3894ec598cbf637c83d0794350d6db85e2570b55b94094e4f275fa9990f42f5 (.mus)
+    sha256 49e489df5f87a7fdfd9e1270fe1f5cdfa50072a811a67f9c65962a57a04104da (.etf)
+    sha256 2075ef5ed03ecd085bb53fef74b177ccdc4e7b5db0d3548dc4c26aaf20a09f07 (.musx)
+    Controlled from F372-baseline by disabling Avoid Margin Collisions. FI comparator 10
+    word 2 changes from -32768 to 0, clearing bit 15; the ETF repeats that change and the
+    Finale 27 companion omits `<avoidSystemMarginCollisions/>`. Selectors 62 and 63 move
+    415 -> 414 as unrelated save normalization, and the save adds page/system layout rows
+    after Finale repaginates the document.
+
+F372-facingpages-parts.mus / .etf / .musx
+    sha256 81e5137fcb28e00c0e12831f6a0326d5816f822cfaf44395d3395969819dca77 (.mus)
+    sha256 4d2b6de456815108db2a70a4112fef7be4db79916ecae367c304966644b71b29 (.etf)
+    sha256 f235ae1054da800fbaff8255e027229f0e571e5530d2756a311e84a75f7cd2d6 (.musx)
+    Controlled from F372-baseline by enabling Facing Pages for parts only. Selector 77
+    word 17 changes from 0 to 1; the ETF repeats the change, and the Finale 27 companion
+    retains facing pages for parts while leaving the score setting off. Selectors 62 and
+    63 move 415 -> 414 as unrelated save normalization.
+
 F372-noteopts.mus
     sha256 023065f4f7414eea87522aa3600f799a8ed6614a6e6731e1d50128c7f7406f65
 F372-noteopts.etf
