@@ -82,6 +82,11 @@ void importMusicSpacingOptions(const ImportContext& context);
 /// @brief Recovers options::MusicSymbolOptions.
 void importMusicSymbolOptions(const ImportContext& context);
 
+/// @brief Recovers the located scalar fields of options::NoteRestOptions.
+/// @details Fields without an established legacy location retain the pinned baseline value;
+/// Coda manual positioning is supplied as legacy behavior.
+void importNoteRestOptions(const ImportContext& context);
+
 /// @brief Recovers options::PianoBraceBracketOptions.
 void importPianoBraceBracketOptions(const ImportContext& context);
 

@@ -59,6 +59,20 @@ F2008-empty.mus
     sha256 d9321c0564199287238185f0952bd282ee4abaed8c65d72a099f7d62f96fea3e
 F2008-empty.musx
     sha256 a2a890b97ef4c3044fb26717b43d50a4c22c626aad8436b14baf0ead3523532a
+    Numeric-global class `0x0071` has 42 words: outline true at word 0,
+    twelve red values at words 1--12, twelve green values at words 13--24,
+    twelve blue values at words 25--36, and five zero trailer words. Every
+    color and the outline switch agree with the companion.
+F2008-notehead-colors.mus
+    sha256 414b2afbf38be630ed8e29aa246549e1d8764fb0d07bbcb18f07e185ff1addfd
+F2008-notehead-colors.musx
+    sha256 493a4ce288511799ea25aeaed3161c84456318cb2bec55a77ed8b6bb8d78b73e
+    A controlled big-endian document supplied and released by Robert G.
+    Patterson. All twelve notehead colors were changed to distinctive RGB
+    values and Show Border Around Colored Noteheads was toggled off. Class
+    `0x0071` retains the same 42-word shape as F2008-empty: word 0 changes from
+    1 to 0 and all 36 planar channel words carry the companion's exact unsigned
+    16-bit values. No ETF exists because Finale 2008 no longer exports ETF.
 F2008-timesig-plusparts.mus
     sha256 23a91fcc4d98768cb94a5903836e43181362a6fc6ce85aa2e40cef9c27616100
 F2008-timesig-plusparts.musx

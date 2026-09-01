@@ -200,3 +200,12 @@ F2012-F372-activelayer-only.mus
     Layer Only setting moves from FI comparator 10 word 4 to class 0x008d with the
     same comparator and word, where it remains 1. The Finale 27 companion writes
     `<showCurrentLayerOnly/>`. Other upgrade changes are not used as mapping evidence.
+
+F2012-F372-noteopts.mus
+    sha256 f361e13d1cc39a3ea0eca3cb9f1a4a32a5b83d49a164cc2053860bab0f359d73
+    F372-noteopts opened and saved in Finale 2012. The enabled Shape Notes setting moves
+    from CS comparator 1 word 5 bit 7 to class 0x000f word 1, which contains 1. The five
+    Rest Positioning values
+    survive unchanged: class 0x003a words 0--2 contain 3, -5, 7, and class 0x0037
+    words 3--4 contain -23, -47. This staged source links the controlled fixed-row
+    locations to their Unicode-era class-record replacements.

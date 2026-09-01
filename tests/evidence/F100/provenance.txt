@@ -13,12 +13,18 @@ rather than byte-for-byte control for those files.
 
 F100-baseline.mus
     sha256 9b6605da705949155d2690bc51680576b87872272406077fb59160fb599f00b9
-    4,143 bytes. Unmodified new-document defaults.
+    4,143 bytes. Unmodified new-document defaults. Selector 44 is absent and
+    selector 41 contains six zero words. The Finale 27 companion carries rest drops
+    `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
 F100-music-font.mus
     sha256 931417967ea03e945f532e4157fb6ed210aa3989e6848d9b3c17ad10b67edadc
     4,655 bytes. Changes the music default to Symbol at 60 points. The raw
-    source tuple is `02(65534)` words 0-2: `(12, 60, 0)`.
+    source tuple is `02(65534)` words 0-2: `(12, 60, 0)`. Its Finale 27 companion
+    writes all five rest drops as zero, unlike the other 39 distinct tracked Finale
+    1.0.0 companions. Because the source still lacks selector 44 and has a zero
+    selector 41, this is upgrade-time font-default substitution rather than a stored
+    rest-position edit.
 
 F100-text-font.mus
     sha256 b393e9b2d8ef844f64967ae208ac50e452dc1672e87b8b569ff8c3cbea3e015c

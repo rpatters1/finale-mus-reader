@@ -210,3 +210,25 @@ F263-concert-pitch.mus / .etf / .musx
     to the unimplemented PartGlobals class and is distinct from MiscOptions Keep Octave
     Transposition in Concert Pitch. Physical record analysis is deferred to the PartGlobals
     investigation.
+
+F263-nodrop-64th.mus
+    sha256 7e9169f85827d7dfdc48e3dfd6bd4d10c8a2ea849ebbafa29b292bdcb090fd6b
+F263-nodrop-64th.etf
+    sha256 f1083488efe6b795129a883d3846fcad0b7bd971c5fa30f5f9266b3332b60762
+-finale27/F263-nodrop-64th.musx
+    sha256 ecd86b0fbca1184dbb01930633c6944a6b86ac1cf1e0ed37d884b3fc0715e38c
+    Controlled from F263-baseline by disabling only the 64th-rest drop. Selector 41
+    word 3 is the only decoded source change, from -24 to 0, and the ETF repeats it.
+    The Finale 27 companion omits `drop64thRest` while retaining `drop128thRest = -48`.
+
+F263-nodrop-128th.mus
+    sha256 eaf86507c71722ceea39b13cdd0d409cf63ac52c1da0159ab45e4c08a1688a24
+F263-nodrop-128th.etf
+    sha256 f442da5e3fef682bd0c055c65b803846d6ff1b2c71d24551b383c7cf3fd18241
+-finale27/F263-nodrop-128th.musx
+    sha256 741d17e54c8b1f5a3e4a298fe8e2052221df8efd1dfec769561dd463a6eeca5f
+    Controlled from F263-baseline by disabling only the 128th-rest drop. Selector 41
+    word 4 is the only decoded source change, from -48 to 0, and the ETF repeats it.
+    The Finale 27 companion omits `drop128thRest` while retaining `drop64thRest = -24`.
+    Together the two edits show that the legacy toggle UI stores the realized EVPU drop,
+    not a packed boolean requiring conversion.

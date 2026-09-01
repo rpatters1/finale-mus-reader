@@ -103,8 +103,7 @@ TEST_CASE("Pre-2012 class 0x0059 recovers its two straight-flag symbols", "[clas
         REQUIRE(info);
         REQUIRE(info->origin == (isStraightUp || isStraightDown
                 ? ValueOrigin::LegacyMus
-                : descriptor.narrowSource ? ValueOrigin::Finale27Default
-                                          : ValueOrigin::Unmapped));
+                : ValueOrigin::Finale27Default));
     }
 }
 
@@ -138,10 +137,9 @@ std::map<std::uint16_t, std::array<std::int16_t, 6>> narrowMusicSymbolWords()
     for (std::size_t index = 0;
          index < finale_mus_reader::options::musicSymbolOptionsFields().size(); ++index) {
         const auto& field = finale_mus_reader::options::musicSymbolOptionsFields()[index];
-        if (field.narrowSource
-            && field.narrowEra
+        if (field.narrowEra
                 != finale_mus_reader::options::NarrowMusicSymbolEra::ZlibOnly) {
-            result[field.narrowSource->selector][field.narrowSource->word] =
+            result[field.narrowSource.selector][field.narrowSource.word] =
                 static_cast<std::int16_t>(20 + index);
         }
     }
@@ -162,12 +160,11 @@ finale_mus_reader::container::ParsedContainer narrowMusicSymbolContainer(
         const auto fields = finale_mus_reader::options::musicSymbolOptionsFields();
         for (std::size_t index = 0; index < fields.size(); ++index) {
             const auto& field = fields[index];
-            if (!field.narrowSource
-                || field.narrowEra
+            if (field.narrowEra
                     != finale_mus_reader::options::NarrowMusicSymbolEra::ZlibOnly) {
                 continue;
             }
-            partsWords[field.narrowSource->word] =
+            partsWords[field.narrowSource.word] =
                 static_cast<std::int16_t>(20 + index);
         }
         rows.push_back({finale_mus_reader::numericGlobalClass(18), partsWords});
@@ -196,15 +193,14 @@ TEST_CASE("Narrow music-symbol selectors recover in every pre-Unicode epoch", "[
             INFO(descriptor.memberName);
             const auto* info = report.findField<MusicSymbolOptionsTestTarget>(descriptor.memberName);
             REQUIRE(info);
-            const auto applies = descriptor.narrowSource
-                && (descriptor.narrowEra
+            const auto applies = descriptor.narrowEra
                         == finale_mus_reader::options::NarrowMusicSymbolEra::Any
                     || (descriptor.narrowEra
                             != finale_mus_reader::options::NarrowMusicSymbolEra::ZlibOnly
                         && epoch != FormatEpoch::CodaBanner)
                     || (descriptor.narrowEra
                             == finale_mus_reader::options::NarrowMusicSymbolEra::ZlibOnly
-                        && epoch == FormatEpoch::ZlibLegacy));
+                        && epoch == FormatEpoch::ZlibLegacy);
             const auto sharedApplies = descriptor.sharedSource
                 && (descriptor.sharedEra
                         == finale_mus_reader::options::SharedMusicSymbolEra::CodaOnly
@@ -223,8 +219,7 @@ TEST_CASE("Narrow music-symbol selectors recover in every pre-Unicode epoch", "[
             } else {
                 REQUIRE(options.get()->*descriptor.member
                     == static_cast<char32_t>(1000 + index));
-                REQUIRE(info->origin == (descriptor.narrowSource
-                        ? ValueOrigin::Finale27Default : ValueOrigin::Unmapped));
+                REQUIRE(info->origin == ValueOrigin::Finale27Default);
             }
         }
     }
