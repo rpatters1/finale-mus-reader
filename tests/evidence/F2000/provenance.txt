@@ -114,3 +114,12 @@ F2000-slur-thickness.mus
     single pre-Engraver-Slur thickness value supplies both modern vertical control-point values.
     ETF sha256 e16da42eb66534af279eb55e1323d3617f48b2f63ac57cbcf2fea601af31a6fb
     Finale 27 companion sha256 e72372e5f663d13780ce9c427d35997de4c3bd1fe8c5580e343f8045e70d5402
+
+F2000-F372-facingpages-parts.mus / .etf / .musx
+    sha256 21f9c1023264ba2aff2fef198d0ac938333e13479b98a77fbbcfdace40bb033b (.mus)
+    sha256 5899a458f2f4ccbf2dbab22aca6f4eef6a68714375a7de8ac53ce856ae81132a (.etf)
+    sha256 d698aa0e9690145166f32579b6fc4a48a4470c1d646bfe3e21a1630bc06a963d (.musx)
+    F372-facingpages-parts opened and saved in Finale 2000. Selector 77, including
+    its facing-pages value 1 at word 17, is preserved exactly. The ETF repeats the
+    payload, and the Finale 27 companion retains facing pages for parts while leaving
+    the score setting off.

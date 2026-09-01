@@ -97,7 +97,7 @@ const MappingTable& fixedFlagTable()
     static const MappingTable table{
         .reportPrefix = flagOptionsReportPrefix,
         .epochs = EpochMask::Uncompressed | EpochMask::Dcl,
-        .applies = &storesEditableMusicCharacterLayout,
+        .applies = &storesFinale35OptionLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<FlagOptionsTarget>,
         .fields = fixedFlagFields,

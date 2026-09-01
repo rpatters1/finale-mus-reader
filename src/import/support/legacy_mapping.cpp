@@ -186,6 +186,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMusicSpacingOptions, &options::importMusicSpacingOptions),
         FINALE_MUS_READER_IMPORTER(ImportMusicSymbolOptions, &options::importMusicSymbolOptions),
         FINALE_MUS_READER_IMPORTER(ImportNoteRestOptions, &options::importNoteRestOptions),
+        FINALE_MUS_READER_IMPORTER(ImportPageFormatOptions, &options::importPageFormatOptions),
         FINALE_MUS_READER_IMPORTER(ImportPianoBraceBracketOptions, &options::importPianoBraceBracketOptions),
         FINALE_MUS_READER_IMPORTER(ImportRepeatOptions, &options::importRepeatOptions),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeOptions, &options::importSmartShapeOptions),
@@ -545,11 +546,11 @@ bool storesPackedBeamFlagLayout(
     return !storesLoneStemFlagLayout(index, profile);
 }
 
-bool storesEditableMusicCharacterLayout(
+bool storesFinale35OptionLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    constexpr std::uint16_t straightFlagSelector = 75;
-    return readGlobalWords(index, profile, straightFlagSelector).present;
+    constexpr std::uint16_t finale35MarkerSelector = 75;
+    return readGlobalWords(index, profile, finale35MarkerSelector).present;
 }
 
 bool storesPreFinale35StemAndBeamUnits(

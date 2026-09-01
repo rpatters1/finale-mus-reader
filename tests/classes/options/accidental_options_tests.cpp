@@ -132,14 +132,14 @@ void testAccidentalOptionsAcrossEpochs()
     ImportReport earlyReport(FormatEpoch::UncompressedLegacy);
     const auto early = runImport(makeContainer(earlyRows, FormatEpoch::UncompressedLegacy),
         FormatEpoch::UncompressedLegacy,
-        finale_mus_reader::versions::finale3_0, earlyReport);
+        finale_mus_reader::versions::finale3_2, earlyReport);
     expectMapping(early->acciNoteSpace == 8 && early->acciAcciSpace == 8,
-        "Finale 3.0 zero accidental spacing did not apply its hard-coded legacy value");
+        "Finale 3.2 zero accidental spacing did not apply its hard-coded legacy value");
     expectMapping(field(earlyReport, "options.accidentalOptions.acciNoteSpace").origin
                 == ValueOrigin::LegacyBehavior
             && field(earlyReport, "options.accidentalOptions.acciAcciSpace").origin
                 == ValueOrigin::LegacyBehavior,
-        "Finale 3.0 zero accidental spacing reported the wrong origin");
+        "Finale 3.2 zero accidental spacing reported the wrong origin");
 
     ImportReport earlyNonzeroReport(FormatEpoch::UncompressedLegacy);
     const auto earlyNonzero = runImport(makeContainer(fixedRows, FormatEpoch::UncompressedLegacy),
@@ -150,14 +150,14 @@ void testAccidentalOptionsAcrossEpochs()
                    "options.accidentalOptions.acciNoteSpace").origin == ValueOrigin::LegacyMus,
         "Finale 3.0 nonzero accidental spacing was mistaken for legacy behavior");
 
-    ImportReport finale37Report(FormatEpoch::UncompressedLegacy);
-    const auto finale37 = runImport(makeContainer(earlyRows, FormatEpoch::UncompressedLegacy),
+    ImportReport finale35Report(FormatEpoch::UncompressedLegacy);
+    const auto finale35 = runImport(makeContainer(earlyRows, FormatEpoch::UncompressedLegacy),
         FormatEpoch::UncompressedLegacy,
-        finale_mus_reader::versions::finale3_7, finale37Report);
-    expectMapping(finale37->acciNoteSpace == 0 && finale37->acciAcciSpace == 0
-            && field(finale37Report,
+        finale_mus_reader::versions::finale3_5, finale35Report);
+    expectMapping(finale35->acciNoteSpace == 0 && finale35->acciAcciSpace == 0
+            && field(finale35Report,
                    "options.accidentalOptions.acciNoteSpace").origin == ValueOrigin::LegacyMus,
-        "Finale 3.7 accidental spacing crossed the legacy-behavior boundary incorrectly");
+        "Finale 3.5 accidental spacing crossed the legacy-behavior boundary incorrectly");
 }
 
 TEST_CASE("Accidental options span the located epochs", "[class]") { testAccidentalOptionsAcrossEpochs(); }

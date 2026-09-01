@@ -87,6 +87,12 @@ void importMusicSymbolOptions(const ImportContext& context);
 /// Coda manual positioning is supplied as legacy behavior.
 void importNoteRestOptions(const ImportContext& context);
 
+/// @brief Recovers both score and parts page-format settings across all four epochs.
+/// @details Coda-banner documents store one set, which populates both modern contained
+/// objects. Adjustment scope retains the seeded document default; collision avoidance is
+/// recovered where stored and otherwise supplied from established legacy behavior.
+void importPageFormatOptions(const ImportContext& context);
+
 /// @brief Recovers options::PianoBraceBracketOptions.
 void importPianoBraceBracketOptions(const ImportContext& context);
 

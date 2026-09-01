@@ -146,22 +146,31 @@ struct SyntheticRow
 /// @brief Builds a parsed container holding the given rows as an uncompressed other pool.
 inline finale_mus_reader::container::ParsedContainer makeContainer(
     const std::vector<SyntheticRow>& rows,
-    FormatEpoch epoch = FormatEpoch::UncompressedLegacy)
+    FormatEpoch epoch = FormatEpoch::UncompressedLegacy,
+    ByteOrder byteOrder = ByteOrder::BigEndian)
 {
     finale_mus_reader::container::ParsedContainer parsed(epoch);
-    parsed.byteOrder = ByteOrder::BigEndian;
+    parsed.byteOrder = byteOrder;
 
     finale_mus_reader::container::DecodedBlock block;
     block.info.type = epoch == FormatEpoch::DclLegacy ? 0x000f : 0x0001;
+    const auto appendWord = [byteOrder, &block](std::uint16_t value) {
+        if (byteOrder == ByteOrder::BigEndian) {
+            block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+            block.data.push_back(static_cast<std::uint8_t>(value));
+        } else {
+            block.data.push_back(static_cast<std::uint8_t>(value));
+            block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+        }
+    };
     for (const auto& row : rows) {
-        block.data.push_back(static_cast<std::uint8_t>(row.cmper >> 8U));
-        block.data.push_back(static_cast<std::uint8_t>(row.cmper));
-        block.data.push_back(static_cast<std::uint8_t>(row.tag[0]));
-        block.data.push_back(static_cast<std::uint8_t>(row.tag[1]));
+        appendWord(row.cmper);
+        block.data.push_back(static_cast<std::uint8_t>(
+            row.tag[byteOrder == ByteOrder::BigEndian ? 0 : 1]));
+        block.data.push_back(static_cast<std::uint8_t>(
+            row.tag[byteOrder == ByteOrder::BigEndian ? 1 : 0]));
         for (const auto word : row.words) {
-            const auto raw = static_cast<std::uint16_t>(word);
-            block.data.push_back(static_cast<std::uint8_t>(raw >> 8U));
-            block.data.push_back(static_cast<std::uint8_t>(raw));
+            appendWord(static_cast<std::uint16_t>(word));
         }
     }
     block.info.decodedSize = block.data.size();

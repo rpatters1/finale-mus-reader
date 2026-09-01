@@ -39,7 +39,7 @@ std::optional<std::int64_t> adjustEarlyBeamDistance(std::int64_t value,
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     if (!storesPreFinale35StemAndBeamUnits(index, profile)) return std::nullopt;
-    return value * musx::dom::EVPU_PER_STAFF_POSITION;
+    return musx::dom::Evpu(value * musx::dom::EVPU_PER_STAFF_POSITION);
 }
 
 std::optional<std::int64_t> adjustCodaBeamWidth(std::int64_t value,

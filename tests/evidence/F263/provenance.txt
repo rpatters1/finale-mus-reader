@@ -232,3 +232,12 @@ F263-nodrop-128th.etf
     The Finale 27 companion omits `drop128thRest` while retaining `drop64thRest = -24`.
     Together the two edits show that the legacy toggle UI stores the realized EVPU drop,
     not a packed boolean requiring conversion.
+
+F263-noavoid-margincoll.mus / .etf / .musx
+    sha256 8d7034d4221cca10f10bd2e42d02a95a4daf4f940309fe82f16e5f40bb889b1b (.mus)
+    sha256 d9e2492ca08d1047ed4283cd772d62e58e7b09c97128a77a09477c833550742a (.etf)
+    sha256 ae4a39719b33c6ed1dafb288843f6aaa8535815ada270ac535d0df44f04e452b (.musx)
+    Controlled from F263-baseline by disabling Avoid Margin Collisions. File-info
+    (`fi`) comparator 65534 incidence 51 word 5 changes from 1 to 0, and the ETF
+    repeats that value. The Finale 27 companion omits `<avoidSystemMarginCollisions/>`.
+    The unrelated `KL(0)` tail also changes as save noise.

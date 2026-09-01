@@ -141,6 +141,12 @@ inline constexpr musx::dom::Cmper GLOBALS_CMPER = musx::dom::MUSX_GLOBALS_CMPER;
 /// @brief Placeholder selector for rows whose comparator comes from the target object.
 inline constexpr musx::dom::Cmper CMPER_FROM_TARGET = 0;
 
+/// @brief The named FI family used by several fixed-row option records.
+inline constexpr std::string_view figureTag = "FI";
+
+/// @brief The class-record replacement for @ref figureTag in the zlib epoch.
+inline constexpr records::LegacyTag zlibFigureClass = 0x008d;
+
 /// @brief Converts a fixed-row numeric global selector to its zlib-era class id.
 /// @details The zlib serialization retained the logical option identities and added
 /// `0x000e` while coalescing each incidence family into one class-record payload.
@@ -402,10 +408,10 @@ inline constexpr std::uint16_t codaMigratedPointSizeSelector = 64;
 [[nodiscard]] bool storesPackedBeamFlagLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
-/// @brief Whether the music-character preferences include the independently editable layout.
-/// @details Selector 75 is a required member of that layout. An absent selector leaves the
-/// affected fields at their seeded defaults, including in a damaged later document.
-[[nodiscard]] bool storesEditableMusicCharacterLayout(
+/// @brief Whether the fixed-row options use the layout introduced in Finale 3.5.
+/// @details Selector 75 is a required member of that layout. An absent selector selects the
+/// earlier layout, including in a damaged later document.
+[[nodiscard]] bool storesFinale35OptionLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
 /// @brief Whether the stem-and-beam option family uses its pre-Finale-3.5 units.
