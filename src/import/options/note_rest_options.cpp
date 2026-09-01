@@ -192,9 +192,8 @@ bool captureNoteColors(const ImportContext &context,
   // twelve green values, and twelve blue values. Five trailing words are not
   // interpreted.
   target.drawOutline = source.words.front() != 0;
-  const auto instance = instanceKey<NoteRestOptionsTarget>();
   FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "drawOutline",
+      context.report, instanceKey<NoteRestOptionsTarget>(), "drawOutline",
       {ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset,
        source.words.front(), numericGlobalClass(noteColorSelector)});
 
@@ -212,7 +211,7 @@ bool captureNoteColors(const ImportContext &context,
       const auto member = std::string("noteColors[") +
                           std::to_string(colorIndex) + "]." + channel.name;
       FINALE_MUS_READER_REPORT_FIELD(
-          context.report, instance, member,
+          context.report, instanceKey<NoteRestOptionsTarget>(), member,
           {ValueOrigin::LegacyMus, source.blockOffset,
            source.decodedOffset + wordIndex * 2, value,
            numericGlobalClass(noteColorSelector)});
@@ -224,22 +223,20 @@ bool captureNoteColors(const ImportContext &context,
 void reportDefaultedNoteRestFields(const ImportContext &context,
                                    const NoteRestOptionsTarget &target,
                                    bool recoveredNoteColors) {
-  const auto instance = instanceKey<NoteRestOptionsTarget>();
   if (!recoveredNoteColors) {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-                                   "drawOutline",
-                                   {ValueOrigin::Finale27Default, 0, 0,
-                                    target.drawOutline});
+    FINALE_MUS_READER_REPORT_FIELD(
+        context.report, instanceKey<NoteRestOptionsTarget>(), "drawOutline",
+        {ValueOrigin::Finale27Default, 0, 0, target.drawOutline});
   }
   if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
     for (const auto [member, value] : {
              std::pair{"doShapeNotes",
                        static_cast<musx::dom::Evpu>(target.doShapeNotes)},
          }) {
-      FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-                                     std::string(member),
-                                     {ValueOrigin::Finale27Default, 0, 0,
-                                      value});
+      FINALE_MUS_READER_REPORT_FIELD(
+          context.report, instanceKey<NoteRestOptionsTarget>(),
+          std::string(member),
+          {ValueOrigin::Finale27Default, 0, 0, value});
     }
   }
   if (recoveredNoteColors) {
@@ -251,15 +248,15 @@ void reportDefaultedNoteRestFields(const ImportContext &context,
       continue;
     const auto prefix =
         std::string("noteColors[") + std::to_string(index) + "].";
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance, prefix + "red",
-                                   {ValueOrigin::Finale27Default, 0, 0,
-                                    color->red});
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance, prefix + "green",
-                                   {ValueOrigin::Finale27Default, 0, 0,
-                                    color->green});
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance, prefix + "blue",
-                                   {ValueOrigin::Finale27Default, 0, 0,
-                                    color->blue});
+    FINALE_MUS_READER_REPORT_FIELD(
+        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "red",
+        {ValueOrigin::Finale27Default, 0, 0, color->red});
+    FINALE_MUS_READER_REPORT_FIELD(
+        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "green",
+        {ValueOrigin::Finale27Default, 0, 0, color->green});
+    FINALE_MUS_READER_REPORT_FIELD(
+        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "blue",
+        {ValueOrigin::Finale27Default, 0, 0, color->blue});
   }
 }
 
