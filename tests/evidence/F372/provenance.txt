@@ -219,3 +219,32 @@ F372-activelayer-only.mus / .etf / .musx
     value. The Finale 27 companion writes `<showCurrentLayerOnly/>`. This proves the
     setting and location by Finale 3.7.2; its availability in Finale 3.0--3.7.1 remains
     provisional because no earlier controlled UI edit is available.
+
+F372-noteopts.mus
+    sha256 023065f4f7414eea87522aa3600f799a8ed6614a6e6731e1d50128c7f7406f65
+F372-noteopts.etf
+    sha256 c5520206e7d65e98ec0127e0cea18a1da959a5e8c836d1156588ab18d3b1c0ec
+-finale27/F372-noteopts.musx
+    sha256 4f2c441381bb1a240084adea4bb3a51fb9e0e01a45fc5cf839994458bb92f724
+    Controlled from F372-baseline with Shape Notes enabled and distinct Rest Positioning
+    values. CS comparator 1 word 5 changes from 0 to 128, setting bit 7; selector 01
+    remains all zero. Eight HI detail rows are added to define the note shapes. The Finale
+    27 companion writes `<doShapeNotes/>`, establishing the CS bit as the document-wide
+    switch independently of those definitions. Selector 44
+    words 0--2 move from 0, 0, 0 to 3, -5, 7, and selector 41 words 3--4 move
+    from -24, -48 to -23, -47. The ETF repeats those changes, and the Finale 27
+    companion carries the five values in eighth-through-128th order.
+
+F372-noteopts-noshapes.mus
+    sha256 ac5bc8c7ffce7ae4c4be0f92b080f267177df51a4fa2fb231286a446a8f79fb5
+F372-noteopts-noshapes.etf
+    sha256 bc82aa8e7b0297308dd08a85a16aa9b47a1c0c9318916e9022389fe3220ced12
+-finale27/F372-noteopts-noshapes.musx
+    sha256 7e57ce898680762dc4c0415fc32ff3fb2130469ab865402749fd2754940c2169
+    Controlled from F372-noteopts by disabling Shape Notes. CS comparator 1 word 5
+    changes from 128 to 0 while selector 01, the eight HI shape-definition rows, and
+    all five Rest Positioning values remain unchanged. Selector 62 word 3 and selector
+    63 word 1 also change from 415 to 414 as incidental save normalization, repeated in
+    the ETF. The Finale 27 companion omits `<doShapeNotes/>`. This inverse edit confirms
+    that CS word 5 bit 7 is the document-wide enable switch rather than a side effect of
+    creating the shape definitions.

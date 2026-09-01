@@ -402,6 +402,12 @@ inline constexpr std::uint16_t codaMigratedPointSizeSelector = 64;
 [[nodiscard]] bool storesPackedBeamFlagLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile);
 
+/// @brief Whether the music-character preferences include the independently editable layout.
+/// @details Selector 75 is a required member of that layout. An absent selector leaves the
+/// affected fields at their seeded defaults, including in a damaged later document.
+[[nodiscard]] bool storesEditableMusicCharacterLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile);
+
 /// @brief Whether the stem-and-beam option family uses its pre-Finale-3.5 units.
 /// @details The early layout identifies itself with a 32-element stem-connection collection;
 /// the later layout has 128 elements. A missing collection is treated as the later layout.

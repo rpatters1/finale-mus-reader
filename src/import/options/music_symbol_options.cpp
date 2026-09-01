@@ -57,7 +57,7 @@ struct MusicSymbolOptionsField
     MusicSymbolFontType fontType;
     std::optional<char32_t MusicSymbolOptionsTarget::*> sharedSource;
     SharedMusicSymbolEra sharedEra = SharedMusicSymbolEra::None;
-    std::optional<NarrowMusicSymbolSource> narrowSource;
+    NarrowMusicSymbolSource narrowSource;
     NarrowMusicSymbolEra narrowEra = NarrowMusicSymbolEra::Any;
 };
 #endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -72,7 +72,7 @@ constexpr std::size_t unicodeMusicSymbolsTrailerSize = 4;
 constexpr MusicSymbolOptionsField musicSymbolField(std::string_view memberName,
     std::string_view leafName, char32_t MusicSymbolOptionsTarget::*member,
     MusicSymbolFontType fontType,
-    std::optional<NarrowMusicSymbolSource> narrowSource = std::nullopt,
+    NarrowMusicSymbolSource narrowSource,
     NarrowMusicSymbolEra narrowEra = NarrowMusicSymbolEra::Any,
     std::optional<char32_t MusicSymbolOptionsTarget::*> sharedSource = std::nullopt,
     SharedMusicSymbolEra sharedEra = SharedMusicSymbolEra::None)
@@ -238,13 +238,6 @@ void importMusicSymbolOptions(const ImportContext& context)
     const auto& fields = musicSymbolOptionFieldTable;
     bool recoveredDefaultMeasureRest = false;
     for (const auto& field : fields) {
-        if (!field.narrowSource) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report,
-                instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
-                {ValueOrigin::Unmapped, 0, 0,
-                    static_cast<std::int64_t>(target.get()->*field.member)});
-            continue;
-        }
         if (!narrowSourceApplies(field.narrowEra, context.profile)) {
             FINALE_MUS_READER_REPORT_FIELD(context.report,
                 instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
@@ -252,13 +245,13 @@ void importMusicSymbolOptions(const ImportContext& context)
                     static_cast<std::int64_t>(target.get()->*field.member)});
             continue;
         }
-        const auto selector = field.narrowSource->selector;
+        const auto selector = field.narrowSource.selector;
         const auto [found, inserted] = selectors.try_emplace(selector);
         if (inserted) found->second = readNarrowSelector(context, selector);
 
         const auto& source = found->second;
-        if (field.narrowSource->word < source.words.size()) {
-            const auto stored = source.words[field.narrowSource->word];
+        if (field.narrowSource.word < source.words.size()) {
+            const auto stored = source.words[field.narrowSource.word];
             target.get()->*field.member = decodeNarrowMusicSymbol(context, field, stored);
             if (field.member == &MusicSymbolOptionsTarget::restDefMeas) {
                 recoveredDefaultMeasureRest = true;
@@ -289,11 +282,11 @@ void importMusicSymbolOptions(const ImportContext& context)
         if (field.sharedEra == SharedMusicSymbolEra::CodaOnly) {
             const auto sourceField = std::ranges::find(
                 fields, *field.sharedSource, &MusicSymbolOptionsField::member);
-            if (sourceField != fields.end() && sourceField->narrowSource) {
-                const auto found = selectors.find(sourceField->narrowSource->selector);
+            if (sourceField != fields.end()) {
+                const auto found = selectors.find(sourceField->narrowSource.selector);
                 if (found != selectors.end()
-                    && sourceField->narrowSource->word < found->second.words.size()) {
-                    const auto stored = found->second.words[sourceField->narrowSource->word];
+                    && sourceField->narrowSource.word < found->second.words.size()) {
+                    const auto stored = found->second.words[sourceField->narrowSource.word];
                     target.get()->*field.member = decodeNarrowMusicSymbol(
                         context, field, stored);
                     rawValue = stored;

@@ -51,15 +51,6 @@ const FieldMapping fixedFlagFields[] = {
     MUS_WORD(FlagOptionsTarget, "76", GLOBALS_CMPER, 0, 1, secondaryGroupAdj),
 };
 
-bool hasEditableFlagLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
-{
-    // Believed: selector 75's straight-flag coordinates identify the editable flag layout.
-    // Without that family, selector 05 bit 0 does not denote straightFlags; a damaged later
-    // file missing selector 75 therefore retains the seeded defaults.
-    return readGlobalWords(index, profile, straightFlagSelector).present;
-}
-
 const FieldMapping classFlagFields[] = {
     MUS_CLASS_BIT(FlagOptionsTarget, numericGlobalClass(flagBehaviorSelector),
         GLOBALS_CMPER, classWordOffset(2), 0, straightFlags),
@@ -106,7 +97,7 @@ const MappingTable& fixedFlagTable()
     static const MappingTable table{
         .reportPrefix = flagOptionsReportPrefix,
         .epochs = EpochMask::Uncompressed | EpochMask::Dcl,
-        .applies = &hasEditableFlagLayout,
+        .applies = &storesEditableMusicCharacterLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<FlagOptionsTarget>,
         .fields = fixedFlagFields,

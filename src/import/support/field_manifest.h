@@ -53,7 +53,7 @@ struct MusicSymbolOptionsField
     MusicSymbolFontType fontType;
     std::optional<char32_t MusicSymbolOptionsTarget::*> sharedSource;
     SharedMusicSymbolEra sharedEra = SharedMusicSymbolEra::None;
-    std::optional<NarrowMusicSymbolSource> narrowSource;
+    NarrowMusicSymbolSource narrowSource;
     NarrowMusicSymbolEra narrowEra = NarrowMusicSymbolEra::Any;
 };
 
