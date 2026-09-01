@@ -160,9 +160,9 @@ void testConfiguredSymbolFontDefinitions()
     finale_mus_reader::others::importFontDefinitions(context);
 
     const auto mac = document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 20);
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(20));
     const auto win = document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 21);
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(21));
     expect(mac && mac->name == "MacListed"
             && mac->charsetBank == FontDefinition::CharacterSetBank::MacOS
             && mac->charsetVal == FontDefinition::SYMBOL_CHARSET_MAC
@@ -193,12 +193,12 @@ void testConfiguredSymbolFontDefinitions()
         / "evidence/F2002/F2002-baseline.mus";
     const auto imported = Reader::readWithReport<TestXmlDocument>(path, options);
     const auto times = imported.document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 1);
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     expect(times && times->charsetBank == FontDefinition::CharacterSetBank::MacOS
             && times->charsetVal == FontDefinition::SYMBOL_CHARSET_MAC,
         "ReaderOptions did not persist a configured symbol font in the returned document");
     const auto* importedCharset = imported.report.findField<FontDefinition>(
-        "charsetVal", musx::dom::SCORE_PARTID, 1);
+        "charsetVal", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     expect(importedCharset
             && importedCharset->origin == ValueOrigin::LegacyMusAdjusted
             && importedCharset->rawValue == 0,
