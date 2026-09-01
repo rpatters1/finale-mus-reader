@@ -318,8 +318,7 @@ void importCodaStoredTexts(const ImportContext& context)
     // This era predates Unicode by a wide margin, so its bytes are always a code page.
     text::EnigmaFontResolutionCache fontResolutionCache;
     const text::EnigmaTextSource source{context.document, /*utf8*/ false,
-        context.profile.platform, nullptr,
-        context.profile.symbolFontNames, &fontResolutionCache};
+        context.profile.platform, nullptr, &fontResolutionCache};
     importCodaBlockTexts(context, source);
     importCodaLyricTexts(context, source);
 }

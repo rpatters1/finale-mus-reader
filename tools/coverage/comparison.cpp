@@ -273,12 +273,6 @@ bool comparisonPathEndsWith(std::string_view path, std::string_view suffix)
     return endsWith(path, suffix);
 }
 
-std::optional<std::int64_t> comparisonIntegerLeaf(const ComparisonLeaves& leaves,
-                                                  std::string_view path)
-{
-    return integerLeaf(leaves, std::string(path));
-}
-
 bool comparisonEqualSurrounding(const ComparisonLeaves& source, const ComparisonLeaves& companion,
                                 std::string_view prefix, std::string_view excluded)
 {
@@ -290,8 +284,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                   const musx::dom::DocumentPtr& companionDocument,
                                   FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
                                   const SourceVersion* sourceVersion,
-                                  const ImportReport& sourceReport,
-                                  const text::SymbolFontNames* symbolFontNames)
+                                  const ImportReport& sourceReport)
 {
     ComparisonResult result;
     ComparisonPreparationContext preparation{source, companion, result.transformations};
@@ -301,8 +294,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                                companionDocument, result);
     }
     const auto textBlockReferents =
-        comparison_text::compareTextBlockReferents(sourceDocument, companionDocument,
-                                                   symbolFontNames);
+        comparison_text::compareTextBlockReferents(sourceDocument, companionDocument);
     auto shapeSetFontPaths = comparisonFontReferencePaths(source);
     const auto companionShapeFontPaths = comparisonFontReferencePaths(companion);
     shapeSetFontPaths.insert(companionShapeFontPaths.begin(), companionShapeFontPaths.end());
@@ -322,9 +314,9 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             collectLeaves(companionClass->second, className, {}, false, companionLeaves);
         std::set<std::string> paths;
         for (const auto& [path, unused] : sourceLeaves)
-            paths.insert(path);
+            if (!isClassifierMetadataPath(path)) paths.insert(path);
         for (const auto& [path, unused] : companionLeaves)
-            paths.insert(path);
+            if (!isClassifierMetadataPath(path)) paths.insert(path);
         auto& stats = classComparison(result, className);
         for (const auto& path : paths) {
             const auto sourceFound = sourceLeaves.find(path);
@@ -378,7 +370,6 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 const auto comparison = comparison_text::compareText(
                     className, path, sourceFound->second.first.asString(),
                     companionFound->second.first.asString(), sourceDocument, companionDocument,
-                    symbolFontNames,
                     comparison_text::isPartNameText(className, path, source, companion));
                 if (comparison.equivalent &&
                     comparison_text::hasSynthesizedTextState(source, className, path) &&

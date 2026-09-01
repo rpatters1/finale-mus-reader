@@ -26,15 +26,13 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            ComparisonResult& result);
 std::map<std::string, ReferentComparison>
 compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
-                          const musx::dom::DocumentPtr& companionDocument,
-                          const text::SymbolFontNames* symbolFontNames);
+                          const musx::dom::DocumentPtr& companionDocument);
 bool isPartNameText(const std::string& className, const std::string& path,
                     const SurveySnapshot& source, const SurveySnapshot& companion);
 TextClassificationResult compareText(const std::string& className, const std::string& path,
                                      const std::string& source, const std::string& companion,
                                      const musx::dom::DocumentPtr& sourceDocument,
                                      const musx::dom::DocumentPtr& companionDocument,
-                                     const text::SymbolFontNames* symbolFontNames,
                                      bool partNameText);
 bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className,
                              const std::string& path);

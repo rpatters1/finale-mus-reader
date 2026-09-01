@@ -132,7 +132,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG c870522db8700f29bd1d94d315feffb8e5085549
+            GIT_TAG fc51b5545e11ac21e1134f3c42ed6ab7ad72ee90
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -184,6 +184,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/misc_options.cpp
     src/import/options/multimeasure_rest_options.cpp
     src/import/options/music_spacing_options.cpp
+    src/import/options/music_symbol_options.cpp
     src/import/options/piano_brace_bracket_options.cpp
     src/import/options/repeat_options.cpp
     src/import/options/smart_shape_options.cpp

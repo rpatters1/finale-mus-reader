@@ -328,8 +328,7 @@ void importLaterTextPool(const ImportContext& context)
     // how the file stores characters, so it is asked for once rather than named again here.
     const text::EnigmaTextSource source{context.document,
         versions::storesUnicodeCodepoints(context.profile.version),
-        context.profile.platform, nullptr,
-        context.profile.symbolFontNames};
+        context.profile.platform, nullptr};
 
     // The stream states which of the two framings it uses. The earliest one opens with a
     // `^text` section marker and terminates a record with the start of the next; Finale 97

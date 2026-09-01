@@ -296,6 +296,30 @@ void testMinorVersionOrdering()
     expectMapping(readWith(3, 7) == 888, "Version 3.7 did not match a gate starting at 3.5");
 }
 
+// Maintenance participates where a capability arrives in a point release.
+void testMaintenanceVersionOrdering()
+{
+    const FieldMapping fields[] = {
+        MUS_WORD_IF_SOURCE(Spacing, "94", GLOBALS_CMPER, 0, 1,
+            &sourceAtFinale351, minWidth),
+    };
+    const auto table = makeTable("options.spacing", fields, std::size(fields));
+    const std::vector<const MappingTable*> tables{&table};
+    const auto parsed = makeContainer({{GLOBALS_CMPER, "94", {0, 888, 0, 0, 0, 0}}});
+
+    const auto readWith = [&](std::uint8_t maint) {
+        Spacing* spacing = nullptr;
+        auto document = makeDocument(&spacing);
+        ImportReport report(FormatEpoch::UncompressedLegacy);
+        finale_mus_reader::applyMappingTables(
+            tables, LegacyRecordIndex::build(parsed), profileFor(3, 5, maint), document, report);
+        return spacing->minWidth;
+    };
+
+    expectMapping(readWith(0) == 111, "Finale 3.5 matched a gate starting at 3.5.1");
+    expectMapping(readWith(1) == 888, "Finale 3.5.1 did not match its version gate");
+}
+
 // A later table supersedes an earlier one for the same field, so a field that moves costs
 // one override row rather than a restatement of the whole table.
 void testTableLayering()
@@ -367,6 +391,7 @@ TEST_CASE("Bit extraction", "[class]") { testBitExtraction(); }
 TEST_CASE("Absent record keeps seeded default", "[class]") { testAbsentRecordKeepsSeededDefault(); }
 TEST_CASE("Version gating", "[class]") { testVersionGating(); }
 TEST_CASE("Minor version ordering", "[class]") { testMinorVersionOrdering(); }
+TEST_CASE("Maintenance version ordering", "[class]") { testMaintenanceVersionOrdering(); }
 TEST_CASE("Table layering", "[class]") { testTableLayering(); }
 TEST_CASE("Uncovered epoch still reports", "[class]") { testUncoveredEpochStillReports(); }
 } // namespace

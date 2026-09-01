@@ -104,37 +104,25 @@ Value observe(const Object& object, const SurveyContext& context, const Fields&.
 
 template <typename Class>
 std::string fieldOrigin(const SurveyContext& context, std::string_view member,
-    musx::dom::Cmper cmper1 = 0)
+    std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
 {
-    const auto* info = context.report.findField<Class>(member, musx::dom::SCORE_PARTID,
-        cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt);
-    if (info) return originName(info->origin);
-    const auto* instance = context.report.findInstanceOrigin(instanceKey<Class>(
-        musx::dom::SCORE_PARTID,
-        cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt));
-    return instance ? originName(*instance) : "absent";
+    const auto instance = instanceKey<Class>(musx::dom::SCORE_PARTID, cmper1);
+    return originName(context.report.fieldProvenance(instance, member).origin);
 }
 
 template <typename Class>
 std::string fieldOrigin(const SurveyContext& context, std::string_view member,
     const InstanceKey& instance)
 {
-    if (const auto* info = context.report.findField(instance, member)) {
-        return originName(info->origin);
-    }
-    if (const auto* origin = context.report.findInstanceOrigin(instance)) {
-        return originName(*origin);
-    }
-    return "absent";
+    return originName(context.report.fieldProvenance(instance, member).origin);
 }
 
 template <typename Class>
 const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_view member,
-    musx::dom::Cmper cmper1 = 0)
+    std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
 {
     const auto instance = InstanceKey{typeid(Class), musx::dom::SCORE_PARTID,
-        cmper1 ? std::optional<musx::dom::Cmper>(cmper1) : std::nullopt, std::nullopt,
-        std::nullopt};
+        cmper1, std::nullopt, std::nullopt};
     const auto foundInstance = context.report.textFields.find(instance);
     if (foundInstance == context.report.textFields.end()) return nullptr;
     const auto foundField = foundInstance->second.find(std::string(member));

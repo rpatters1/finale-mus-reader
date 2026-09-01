@@ -863,7 +863,7 @@ void testEnigmaFontResolutionCache()
     const auto document = makeTextDocument();
     finale_mus_reader::text::EnigmaFontResolutionCache cache;
     const finale_mus_reader::text::EnigmaTextSource source{
-        document, false, SourcePlatform::MacOS, nullptr, nullptr, &cache};
+        document, false, SourcePlatform::MacOS, nullptr, &cache};
     const auto convert = [&](std::string_view value) {
         return finale_mus_reader::text::toModernEnigmaText(
             std::span<const std::uint8_t>(

@@ -5,16 +5,25 @@
 
 #pragma once
 
+#include <stdexcept>
+
 #include "finale_mus_reader/reader.h"
 #include "musx/dom/Document.h"
 
 namespace finale_mus_reader {
 namespace coverage {
 
+/// @brief A coverage invariant whose failure must terminate the probe.
+class ProbeInvariantError : public std::logic_error
+{
+public:
+    using std::logic_error::logic_error;
+};
+
 struct SurveyContext
 {
     const musx::dom::DocumentPtr& document;
-    const ImportReport& report;
+    ImportReport& report;
 };
 
 } // namespace coverage

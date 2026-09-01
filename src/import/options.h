@@ -79,6 +79,9 @@ void importMultimeasureRestOptions(const ImportContext& context);
 /// @brief Recovers options::MusicSpacingOptions.
 void importMusicSpacingOptions(const ImportContext& context);
 
+/// @brief Recovers options::MusicSymbolOptions.
+void importMusicSymbolOptions(const ImportContext& context);
+
 /// @brief Recovers options::PianoBraceBracketOptions.
 void importPianoBraceBracketOptions(const ImportContext& context);
 

@@ -21,8 +21,14 @@ std::string_view differenceName(DifferenceClassification classification)
         return "unexpected";
     case AccidentalInsert17Byte:
         return "17-byte-accidental-insert";
-    case BaselineFont:
-        return "baseline-font";
+    case CharsetEquivalence:
+        return "charset-equivalence";
+    case CharsetPitchDifference:
+        return "charset-pitch-difference";
+    case FontPlatformShift:
+        return "font-platform-shift";
+    case SymbolFontEquivalence:
+        return "symbol-font-equivalence";
     case BetaDiscrepancy:
         return "beta-discrepancy";
     case CodaTextBlockUpgrade:

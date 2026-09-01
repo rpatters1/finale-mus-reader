@@ -3,6 +3,22 @@ Finale 2006 (internal version 11.x), PKWARE DCL era, big-endian.
 Origin: a test case authored for the Page-Attached Copy plug-in and released for
 publication by its author.
 
+F2006-empty.mus
+    sha256 fd88984478594cba22b6e4cd5361ddaf14ef86f97163d138903365b2dbb1986a
+F2006-empty.etf
+    sha256 224657cc0839265e1d5458d29d0f9b65ee5502dc5390c380d2938239b836a519
+F2006-empty.musx
+    sha256 52e2bcd30d47c2f79aa9ec3d4d99e52e8cbe58668e4555da2ffb58d384a68e4b
+F2006-timesig-plus.mus
+    sha256 4157232d1f98661a45ee8da11dfa0a873fee1aac18c361e3e6e96f31d0c8612f
+F2006-timesig-plus.etf
+    sha256 a169e5e76ed1672d9a0b9cac28e47e1a8c8b3db38c3051926f5c44e125804675
+F2006-timesig-plus.musx
+    sha256 ece5fab554086b7eb5eea9f54486954298007897b379c2704036cef36d9e95da
+    A controlled pair changing the score time-signature plus symbol from 43 to
+    44. Finale 2006 stores only selector 42, word 5; ETF and Finale 27 use that
+    one value for both the score and linked-parts fields.
+
 F2006-single-title.mus
     sha256 0f7ed5bd148a9ad43720dff8f761b4d5c74f1198a493fcb9828a2ae5f70eff65
     Finale 2006 is the last release to write ETF, which raised the question of

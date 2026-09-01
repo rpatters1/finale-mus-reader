@@ -70,9 +70,10 @@ std::string_view surveyorPool(std::string_view key);
 
 /// @brief Runs every registered surveyor over one imported document in
 /// registration order.
-/// @details A surveyor that throws does not stop the others: its snapshot value
-/// is null and the loop continues. The return value carries the structured
-/// snapshot plus whole-pass and per-surveyor wall-clock durations.
+/// @details An ordinary surveyor exception leaves its snapshot value null and does not stop
+/// the others. A @ref ProbeInvariantError escapes immediately so the probe cannot continue
+/// after its own results become unreliable. The return value carries the structured snapshot
+/// plus whole-pass and per-surveyor wall-clock durations.
 SurveyResult runAllSurveyors(const SurveyContext& ctx);
 
 } // namespace coverage

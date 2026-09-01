@@ -45,6 +45,12 @@ std::optional<DifferenceClassification> classifyStemDifference(const DifferenceC
                                    "stem_options.stem_connections[0].", context.path)) {
         return StemHorizontalCorrection;
     }
+    if (context.path == "stem_options.stem_connections[0].up_stem_horz" &&
+        context.category == Differs &&
+        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
+        context.origin == "legacy-mus") {
+        return DifferentDefaults;
+    }
     return std::nullopt;
 }
 

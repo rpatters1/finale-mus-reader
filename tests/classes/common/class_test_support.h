@@ -107,6 +107,12 @@ inline bool sourceAtFinale35(const SourceProfile& profile)
         profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5);
 }
 
+inline bool sourceAtFinale351(const SourceProfile& profile)
+{
+    return finale_mus_reader::sourceAtOrAfter(
+        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5_1);
+}
+
 // These tests drive one importer at a time against a synthesized record set, so none of them
 // has a source file for the importer to read the header out of.
 constexpr std::span<const std::uint8_t> noSource{};
@@ -317,13 +323,15 @@ inline musx::dom::DocumentPtr makeClefReferenceDocument()
     return std::move(session).finish();
 }
 
-inline SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0)
+inline SourceProfile profileFor(
+    std::uint8_t major, std::uint8_t minor = 0, std::uint8_t maint = 0)
 {
     SourceProfile profile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     SourceVersion version;
     version.major = major;
     version.minor = minor;
+    version.maint = maint;
     profile.version = version;
     return profile;
 }

@@ -210,8 +210,7 @@ void reportClefField(ImportReport& report, std::size_t index, const char* member
 /// the case that makes the difference visible.
 void insertRecoveredClef(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<ClefOptionsTarget>& target,
-    const PhysicalClef& stored, ImportReport& report,
-    const text::SymbolFontNames* symbolFontNames)
+    const PhysicalClef& stored, ImportReport& report)
 {
     const auto index = target->clefDefs.size();
     auto def = std::make_shared<ClefDef>(target);
@@ -241,7 +240,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
         ? static_cast<char32_t>(stored.clefChar)
         : text::codepointFromByte(static_cast<std::uint8_t>(stored.clefChar),
             document, def->useOwnFont ? musx::dom::Cmper(stored.fontId) : 0,
-            text::UnresolvedFontFallback::Symbol, symbolFontNames);
+            text::UnresolvedFontFallback::Symbol);
     target->clefDefs.push_back(std::move(def));
 
     const auto block = stored.blockOffset;
@@ -273,7 +272,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
 bool captureFromWordStream(const musx::dom::DocumentPtr& document,
     const std::vector<std::int16_t>& words, std::size_t tupleWords,
     const PhysicalClef& provenance, const std::shared_ptr<ClefOptionsTarget>& target,
-    ImportReport& report, const text::SymbolFontNames* symbolFontNames)
+    ImportReport& report)
 {
     if (tupleWords == 0 || words.size() % tupleWords != 0) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table holds " + std::to_string(words.size())
@@ -285,7 +284,7 @@ bool captureFromWordStream(const musx::dom::DocumentPtr& document,
         auto stored = decodeTuple(words, first, tupleWords);
         stored.blockOffset = provenance.blockOffset;
         stored.decodedOffset = provenance.decodedOffset;
-        insertRecoveredClef(document, target, stored, report, symbolFontNames);
+        insertRecoveredClef(document, target, stored, report);
     }
     return true;
 }
@@ -328,7 +327,7 @@ bool captureEarlyClefs(const musx::dom::DocumentPtr& document,
         stored.push_back(clef);
     }
     for (const auto& clef : stored) {
-        insertRecoveredClef(document, target, clef, report, profile.symbolFontNames);
+        insertRecoveredClef(document, target, clef, report);
     }
     return true;
 }
@@ -591,8 +590,8 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
                         "in big-endian order, an untested combination; the clef "
                         "character's word order is unverified for it."});
                 }
-                captureFromWordStream(document, words, *tupleWords, provenance, target, report,
-                    profile.symbolFontNames);
+                captureFromWordStream(
+                    document, words, *tupleWords, provenance, target, report);
             } else {
                 report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table payload of "
                     + std::to_string(bytes.size())
@@ -606,8 +605,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
         provenance.decodedOffset = family.decodedOffset;
         if (family.present) {
             captureFromWordStream(
-                document, family.words, narrowTupleWords, provenance, target, report,
-                profile.symbolFontNames);
+                document, family.words, narrowTupleWords, provenance, target, report);
         } else if (profile.epoch == FormatEpoch::CodaBanner
             || profile.epoch == FormatEpoch::UncompressedLegacy) {
             // Only these two eras keep clefs in selectors 28 through 35. Falling back on the

@@ -100,6 +100,8 @@ SurveyResult runAllSurveyors(const SurveyContext& ctx)
         const auto surveyorStarted = std::chrono::steady_clock::now();
         try {
             result.snapshot.insert_or_assign(key, fn(ctx));
+        } catch (const ProbeInvariantError&) {
+            throw;
         } catch (const std::exception& error) {
             result.snapshot.insert_or_assign(key, Value{});
             result.errors.emplace(key, error.what());

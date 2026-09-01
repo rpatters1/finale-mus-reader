@@ -102,8 +102,6 @@ enum class CodePage : int
 };
 
 // Windows LOGFONT charset values, from wingdi.h.
-constexpr int windowsAnsiCharset = 0;
-constexpr int windowsDefaultCharset = 1;
 constexpr int windowsShiftJisCharset = 128;
 constexpr int windowsHangeulCharset = 129;
 constexpr int windowsGb2312Charset = 134;
@@ -562,8 +560,7 @@ static CodePage documentCodePage(const musx::dom::DocumentPtr& document)
 }
 
 static std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont,
-    const SymbolFontNames* symbolFontNames)
+    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
 {
     if (fontId == 0) {
         return std::nullopt;
@@ -574,10 +571,6 @@ static std::optional<CodePage> codePageForDocumentFont(const musx::dom::Document
         return unknownFont;
     }
     if (definition->calcIsSymbolFont()) {
-        return std::nullopt;
-    }
-    if (symbolFontNames && symbolFontNames->contains(
-            musx::dom::normalizeFontName(definition->name))) {
         return std::nullopt;
     }
     const auto defaultMusic = document->getOthers()
@@ -676,25 +669,22 @@ std::string toUtf8(std::string_view source, std::uint16_t packedCharset)
 }
 
 std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
-    const SymbolFontNames* symbolFontNames)
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
 {
     const auto unresolved = unresolvedFontFallback == UnresolvedFontFallback::Text
         ? std::optional<CodePage>(documentCodePage(document)) : std::nullopt;
-    if (const auto codePage = codePageForDocumentFont(
-            document, fontId, unresolved, symbolFontNames)) {
+    if (const auto codePage = codePageForDocumentFont(document, fontId, unresolved)) {
         return toUtf8WithCodePage(source, *codePage);
     }
     return symbolBytesToUtf8(source);
 }
 
 char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback,
-    const SymbolFontNames* symbolFontNames)
+    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
 {
     const std::string source(1, static_cast<char>(stored));
-    return firstCodepointOrByte(stored, toUtf8(source, document, fontId,
-        unresolvedFontFallback, symbolFontNames));
+    return firstCodepointOrByte(
+        stored, toUtf8(source, document, fontId, unresolvedFontFallback));
 }
 
 } // namespace text

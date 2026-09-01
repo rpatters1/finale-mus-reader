@@ -23,6 +23,8 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
     reader_tests.cpp
+    coverage_schema_tests.cpp
+    ../tools/coverage/json.cpp
     classes/options/augmentation_dot_options_tests.cpp
     classes/options/accidental_options_tests.cpp
     classes/options/alternate_notation_options_tests.cpp
@@ -39,6 +41,7 @@ add_executable(finale_mus_reader_tests
     classes/common/legacy_record_tests.cpp
     classes/options/lyric_options_tests.cpp
     classes/options/misc_options_tests.cpp
+    classes/options/music_symbol_options_tests.cpp
     classes/common/mapping_framework_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
     classes/options/multimeasure_rest_options_tests.cpp
@@ -64,7 +67,8 @@ target_link_libraries(finale_mus_reader_tests PRIVATE
 # rather than driving every case through a synthetic MUS file.
 target_include_directories(finale_mus_reader_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/classes/common"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../tools")
 
 target_compile_definitions(finale_mus_reader_tests PRIVATE
     FINALE_MUS_READER_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

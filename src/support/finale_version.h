@@ -8,9 +8,10 @@
 
 namespace finale_mus_reader {
 
-/// @brief A Finale version boundary, ordered by major then minor.
+/// @brief A Finale version boundary, ordered by major, minor, then maintenance version.
 /// @details Minor versions participate because the Finale 3.x line and Finale 97 share
-/// internal major version 3.
+/// internal major version 3. Maintenance versions participate where a capability arrived
+/// in a point release.
 struct VersionBound
 {
     constexpr VersionBound(std::uint8_t sourceMajor) : major(sourceMajor) {}
@@ -18,9 +19,15 @@ struct VersionBound
         : major(sourceMajor), minor(sourceMinor)
     {
     }
+    constexpr VersionBound(std::uint8_t sourceMajor, std::uint8_t sourceMinor,
+        std::uint8_t sourceMaint)
+        : major(sourceMajor), minor(sourceMinor), maint(sourceMaint)
+    {
+    }
 
     std::uint8_t major;
     std::uint8_t minor{};
+    std::uint8_t maint{};
 
     constexpr auto operator<=>(const VersionBound&) const = default;
 };
@@ -31,6 +38,7 @@ inline constexpr VersionBound finale2_6{2, 6};
 inline constexpr VersionBound finale3_0{3, 0};
 inline constexpr VersionBound finale3_2{3, 2};
 inline constexpr VersionBound finale3_5{3, 5};
+inline constexpr VersionBound finale3_5_1{3, 5, 1};
 inline constexpr VersionBound finale3_7{3, 7};
 inline constexpr VersionBound finale97{3, 8};
 inline constexpr VersionBound finale98{4};

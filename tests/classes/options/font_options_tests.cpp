@@ -132,6 +132,105 @@ void testFontDefinitions()
         "The unmatched fallback face did not retain the reference spelling");
 }
 
+void testConfiguredSymbolFontDefinitions()
+{
+    using FontDefinition = musx::dom::others::FontDefinition;
+    const auto parsed = makeContainer({
+        {20, "FN", {0x1000, 0, 0, 0, 0, 0}},
+        {20, "FN", {0x4d61, 0x634c, 0x6973, 0x7465, 0x6400, 0}},
+        {21, "FN", {0x2000, 0, 0, 0, 0, 0}},
+        {21, "FN", {0x5769, 0x6e4c, 0x6973, 0x7465, 0x6400, 0}},
+    });
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto reference = referenceSession.getDocument();
+    SourceProfile profile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = 3, .minor = 2};
+    profile.byteOrder = ByteOrder::BigEndian;
+    const finale_mus_reader::text::SymbolFontNames symbolFonts{
+        "maclisted", "winlisted"};
+    profile.symbolFontNames = &symbolFonts;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    finale_mus_reader::PendingReferences pending;
+    musx::factory::ConstructionContext construction;
+    const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
+        profile, noSource, document, reference, report, pending, construction};
+
+    finale_mus_reader::others::importFontDefinitions(context);
+
+    const auto mac = document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(20));
+    const auto win = document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(21));
+    expect(mac && mac->name == "MacListed"
+            && mac->charsetBank == FontDefinition::CharacterSetBank::MacOS
+            && mac->charsetVal == FontDefinition::SYMBOL_CHARSET_MAC
+            && mac->calcIsSymbolFont(),
+        "A configured Mac symbol font was not persisted as a symbol definition");
+    expect(win && win->name == "WinListed"
+            && win->charsetBank == FontDefinition::CharacterSetBank::Windows
+            && win->charsetVal == FontDefinition::SYMBOL_CHARSET_WIN
+            && win->calcIsSymbolFont(),
+        "A configured Windows symbol font was not persisted as a symbol definition");
+    for (const auto cmper : {musx::dom::Cmper(20), musx::dom::Cmper(21)}) {
+        const auto* charset = report.findField<FontDefinition>(
+            "charsetVal", musx::dom::SCORE_PARTID, cmper);
+        expect(charset && charset->origin == ValueOrigin::LegacyMusAdjusted
+                && charset->rawValue == 0,
+            "A configured symbol charset did not retain its stored value and adjusted origin");
+        expect(finale_mus_reader::text::codepointFromByte(0xfa, document, cmper,
+                   finale_mus_reader::text::UnresolvedFontFallback::Text) == 0xfa,
+            "Character decoding did not use the persisted symbol charset");
+    }
+
+    const std::string configuredName = "Times\n";
+    const std::vector<std::uint8_t> configuredBytes(
+        configuredName.begin(), configuredName.end());
+    const finale_mus_reader::ReaderOptions options{
+        std::span<const std::uint8_t>(configuredBytes)};
+    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
+        / "evidence/F2002/F2002-baseline.mus";
+    const auto imported = Reader::readWithReport<TestXmlDocument>(path, options);
+    const auto times = imported.document->getOthers()->get<FontDefinition>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    expect(times && times->charsetBank == FontDefinition::CharacterSetBank::MacOS
+            && times->charsetVal == FontDefinition::SYMBOL_CHARSET_MAC,
+        "ReaderOptions did not persist a configured symbol font in the returned document");
+    const auto* importedCharset = imported.report.findField<FontDefinition>(
+        "charsetVal", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    expect(importedCharset
+            && importedCharset->origin == ValueOrigin::LegacyMusAdjusted
+            && importedCharset->rawValue == 0,
+        "The returned document's adjusted symbol charset lost its stored provenance");
+}
+
+void testHeaderlessFontDefinitionOrigins()
+{
+    using FontDefinition = musx::dom::others::FontDefinition;
+    const auto result = readFixture("evidence/F263/F263-baseline.mus");
+    const auto fonts = result.document->getOthers()
+        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    expect(!fonts.empty(), "The headerless font fixture recovered no definitions");
+    for (const auto& font : fonts) {
+        const auto key = finale_mus_reader::instanceKey<FontDefinition>(
+            musx::dom::SCORE_PARTID, font->getCmper());
+        const auto* name = result.report.findField(key, "name");
+        for (const auto* member : {"charsetBank", "charsetVal", "pitch", "family"}) {
+            if (name) {
+                const auto* info = result.report.findField(key, member);
+                expect(info,
+                    std::string("A headerless font characteristic has no recorded origin: ")
+                        + member + " for font " + std::to_string(font->getCmper()));
+            } else {
+                expect(result.report.findInstanceOrigin(key),
+                    std::string("A fallback font characteristic has no recorded default: ")
+                        + member);
+            }
+        }
+    }
+}
+
 void testUncompressedFontOptions()
 {
     using FontOptions = musx::dom::options::FontOptions;
@@ -162,6 +261,14 @@ void testUncompressedFontOptions()
 }
 
 TEST_CASE("Font definitions", "[class][reader]") { testFontDefinitions(); }
+TEST_CASE("Configured symbol font definitions", "[class][reader]")
+{
+    testConfiguredSymbolFontDefinitions();
+}
+TEST_CASE("Headerless font definitions report their fixed characteristics", "[class][reader]")
+{
+    testHeaderlessFontDefinitionOrigins();
+}
 
 void testFontOptionsCapture()
 {

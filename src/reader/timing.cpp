@@ -41,6 +41,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMiscOptions: return "misc_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";
+    case Phase::ImportMusicSymbolOptions: return "music_symbol_options";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatOptions: return "repeat_options";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";

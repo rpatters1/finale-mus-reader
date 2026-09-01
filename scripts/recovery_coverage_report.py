@@ -19,6 +19,8 @@ from typing import Any, Iterable, Iterator
 
 TEXT_KINDS = ("known encoding glitch", "whitespace", "font", "size", "effects",
     "added font info", "empty part-name template", "missing run", "unresolved font", "other")
+CODA_EPOCH = "coda-banner"
+EPOCH_ORDER = (CODA_EPOCH, "uncompressed", "dcl", "zlib")
 PROGRESS_INTERVAL_SECONDS = 1.9
 VALUE_WIDTH = 60
 
@@ -26,15 +28,18 @@ VALUE_WIDTH = 60
 @dataclass
 class ClassStats:
     same: int = 0
+    coda_expected: int = 0
     expected: int = 0
     unexpected: int = 0
     source_only: int = 0
     companion_only: int = 0
 
-    def add(self, values: list[int]) -> None:
+    def add(self, values: list[int], epoch: str) -> None:
         if len(values) != 5:
             raise ValueError("comparison class counts must contain five values")
         self.same += values[0]
+        if epoch == CODA_EPOCH:
+            self.coda_expected += values[1]
         self.expected += values[1]
         self.unexpected += values[2]
         self.source_only += values[3]
@@ -106,6 +111,12 @@ def truncate(value: Any) -> str:
     return rendered if len(rendered) <= VALUE_WIDTH else rendered[:VALUE_WIDTH - 1] + "…"
 
 
+def ordered_epochs(names: Iterable[str]) -> list[str]:
+    names = set(names)
+    return [name for name in EPOCH_ORDER if name in names] \
+        + sorted(names - set(EPOCH_ORDER))
+
+
 def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     row_count = companion_count = 0
     statuses: Counter[str] = Counter()
@@ -114,7 +125,7 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     failures: Counter[str] = Counter()
     failure_examples: dict[str, str] = {}
     classes: dict[str, dict[str, ClassStats]] = {}
-    expected: Counter[str] = Counter()
+    expected_by_epoch: dict[str, Counter[str]] = {}
     transformations: Counter[str] = Counter()
     substitutions: Counter[str] = Counter()
     text: Counter[tuple[str, str]] = Counter()
@@ -142,8 +153,10 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         for pool, pool_classes in comparison.get("classes", {}).items():
             aggregate = classes.setdefault(pool, {})
             for name, values in pool_classes.items():
-                aggregate.setdefault(name, ClassStats()).add(values)
-        expected.update(comparison.get("expected", {}))
+                aggregate.setdefault(name, ClassStats()).add(
+                    values, row.get("epoch", "-"))
+        expected_by_epoch.setdefault(row.get("epoch", "-"), Counter()).update(
+            comparison.get("expected", {}))
         transformations.update(comparison.get("transformations", {}))
         substitutions.update(comparison.get("font_substitutions", {}))
         for class_name, counts in comparison.get("text", {}).items():
@@ -175,11 +188,18 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         ["source font", "companion font", "count"], substitution_rows)
     print_table("Recognized companion transformations", ["transformation", "count"],
         ([name, str(count)] for name, count in transformations.most_common()))
-    expected_rows = [[name, str(expected[name])] for name in sorted(expected)]
-    expected_rows.append(["TOTAL", str(sum(expected.values()))])
-    print_table("Expected differences", ["rule", "count"], expected_rows)
+    expected_epochs = ordered_epochs(set(epochs) | set(expected_by_epoch))
+    expected_rules = sorted({rule for counts in expected_by_epoch.values() for rule in counts})
+    expected_rows = [[rule,
+        *[str(expected_by_epoch.get(epoch, Counter())[rule]) for epoch in expected_epochs],
+        str(sum(expected_by_epoch.get(epoch, Counter())[rule] for epoch in expected_epochs))]
+        for rule in expected_rules]
+    epoch_totals = [sum(expected_by_epoch.get(epoch, Counter()).values())
+        for epoch in expected_epochs]
+    expected_rows.append(["TOTAL", *map(str, epoch_totals), str(sum(epoch_totals))])
+    print_table("Expected differences", ["rule", *expected_epochs, "total"], expected_rows)
 
-    headers = ["class", "same", "expected-diff", "unexpected-diff",
+    headers = ["class", "same", "coda-expected-diff", "expected-diff", "unexpected-diff",
         "reader-only", "companion-only", "total"]
     pool_rows: dict[str, list[list[str]]] = {}
     ordered_pools = [pool for pool in ("options", "others", "details", "texts")
@@ -189,7 +209,8 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         class_rows = []
         for name, stats in sorted(classes[pool].items()):
             values = stats.values()
-            class_rows.append([name, *map(str, values), str(sum(values))])
+            class_rows.append([name, str(values[0]), str(stats.coda_expected),
+                *map(str, values[1:]), str(sum(values))])
         if class_rows:
             class_rows.append(["TOTAL", *[str(sum(int(row[index]) for row in class_rows))
                 for index in range(1, len(headers))]])
@@ -210,7 +231,12 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     all_classes = [stats for pool_classes in classes.values() for stats in pool_classes.values()]
     totals = [sum(getattr(value, field) for value in all_classes)
         for field in ("same", "expected", "unexpected", "source_only", "companion_only")]
-    grand = ["ALL POOLS", *map(str, totals), str(sum(totals))]
+    coda_expected_total = sum(value.coda_expected for value in all_classes)
+    expected_coda_total = sum(expected_by_epoch.get(CODA_EPOCH, Counter()).values())
+    if coda_expected_total != expected_coda_total:
+        raise ValueError("Coda class expected-difference total does not match rule total")
+    grand = ["ALL POOLS", str(totals[0]), str(coda_expected_total),
+        *map(str, totals[1:]), str(sum(totals))]
     print("\n" + "  ".join(value.ljust(shared_widths[index])
         for index, value in enumerate(grand)))
 
