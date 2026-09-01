@@ -361,7 +361,8 @@ TEST_CASE("Finale 3.5 page format uses the expanded current-system layout", "[cl
 TEST_CASE("Pre-Finale 3.5 collision avoidance is a scalar flag", "[class]")
 {
     for (const auto& [stored, expected] :
-        {std::pair<std::int16_t, bool>{0, false}, {std::int16_t(1), true}}) {
+        {std::pair<std::int16_t, bool>{std::int16_t(0), false},
+            {std::int16_t(1), true}}) {
         const auto parsed = makeContainer(
             {{10, "FI", {64, 0, stored, 0, 0, 4}}},
             FormatEpoch::UncompressedLegacy);
