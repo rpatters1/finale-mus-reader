@@ -368,6 +368,10 @@ at the same time. The reader needs word 1 solely to choose which musxdom member 
 
 ### T3 — Proposed — the Finale 3.7–2000 insert layout
 
+The introduction boundary is no longer part of this request. The repository owner's inspection of
+the Finale 3.7 addendum confirms that configurable text inserts first appeared in that release's
+UI, agreeing with the record family's absence through Finale 3.5 and presence from Finale 3.7.
+
 No controlled save exists for the 17-byte layout, and no companion can stand in for one: Finale 27 mis-converts
 that era on all 179 documents that have the record. One save from Finale 97 or 2000, changing the flat insert's
 tracking before to 1000, tracking after to 250 and baseline shift to −25 — the same edit as the Finale 2005
@@ -467,14 +471,13 @@ The cost of being wrong is small but silent in the wrong direction: an unrecogni
 so the *right* spelling would announce itself the first time such a document is read. That makes this a cheap
 request rather than an urgent one.
 
-### X2 — Proposed — a bookmark, whose keyword is unknown
+### X2 — Partly closed — the pre-Finale-2012 bookmark object
 
-`texts::BookmarkText` has no located source at all. Pre-Finale-2012 the PDK reportedly carried bookmark text as a
-trailing variable-length NUL-terminated string on the bookmark record, which would put it outside the text pool
-entirely; where that record turns up in raw Enigma is unknown, and the pool may also name it with a keyword this
-reader would report. **One document with two named bookmarks, in a Finale 2012 save and again in an earlier one,
-would settle both the location and whether the class converted to Unicode at the same time as everything else.**
-Bookmark text is scarce enough that a corpus survey is unlikely to find one.
+The Finale 3.5 addendum confirms that bookmarks were introduced in that release. Controlled Finale
+3.7.2 and 2012 saves locate the earlier text in the `BK` others family and the later UTF-8 text in
+the `bookmark` text-pool record. Text recovery from `BK` remains deliberately deferred until the
+bookmark class itself is imported; a Finale 3.5 specimen would establish whether its object and
+text representation already match Finale 3.7.2.
 
 ### X3 — Proposed — where expression text moved into the text pool
 

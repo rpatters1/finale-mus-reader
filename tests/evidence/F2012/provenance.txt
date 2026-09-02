@@ -64,6 +64,15 @@ F2012-baseline.mus
     sha256 aa95324d39ef94f1340133d637b52206eeddaf1c7442fb0ac1a81c3e444639f3
     The unedited control for the Finale 2012 text saves below.
 
+F2012-staffopts-scalars.mus
+    sha256 8a522b61ca3db452529be8c20c741d4917b62a35e183e415e169e0688acf990d
+-finale27/F2012-staffopts-scalars.musx
+    sha256 562cf229081d5bf62736ff8ca5501899776073d19fcaee8bfaf77e3519043a60
+    From F2012-baseline, all three Staff Options scalars changed: staff separation from -320 to
+    -289 EVPUs, separation increment from 72 to 71 EVPUs, and automatic adjustment disabled.
+    Class 0x006f changes only words 12--14, from -320, 72, 1 to -289, 71, 0. The independently
+    parsed Finale 27 companion reports -289 and 71 and omits the false boolean element.
+
 F2012-insert-flat-tracking.mus
     sha256 09f662ca4ef7c61c34e2810b6c8c4a63cc8f5b25f9dc77256ed024136df49aa5
     The same edit as F2005-insert-flat-tracking, in the 20-byte element layout: tracking

@@ -190,6 +190,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportPianoBraceBracketOptions, &options::importPianoBraceBracketOptions),
         FINALE_MUS_READER_IMPORTER(ImportRepeatOptions, &options::importRepeatOptions),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeOptions, &options::importSmartShapeOptions),
+        FINALE_MUS_READER_IMPORTER(ImportStaffOptions, &options::importStaffOptions),
         FINALE_MUS_READER_IMPORTER(ImportStemOptions, &options::importStemOptions),
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         // others

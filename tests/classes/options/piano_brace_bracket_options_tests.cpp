@@ -145,7 +145,7 @@ TEST_CASE("Piano brace default bracket position begins in Finale 2004", "[class]
         "Finale 2004 did not recover its stored bracket position");
 }
 
-TEST_CASE("Piano brace thickness options begin with the provisional Finale 3.7 boundary", "[class]")
+TEST_CASE("Piano brace thickness options begin with Finale 3.7", "[class]")
 {
     const auto rows = pianoBraceBracketFixedRows();
 

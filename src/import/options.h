@@ -105,6 +105,11 @@ void importRepeatOptions(const ImportContext& context);
 /// options::SmartShapeOptions.
 void importSmartShapeOptions(const ImportContext& context);
 
+/// @brief Recovers the located default staff- and group-name positioning fields.
+/// @details Staff-spacing fields and name-position fields without an established legacy
+/// location retain their pinned baseline values.
+void importStaffOptions(const ImportContext& context);
+
 /// @brief Recovers options::StemOptions, whose connections are a source-owned collection.
 void importStemOptions(const ImportContext& context);
 
