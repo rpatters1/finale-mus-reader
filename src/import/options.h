@@ -122,5 +122,9 @@ void importTextOptions(const ImportContext& context);
 /// @details Unlocated Coda-banner fields retain the pinned baseline values.
 void importTieOptions(const ImportContext& context);
 
+/// @brief Recovers the located score and linked-parts time-signature options.
+/// @details Coda-banner documents retain pinned defaults for fields absent from that layout.
+void importTimeSignatureOptions(const ImportContext& context);
+
 } // namespace options
 } // namespace finale_mus_reader
