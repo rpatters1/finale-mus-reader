@@ -380,3 +380,45 @@ F100-pageformat.mus / .etf / .musx
     -201, -11, 7). Finale 27 converts the staff height to 1536 sixteenths of an EVPU,
     derives the first-system top margin as -73, and writes the same complete format to
     both the score and parts objects because the source UI has no separate parts set.
+
+F100-tieopts.mus / .etf / .musx
+    sha256 17b4c6f2b54df18feea66dd80cd7c0a73c468b86fd2e9961de2eebb26e467813 (.mus)
+    sha256 0cdc8070edd9e9cf376775ae6c3678bf98593a34e9eeb3eaba2a75e01c380773 (.etf)
+    sha256 3421783296a1278f188f4eb176d5680912b42e224dd89ba7926fb6d271c32d6e (.musx)
+    Changes every control visible in Finale 1.0.0's tie-options dialog to a distinct unusual
+    value. The ETF independently repeats changes in selectors 17, 22, 35, 50, and 51. Selector
+    51 words 1 and 3 become -9 and -11, and Finale 27 writes their negations as
+    `thicknessLeft = 9` and `thicknessRight = 11`. Selector 50 words 0 and 2 become 1 and 3;
+    Finale 27 copies them to
+    the inner and outer-stem start/end horizontal tie connections. Together with the Finale 2.6
+    curve discriminators, selector 51 words 0 and 2 establish the left/right height adjustments.
+    The remaining changed words undergo derived vertical-placement or inset conversions and do
+    not yet establish direct musxdom mappings. Selector 41 remains unchanged and supplies no
+    early `frontTieSepar` location; the importer supplies zero as Coda legacy behavior.
+
+F100-tieheight-inset.mus / .etf / .musx
+    sha256 b19fc12ea11b404d2a4d071a54fe4a3e1f32701c2a65b6015cf0c07e11e7c2a7 (.mus)
+    sha256 22449fcae381e6678cf65646e9378f82aaab9fc435e083cb149b3980b12c11bf (.etf)
+    sha256 9889a7e7fcb511c8f40d446ca0078bf2c0d7ea1d2553cf3c033f67c4ead72845 (.musx)
+    From F100-baseline, changes only Tie Height from 18 to 9 and Inset from 8 to 7.
+    Selector 22 words 4 and 5 carry 9 and 7; selector 17 word 4 changes from 6 to 3 as a
+    derived one-third height. Finale 27 expands height 9 to both control points of the medium,
+    long, and tie-end contours and integer half-height 4 to the short contour. It writes fixed
+    inset 8 throughout, so the legacy inset's modern transform is not established by the
+    companion.
+
+F100-tendxdisp-13.mus / .etf / .musx
+    sha256 8c2e6352471538cbbb70fa128f72d1f286520d168a4993ab974ed6058994e511 (.mus)
+    sha256 81854708cf5e8d329727bdec9510e2cf81854b6b8e66dd421adcfff26b04d6a4 (.etf)
+    sha256 b5fbc2d4bad5d031b882d910d290b76f25365c3c2c93d538b1632550a84204ab (.musx)
+    From F100-baseline, changes only Tend XDisp from 0 to 13. Selector 51 word 4 is
+    the sole decoded source change and the ETF repeats it. Finale 27 discards the edit:
+    its complete TieOptions object is identical to the baseline's.
+
+F100-tendydisp-17.mus / .etf / .musx
+    sha256 801a3b409e914c557b8f2fb81d88b315b596e9c157c91677f9cef5c229d214bc (.mus)
+    sha256 c565e7f12322b5b75365764586a79f6e494c65da36d84635e6520fa86e7325d0 (.etf)
+    sha256 26368c43d1ed925c3fcab9629c1d1b2d12071813da286806d7aeebee889a45da (.musx)
+    From F100-baseline, changes only Tend YDisp from 0 to 17. Selector 35 word 5 is
+    the sole decoded source change and the ETF repeats it. Finale 27 discards the edit:
+    its complete TieOptions object is identical to the baseline's.

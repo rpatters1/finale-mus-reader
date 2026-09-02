@@ -1,6 +1,6 @@
 ---
 name: inventory-a-corpus
-description: Discover or rediscover what a local legacy Finale corpus contains and regenerate its namespaced private inventories, mappings, caches, and public aggregate deliverables. Use when adding a corpus, changing corpus conventions, finding new source files or companions, refreshing archive contents, or rebuilding a survey's private/generated directory. Do not use merely to rerun or analyze recovery_coverage_probe.
+description: Discover or rediscover what a local legacy Finale corpus contains and regenerate its namespaced private inventories, mappings, caches, and public aggregate deliverables. Use when adding a corpus, changing corpus conventions, finding new source files or companions, refreshing archive contents, or rebuilding a survey's private/generated directory. For tracked-evidence fixture additions, batch them and invoke this skill only as the final prerequisite to a tracked probe/report cycle. Do not use merely to rerun or analyze recovery_coverage_probe.
 ---
 
 # Inventory a corpus
@@ -42,6 +42,10 @@ hypothesis, or repeated analysis of a probe snapshot.
   configuration and invocation.
 - Print complete-import failures with their private names and paths only to the local console.
   Never copy those diagnostics into tracked output.
+- Do not regenerate `tracked-evidence` after each new fixture. Batch fixture additions and
+  regenerate only if at least one fixture is new, as the final prerequisite immediately before
+  the tracked probe/report cycle that will consume them. Reuse the current inventory when no
+  fixture changed, and do not regenerate if no tracked cycle will run.
 
 ## Workflow
 

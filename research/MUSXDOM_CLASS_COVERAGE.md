@@ -10,10 +10,10 @@ recovers it, and the briefest possible status in the right-hand column. Anything
 sentence belongs in [FORMAT_NOTES.md](FORMAT_NOTES.md); anything that needs a paragraph belongs
 in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be removed again.
 
-**44 done, 3 partial, 143 to do, 190 total.** Verified class for class against the registry on
+**45 done, 3 partial, 142 to do, 190 total.** Verified class for class against the registry on
 2026-09-02: every registered type appears here and nothing here is unregistered.
 
-## options  (25 done, 0 partial, 3 to do, 28 total)
+## options  (26 done, 0 partial, 2 to do, 28 total)
 
     [x] AccidentalOptions                       accidental_options.cpp
     [x] AlternateNotationOptions                alternate_notation_options.cpp
@@ -40,23 +40,23 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] StaffOptions                            staff_options.cpp
     [x] StemOptions                             stem_options.cpp
     [x] TextOptions                             text_options.cpp
-    [ ] TieOptions
+    [x] TieOptions                              tie_options.cpp
     [ ] TimeSignatureOptions
     [ ] TupletOptions
 
 ## others  (11 done, 1 partial, 81 to do, 93 total)
 
-    [ ] AcciAmountFlats
-    [ ] AcciAmountSharps
-    [ ] AcciOrderFlats
-    [ ] AcciOrderSharps
-    [ ] ArticulationDef
+    [ ] AcciAmountFlats                                                         L1 library item
+    [ ] AcciAmountSharps                                                        L1 library item
+    [ ] AcciOrderFlats                                                          L1 library item
+    [ ] AcciOrderSharps                                                         L1 library item
+    [ ] ArticulationDef                                                         L1 library item
     [ ] BeatChartElement
-    [ ] ChordSuffixElement
-    [ ] ChordSuffixPlayback
+    [ ] ChordSuffixElement                                                      L1 library item
+    [ ] ChordSuffixPlayback                                                     L2 satellite
     [ ] ClefList
     [ ] DrumStaff
-    [ ] DrumStaffStyle
+    [ ] DrumStaffStyle                                                          L2 satellite
     [ ] FileAlias
     [ ] FileDescription
     [ ] FilePath
@@ -66,12 +66,12 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] FretInstrument                          fret_instruments.cpp
     [x] FretboardGroup                          fretboard_groups.cpp
     [x] FretboardStyle                          fretboard_styles.cpp
-    [ ] KeyAttributes
-    [ ] KeyFormat
-    [ ] KeyMapArray
+    [ ] KeyAttributes                                                           L1 library item
+    [ ] KeyFormat                                                               L1 library item
+    [ ] KeyMapArray                                                             L1 library item
     [~] LayerAttributes                         layer_attributes.cpp            stub; completeness audit excluded
-    [ ] MarkingCategory
-    [ ] MarkingCategoryName
+    [ ] MarkingCategory                                                         L1 library item
+    [ ] MarkingCategoryName                                                     L2 satellite
     [ ] Measure
     [ ] MeasureExprAssign
     [ ] MeasureNumberRegion
@@ -80,8 +80,8 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] MultimeasureRest
     [ ] NamePositionAbbreviated
     [ ] NamePositionFull
-    [ ] NamePositionStyleAbbreviated
-    [ ] NamePositionStyleFull
+    [ ] NamePositionStyleAbbreviated                                            L2 satellite
+    [ ] NamePositionStyleFull                                                   L2 satellite
     [ ] OssiaBounds
     [ ] OssiaHeader
     [ ] OssiaMusic
@@ -92,7 +92,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] PartDefinition
     [ ] PartGlobals
     [ ] PartVoicing
-    [ ] PercussionNoteInfo
+    [ ] PercussionNoteInfo                                                      L1 library item
     [ ] PlaybackRoute
     [ ] PlaybackRouteName
     [ ] RepeatBack
@@ -104,7 +104,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] RepeatPassList
     [x] ShapeData                               shape_definitions.cpp
     [x] ShapeDef                                shape_definitions.cpp
-    [ ] ShapeExpressionDef
+    [ ] ShapeExpressionDef                                                      L1 library item
     [x] ShapeGraphicAssign                      graphic_assignments.cpp
     [x] ShapeInstructionList                    shape_definitions.cpp
     [ ] SmartShape
@@ -112,33 +112,33 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
     [ ] Staff
-    [ ] StaffListCategoryName
-    [ ] StaffListCategoryParts
-    [ ] StaffListCategoryScore
+    [ ] StaffListCategoryName                                                   L2 satellite
+    [ ] StaffListCategoryParts                                                  L2 satellite
+    [ ] StaffListCategoryScore                                                  L2 satellite
     [ ] StaffListRepeatName
     [ ] StaffListRepeatParts
     [ ] StaffListRepeatPartsForced
     [ ] StaffListRepeatScore
     [ ] StaffListRepeatScoreForced
     [ ] StaffPlayData
-    [ ] StaffStyle
+    [ ] StaffStyle                                                              L1 library item
     [ ] StaffStyleAssign
     [ ] StaffSystem
     [ ] StaffUsed
     [ ] SystemLock
     [ ] TempoChange
     [x] TextBlock                              text_blocks.cpp
-    [ ] TextExpressionDef
-    [ ] TextExpressionEnclosure
+    [ ] TextExpressionDef                                                       L1 library item
+    [ ] TextExpressionEnclosure                                                 L2 satellite
     [ ] TextRepeatAssign
-    [ ] TextRepeatDef
-    [ ] TextRepeatEnclosure
+    [ ] TextRepeatDef                                                           L1 library item
+    [ ] TextRepeatEnclosure                                                     L2 satellite
     [ ] TextRepeatIndividualPositioning
-    [ ] TextRepeatText
+    [ ] TextRepeatText                                                          L2 satellite
     [ ] TimeCompositeLower
     [ ] TimeCompositeUpper
-    [ ] TonalCenterFlats
-    [ ] TonalCenterSharps
+    [ ] TonalCenterFlats                                                        L1 library item
+    [ ] TonalCenterSharps                                                       L1 library item
 
 ## details  (2 done, 0 partial, 58 to do, 60 total)
 
@@ -166,8 +166,8 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] Bracket
     [ ] CenterShape
     [ ] ChordAssign
-    [ ] ClefOctaveFlats
-    [ ] ClefOctaveSharps
+    [ ] ClefOctaveFlats                                                         L1 library item
+    [ ] ClefOctaveSharps                                                        L1 library item
     [ ] CrossStaff
     [ ] CustomDownStem
     [ ] CustomUpStem
@@ -177,7 +177,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [x] FretboardDiagram                        fretboard_diagrams.cpp
     [ ] GFrameHold
     [ ] IndependentStaffDetails
-    [ ] KeySymbolListElement
+    [ ] KeySymbolListElement                                                    L1 library item
     [ ] LyricAssignChorus
     [ ] LyricAssignSection
     [ ] LyricAssignVerse
@@ -192,7 +192,7 @@ in [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Explanation added here has to be remo
     [ ] SecondaryBeamAlterationsUpStem
     [ ] SecondaryBeamBreak
     [ ] ShapeNote
-    [ ] ShapeNoteStyle
+    [ ] ShapeNoteStyle                                                          L2 satellite
     [ ] SmartShapeEntryAssign
     [ ] StaffGroup
     [ ] StaffSize

@@ -32,8 +32,12 @@ match, stop and fix them before reading any corpus manifest. Never launch a prob
 evidence, to discover whether surveyor names match.
 
 Require current `private/generated/<survey_id>/corpus_locations.csv`, the public manifest, and the
-generated `private/generated/corpus-<survey_id>.tsv` for every selected survey. If these are absent
-or stale, stop and use `inventory-a-corpus`; do not rescan the corpus here.
+generated `private/generated/corpus-<survey_id>.tsv` for every selected survey. For
+`tracked-evidence`, regenerate these artifacts only if fixtures were added since the previous
+inventory: batch every addition, then use `inventory-a-corpus` once as the final prerequisite
+immediately before this probe/report cycle. If no fixture changed, reuse the current inventory.
+For any other selected survey whose artifacts are absent or stale, stop and use
+`inventory-a-corpus`; do not rescan a corpus here.
 
 `private/generated/<survey_id>/` is persistent survey output. It belongs only to a complete corpus
 inventory and remains in place until that survey is regenerated. Never put recovery-coverage probe

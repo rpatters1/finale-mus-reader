@@ -118,5 +118,9 @@ void importStemOptions(const ImportContext& context);
 /// baseline's values; see the note at the end of the importer.
 void importTextOptions(const ImportContext& context);
 
+/// @brief Recovers options::TieOptions scalars, connection styles, and control styles.
+/// @details Unlocated Coda-banner fields retain the pinned baseline values.
+void importTieOptions(const ImportContext& context);
+
 } // namespace options
 } // namespace finale_mus_reader

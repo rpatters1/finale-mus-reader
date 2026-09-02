@@ -114,8 +114,10 @@ revise one layer without destabilizing the others.
 - Keep project-owned source files unity-build clean. A future build may combine many
   class-specific translation units, and anonymous namespaces do not isolate names from
   one another after CMake amalgamates those files. Use distinctive file-local aliases,
-  helpers, and constants; verify with a temporary `CMAKE_UNITY_BUILD=ON` build when the
-  implementation or its neighboring source files change.
+  helpers, and constants. Use the instrumented development build for implementation and
+  coverage work. Run a non-instrumented build only as the final validation immediately before
+  opening a pull request, after the implementation, fixtures, tests, and coverage results have
+  stabilized. If no pull request is being opened, do not run a separate non-instrumented build.
 - Do not commit, push, or publish unless the user separately requests it.
 
 ## Work interactively
@@ -155,13 +157,18 @@ Finale version and platform desired, and any ETF or modern re-save that would ma
 result more useful. Prefer a baseline plus one changed field over a realistic score
 whose unrelated changes create noise.
 
-**A fixture added to `tests/evidence/` is not finished until it is in the corpus index.**
-Re-survey that tree, which is registered as a corpus in its own right: `./private/regenerate.sh
-tracked-evidence` where the private configuration exists, or `scripts/inventory.py` against
-`tests/evidence/` with the export convention from `research/data/surveys.csv`, which needs no
-private configuration at all. Then update that row — the source count, the date, the
-`tool_commit`, and the `corpus_fingerprint`, which changes whenever a file is added — and
-re-run any class-coverage cohort that draws on it.
+**Do not re-survey `tests/evidence/` when each fixture is added.** Batch all fixture additions
+made during the implementation. Re-survey this tree only when it contains new fixtures, and
+only as the final prerequisite immediately before the next `tracked-evidence` probe/report
+cycle. If no fixture was added, reuse the current inventory. If no tracked probe/report cycle
+will run, do not re-survey merely to refresh the index.
+
+For that final prerequisite, use `./private/regenerate.sh tracked-evidence` where the private
+configuration exists, or `scripts/inventory.py` against `tests/evidence/` with the export
+convention from `research/data/surveys.csv`, which needs no private configuration at all. Then
+update that survey row — the source count, the date, the `tool_commit`, and the
+`corpus_fingerprint`, which changes whenever a file is added — and immediately proceed to the
+tracked probe/report cycle.
 
 Do this because the fixture tree is a *survey*, not a pile of test inputs, and it is the
 only one that is both fully companion-backed and reproducible at all by anyone but its owner.
@@ -478,7 +485,10 @@ it recovers, which epochs it fails, where companions disagree with it -- and non
 those questions has a meaning yet if the class exists only as notes, or if it has an
 importer but no surveyor to report what the importer did. A survey run early is not a
 head start; it is Step 8 performed on nothing, and it has to be run again afterwards
-anyway. Start with `tracked-evidence` and iterate there as needed. Define any broader cohort
+anyway. Start with `tracked-evidence` and iterate there as needed. After all planned tracked
+fixtures are present, re-survey them exactly once as the final prerequisite to the first
+probe/report cycle that needs those new fixtures; do not re-survey between cycles unless more
+fixtures have been added. Define any broader cohort
 with the user and obtain explicit authorization immediately before launching its probe: all
 fixtures, loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
 Authorization for one broader run does not cover a later rerun.
