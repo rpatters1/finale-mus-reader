@@ -25,6 +25,8 @@ musx::dom::DocumentPtr makePageFormatOptionsDocument()
     options->pageFormatParts = std::make_shared<PageFormatTestTarget>();
     options->pageFormatScore->pageHeight = 901;
     options->pageFormatParts->pageHeight = 902;
+    options->pageFormatScore->sysPercent = 100;
+    options->pageFormatParts->sysPercent = 100;
     options->pageFormatScore->rawStaffHeight = 903;
     options->pageFormatParts->rawStaffHeight = 904;
     document->getOptions()->add(PageFormatOptionsTestTarget::XmlNodeName, options);
@@ -230,36 +232,68 @@ TEST_CASE("Finale 1 page format populates both modern destinations", "[class]")
         "The Finale 1 collision behavior was not applied");
 }
 
-TEST_CASE("Absolute page-format staff height begins with Finale 2002", "[class]")
+TEST_CASE("System scaling and absolute page-format staff height begin with Finale 2002",
+    "[class]")
 {
     const auto rows = pageFormatFixedRows();
     ImportReport finale2001Report(FormatEpoch::DclLegacy);
     const auto finale2001 = importPageFormatOptions(
         makeContainer(rows, FormatEpoch::DclLegacy), FormatEpoch::DclLegacy,
         finale2001Report, finale_mus_reader::versions::finale2001);
-    expectMapping(finale2001->pageFormatScore->rawStaffHeight == 1536
+    expectMapping(finale2001->pageFormatScore->sysPercent == 100
+            && finale2001->pageFormatParts->sysPercent == 100
+            && finale2001->pageFormatScore->rawStaffHeight == 1536
             && finale2001->pageFormatParts->rawStaffHeight == 1536
+            && field(finale2001Report,
+                   "options.pageFormatOptions.pageFormatScore.sysPercent").origin
+                == ValueOrigin::Finale27Default
+            && field(finale2001Report,
+                   "options.pageFormatOptions.pageFormatParts.sysPercent").origin
+                == ValueOrigin::Finale27Default
             && field(finale2001Report,
                    "options.pageFormatOptions.pageFormatScore.rawStaffHeight").origin
                 == ValueOrigin::LegacyBehavior
             && field(finale2001Report,
                    "options.pageFormatOptions.pageFormatParts.rawStaffHeight").origin
                 == ValueOrigin::LegacyBehavior,
-        "Finale 2001 incorrectly supplied the later absolute staff-height preference");
+        "Finale 2001 incorrectly supplied a later Page Format preference");
 
     ImportReport finale2002Report(FormatEpoch::DclLegacy);
     const auto finale2002 = importPageFormatOptions(
         makeContainer(rows, FormatEpoch::DclLegacy), FormatEpoch::DclLegacy,
         finale2002Report, finale_mus_reader::versions::finale2002);
-    expectMapping(finale2002->pageFormatScore->rawStaffHeight == 1600
+    expectMapping(finale2002->pageFormatScore->sysPercent == 81
+            && finale2002->pageFormatParts->sysPercent == 82
+            && finale2002->pageFormatScore->rawStaffHeight == 1600
             && finale2002->pageFormatParts->rawStaffHeight == 1700
+            && field(finale2002Report,
+                   "options.pageFormatOptions.pageFormatScore.sysPercent").origin
+                == ValueOrigin::LegacyMus
+            && field(finale2002Report,
+                   "options.pageFormatOptions.pageFormatParts.sysPercent").origin
+                == ValueOrigin::LegacyMus
             && field(finale2002Report,
                    "options.pageFormatOptions.pageFormatScore.rawStaffHeight").origin
                 == ValueOrigin::LegacyMus
             && field(finale2002Report,
                    "options.pageFormatOptions.pageFormatParts.rawStaffHeight").origin
                 == ValueOrigin::LegacyMus,
-        "Finale 2002 did not recover its absolute staff-height preference");
+        "Finale 2002 did not recover its Page Format preferences");
+}
+
+TEST_CASE("Finale 2001 retains baseline system scaling", "[class]")
+{
+    const auto fixture = readFixture("evidence/F2001/F2011Win-empty.mus");
+    const auto options = fixture.document->getOptions()->get<PageFormatOptionsTestTarget>();
+    expectMapping(options->pageFormatScore->sysPercent == 100
+            && options->pageFormatParts->sysPercent == 100
+            && field(fixture,
+                   "options.pageFormatOptions.pageFormatScore.sysPercent").origin
+                == ValueOrigin::Finale27Default
+            && field(fixture,
+                   "options.pageFormatOptions.pageFormatParts.sysPercent").origin
+                == ValueOrigin::Finale27Default,
+        "Finale 2001 selector placeholders disturbed baseline system scaling");
 }
 
 TEST_CASE("An uncompressed document without selector 77 shares its score page format",

@@ -114,3 +114,14 @@ F2005/-finale27/F2005-rpts-forparts.musx
     From F2005-baseline, Show Repeats for Parts enabled and nothing else requested. Selector
     16 comparator 65534 word 5 is the only decoded source word that changes, 0 -> 1, and
     the ETF prints the same value. The Finale 27 companion preserves the enabled setting.
+
+F2005-tie-xtrasys.mus
+    sha256 7e5608f8e981db80b4d6a1a35a540edd037a4389c47570c5c732986054981204
+F2005-tie-xtrasys.etf
+    sha256 e8228e799060f3c9036ab2a8964c13ffdb885dae40520154ba3ecac0c290e801
+F2005/-finale27/F2005-tie-xtrasys.musx
+    sha256 e5090996d36b93fd2e228a1b972dabc1faab011f1437f8423946e1b4afbda773
+    From F2005-baseline, Document Options > Ties > Extra System Separation changed from
+    -12 to -11 EVPU. Selector 41 incidence 2 word 3 is the only decoded source word that
+    changes; the ETF prints the same value and the Finale 27 companion changes only
+    <frontTieSepar>, from -12 to -11.

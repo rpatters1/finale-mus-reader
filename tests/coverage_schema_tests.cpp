@@ -11,6 +11,7 @@
 #include "coverage/common/music_symbol_info.h"
 #include "coverage/common/note_rest_info.h"
 #include "coverage/common/page_format_info.h"
+#include "coverage/common/tie_options_info.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -394,6 +395,98 @@ TEST_CASE("Page adjustment scope differences are different defaults", "[coverage
     context.category = DifferenceCategory::Differs;
     context.path = "page_format_options.avoid_system_margin_collisions";
     REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
+}
+
+TEST_CASE("Unrecovered scattered-layout tie options are different defaults", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(8);
+    const Value companionValue(0);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    DifferenceContext context{"tie_options.tie_connect_styles[0].offset_x",
+        DifferenceCategory::Differs, "finale27-default", sourceValue, companionValue,
+        leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::DifferentDefaults);
+
+    context.origin = "legacy-mus";
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+    context.origin = "finale27-default";
+    context.category = DifferenceCategory::ReaderOnly;
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+    context.category = DifferenceCategory::Differs;
+    context.epoch = finale_mus_reader::FormatEpoch::UncompressedLegacy;
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+
+    report.setField(
+        finale_mus_reader::instanceKey<musx::dom::options::TieOptions>(),
+        "breakForTimeSigs",
+        {finale_mus_reader::ValueOrigin::LegacyBehavior, 0, 0, 0});
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::DifferentDefaults);
+}
+
+TEST_CASE("Coda source-derived tie thickness differences are upgrade loss", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(6);
+    const Value companionValue(0);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    DifferenceContext context{"tie_options.thickness_left", DifferenceCategory::Differs,
+        "legacy-mus-adjusted", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::FinaleUpgradeLoss);
+    context.path = "tie_options.thickness_right";
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::FinaleUpgradeLoss);
+
+    const Value otherSourceValue(7);
+    const DifferenceContext otherValue{"tie_options.thickness_right", DifferenceCategory::Differs,
+        "legacy-mus", otherSourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE(classifyTieOptionsDifference(otherValue) ==
+            DifferenceClassification::FinaleUpgradeLoss);
+
+    context.path = "tie_options.tie_tip_width";
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+    context.path = "tie_options.thickness_left";
+    context.origin = "finale27-default";
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::DifferentDefaults);
+    context.origin = "legacy-mus-adjusted";
+    context.epoch = finale_mus_reader::FormatEpoch::UncompressedLegacy;
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+}
+
+TEST_CASE("Finale 2006 mixed-stem direction conversion loss is upgrade loss", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(2);
+    const Value companionValue(0);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
+    const finale_mus_reader::SourceVersion finale2006{.major = 11};
+    DifferenceContext context{"tie_options.mixed_stem_direction",
+        DifferenceCategory::Differs, "legacy-mus", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::DclLegacy,
+        finale_mus_reader::ByteOrder::LittleEndian, &finale2006, report};
+
+    REQUIRE(classifyTieOptionsDifference(context) ==
+            DifferenceClassification::FinaleUpgradeLoss);
+
+    const finale_mus_reader::SourceVersion finale2005{.major = 10};
+    context.sourceVersion = &finale2005;
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
+    context.sourceVersion = &finale2006;
+    context.origin = "finale27-default";
+    REQUIRE_FALSE(classifyTieOptionsDifference(context));
 }
 
 } // namespace

@@ -151,9 +151,13 @@ const FieldMapping codaPageFormatFields[] = {
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(scoreRightMarginSelector), GLOBALS_CMPER, \
         offset(4), pageFormatScore->facingPages)
 
-#define SCORE_DCL_PAGE_FORMAT_FIELDS(prefix, selector, offset) \
+#define SYSTEM_SCALING_PAGE_FORMAT_FIELDS(prefix, selector, offset) \
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(systemScalingSelector), GLOBALS_CMPER, \
         offset(3), pageFormatScore->sysPercent), \
+    MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(systemScalingSelector), GLOBALS_CMPER, \
+        offset(4), pageFormatParts->sysPercent)
+
+#define SCORE_DCL_PAGE_FORMAT_FIELDS(prefix, selector, offset) \
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(systemMarginSelector), GLOBALS_CMPER, \
         offset(0), pageFormatScore->sysMarginTop), \
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(scoreDistanceSelector), GLOBALS_CMPER, \
@@ -190,6 +194,10 @@ const FieldMapping fixedScoreDifferentFirstPageField[] = {
 
 const FieldMapping fixedScoreDclPageFormatFields[] = {
     SCORE_DCL_PAGE_FORMAT_FIELDS(FIXED, FIXED_SELECTOR, FIXED_OFFSET),
+};
+
+const FieldMapping fixedSystemScalingPageFormatFields[] = {
+    SYSTEM_SCALING_PAGE_FORMAT_FIELDS(FIXED, FIXED_SELECTOR, FIXED_OFFSET),
 };
 
 const FieldMapping fixedStaffHeightFields[] = {
@@ -258,6 +266,10 @@ const FieldMapping classScorePageFormatFields[] = {
         pageFormatScore->differentFirstPageMargin),
 };
 
+const FieldMapping classSystemScalingPageFormatFields[] = {
+    SYSTEM_SCALING_PAGE_FORMAT_FIELDS(CLASS_LAYOUT, CLASS_SELECTOR, CLASS_OFFSET),
+};
+
 const FieldMapping classStaffHeightFields[] = {
     MUS_CLASS_WORD(PageFormatOptionsTarget, numericGlobalClass(staffHeightSelector),
         GLOBALS_CMPER, classWordOffset(2), pageFormatScore->rawStaffHeight),
@@ -276,6 +288,7 @@ const FieldMapping classOuterPageFormatFields[] = {
 #undef MUS_CLASS_LAYOUT_LONG
 #undef SCORE_DCL_PAGE_FORMAT_FIELDS
 #undef SCORE_COMMON_PAGE_FORMAT_FIELDS
+#undef SYSTEM_SCALING_PAGE_FORMAT_FIELDS
 
 #define PARTS_PAGE_FORMAT_DIMENSIONS(prefix, selector, offset, order) \
     MUS_##prefix##_LONG(PageFormatOptionsTarget, selector(partsFormatSelector), GLOBALS_CMPER, \
@@ -310,8 +323,6 @@ const FieldMapping classOuterPageFormatFields[] = {
         offset(16), pageFormatParts->sysMarginRight)
 
 #define PARTS_DCL_PAGE_FORMAT_FIELDS(prefix, selector, offset) \
-    MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(systemScalingSelector), GLOBALS_CMPER, \
-        offset(4), pageFormatParts->sysPercent), \
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(partsFormatSelector), GLOBALS_CMPER, \
         offset(13), pageFormatParts->sysMarginTop), \
     MUS_##prefix##_WORD(PageFormatOptionsTarget, selector(partsFormatSelector), GLOBALS_CMPER, \
@@ -490,19 +501,32 @@ const MappingTable& fixedScoreDclPageFormatTable()
     return table;
 }
 
-bool fixedSourceStoresAbsoluteStaffHeight(
+bool fixedSourceStoresFinale2002PageFormatFields(
     const records::LegacyRecordIndex&, const SourceProfile& profile)
 {
-    // Finale 2002 introduces the absolute staff-height preference. Earlier values at
-    // the same selector do not represent the modern Page Format option.
+    // System scaling and absolute staff height begin with Finale 2002. Earlier words at
+    // those selectors are placeholders or unrelated values.
     return sourceAtOrAfter(
         profile, FormatEpoch::DclLegacy, versions::finale2002);
+}
+
+const MappingTable& fixedSystemScalingPageFormatTable()
+{
+    static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
+        .epochs = EpochMask::Dcl,
+        .applies = &fixedSourceStoresFinale2002PageFormatFields,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
+        .fields = fixedSystemScalingPageFormatFields,
+        .fieldCount = std::size(fixedSystemScalingPageFormatFields)};
+    return table;
 }
 
 const MappingTable& fixedStaffHeightTable()
 {
     static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
-        .epochs = EpochMask::Dcl, .applies = &fixedSourceStoresAbsoluteStaffHeight,
+        .epochs = EpochMask::Dcl,
+        .applies = &fixedSourceStoresFinale2002PageFormatFields,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
         .fields = fixedStaffHeightFields,
@@ -690,6 +714,17 @@ const MappingTable& classScorePageFormatTable()
         .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
         .fields = classScorePageFormatFields,
         .fieldCount = std::size(classScorePageFormatFields)};
+    return table;
+}
+
+const MappingTable& classSystemScalingPageFormatTable()
+{
+    static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
+        .epochs = EpochMask::Zlib, .encoding = RecordEncoding::ClassRecord,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
+        .fields = classSystemScalingPageFormatFields,
+        .fieldCount = std::size(classSystemScalingPageFormatFields)};
     return table;
 }
 
@@ -898,6 +933,7 @@ void importPageFormatOptions(const ImportContext& context)
                            &fixedScalarCollisionPageFormatTable(),
                            &fixedPackedCollisionPageFormatTable(),
                            &fixedScoreDclPageFormatTable(),
+                           &fixedSystemScalingPageFormatTable(),
                            &fixedStaffHeightTable(),
                            &fixedScoreUncompressedPageFormatTable(),
                            &fixedScorePreFinale35UpperSystemTable(),
@@ -910,6 +946,7 @@ void importPageFormatOptions(const ImportContext& context)
                            &fixedPartsDclPageFormatTable(),
                            &fixedPartsUncompressedPageFormatTable(),
                            &classScorePageFormatTable(),
+                           &classSystemScalingPageFormatTable(),
                            &classStaffHeightTable(),
                            &classOuterPageFormatTable(),
                            &classPartsCommonPageFormatTable(),

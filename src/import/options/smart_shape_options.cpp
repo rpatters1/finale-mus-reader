@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "import/options/legacy_curve_selectors.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -22,6 +23,10 @@ namespace options {
 namespace {
 
 using SmartShapeTarget = musx::dom::options::SmartShapeOptions;
+using legacy_curve::engraverSlurSelector;
+using legacy_curve::engraverSlurTag;
+using legacy_curve::slurThicknessSelector;
+using legacy_curve::slurThicknessTag;
 
 template <typename Enum, std::size_t Size>
 consteval bool enumValuesMatchIndices(const std::array<Enum, Size>& values)
@@ -130,9 +135,7 @@ constexpr std::uint16_t smartShapeSelector(std::string_view tag)
     return static_cast<std::uint16_t>((tag[0] - '0') * 10 + tag[1] - '0');
 }
 
-constexpr std::string_view slurThicknessTag = "50";
 constexpr std::string_view directionTag = "10";
-constexpr std::string_view engraverSlurTag = "51";
 constexpr std::string_view slurContourTag = "52";
 constexpr std::string_view slurAdjustmentTag = "53";
 constexpr std::string_view legacySlurThicknessTag = "59";
@@ -143,9 +146,7 @@ constexpr std::uint16_t smartShapeSlurConnectionSelector = 26;
 constexpr std::uint16_t smartShapeTabSlideConnectionSelector = 90;
 constexpr std::uint16_t smartShapeGlissandoConnectionSelector = 91;
 constexpr std::uint16_t smartShapeBendCurveConnectionSelector = 98;
-constexpr std::uint16_t slurThicknessSelector = smartShapeSelector(slurThicknessTag);
 constexpr std::uint16_t directionSelector = smartShapeSelector(directionTag);
-constexpr std::uint16_t engraverSlurSelector = smartShapeSelector(engraverSlurTag);
 constexpr std::uint16_t slurContourSelector = smartShapeSelector(slurContourTag);
 constexpr std::uint16_t slurAdjustmentSelector = smartShapeSelector(slurAdjustmentTag);
 constexpr std::uint16_t lineStyleSelector = smartShapeSelector(lineStyleTag);

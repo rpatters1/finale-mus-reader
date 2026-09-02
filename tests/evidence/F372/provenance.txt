@@ -267,3 +267,34 @@ F372-noteopts-noshapes.etf
     the ETF. The Finale 27 companion omits `<doShapeNotes/>`. This inverse edit confirms
     that CS word 5 bit 7 is the document-wide enable switch rather than a side effect of
     creating the shape definitions.
+
+F372-tieopts.mus / .etf / .musx
+    sha256 e154426aeeca0169d3ebcc6bd4c8d3c5e5090ec92265bc0cd89910e647fd9cbb (.mus)
+    sha256 b44f22ba9b69600a6ef396e07a6254c658b37630af5f0cddacd9f3410ee68dc8 (.etf)
+    sha256 a8e7facfd473461b0e243d85235d4933e25466eb855208e8c730c51b2f60cef3 (.musx)
+    Controlled from F372-baseline by changing the three Position from Notehead values from
+    6, 18, and 8 to 5, 17, and 7. Selector 17 word 4 changes from 6 to 5, and selector 22
+    words 4--5 change from 18, 8 to 17, 7; the ETF repeats all three changes. Selectors 62
+    and 63 also move 415 -> 414 as unrelated save normalization. The Finale 27 companion
+    expands the first source value into vertical offsets 5, 5, -5, and -5 for the four inner
+    tie connections. It expands the second into height 17 for both control points of the
+    medium, long, and tie-end contours and integer half-height 8 for the short contour. The
+    third value has no independently attributable modern TieOptions target: companions of
+    other post-baseline Finale 3.7 saves retain source value 8 while already carrying the
+    same remaining modern tie settings as this value-7 save.
+
+F372-tieopts-ps.mus / .etf / .musx
+    sha256 1318b44103c46250eba65a5ede6f2eeb673547ae24129331981d893a48387999 (.mus)
+    sha256 f4f831f5371689fe1748e4acd94694999fba879c0157daa0ade4aac3d3978e65 (.etf)
+    sha256 23b995d9fbe2677f3a91b50c613b3f46441ff72d442fd6b04d52e4f77190b132 (.musx)
+    Controlled from F372-baseline by assigning distinct values to every PostScript tie
+    control. Selector 35 word 5 changes from 0 to 5; selector 50 changes from
+    0, 0, 0, 0, 8, -8 to 9, 11, 13, 15, 17, -17; and selector 51 changes from
+    0, -6, 0, -6, 0, 8 to 19, -19, 21, -21, 3, 7. The ETF repeats all thirteen
+    values. Combined with the earlier Finale 1.0 and 2.6 discriminators, the companion
+    confirms the shared conversion formulas: selector 50 words 0 and 2 supply start and
+    end X positions; its words 1 and 3 add to selector 17 word 4 for the signed inner-tie
+    Y positions; selector 51 words 1 and 3 are negated for the two thicknesses; and its
+    words 0 and 2 add to selector 22 word 4 for the two contour heights. For the short,
+    medium, and long contours, the two fixed insets are selector 50 word 4 minus word 0
+    and word 2 minus word 5. The tie-end fixed-inset conversion remains ambiguous.
