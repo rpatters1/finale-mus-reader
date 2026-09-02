@@ -51,6 +51,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportStemOptions: return "stem_options";
     case Phase::ImportTextOptions: return "text_options";
     case Phase::ImportTieOptions: return "tie_options";
+    case Phase::ImportTimeSignatureOptions: return "time_signature_options";
     case Phase::ImportFretInstruments: return "fret_instruments";
     case Phase::ImportFretboardGroups: return "fretboard_groups";
     case Phase::ImportFretboardStyles: return "fretboard_styles";
