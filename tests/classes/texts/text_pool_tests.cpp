@@ -286,6 +286,20 @@ void testEarlyExpressionTextDeferred()
 void testCompressedTextPool()
 {
     using namespace musx::dom::texts;
+    const auto measureText = readTextFixture("evidence/F2001/F2001Win-meastext.mus");
+    expectText(measureText.report.formatEpoch == FormatEpoch::DclLegacy
+            && measureText.report.byteOrder == ByteOrder::LittleEndian,
+        "Windows Finale 2001 fixture was not classified as little-endian DCL");
+    expectText(textOf<BlockText>(measureText, 1)
+            == "^font(Times New Roman)^size(12)^nfx(0)Measure-attachéd text: €2.99",
+        "Windows-1252 block text was not recovered from Finale 2001");
+
+    const auto sectionLyric = readTextFixture(
+        "evidence/F2001/F2001Win-section-lyric.mus");
+    expectText(textOf<LyricsSection>(sectionLyric, 1)
+            == "^font(Times New Roman)^size(12)^nfx(0)sec-tion ly-ric",
+        "A section lyric was not recovered from the DCL text pool");
+
     const auto dcl = readTextFixture("evidence/F2006/F2006-single-title.mus");
     expectText(dcl.report.formatEpoch == FormatEpoch::DclLegacy,
         "Finale 2006 fixture was not classified as DCL");

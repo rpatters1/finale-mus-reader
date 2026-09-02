@@ -26,3 +26,13 @@ F2003-flagopts.etf
     selector 75 words 2--5 contain the straight horizontal and vertical pairs; and selector
     76 words 0--1 contain flag spacing and secondary-group adjustment. The ETF repeats all
     nineteen values and the Finale 27 companion agrees on every edited semantic field.
+
+F2003Win-empty.mus
+    sha256 c130455de1fc724024024ddea35286c753f7cb821092ff644cc433d7723c7eff
+F2003Win-empty.ETF
+    sha256 3e5a3fa3065b87c1530bc375d3d4899f47bfc3a989e878089da4a7615e770655
+-finale27/F2003Win-empty.musx
+    sha256 de85466cb4a22cc73f28a14237b50a5392fa06384550c65f5f06d22da587f76e
+    An untouched new document authored in Finale 2003 for Windows (internal source version
+    8.0.0.2), with its direct ETF export and Finale 27 conversion. The MUS uses little-endian
+    DCL framing; the companion is a semantic reference.

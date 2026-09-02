@@ -756,7 +756,7 @@ The corpus is overwhelmingly Macintosh-derived. Header platform tuples, classic 
 |---|---|---|---|
 | Pre-banner | apparent Finale 2 | Distinct header/body; no `ENIGMA BINARY FILE` | Separate parser likely |
 | Uncompressed fixed-row legacy | 3.0, 3.2, 3.5, 3.7, 97, 2000 | Four typed/length pools; platform byte order; 16-byte other/detail rows, 38-byte entries, raw text | Container and physical rows solved; tag fields incomplete |
-| DCL-compressed legacy | 2001–2006 | Big-endian typed/length blocks; CRC-32; PKWARE DCL; fixed 16-byte other/detail rows and 38-byte entry rows | Container, codec, and physical pool rows solved; logical field mapping incomplete |
+| DCL-compressed legacy | 2001–2006 | Platform-byte-order typed/length blocks; CRC-32; PKWARE DCL; fixed 16-byte other/detail rows and 38-byte entry rows | Container, codec, and physical pool rows solved; logical field mapping incomplete |
 | Typed zlib transition | 2007–2008 | Four typed blocks; 2007 is mixed big/little endian, 2008 mostly little endian | Wrapper solved; records partly solved |
 | Typed zlib stable | 2009, 2010, 2012 | Same four principal blocks and CRC validation; little endian in all but transition exceptions | Best implementation target |
 
@@ -807,13 +807,13 @@ format produced by the PKWARE DCL `implode()` function, not the incompatible PKZ
 named “implode.” `blast` is shipped as a small, permissively licensed contribution in the zlib source tree, but it is
 not part of the ordinary installed zlib API and should be built or vendored separately.
 
-At `0x200`, a compressed block has this big-endian layout:
+At `0x200`, a compressed block has this layout in the file's detected byte order:
 
 | Field | Size | Meaning |
 |---|---:|---|
 | block type | 2 | numeric pool/block identifier, commonly `0x000f`–`0x0013` |
 | block size | 4 | complete block size, including the six-byte type/length header |
-| CRC-32 | 4 | big-endian CRC-32 of the decompressed bytes |
+| CRC-32 | 4 | CRC-32 of the decompressed bytes, in the file's byte order |
 | payload | variable | complete PKWARE DCL stream |
 
 All 1,603 candidate compressed members encountered in the Finale 2001–2006 corpus decoded successfully and matched
@@ -837,6 +837,12 @@ the minimal controlled files end with empty `0x0012`, while 58 Finale 2006 files
 empty `0x0013`. Therefore the earlier interpretation of `0x0012` itself as a terminal type was wrong. Nonempty
 `0x0012` members are variable-length and follow the entry pool; text/lyrics are the leading interpretation, but
 their internal organization remains open.
+
+The controlled Windows Finale 2001 files under `tests/evidence/F2001/` confirm the symmetric
+little-endian layout. All four block headers, stored CRC values, and decoded fixed-row words use
+little-endian serialization. A nonempty `0x0012` text pool may also end exactly at EOF: the measure-text
+and section-lyric fixtures carry no following empty `0x0013` marker or eight-byte trailer. The parser
+therefore accepts either a sequential empty-pool marker or complete consumption after the last data pool.
 
 **Confirmed in the controlled Finale 2002–2005 baselines.** Each empty final pool marker is followed by the same
 eight-byte trailer, `ff ff ff ff 01 04 01 ff`. The trailer is outside the marker's declared six-byte size. Its
@@ -1871,7 +1877,10 @@ Word 3 is the difference between the clef's musical baseline, such as the G line
 typographic baseline: a font whose clefs already sit on the musical baseline leaves it zero. It is zero in all 1,268
 corpus specimens, because no unedited document sets it, so three controlled fixtures carry the whole weight here.
 
-**Finale 2001 onward stores Efix. Confirmed.** `F2005-clef-baseline.mus` sets one inch of baseline on the treble
+**Finale 2001 onward stores Efix. Confirmed.** `F2001Win-tclef-baseline.mus` sets the treble
+clef baseline to -0.25 inch in Windows Finale 2001; tuple word 3 stores `-4608`, exactly
+`-0.25 * 288 * 64`, and its exact companion preserves `<baseAdjust>-4608</baseAdjust>`. This
+places the unit boundary at the first DCL release directly. `F2005-clef-baseline.mus` sets one inch of baseline on the treble
 clef; the stored word is `18432`, which is exactly one inch — 288 Evpu at 64 Efix each — and the exact Finale 27
 companion carries `<baseAdjust>18432</baseAdjust>` through unchanged. The same fixture asks for minus two inches on
 the bass clef, which would be `-36864`, and the file stores `-32768`. **The field is a signed 16-bit word**, so its
@@ -3472,7 +3481,10 @@ therefore **confirmed**, although the decoder continues to prefer the structural
 The automatic-final-barline word is not operative before the DCL epoch. Earlier selector `09`
 values change across releases without tracking the companion option, while all corresponding
 companions disable it. The reader supplies false as `LegacyBehavior` before DCL because the
-pinned Finale 27 baseline enables it. `drawDoubleBarlineBeforeKeyChanges` is likewise false as
+pinned Finale 27 baseline enables it. In the controlled Windows Finale 2001 pair,
+`F2001Win-finalbarline-toggle.mus` changes selector `09` word 5 from 1 to 0, and both its ETF and
+Finale 27 companion disable `drawFinalBarlineOnLastMeas`. This confirms the DCL lower boundary.
+`drawDoubleBarlineBeforeKeyChanges` is likewise false as
 `LegacyBehavior` in every supported MUS epoch, all of which predate the public PDK's Finale
 2014.5 boundary. Absent mapped fields otherwise retain `Finale27Default` origin.
 
@@ -4567,7 +4579,7 @@ Keywords observed, with the musxdom class each names:
 | `block` | `texts::BlockText` | every epoch's fixtures |
 | `verse` | `texts::LyricsVerse` | `F2007-lyric-hyphens.mus` |
 | `chorus` | `texts::LyricsChorus` | **inferred** from `verse`; no fixture has one |
-| `section` | `texts::LyricsSection` | **inferred** from `verse`; no fixture has one |
+| `section` | `texts::LyricsSection` | `F2001Win-section-lyric.mus` |
 | `smartshape` | `texts::SmartShapeText` | `F2006-embedded-tiff.mus` |
 | `expression` | `texts::ExpressionText` | `F2006-embedded-tiff.mus` |
 | `fileInfo` | `texts::FileInfoText` | `F2008-BE-text-inserts.mus` |
@@ -4575,6 +4587,11 @@ Keywords observed, with the musxdom class each names:
 
 The reader reports any keyword it does not recognize, by name, which is how a missing spelling
 is meant to be found.
+
+The little-endian Finale 2001 text fixtures confirm both framing and encoding at the DCL lower
+boundary. `F2001Win-meastext.mus` recovers `Measure-attachéd text: €2.99` through Windows-1252,
+and `F2001Win-section-lyric.mus` recovers its `section` record exactly. Their ETF exports and
+Finale 27 companions agree with both strings.
 
 ### Initial formatting state
 
@@ -5127,7 +5144,7 @@ Code `0x011a` maps exactly to `partDef`. Part scope and sharing are likely encod
 ## Checksums, compression, and wrapping
 
 - 2007+: zlib plus explicit CRC-32 and stored block length, confirmed.
-- 2001–2006: PKWARE DCL streams, decoded with `blast`; explicit big-endian CRC-32 and stored block length, confirmed.
+- 2001–2006: PKWARE DCL streams, decoded with `blast`; CRC-32 and stored block length in the file's detected byte order, confirmed.
 - 3.x–2000: uncompressed typed pools with no identified checksum; fixed rows and text framing confirmed.
 - Coda-banner/Finale 2: separate organization.
 
