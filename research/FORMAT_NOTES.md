@@ -1243,16 +1243,18 @@ uncompressed, DCL, and zlib epochs; a Coda-banner assignment remains corpus-unve
 
 ### Earliest controlled graphic placement
 
-**Confirmed in Finale 3.7.2; absent from the Finale 2.6.3-and-earlier UI.** The controlled
+**Introduced in Finale 3.7; the assignment layout is confirmed in Finale 3.7.2.** The controlled
 `F372-measure-graphic` fixture places a linked EPS on staff 1 at measure 3. Its MUS and ETF both
 carry four `mg(1,3)` rows containing the 18-word assignment followed by two zero filler words,
 including file-description cmper 1 and `graphicCmper` zero. No stored graphic block exists, as expected for
 a linked file. The user who produced the fixture observed the Graphics Tool in Finale 3.7.2's Tool
-menu and observed it absent in Finale 2.6.3 and earlier.
+menu and observed it absent in Finale 2.6.3 and earlier. The Finale 3.7 addendum independently
+identifies the Graphics Tool and Place/Export Graphics as new features, with EPS, PICT, and TIFF
+explicitly supported. It does not mention embedding; that feature remains at the observed Finale
+2006 boundary.
 
-This establishes external placement by 3.7.2 and brackets its UI introduction after 2.6.3. It
-does not determine which intervening 3.x release first supplied the tool. The controlled
-`F372-page-graphic` fixture independently establishes `pg` at the same boundary: its three rows
+The controlled `F372-page-graphic` fixture independently establishes `pg` at the same boundary:
+its three rows
 contain the standard 18-word page assignment and refer to the linked `Photo_tiff.tiff`. Finale 27
 preserves both the assignment and path in `score.dat`, but does not put the TIFF in the MUSX ZIP.
 
@@ -1920,6 +1922,99 @@ does store the courtesies it has as separate boolean words — the same controll
 The boundary is the epoch, not version 3.6.2. Finale 3.0 through 3.5 predate the option as well, but their files
 already carry bit 2 set, so reading the bit gives the correct answer for them, and an epoch gate says that in one
 line where a version range would have to name a release whose behaviour the bit already reports.
+
+### Staff options
+
+**Implemented in full.** From the arrival of group-name positioning, the default full and
+abbreviated positions for staff and group names are four numeric globals at comparator `65534`.
+Each supplies horizontal and vertical EVPUs and a packed flag word:
+
+| Destination | Selector | Horizontal | Vertical | Flags |
+|---|---:|---:|---:|---:|
+| `namePos` | `04` | word 0 | word 1 | word 5 |
+| `namePosAbbrv` | `66` | word 0 | word 1 | word 5 |
+| `groupNameFullPos` | `79` | word 0 | word 1 | word 2 |
+| `groupNameAbbrvPos` | `80` | word 0 | word 1 | word 2 |
+
+The staff flag uses bits 0--1 for justification and bits 4--5 for horizontal alignment; the
+group flag uses bits 0--2 and 3--4 respectively. Bit 15 is Expand Single Word in both. These
+values map directly to musxdom's left/right/center enumeration. In the zlib epoch, the same
+selectors use the repository-wide numeric-global class transformation.
+
+Finale 3.0--3.5 uses an earlier six-word layout for selectors `04` and `66`:
+
+| Word | Meaning |
+|---:|---|
+| 0 | horizontal offset |
+| 1 | stored vertical offset |
+| 2 | font id |
+| 3 | point size |
+| 4 | font effects |
+| 5 | justification |
+
+Within the uncompressed epoch, the simultaneous absence of group-position selectors `79` and `80`
+selects this layout. The marker directly expresses the record-family change and also handles the
+unrepresented Finale 3.3--3.4 interval; a damaged later file missing both selectors would be
+misidentified as early. The Finale 3.7 addendum supplied for this investigation identifies group
+names, including their positioning, as a 3.7 enhancement, agreeing with the observed structural
+boundary.
+
+The stored vertical offset is not in the later baseline coordinate system. Its conversion depends
+on font metrics that the reader cannot reproduce reliably, so the importer applies the uniform
+approximation `stored vertical + 3 * point size` and reports `LegacyMusAdjusted`. This exactly
+matches 34 Times-font companion values across 17 Finale 3.0--3.5 documents. Six Times New Roman
+positions across three Windows documents remain seven Efix below their companions; those residual
+differences are categorized as `font-metric-approximation`. The stored justification is recovered
+directly. Horizontal alignment follows that justification as source-era behavior when it differs
+from the pinned value, while matching alignment and Expand Single Word remain `Finale27Default`.
+The absent group positions likewise remain pinned defaults. **Strong for the layout and simple
+approximation; open for Finale's actual font-metric conversion.**
+
+The field semantics and flag packing are **public-PDK-derived** from
+[`FCStaffNamePositionPrefs`](https://pdk.finalelua.com/class_f_c_staff_name_position_prefs.html),
+[`FCGroupNamePositionPrefs`](https://pdk.finalelua.com/class_f_c_group_name_position_prefs.html),
+and their [published header source](https://pdk.finalelua.com/ff__prefs_8h_source.html), accessed
+2026-09-01. The selectors and word locations are **private-framework-derived**. Existing ETFs
+independently contain all four selectors from Finale 3.7.2 onward. The controlled Finale 1.0.0
+and 2.6.3 ETFs contain selector `04`, but the Coda UI exposes no name-position preferences and
+does not yet have group names. The early selector's words therefore are not interpreted as the
+later `namePos` object. Those early files do not contain selectors `66`, `79`, or `80`.
+
+In the Coda epoch, full and abbreviated staff names use fixed horizontal offset `-192`, vertical
+offset `-27`, left justification, and left alignment. These values differ from the pinned baseline
+and report `LegacyBehavior`. Expand Single Word and every group-name position leaf already have the
+effective Coda values in the pinned baseline and remain `Finale27Default`. The vertical value is
+the predominant recoverable Coda behavior: tracked companions retain `-27` in 43 occurrences but
+upgrade it to `-24` once and `-22` in 24 occurrences. Those two transformations are categorized as
+`different_defaults`, not as separately recoverable source behaviors. The broader corpus likewise
+contains seven Coda documents whose companions replace the fixed horizontal value `-192` with one
+of `-152`, `-160`, `-200`, `-216`, `-228`, `-232`, or `-320`, identically for full and abbreviated
+names. These horizontal transformations are categorized as `different_defaults` under the same
+rule. **Strong.**
+
+The three scalar members are the tail of numeric-global selector `97`, class `0x006f` in the zlib
+epoch:
+
+| Destination | Word |
+|---|---:|
+| `staffSeparation` | 12 |
+| `staffSeparIncr` | 13 |
+| `autoAdjustStaffSepar` | 14 |
+
+The record's payload states whether the tail exists. Finale 2008 records are 36 bytes and carry all
+three words; the tracked Finale 2007 record is only 24 bytes and ends before them. The controlled
+Finale 2012 edit changes words 12--14 from `-320`, `72`, `1` to `-289`, `71`, `0`, exactly matching
+the independently parsed companion. Recovery therefore requires at least 15 payload words rather
+than a recovered product version. This is **strong** from the controlled Finale 2012 edit, the
+short Finale 2007 record, and the consistent Finale 2008 record shape. Files without the tail have
+no exposed source-era setting. On that side of the same structural gate, `staffSeparation` receives
+the fixed value `-320` as `LegacyBehavior`; `staffSeparIncr` and `autoAdjustStaffSepar` retain their
+`Finale27Default` values.
+
+`indivPos` and `hidden` are not persisted in this options context. They remain false from the
+pinned baseline and report `Finale27Default`. Outside the Coda epoch, a missing located
+name-position selector likewise reports `Finale27Default` for the five fields that selector would
+have supplied.
 
 ### Flag options
 
@@ -3341,10 +3436,10 @@ documents each from Finale 3.0, 3.2, and 3.5 carry an all-zero selector `45`; in
 at word 2 as `centerThickness` produces zero while each raw companion stores 2. Eleven other Finale
 3.0 documents omit selector `45`; the pinned baseline then produces `centerThickness` 3.6 and
 `tipThickness` 7.2 while their companions store 2 and 0. Finale 3.7 documents recover the stored
-values without disagreement. The importer therefore treats 2 and 0 as `LegacyBehavior` before a
-provisional Finale 3.7 boundary and begins reading these two selector words at that boundary. The
-exact introduction after Finale 3.5 remains open because no represented source occupies the gap;
-selector presence cannot distinguish the layouts.
+values without disagreement. The Finale 3.7 addendum independently identifies piano-brace
+thickness controls as a 3.7 enhancement. The importer therefore treats 2 and 0 as
+`LegacyBehavior` before Finale 3.7 and begins reading these two selector words at that confirmed
+boundary; selector presence alone cannot distinguish the layouts.
 
 The Coda-banner epoch uses a different representation. A controlled Finale 1.0.0 save changes only
 three 32-bit IEEE-754 values from its baseline: selector `52` word 4 stores `1.61802995` for the
@@ -3465,10 +3560,14 @@ musxdom had no such member and silently dropped the value; it now has one.
 
 #### Accidental symbol inserts
 
-**Confirmed for Finale 2001 onward; strong for Finale 3.7–2000.** `TextOptions::symbolInserts` is a direct
-five-element array at selector `78(65534)`, class `0x005c` in the zlib epoch, in musxdom's own
-`AccidentalInsertSymbolType` order: sharp, flat, natural, double sharp, double flat. The field order is the same
-in every era:
+**Confirmed for Finale 2001 onward; strong physical mapping for Finale 3.7–2000.**
+`TextOptions::symbolInserts` is a direct five-element array at selector `78(65534)`, class
+`0x005c` in the zlib epoch, in musxdom's own `AccidentalInsertSymbolType` order: sharp, flat,
+natural, double sharp, double flat. The repository owner's inspection of the Finale 3.7 addendum
+confirms that configurable text inserts first appeared in that release's UI. This independently
+supports the structural boundary: the family is absent through Finale 3.5 and present from Finale
+3.7 onward. The UI boundary is confirmed; the early field widths and byte order remain strong for
+the separate reasons below. The field order is the same in every era:
 
 | Offset | Width | Field |
 |---:|---|---|
@@ -4044,8 +4143,10 @@ available, and the six-word record has no identified structural change at the bo
 
 The printed Finale 3.2 addendum documents “enhanced smart shapes,” including entry-attached slurs,
 slur contours and connection types, plus Slur Thickness, Line Thickness, Dash Length, and Dash
-Space. It does not mention a hook-length setting. This supports the located early Smart Shape
-family but neither moves nor confirms the later independent crescendo-width and hook-length gate.
+Space. The Finale 3.7 addendum identifies the Smart Shape Options dialog, including Hook Length,
+as a 3.7 enhancement. This independently confirms the hook-length introduction boundary. The
+independent crescendo-line-width boundary remains strong from the binary and companion evidence
+rather than confirmed from the addenda.
 
 The selector `97` structural boundary coincides exactly with Finale 2002 in the larger installation
 survey: all 63 Finale 2001 documents have a zero fourth selector-`52` tuple and selector-`53` word 3
@@ -4751,10 +4852,10 @@ been tested inside Finale 2012. It is possible that the first release of that ve
 be wrong. Nothing turns on this while the reader takes whichever form the document presents:
 `^bookmark` records are read where they exist and `BK` is read nowhere.
 
-The earliest specimen available is Finale 3.7.2, which bounds the arrival of bookmarks from above
-and says nothing about it otherwise: no earlier release is available to test. The comparators are
-not stable across an upgrade — the same two bookmarks are 1 and 2 in the Finale 3.7.2 companion
-and 2 and 3 in the Finale 2012 one.
+The Finale 3.5 addendum supplied for this investigation identifies bookmarks as a 3.5 enhancement.
+The earliest binary specimen available is Finale 3.7.2, so the Finale 3.5 representation remains
+unobserved. The comparators are not stable across an upgrade — the same two bookmarks are 1 and 2
+in the Finale 3.7.2 companion and 2 and 3 in the Finale 2012 one.
 
 ### The Coda-banner epoch
 

@@ -659,8 +659,8 @@ void captureSlurAvoidStaffLinesAmount(const ImportContext& context,
 void applyPreFinale37FigureBehavior(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
-    // Believed: Finale 3.0 through 3.6 has neither an independent crescendo
-    // line width nor the later hook-length setting.
+    // Finale 3.0 through 3.6 predates the hook-length setting. Believed: it also has no
+    // independent crescendo line width.
     if (!sourceHasPreFinale37FigureBehavior(context.profile)
         || !hasFigureSettings(context.index, context.profile)) {
         return;

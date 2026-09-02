@@ -52,6 +52,7 @@ add_executable(finale_mus_reader_tests
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/options/smart_shape_options_tests.cpp
+    classes/options/staff_options_tests.cpp
     classes/options/stem_options_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/options/text_options_tests.cpp

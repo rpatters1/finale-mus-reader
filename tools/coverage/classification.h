@@ -47,6 +47,7 @@ enum class DifferenceClassification
     EnigmaTextDifference,
     FinaleTextBlockRenumbering,
     FinaleUpgradeLoss,
+    FontMetricApproximation,
     LegacyPageParityText,
     MissingAccidentalInsertDefault,
     MissingSelector,

@@ -43,6 +43,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "finale-text-block-renumbering";
     case FinaleUpgradeLoss:
         return "finale-upgrade-loss";
+    case FontMetricApproximation:
+        return "font-metric-approximation";
     case LegacyPageParityText:
         return "legacy-page-parity-text";
     case MissingAccidentalInsertDefault:

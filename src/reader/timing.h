@@ -50,6 +50,7 @@ enum class Phase : std::size_t
     ImportPianoBraceBracketOptions,
     ImportRepeatOptions,
     ImportSmartShapeOptions,
+    ImportStaffOptions,
     ImportStemOptions,
     ImportTextOptions,
     ImportFretInstruments,
