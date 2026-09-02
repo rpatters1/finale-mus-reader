@@ -283,7 +283,7 @@ TEST_CASE("System scaling and absolute page-format staff height begin with Final
 
 TEST_CASE("Finale 2001 retains baseline system scaling", "[class]")
 {
-    const auto fixture = readFixture("evidence/F2001/F2011Win-empty.mus");
+    const auto fixture = readFixture("evidence/F2001/F2001Win-empty.mus");
     const auto options = fixture.document->getOptions()->get<PageFormatOptionsTestTarget>();
     expectMapping(options->pageFormatScore->sysPercent == 100
             && options->pageFormatParts->sysPercent == 100

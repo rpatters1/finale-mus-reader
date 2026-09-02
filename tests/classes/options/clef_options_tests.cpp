@@ -268,6 +268,19 @@ void testClefOptionsCapture()
             std::string("The treble clef definition was not recovered from ") + era);
     };
 
+    // Finale 2001: selector 95 already stores the baseline in Efix. This little-endian
+    // fixture puts -4608 in the treble-clef word, a quarter inch below the default.
+    const auto f2001 = read("evidence/F2001/F2001Win-tclef-baseline.mus");
+    const auto f2001Clefs = clefs(f2001);
+    expectTreble(f2001Clefs, "Finale 2001");
+    expect(f2001.report.formatEpoch == FormatEpoch::DclLegacy
+            && f2001.report.byteOrder == ByteOrder::LittleEndian
+            && f2001Clefs->getClefDef(0)->baselineAdjust == -4608
+            && field(f2001,
+                   "options.clefOptions.clefDefs[0].baselineAdjust").origin
+                == ValueOrigin::LegacyMus,
+        "The Windows Finale 2001 clef baseline was not recovered in Efix");
+
     // Finale 2002: selector 95, 24 incidences, sixteen nine-word tuples. The last two
     // definitions did not exist yet and come from the baseline.
     const auto f2002 = read("evidence/F2002/F2002-baseline.mus");

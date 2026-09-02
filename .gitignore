@@ -27,6 +27,8 @@ compile_commands.json
 *.code-workspace
 *.sublime-project
 *.sublime-workspace
+*.asv
+*.[bB][aA][kK]
 *.xcuserstate
 xcuserdata/
 

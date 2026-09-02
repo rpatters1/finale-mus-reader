@@ -1,0 +1,59 @@
+Finale 2001 for Windows (internal version 6.0.2.2), little-endian PKWARE DCL era.
+
+Origin: controlled documents authored in Finale 2001 for Windows by this repository's
+author. Each ETF was exported by that application. Each `.musx` under `-finale27/` is
+Finale 27's conversion of the matching MUS and is a semantic reference, not a byte-level
+reference.
+
+F2001Win-empty.mus / .ETF / .musx
+    sha256 0f4d05d140d5e2fa7170cae788b9bfb6df80d4422228d24c8fbbe0fc3ec77cb0 (.mus)
+    sha256 293880da4908cc7cc8230f1f4090520205dc7d81de693a1bb72f7ab4ce12012b (.ETF)
+    sha256 83164ff2e08acec9eae42698b4d0289ec9b88cbf3b7bdd9b5aff407452665208 (.musx)
+    The baseline for the controlled edits in this directory.
+
+F2001Win-mixstem-opp.mus / .ETF / .musx
+    sha256 1a4bddaa8e4536ba518c683cad97cee9753988bb58cfa40565b8ac6f9f8e53f3 (.mus)
+    sha256 af78ae576b2b5408a34849cb24a30c12ca1b63c31e948643a0a20c25aa0ff979 (.ETF)
+    sha256 5e2184ccd0dcbd2aaecbb2395501ab2f8f536297be620ae0a4dfa34a09278c76 (.musx)
+    A controlled mixed-stem Tie Options edit selecting the opposite-first direction.
+
+F2001Win-mixstem-under.mus / .ETF / .musx
+    sha256 d3b6a120995be950d2c1a132409c9c1b3146992e15ee11cb291a50e7bae245b9 (.mus)
+    sha256 2fb724a6756f86a663648381a745f2e62f268389529f4f37acfe56d65f406cf7 (.ETF)
+    sha256 a030bc29d20cfe4dc479dfe5c3922290b5c75c7e4510c361e64c043839264af3 (.musx)
+    A controlled mixed-stem Tie Options edit selecting the underside direction.
+
+F2001Win-csharp-artic.mus / .ETF / .musx
+    sha256 98e1cfad474959d305f2146337593c4f5441189f80464d340d55ed350ffa4c63 (.mus)
+    sha256 9632d9fcfec0b79055d3475b88714e8ffe9264fa0b737a3b09e076c7f8955642 (.ETF)
+    sha256 294c0f2a02e34a8d77100031eea5b5ffe079b7346b346ce43bb7624b9c89eefc (.musx)
+    A minimal musical edit carrying a C-sharp and one articulation. Entry and
+    articulation interpretation is reserved for a dedicated recovery cycle.
+
+F2001Win-finalbarline-toggle.mus / .ETF / .musx
+    sha256 e0edd453c8ade6bfcd1db7eca72bc6377303f9218d85b21d7df6923b261724d0 (.mus)
+    sha256 60b8ded381cd5d20a2a6c84109fc26d2368a5c63b41cb13028738c6438fe9d4c (.ETF)
+    sha256 d0981896d8b2668c98c15c8ebe5c8398b87e66bb0c5c636f011a136ea8117ee8 (.musx)
+    From the baseline, with automatic final barlines disabled. Selector 09 word 5
+    changes from 1 to 0, and both companions preserve the disabled value.
+
+F2001Win-meastext.mus / .ETF / .musx
+    sha256 5a69cdb0743a46ec4dfcf7cbb333d4fa29bcff645683d6b797982d12d3617533 (.mus)
+    sha256 dbe93b7b02aa8e57b9d965fde444abb6a57c286e3cd4e7f6c9d333274b7b32eb (.ETF)
+    sha256 9c8b0f9f3b43a336701f7aa214f314c9479883fdc22ba34ef401882abdf0f6f6 (.musx)
+    A measure-attached block containing `Measure-attachéd text: €2.99`. It confirms
+    Windows-1252 text decoding at the DCL lower boundary.
+
+F2001Win-section-lyric.mus / .ETF / .musx
+    sha256 324284085ba263fe184afd0a2beb2079ba200227d720cbc63b64a43690428f2b (.mus)
+    sha256 31795894401cdf477378b6589af5aab97d7feaafa28b365c0b225a527a09fb5c (.ETF)
+    sha256 fce8ef0a96b030fb2c038baa8ac9e3ea47d100e95719e4e29a5dfea8e8849b79 (.musx)
+    A section lyric containing `sec-tion ly-ric`, confirming the `section` text-pool
+    keyword directly.
+
+F2001Win-tclef-baseline.mus / .ETF / .musx
+    sha256 0a87171df9f2bd6d1d4f05fd8d35f9f256b78f7547fd7237c31a3441e0fe52bb (.mus)
+    sha256 30bbf9bf8c64d7d23f166aa24aa62c016c9f7c8f3e3fe9979e1a7563dd6f9c7a (.ETF)
+    sha256 95fa694160f3ae4d59faa3459d0b05be15d7484d4c8e69bb79c23cc85c80ad51 (.musx)
+    From the baseline, with the treble-clef baseline set to -0.25 inch. Selector 95
+    tuple word 3 stores -4608 Efix, and the Finale 27 companion preserves -4608.

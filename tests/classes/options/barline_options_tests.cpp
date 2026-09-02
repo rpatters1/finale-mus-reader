@@ -226,6 +226,24 @@ TEST_CASE("Barline options recover the located fixed-row fields", "[class]")
     }
 }
 
+TEST_CASE("Automatic final barlines begin in the DCL epoch", "[class][reader]")
+{
+    const auto baseline = readFixture("evidence/F2001/F2001Win-empty.mus");
+    const auto disabled = readFixture(
+        "evidence/F2001/F2001Win-finalbarline-toggle.mus");
+    const auto baselineOptions = baseline.document->getOptions()->get<BarlineTarget>();
+    const auto disabledOptions = disabled.document->getOptions()->get<BarlineTarget>();
+
+    expectMapping(baseline.report.formatEpoch == FormatEpoch::DclLegacy
+            && baseline.report.byteOrder == ByteOrder::LittleEndian
+            && baselineOptions->drawFinalBarlineOnLastMeas
+            && !disabledOptions->drawFinalBarlineOnLastMeas
+            && field(disabled,
+                   "options.barlineOptions.drawFinalBarlineOnLastMeas").origin
+                == ValueOrigin::LegacyMus,
+        "The Windows Finale 2001 final-barline switch was not recovered");
+}
+
 TEST_CASE("Barline options recover class records in either byte order", "[class]")
 {
     const std::vector<SyntheticClassRow> rows{

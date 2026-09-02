@@ -130,13 +130,22 @@ The installed `unar`/`lsar` 1.10.7 tools were used to inspect all 275 `.sit` arc
 
 Use archive candidates `mus-ee1382238443129b` (Finale 2007, validated big-endian framing) and `mus-43c11614815f485c` (Finale 2008, validated little-endian framing) as controlled comparison targets if their documents can be opened. Export ETF where supported or save equivalent copies from the indicated Finale versions. The purpose is to test whether the observed endian transition changes only serialization or also record identities and payload meanings.
 
-### W1 — Proposed — essential platform coverage
+### W1 — Partly supplied — essential platform coverage
 
 Supply additional Windows-origin files, preferably with exact Finale version/build provenance, covering at least one minimal document and one musically rich document from Finale 2001–2006, 2007, 2008, and 2012. For the 2007/2008 pair, save the same document on Mac and Windows where possible. Preserve source hashes, header bytes, platform tuples, and resource-fork absence. Four existing Windows files now prove little-endian serialization of the same Finale 3.x–2000 pools, but later Windows coverage remains insufficient.
 
-### C1 — Proposed — useful for decoded record mapping
+The controlled `tests/evidence/F2001/` set now supplies the DCL lower boundary: Windows Finale
+2001 writes little-endian block headers, CRC values, and decoded records. Minimal option and text
+edits agree with their ETF and Finale 27 companions. Windows-origin coverage for the rest of the
+requested releases remains open.
+
+### C1 — Supplied; entry analysis deferred — useful for decoded record mapping
 
 Using the earliest available Finale version that supports ETF, create a minimal one-staff/one-measure document and save/export four pairs (`.mus` and `.etf`): empty measure, add one quarter-note middle C, change only that note to C-sharp, and attach one articulation. Do not change layout between saves. DCL decoding is solved; this isolates entry, pitch/alteration, and articulation changes in the decoded pools.
+
+`F2001Win-empty` and `F2001Win-csharp-artic` provide the baseline and edited Windows Finale
+2001 documents with ETF and Finale 27 companions. Entry and articulation interpretation is
+intentionally reserved for its own recovery cycle.
 
 ### C2 — Proposed — important for transition
 
@@ -233,7 +242,9 @@ exact version, build, platform, and UI value, and save a Finale 27 companion for
 `F263-clef-baseline` with ETF and Finale 27 companions. Results are in
 [FORMAT_NOTES.md](FORMAT_NOTES.md#clef-definitions): the 2001-and-later unit is Efix in a signed
 16-bit word, **confirmed**; the pre-2001 slot is word 4 of the clef's own selector, **confirmed**,
-which corrected a wrong mapping that had been reading word 1 and affected 90 corpus files. The
+which corrected a wrong mapping that had been reading word 1 and affected 90 corpus files.
+`F2001Win-tclef-baseline` subsequently confirms the upper unit boundary in Finale 2001 itself:
+the -0.25-inch edit is stored as -4608 Efix and survives the Finale 27 conversion unchanged. The
 harmonic-level-to-Efix conversion stays **weak** and now cannot be settled by a companion at all,
 because Finale 27 discards the early value rather than converting it.
 

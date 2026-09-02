@@ -60,8 +60,8 @@ bool storesUnifiedLeftBarlineOption(
 
 bool sourceHasAutomaticFinalBarlineOption(const SourceProfile& profile)
 {
-    // Believed: the DCL record family is the first to store this option. Earlier layouts
-    // reuse the word while Finale behaves as though the later option were disabled.
+    // The DCL record family is the first to store this option. Earlier layouts reuse the
+    // word while Finale behaves as though the later option were disabled.
     return sourceAtOrAfter(profile, FormatEpoch::DclLegacy);
 }
 
