@@ -195,6 +195,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTextOptions, &options::importTextOptions),
         FINALE_MUS_READER_IMPORTER(ImportTieOptions, &options::importTieOptions),
         FINALE_MUS_READER_IMPORTER(ImportTimeSignatureOptions, &options::importTimeSignatureOptions),
+        FINALE_MUS_READER_IMPORTER(ImportTupletOptions, &options::importTupletOptions),
         // others
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),

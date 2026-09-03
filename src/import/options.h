@@ -126,5 +126,10 @@ void importTieOptions(const ImportContext& context);
 /// @details Coda-banner documents retain pinned defaults for fields absent from that layout.
 void importTimeSignatureOptions(const ImportContext& context);
 
+/// @brief Recovers options::TupletOptions from stored preferences and source-era behavior.
+/// @details Fields absent from a source layout retain the pinned baseline unless that layout's
+/// behavior differs from the baseline.
+void importTupletOptions(const ImportContext& context);
+
 } // namespace options
 } // namespace finale_mus_reader

@@ -55,6 +55,7 @@ enum class Phase : std::size_t
     ImportTextOptions,
     ImportTieOptions,
     ImportTimeSignatureOptions,
+    ImportTupletOptions,
     ImportFretInstruments,
     ImportFretboardGroups,
     ImportFretboardStyles,
