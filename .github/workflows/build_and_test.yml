@@ -71,6 +71,11 @@ jobs:
       - name: Verify embedded defaults
         run: python scripts/generate_embedded_defaults.py --check
 
+      - name: Verify documentation structure
+        run: |
+          python scripts/check_doc_budget.py
+          python scripts/check_doc_links.py
+
       - name: Configure CMake
         if: runner.os != 'Windows'
         run: >-

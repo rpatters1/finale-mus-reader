@@ -48,7 +48,7 @@ history preserved. Its entry point is [research/README.md](research/README.md).
 ## Surveying your own corpus
 
 If you have your own collection of legacy `.mus` files, you can inventory it and
-contribute the findings. [research/SURVEY_PROMPT.md](research/SURVEY_PROMPT.md)
+contribute the findings. [research/reference/SURVEY_PROMPT.md](research/reference/SURVEY_PROMPT.md)
 is written to be pasted into a coding agent: it asks you how your files are
 organized and runs the survey from there. Your paths are never published — every
 file is identified by a hash of its contents, and results are namespaced per
@@ -63,7 +63,7 @@ record provenance and confidence explicitly.
 The repository includes a distilled option/global mapping derived from
 authorized read-only inspection of historical PDK Framework versions. It
 labels every unverified result accordingly; see
-[research/LEGACY_OPTION_MAPPINGS.md](research/LEGACY_OPTION_MAPPINGS.md).
+[research/reference/LEGACY_OPTION_MAPPINGS.md](research/reference/LEGACY_OPTION_MAPPINGS.md).
 
 ## Current format coverage
 

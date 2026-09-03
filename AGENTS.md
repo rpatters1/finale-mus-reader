@@ -39,6 +39,27 @@ that task rather than reconstructing the procedure:
   user asks to implement a class; it moves from small epoch samples to a narrow
   implementation and then hands broad validation to
   `analyze-recovery-coverage`.
+- `.agents/skills/maintain-documentation/`: the rules for changing anything under `research/`.
+  Read this before adding a finding, recording an experiment, updating status, or creating a
+  research document.
+- `.agents/skills/comment-production-code/`: what belongs in a code comment and what belongs in
+  the research documents instead.
+
+## Documentation
+
+Read `research/ORIENTATION.md`, `research/STATE.md`, and `research/INDEX.md` at the start of a
+session. That is the whole startup set.
+
+**Do not read `research/` recursively, and do not preload `research/format/`,
+`research/investigations/`, `research/history/`, `research/reference/`, or
+`research/corpora/`.** Those hold the detailed reference notes, the experiment history, and the
+corpus inventories; open one file when the task calls for it.
+
+The naming rule that locates a class's notes from its source file, and the rest of the navigation
+contract, are stated once in `research/ORIENTATION.md`. `research/INDEX.md` maps every other
+subject to a file.
+
+Before editing any documentation, use the `maintain-documentation` skill.
 
 ## Repository map
 
@@ -54,9 +75,9 @@ that task rather than reconstructing the procedure:
   fallback resources for macOS and Windows.
 - `tests/evidence/`: controlled, publishable MUS/ETF fixtures and provenance.
 - `research/`: findings, confidence labels, provenance, evidence inventories,
-  and open questions. Start with `research/README.md` and
-  `research/FORMAT_NOTES.md` before changing a decoder. Survey results are
-  registered in `research/data/surveys.csv`, one row per surveyed corpus.
+  and open questions, organized for retrieval rather than for reading through.
+  See **Documentation** above. Survey results are registered in
+  `research/data/surveys.csv`, one row per surveyed corpus.
 - `scripts/`: reproducible maintenance and corpus-read-only analysis tools.
   Location-agnostic by design: every path is a CLI argument, so corpus-specific
   conventions belong in the invocation and never in the code.
@@ -104,8 +125,8 @@ In practice:
 Comments in `src/` and `include/` state how the code works, and how the format is believed to
 work where belief is all there is, with the confidence labelled. They do not carry how a
 behavior was derived, which fixture or survey established it, or what was believed before. That
-material is not lost: it belongs in `research/FORMAT_NOTES.md`, `research/EXPERIMENT_LOG.md`,
-and the fixture `provenance.txt` files, which exist to hold it. See the
+material belongs in the class's file under `research/format/`, its experiment history under
+`research/investigations/`, and the fixture `provenance.txt` files. See the
 `comment-production-code` skill.
 
 Doxygen comments document the contract, not its history. State what a caller must know:
@@ -114,203 +135,33 @@ property was added, what it replaced, or which investigation prompted it. A read
 the published API has none of that context. The same rule applies to Doxygen written in
 musxdom.
 
-The rule also applies across the recovery-coverage pair:
-`tools/coverage/recovery_coverage_probe.cpp` and its dependencies capture the observations, and
-`scripts/recovery_coverage_report.py` classifies and aggregates them. They are
-one analysis pipeline, not independent probes. A field name, path convention,
-classification rule, transformation, or aggregate must have one authoritative
-implementation; if the report needs information from the probe, add it to the
-probe's structured output rather than re-deriving it from incidental fields.
+The rule also applies across the recovery-coverage probe/report pair, and it does not apply to
+the rest of `tools/`, `scripts/`, or test code. The exact scope is in
+[`research/reference/duplication_scope.md`](research/reference/duplication_scope.md).
 
-This applies to `src/`, `include/`, `tests/evidence/` fixtures, and
-`tools/coverage/`. It does not apply to the rest of `tools/`, `scripts/`, or
-test code, which may repeat themselves as freely as makes sense — a probe is
-meant to be written quickly while a question is live, and a test that spells
-out its own expectations is clearer than one that shares a helper with the
-code under test. `tools/coverage/` is the exception within `tools/`: it is
-the one probe meant to stay comprehensible and regression-safe over time
-rather than rewritten on demand, so its comments follow production discipline
-even though its code may still repeat itself as freely as any other probe.
+## Rules that live in the research tree
 
-## Format and decoder rules
+These are binding project rules, kept next to the material they govern so there is one copy of
+each. Read the relevant one before the work it covers, not at session start.
 
-Legacy MUS is a family of formats, not one stable binary layout. Classification
-must use observed framing, byte order, lengths, and checksum/codec validation;
-do not select a decoder from a marketing version alone.
+| Rule | Read before |
+|---|---|
+| [`research/reference/decoder_rules.md`](research/reference/decoder_rules.md) | Writing or changing a layout gate, or any binary read. Structural markers outrank version gates; epoch gates outrank version gates. |
+| [`research/format/container/text_encoding.md`](research/format/container/text_encoding.md) | Any text or symbol conversion. Never re-encode pre-Finale-2012 text without that text's own font. |
+| [`research/reference/options_fallback.md`](research/reference/options_fallback.md) | Adding an option overlay or reporting a `ValueOrigin`. |
+| [`research/reference/embedded_defaults.md`](research/reference/embedded_defaults.md) | Touching `src/defaults/`, `resources/defaults/`, or the resource generator. |
+| [`research/reference/CITING_EVIDENCE.md`](research/reference/CITING_EVIDENCE.md) | Writing any finding, or publishing anything derived from a corpus or from PDK material. |
+| [`research/reference/build_invariants.md`](research/reference/build_invariants.md) | Changing CMake or adding a dependency. |
+| [`research/reference/code_conventions.md`](research/reference/code_conventions.md) | Writing or reviewing any project-owned C++ source file. |
+| [`research/reference/duplication_scope.md`](research/reference/duplication_scope.md) | Deciding whether a repetition in `tools/`, `scripts/`, or tests is a defect. |
 
-Current broad eras are:
-
-- Finale 1.x-2.x: pre-banner framing with unresolved directory spans.
-- Finale 3.x-2000: uncompressed typed pools and platform-dependent byte order.
-- Finale 2001-2006: PKWARE DCL-compressed typed blocks. A normal zlib install
-  does not provide this decoder; use a pinned Mark Adler `contrib/blast`
-  implementation with its original zlib license notice.
-- Finale 2007-2012: zlib-related typed blocks, including transition-era byte
-  order variation.
-
-Keep physical framing separate from logical record interpretation. In
-particular, the verified legacy other/detail rows are 16 **bytes**, not 16
-words, and multi-incidence rows may form one logical object.
-
-- Make all binary reads bounds-checked and overflow-safe.
-- Preserve original offsets, raw values, selected byte order, format era, and
-  confidence/provenance in diagnostics where useful.
-- Validate declared sizes, decompressed sizes, CRCs, and complete input/output
-  consumption as appropriate to the era.
-- **Where the data or the record structure states which layout a file uses, read that instead of
-  dating the file.** This outranks both gates below, and not as a stylistic preference: version
-  coverage is incomplete and always will be. No Finale 3.3 or 3.4 document exists in either
-  surveyed corpus, so a boundary in that window can only be guessed at; the Coda-banner era's
-  Windows documents state no version at all; and a version read without the container's byte
-  order gives a plausible wrong answer rather than no answer. A structural marker is also one
-  step closer to the evidence, because a version boundary is usually inferred from the same
-  observation the structure makes directly. Two mappings already work this way: the clef tuple
-  width comes from the payload size, and the whole stem family's units come from the size of its
-  connection collection. Say at the site why the marker is trustworthy, and what it costs when
-  the file is ambiguous.
-  A test over unbounded content is not a marker but a heuristic: font names are whatever a user or system could install, so no rule distinguishes a header incidence from the first bytes of every possible name, and that boundary rightly stays a version range. A marker must be a fact about the record's shape, not a guess about its contents.
-- Keep record layouts and option mappings explicitly version-aware, but **prefer an epoch gate
-  to a version gate wherever the boundary is really the epoch.** A version gate is the more
-  fragile instrument: it fails closed on any file whose version cannot be recovered, and it
-  fails silently, leaving the class populated from reference defaults and every field reported
-  as synthesized. That looks exactly like a document with nothing to recover. The Coda-banner
-  era's Windows documents state a platform where its Mac documents state a version, so they
-  have no version at all and a version-gated table skips them without a word.
-- **Where a version gate is genuinely required, frame it inside the epoch it is gating.** A
-  boundary that falls within one epoch — the font-definition header arriving in Finale 3.2,
-  inside the uncompressed era — belongs to that epoch and should be expressed as a version
-  range on a table already restricted to it. Listing extra epochs alongside it can only ever be
-  satisfied by a misread version, and bounding the range at both ends keeps a wild version from
-  landing in the wrong case.
-- Treat sharing, tag-specific fields, early directory spans, and other matters
-  labeled open in the research as open.
-- When evidence conflicts with an assumption, preserve the evidence and update
-  the hypothesis rather than forcing the sample through an expected layout.
-
-## Legacy text encoding
-
-Legacy MUS stores text in whatever encoding the machine that saved it used; EnigmaXML and
-musxdom are always UTF-8. Converting between the two is this project's job and not
-musxdom's, which is why `src/import/support/text_encoding.*` exists here.
-
-The encoding is named per font rather than per document: `charsetBank` selects the
-platform's charset numbering and `charsetVal` selects within it, so a Mac font in a document
-saved on Windows still decodes correctly. Before Finale 3.2 the font record carries no
-charset at all, and the bank is synthesized from the document's own platform instead.
-
-**Never re-encode pre-Finale-2012 text to Unicode without using that text's own font.** This
-is the default position and it applies to a single stored character exactly as it applies to a
-run of text: a clef character, a stem-connection symbol, a custom line style's character and a
-text symbol insert are each a byte in the encoding of the font their own record names, not a
-code point. Decoding one through the wrong encoding does not merely garble it -- it names a
-different glyph, which is why a symbol font's byte must survive untouched rather than being read
-as Mac Roman. `text::codePageForDocumentFont` answers the question once, including that font id
-zero is the default music font whatever charset its record claims, and
-`text::codepointFromByte` applies the answer to one character.
-
-Where no font names an encoding, fall back to the platform default: Mac Roman on Mac and
-Windows-1252 on Windows. That fallback is `text::platformCodePage` and belongs only to text
-that genuinely has no font -- the File Info header strings, the name inside a font command,
-literal text before any font command in a block, and the lyric punctuation string. Do not
-restate it anywhere else.
-
-**Aim for the best result obtainable on the machine that is running.** Conversion need not
-be bit-identical across platforms, and insisting on that would mean giving up real accuracy:
-Windows can name encodings iconv cannot, so it gets the more faithful code page rather than
-being held to a common subset. Where a platform must fall back, say so next to the fallback
-and record what evidence shows the fallback is adequate.
-
-Choices that no observed file settles are starting positions, not findings. Label them as
-such and revise them when a file demands it, rather than defending them.
-
-## Options fallback strategy
-
-musxdom expects a structurally complete options pool. Implement fallback options
-with this sequence:
-
-1. Select the pinned Finale 27 macOS or Windows baseline explicitly, preferring
-   a source-platform match when reliable.
-2. Inflate the embedded gzip bytes with zlib and parse the raw EnigmaXML with
-   the configured musxdom XML backend.
-3. Seed or clone only the complete options pool into the imported document.
-4. Overlay every confidently recovered legacy option value.
-5. Leave absent, unknown, or unsupported values at the Finale 27 default. Prefer this even
-   where the source era's behaviour is known, whenever the baseline already carries the value
-   that behaviour implies. The baseline is generated from committed resources whose hashes
-   this document records, so it is effectively as fixed as a constant, and a value asserted
-   in code beside a baseline that already agrees is a second copy of the same fact.
-6. Report recovered values separately from synthesized defaults, and separately again from
-   values determined by how the source version behaved when it had no option to store them.
-   `ValueOrigin` names the three: `LegacyMus`, `LegacyBehavior`, and `Finale27Default`.
-   Reserve `LegacyBehavior` for a value the baseline does **not** already supply, or supplies
-   wrongly — an era that always did something later versions let you turn off, where reading
-   the later location would assert the opposite.
-
-Never leak fallback measures, staves, entries, text, document identity, header
-values, or other score content into an imported document. The fallback document
-must not remain the owner of options placed in the imported document.
-
-The CSV files under `research/data/` are evidence, not runtime schemas. Promote
-only validated mappings into versioned compiled or generated constant tables;
-do not make the library load research CSV files at runtime.
-
-## Embedded default resources
-
-Keep the raw `.enigmaxml` files as authoritative, inspectable source artifacts.
-They are Finale-generated files with intentional CRLF endings; preserve their
-exact bytes even though `git diff --check` reports carriage returns as trailing
-whitespace. Use the committed deterministic `gzip -n -9` files as the inputs to
-the resource-generation script.
-
-Generate and commit the C++ byte arrays under `src/defaults/` with
-`scripts/generate_embedded_defaults.py`; do not generate them during a normal
-CMake build and do not edit them by hand. Run the script with `--check` to detect
-stale output. Do not wrap the XML in ZIP or MUSX containers. Tests should cover
-inflation, expected byte counts or hashes, platform selection, musxdom parsing,
-and the presence of required option instances.
-
-Expected SHA-256 values:
-
-| Resource | SHA-256 |
-| --- | --- |
-| macOS EnigmaXML | `cebcc5af8d625979e1baa11c7350a1fc1cbb8475c776bdb5c34aea059e9a9120` |
-| macOS gzip | `c58e69ab810451f7b295b3fe1e5545f9e1dd9d064b10e84c9253fe7a90a1ff66` |
-| Windows EnigmaXML | `b151b38bd48580db7dd64a73b1364323936391abb19d74e424f27d35070fd2cb` |
-| Windows gzip | `745444c37c44c13b17c72e1c6aad9f05e3e04ac2ab04bce027a2f55850201a5f` |
-
-## Evidence, privacy, and provenance
-
-Use the confidence vocabulary already established by the research documents:
-`confirmed`, `strong`, `weak`, and `open`. Clearly separate source-derived facts
-from independently corpus-verified behavior.
-
-- Public notes use stable content-derived aliases such as `corpus_id`; never add
-  private survey paths, drive names, archive locations, or directory layouts.
-- Keep local corpus mappings and unpublished evidence under ignored `private/`.
-- Controlled public evidence belongs under `tests/evidence/` with provenance and
-  hashes where appropriate.
-- Analysis scripts must remain read-only with respect to the evidence corpus.
-- Treat later Finale/MUSX conversions and ETF exports as semantic references;
-  resaving may normalize, synthesize, reorder, or expand records.
-- Before consulting any authorized private Framework source for a Finale header or
-  declaration, search the publicly available Framework headers at
-  `pdk.finalelua.com`. All Framework headers are expected to be available there;
-  use private history only when the public headers do not answer the question.
-- Public PDK facts must cite an immutable public URL and access date, use the
-  project's own terminology, and remain labeled `public-PDK-derived` until
-  independently verified.
-- Authorized local PDK Framework history is read-only. Do not copy its source,
-  declarations, comments, or implementation into this repository or musxdom.
-  Record only independently useful interoperability facts, numeric mappings,
-  behavior, caveats, and provenance. Label such facts
-  `private-framework-derived` until independently verified.
-
-Do not make ownership claims about historically mixed PDK/framework material.
+The CSV files under `research/data/` are evidence, not runtime schemas. Promote only validated
+mappings into versioned compiled or generated constant tables; do not make the library load
+research CSV files at runtime.
 
 ## Build, code, and tests
 
 The build uses CMake. Keep these properties intact when extending it:
-
 - Provide a normal CMake library target and deliberate musxdom dependency
   integration suitable for downstream clients.
 - Require C++20. `std::format` is permitted where it improves clarity.
@@ -325,37 +176,10 @@ The build uses CMake. Keep these properties intact when extending it:
   definition to the library.
 - Keep committed generated resource sources synchronized with their gzip inputs
   and verify them with `scripts/generate_embedded_defaults.py --check`.
-- Follow the surrounding musxdom C++ conventions where this repository has not
-  yet established a local style.
-- Match musxdom's code naming: use `camelCase` for methods, properties, and
-  variables, and `PascalCase` for classes and enums. Match denigma's filename
-  convention by using `snake_case` rather than kebab-case for new source files.
-- Begin every project-owned C++ header and source file with
-  `Copyright (c) 2026 Robert G. Patterson` and the SPDX identifier `MIT`.
-  Preserve original copyright and license notices in third-party sources.
-- Use explicit nested namespace blocks rather than concatenated namespace
-  declarations.
-- End every preprocessor conditional with a comment naming the condition, such
-  as `#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)`. For
-  `#ifdef` and `#ifndef`, spell the comment as the corresponding positive or
-  negated condition.
-- Do not require `NOMINMAX`. Protect standard-library `min` and `max` tokens
-  from the Windows macros with parentheses, such as `(std::min)(a, b)` and
-  `(std::numeric_limits<T>::max)()`.
-- Compile every C and C++ object with `/bigobj` under MSVC. Keep this as a
-  directory-wide build invariant so template-heavy musxdom factory
-  instantiations cannot exceed the default COFF section limit in any target.
-- Compile every object with `/utf-8` under MSVC, also directory-wide. Sources
-  carry UTF-8 string literals and no byte-order mark; without the flag MSVC reads
-  them in the machine's active code page and silently produces different bytes.
-- Keep every project-owned translation unit unity-build clean. Unity compilation
-  is the normal build for the library, tests, and recovery-coverage probe. CMake
-  may combine unrelated source files into one
-  translation unit, so an anonymous namespace does not make file-local names
-  unique after amalgamation; use distinctive names for aliases, helpers, and
-  constants when needed. Do not let unity-only fixes change runtime behavior.
-- Project-owned targets enable unity compilation themselves; external dependencies
-  retain their own build policy.
+- Follow the surrounding musxdom C++ conventions where this repository has not yet established a
+  local style. Naming, file headers, namespaces, preprocessor comments, Windows macro safety, the
+  MSVC directory-wide flags, and unity-build cleanliness are in
+  [`research/reference/code_conventions.md`](research/reference/code_conventions.md).
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
 - Route project-owned runtime warnings and errors through musxdom's logging
@@ -377,20 +201,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-**A unity build is this project's invariant and must never
-be imposed on code this repository does not own.** `CMakeLists.txt` states that rule once, as
-`finale_mus_reader_keep_out_of_unity()`, and calls it at each dependency: the zlib targets,
-musxdom, pugixml, Catch2's companion target, and the pinned `blast` source. zlib is the
-standing example of why -- its `inftrees.h` is included by several of its own sources and is
-not idempotent -- but the rule is about ownership, not about zlib, and a dependency added
-later is opted out by calling that function rather than by remembering a policy written
-elsewhere. Catch2 itself is the one deliberate exception: `tests/CMakeLists.txt` amalgamates
-it for build speed, which is a choice about one dependency rather than a consequence of the
-project-owned target policy.
-
-In a normal build, no dependency target should have a `Unity/` source: only
-`finale_mus_reader`, `finale_mus_reader_tests`, `recovery_coverage_probe` when tools are
-enabled, and the deliberate Catch2 should appear.
+Unity compilation is a project-owned-target invariant and must never be imposed on code this
+repository does not own; a dependency is opted out by calling
+`finale_mus_reader_keep_out_of_unity()` at its site. The rationale, the MSVC directory-wide flags,
+and the one deliberate Catch2 exception are in
+[`research/reference/build_invariants.md`](research/reference/build_invariants.md).
 
 Do not modify large evidence or default fixtures unless the task requires it.
 If exact-source files change intentionally, verify and document their hashes and

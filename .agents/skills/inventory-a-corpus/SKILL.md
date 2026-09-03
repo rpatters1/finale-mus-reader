@@ -10,7 +10,7 @@ artifacts derived from that discovery. This skill establishes **what evidence ex
 is locally**. It does not test the current reader across that evidence; use
 `analyze-recovery-coverage` for that.
 
-`research/REPRODUCING_THE_SURVEY.md` is authoritative for the inventory pipeline. Read it before
+`research/reference/REPRODUCING_THE_SURVEY.md` is authoritative for the inventory pipeline. Read it before
 running or changing the pipeline. If it and this skill disagree, follow it and fix this skill.
 
 ## Boundaries
@@ -52,16 +52,16 @@ hypothesis, or repeated analysis of a probe snapshot.
 1. Identify the `survey_id` and whether this is initial discovery or regeneration.
 2. For a new corpus, establish: root, companion directory/suffix conventions, archive inclusion,
    content sniffing, exclusions/keeps, DCL decoder path, and publishing intent. Register the survey
-   as described in `research/REPRODUCING_THE_SURVEY.md`.
+   as described in `research/reference/REPRODUCING_THE_SURVEY.md`.
 3. For an existing corpus, preflight its `private/corpora/<survey_id>.conf`, mounted root,
    `unar`/`lsar` when archives are enabled, available disk, and current worktree changes.
 4. Run `private/regenerate.sh <survey_id>` when the local private driver exists. Its per-stage
-   commands are documented in `research/REPRODUCING_THE_SURVEY.md`; use those commands directly
+   commands are documented in `research/reference/REPRODUCING_THE_SURVEY.md`; use those commands directly
    when reproducing on another machine.
 5. Verify the selection funnel: inventory occurrences, distinct `corpus_id` values, origin counts,
    recognized epochs/products, companion match grades, exclusions, and failures. A sudden zero in
    companions usually means a stale convention, not a finding.
-6. Run the path and filename leak checks in `research/REPRODUCING_THE_SURVEY.md` before proposing
+6. Run the path and filename leak checks in `research/reference/REPRODUCING_THE_SURVEY.md` before proposing
    tracked output. Fix generators rather than hand-editing generated files.
 7. Inspect `git status --short` and `git diff --check`, preserving unrelated changes. Report which
    private artifacts were regenerated and which tracked aggregates changed.

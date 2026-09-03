@@ -16,11 +16,11 @@ Published findings identify each source by a stable content-derived `corpus_id`,
 [corpora/rpatters1-main/data/corpus_manifest.csv](corpora/rpatters1-main/data/corpus_manifest.csv), one directory per
 surveyed corpus; [data/surveys.csv](data/surveys.csv) registers them.
 
-To survey your own corpus, paste [SURVEY_PROMPT.md](SURVEY_PROMPT.md) into a coding agent; the procedure it follows
-is [`.agents/skills/inventory-a-corpus/SKILL.md`](../.agents/skills/inventory-a-corpus/SKILL.md), and
-[REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md) gives the underlying commands.
+To survey your own corpus, paste [SURVEY_PROMPT.md](reference/SURVEY_PROMPT.md) into a coding agent; the procedure it follows
+is [`../.agents/skills/inventory-a-corpus/SKILL.md`](../.agents/skills/inventory-a-corpus/SKILL.md), and
+[REPRODUCING_THE_SURVEY.md](reference/REPRODUCING_THE_SURVEY.md) gives the underlying commands.
 
-For StuffIt archives, install the `unar` package so that both `unar` and `lsar` are available. Use `lsar` for a non-destructive member listing and `unar -o <temporary-directory> <archive>` for extraction; never extract over the source corpus.
+Archive handling, including the StuffIt tooling and the rule against extracting over a source corpus, is in [REPRODUCING_THE_SURVEY.md](reference/REPRODUCING_THE_SURVEY.md).
 
 The evidence set includes controlled MUS/ETF pairs for Finale 2002–2005 under `tests/evidence/F2002/` through
 `tests/evidence/F2005/`. There are now fifteen ETF exports plus eight controlled-test MUS files in total. The public notes record
@@ -37,7 +37,7 @@ Earlier survey notes call the Finale 1.x-2.6 family "pre-banner". That is inaccu
 retained only where it records what was observed at the time. Those files do carry a banner, a
 plain-text `Finale(TM) 2.6 Copyright 1987 by Coda.` product string at offset 0; what they lack is the
 `ENIGMA BINARY FILE` signature. The reader calls the era `CodaBanner`, and the corrected structural
-description is in [FORMAT_NOTES.md](FORMAT_NOTES.md#coda-banner-files).
+description is in [coda_banner.md](format/container/coda_banner.md#coda-banner-files).
 
 ## Public-source provenance policy
 
@@ -75,21 +75,34 @@ boundaries remain unresolved. A universal reader is not yet justified, but a ver
 ## Reproduction
 
 The survey workflow and commands are documented in
-[REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md).
+[REPRODUCING_THE_SURVEY.md](reference/REPRODUCING_THE_SURVEY.md).
 
 ## Research documents
 
-- [CORPUS_INVENTORY.md](corpora/rpatters1-main/CORPUS_INVENTORY.md): all examined files, sizes, hashes, header products, and counterpart matches.
-- [ARCHIVE_SURVEY.md](corpora/rpatters1-main/ARCHIVE_SURVEY.md): archive and extensionless-member findings, including the Finale 2.6 samples.
-- [FORMAT_NOTES.md](FORMAT_NOTES.md): headers, format eras, blocks, record framing, entries, text, options, and sharing.
-- [LEGACY_OPTION_MAPPINGS.md](LEGACY_OPTION_MAPPINGS.md): distilled legacy global-to-option mappings, provenance, confidence, and validation plan.
-- [RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md): every numeric record identifier observed in successfully framed 2007+ blocks.
-- [VERSION_MATRIX.md](VERSION_MATRIX.md): corpus versions and proposed format eras.
-- [EVIDENCE_REQUESTS.md](EVIDENCE_REQUESTS.md): precise ETF and controlled-difference requests.
-- [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md): commands, observations, failed hypotheses, and follow-ups.
-- [FEASIBILITY_ASSESSMENT.md](FEASIBILITY_ASSESSMENT.md): direct recommendation, risks, architecture, and next steps.
-- [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md): prioritized blockers and gaps between the current vertical slice and a production importer.
-- [REPRODUCING_THE_SURVEY.md](REPRODUCING_THE_SURVEY.md): corpus mapping conventions and reproducible commands.
+This tree is organized for retrieval, not for reading through. **Agents: read
+[ORIENTATION.md](ORIENTATION.md), [STATE.md](STATE.md), and [INDEX.md](INDEX.md), and nothing
+else automatically.** [INDEX.md](INDEX.md) maps a subject to the one file that covers it.
+
+| Layer | What it holds |
+|---|---|
+| [ORIENTATION.md](ORIENTATION.md) · [STATE.md](STATE.md) · [INDEX.md](INDEX.md) | Durable facts, current state, and navigation. Deliberately small. |
+| [format/](INDEX.md#container-and-framing--formatcontainer) | Established format knowledge: one file per subject, and one per musxdom class named after its source file. |
+| [state/](state/) | Blockers, gaps, evidence requests, and per-class implementation status. |
+| [reference/](reference/) | Version matrix, distilled option mappings, evidence-citation rules, survey reproduction, and binding project rules. |
+| [investigations/](investigations/index.md) | The experiments behind the findings, including refuted predictions, grouped by subject. |
+| [history/](history/) | Failed hypotheses, the chronological experiment index, the original feasibility assessment, and verbatim pre-split archives. |
+| [corpora/](corpora/) · [data/](data/) | Per-corpus inventories, record catalogs, and the survey registry. |
+
+Entry points a human reader usually wants:
+
+- [corpora/rpatters1-main/CORPUS_INVENTORY.md](corpora/rpatters1-main/CORPUS_INVENTORY.md): all examined files, sizes, hashes, header products, and counterpart matches.
+- [corpora/rpatters1-main/ARCHIVE_SURVEY.md](corpora/rpatters1-main/ARCHIVE_SURVEY.md): archive and extensionless-member findings, including the Finale 2.6 samples.
+- [corpora/rpatters1-main/RECORD_CATALOG.md](corpora/rpatters1-main/RECORD_CATALOG.md): every numeric record identifier observed in successfully framed 2007+ blocks.
+- [reference/LEGACY_OPTION_MAPPINGS.md](reference/LEGACY_OPTION_MAPPINGS.md): distilled legacy global-to-option mappings, provenance, confidence, and validation plan.
+- [reference/VERSION_MATRIX.md](reference/VERSION_MATRIX.md): corpus versions and proposed format eras.
+- [state/PRODUCTION_READINESS.md](state/PRODUCTION_READINESS.md): prioritized blockers and gaps between the current vertical slice and a production importer.
+- [state/EVIDENCE_REQUESTS.md](state/EVIDENCE_REQUESTS.md): precise ETF and controlled-difference requests.
+- [history/FEASIBILITY_ASSESSMENT.md](history/FEASIBILITY_ASSESSMENT.md): direct recommendation, risks, architecture, and next steps.
 
 Public references used in the initial clean-room search include Mark Adler's permissively licensed `blast` decoder, the
 Library of Congress description of legacy MUS and ETF,
