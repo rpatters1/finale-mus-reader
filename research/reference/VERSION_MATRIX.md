@@ -1,10 +1,9 @@
 # Version Matrix
 
-The saving product comes from the binary banner, not filenames or timestamps. All three spellings count: `Finale(R)`
-at 0x20 for signature-bearing files, `Finale(TM)` at offset 0 for the Coda-banner era, and `Finale` followed by a
-MacRoman trademark sign (0xAA) for Finale 1.0.0, whose banner ends `ENIGA Structures` (sic) rather than a copyright
-notice. Reading all three is why 1.0.0, 1.8.7, 2.0.1, and 2.6 appear as products in their own right rather than as
-one `unknown` bucket. Counts include archive members, which is where nearly all the pre-3.x material lives.
+The saving product comes from the binary banner, not filenames or timestamps, and all three of its spellings count —
+they are tabulated in
+[`format/container/header.md`](../format/container/header.md#the-three-banner-spellings). Reading all three is why
+1.0.0, 1.8.7, 2.0.1, and 2.6 appear here as products in their own right rather than as one `unknown` bucket. Counts include archive members, which is where nearly all the pre-3.x material lives.
 “ETF likely” means the file should be tested with the earliest compatible application available; it is not a
 guarantee. Fifteen local ETF exports are now available across private and tracked evidence, including two saves of
 the same Finale 2000 template by Finale 2000 and Finale 2005, the exact Finale 2000 `mus-3a8b724cf3adba80` pair, plus controlled

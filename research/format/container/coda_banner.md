@@ -10,7 +10,9 @@ Previously described here as "pre-banner", which is inaccurate: these files do h
 
 **Confirmed.** These files lack the `ENIGMA BINARY FILE` signature but open at offset 0 with a plain-text product banner reading `Finale(TM) <version> Copyright 1987 by Coda. All rights reserved.`. The banner is the only place their version appears: bytes 0x60-0x200 are entirely zero apart from a constant `01 03` at 0x80, which is a candidate format version rather than an application version.
 
-Finale 1.0.0 belongs to this family but spells the banner a third way: `Finale` followed by a MacRoman trademark sign (0xAA), the version, and `ENIGA Structures` (sic) in place of the copyright notice, as in `Finale™ 1.0.0 ENIGA Structures Copyright 1987 by Coda.`. It shows the same absence of an Enigma tuple — 22 of 22 files in `rpatters1-installs` yield no `FIN` application string at the offset where later eras carry one — which is consistent with the zeroed 0x60-0x200 region described above rather than with a differently placed tuple.
+Finale 1.0.0 belongs to this family but spells the banner a third way, as in
+`Finale™ 1.0.0 ENIGA Structures Copyright 1987 by Coda.`; the full set of spellings and their
+terminators is in [`header.md`](header.md#the-three-banner-spellings). It shows the same absence of an Enigma tuple — 22 of 22 files in `rpatters1-installs` yield no `FIN` application string at the offset where later eras carry one — which is consistent with the zeroed 0x60-0x200 region described above rather than with a differently placed tuple.
 
 **Contradicted: the era is not Finale 2.6 alone.** This section previously read "every one of the 54 is Finale 2.6", measured when the survey saw only loose files. Including archive members raised the sample to 229 files, and 52 of them state a version older than 2.6 in their own banner:
 
@@ -28,7 +30,7 @@ Other claims about this era elsewhere in these notes were measured over the 54 l
 were surveyed, and are marked "then known" where they state a count. They have not been re-tested against the
 full 229 and should not be read as covering it. Re-measuring them is **open** work.
 
-Because the version is explicit and machine-readable, `scripts/inventory.py` reads both banner spellings and reports these as `1.8.7`, `2.0.1`, and `2.6` rather than `unknown`. Matching only `Finale(R)` had filed the whole era as unclassified.
+Because the version is explicit and machine-readable, `scripts/inventory.py` reports these as `1.8.7`, `2.0.1`, and `2.6` rather than `unknown`.
 
 The `(TM)` spelling is what separates the era. All signature-bearing files spell it `Finale(R)`, and later banners name Coda as well, so the copyright holder does not distinguish the two.
 

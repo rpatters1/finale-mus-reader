@@ -57,10 +57,9 @@ Two further options exist for corpora that are not somebody's document folder:
   `inventory_summary.json`, because a survey run with them covers less than the tree it names and its counts are
   only comparable with another run that used the same ones.
 
-Recognizing a specimen is a matter of the banner, and there are three spellings: `Finale(R)` at 0x20 for
-signature-bearing files, `Finale(TM)` at offset 0 for the Coda-banner era, and `Finale` followed by a MacRoman
-trademark sign (0xAA) for Finale 1.0.0, whose banner ends `ENIGA Structures` (sic) instead of a copyright notice.
-`inventory.py` and `archive_sources.py` each carry this pattern and must stay in step: a spelling missing from
+Recognizing a specimen is a matter of the banner, whose three spellings are tabulated in
+[`format/container/header.md`](../format/container/header.md#the-three-banner-spellings).
+`inventory.py` and `archive_sources.py` each carry that pattern and must stay in step: a spelling missing from
 `archive_sources.py` means matching members are never cached, so nothing downstream ever sees them.
 
 For StuffIt archives, install the `unar` package so that both `unar` and `lsar` are available. Use `lsar` for a
