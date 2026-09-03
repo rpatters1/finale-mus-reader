@@ -359,10 +359,9 @@ void applyUnstoredTupletBehavior(const ImportContext& context)
     const auto pooled = context.document->getOptions()->get<TupletOptionsTarget>();
     if (!pooled) return;
     const auto target = std::const_pointer_cast<TupletOptionsTarget>(pooled);
-    const auto key = instanceKey<TupletOptionsTarget>();
     const auto reportBehavior = [&](const char* member, auto& destination, auto value) {
         destination = value;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
+        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TupletOptionsTarget>(), member,
             {ValueOrigin::LegacyBehavior, 0, 0, readAs(value)});
     };
 
@@ -395,6 +394,7 @@ void applyUnstoredTupletBehavior(const ImportContext& context)
     }
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportUnmappedTupletFields(const ImportContext& context)
 {
     const auto target = context.document->getOptions()->get<TupletOptionsTarget>();
@@ -436,6 +436,7 @@ void reportUnmappedTupletFields(const ImportContext& context)
     FINALE_MUS_READER_UNMAPPED_TUPLET(tupNDownstemOffset);
 #undef FINALE_MUS_READER_UNMAPPED_TUPLET
 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace
 
@@ -450,7 +451,9 @@ void importTupletOptions(const ImportContext& context)
         context.index, context.profile, context.document, context.report);
     applyAutoBracketStyle(context);
     applyUnstoredTupletBehavior(context);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     reportUnmappedTupletFields(context);
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 } // namespace options
