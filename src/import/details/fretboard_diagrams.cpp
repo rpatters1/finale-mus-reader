@@ -50,17 +50,18 @@ FretboardDiagramTarget::Shape fretboardCellShape(std::uint16_t symbols)
 void importFretboardDiagrams(const ImportContext& context)
 {
     const auto source = selectRecordFamilySource(context, context.index.getDetails(),
-        context.index.getClassDetails(), fretboardDiagramTag, fretboardDiagramClass);
+        context.index.getClassDetails(), fretboardDiagramTag, fretboardDiagramClass, true);
     if (!source) return;
-    for (const auto cmper1 : source->pool->cmpersForTag(source->identity)) {
-        for (const auto cmper2 : source->pool->secondCmpersForTag(source->identity, cmper1)) {
-            const auto rows = source->pool->getArray(source->identity, cmper1, cmper2);
+    for (const auto [partId, cmper1] : recordKeys(*source)) {
+        for (const auto cmper2 : source->pool->secondCmpersForTag(
+                source->identity, cmper1, partId)) {
+            const auto rows = source->pool->getArray(source->identity, cmper1, cmper2, partId);
             if (rows.empty()) continue;
             const auto payload = collectRecordPayload(*source, rows);
             if (payload.size() < fretboardDiagramHeaderSize) continue;
-            auto target = std::make_shared<FretboardDiagramTarget>(context.document,
-                musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
-                cmper1, cmper2);
+            auto target = createDetailsRecordTarget<FretboardDiagramTarget>(
+                context.document, *source, rows.front(), cmper1, cmper2);
+            if (!target) continue;
             target->numFrets = payloadWord(payload, 0, context.profile.byteOrder);
             target->fretboardNum = payloadWord(payload, 2, context.profile.byteOrder);
             const auto flags = payloadWord(payload, 4, context.profile.byteOrder);
@@ -110,7 +111,7 @@ void importFretboardDiagrams(const ImportContext& context)
             }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             const auto key = instanceKey<FretboardDiagramTarget>(
-                musx::dom::SCORE_PARTID, cmper1, musx::dom::Inci{}, cmper2);
+                partId, cmper1, musx::dom::Inci{}, cmper2);
             context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
             const auto report = [&](std::string member, auto value) {
                 FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),

@@ -200,16 +200,17 @@ bool ssLineEndIsHook(const void* instance)
 /// @ref ssLineFinalize drops the two the record does not select, so the finished
 /// object carries exactly the block its line style names, as musxdom documents.
 MappingTarget createSmartShapeCustomLine(
-    const musx::dom::DocumentPtr& document, std::uint16_t cmper)
+    const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
+    const records::LegacyRow& row, std::uint16_t cmper)
 {
-    auto instance = std::make_shared<CustomLine>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+    auto instance = createOthersRecordTarget<CustomLine>(document, source, row, cmper);
+    if (!instance) return {};
     instance->charParams = std::make_shared<CustomLine::CharParams>(instance);
     instance->solidParams = std::make_shared<CustomLine::SolidParams>(instance);
     instance->dashedParams = std::make_shared<CustomLine::DashedParams>(instance);
     auto* raw = instance.get();
     document->getOthers()->add(CustomLine::XmlNodeName, std::move(instance));
-    return makeMappingTarget(cmper, raw);
+    return makeMappingTarget(row.partId, cmper, raw);
 }
 
 /// @brief Drops the parameter blocks the record does not select, and decodes its character.

@@ -61,8 +61,55 @@ void testGraphicAssignmentsAcrossEpochs()
             "A PageGraphicAssign did not report every persisted field");
     }
 
-    const std::array<std::pair<std::int16_t, PageGraphicAssign::PageAssignType>, 4>
-        displayTypes{{
+    auto partTuple = tuple;
+    partTuple[1] = 777;
+    partTuple[2] = 888;
+    partTuple[7] = 0x02;
+    partTuple[9] = 1;
+    partTuple[10] = 1;
+    std::vector<std::uint16_t> partMasks(16);
+    partMasks[1] = 0xffff;
+    partMasks[7] = 0x0010;
+    const auto sharedParsed = makeClassContainer({
+        SyntheticClassRow{0x00bc, tuple, 0},
+        SyntheticClassRow{0x00bc, tuple, 4},
+        SyntheticClassRow{0x00bc, partTuple, 0, 2, true},
+        SyntheticClassRow{0x00bc, partTuple, 4, 2, true, partMasks},
+    }, ByteOrder::BigEndian);
+    const auto sharedIndex = LegacyRecordIndex::build(sharedParsed);
+    const auto* physicalPartRow = sharedIndex.getClassOthers().get(0x00bc, 4, 0, 0, 2);
+    const auto physicalPart = sharedIndex.getClassOthers().payloadOf(*physicalPartRow);
+    const auto effectivePart = sharedIndex.getClassOthers().effectivePayloadOf(*physicalPartRow);
+    expectMapping(finale_mus_reader::payloadWord(physicalPart, 14, ByteOrder::BigEndian) == 0x02
+            && finale_mus_reader::payloadWord(effectivePart, 14, ByteOrder::BigEndian) == 0x01,
+        "A continuation did not preserve the physical payload while resolving packed bits");
+    auto sharedSession = musx::factory::DocumentFactory::begin();
+    const auto sharedDocument = sharedSession.getDocument();
+    auto sharedReferenceSession = musx::factory::DocumentFactory::begin();
+    const auto sharedReference = std::move(sharedReferenceSession).finish();
+    ImportReport sharedReport(FormatEpoch::ZlibLegacy);
+    finale_mus_reader::PendingReferences sharedPending;
+    SourceProfile sharedProfile(FormatEpoch::ZlibLegacy);
+    sharedProfile.byteOrder = ByteOrder::BigEndian;
+    musx::factory::ConstructionContext sharedConstruction;
+    const finale_mus_reader::ImportContext sharedContext{
+        sharedIndex,     sharedProfile, noSource,      sharedDocument,
+        sharedReference, sharedReport,  sharedPending, sharedConstruction};
+    finale_mus_reader::others::importPageGraphicAssignments(sharedContext);
+    const auto sharedPart = sharedDocument->getOthers()->get<PageGraphicAssign>(2, 4, 0);
+    expectMapping(sharedPart && sharedPart->getSourcePartId() == 2 &&
+                      sharedPart->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial &&
+                      sharedPart->left == 777 && sharedPart->bottom == -48
+                      && !sharedPart->hidden
+                      && sharedPart->displayType == PageGraphicAssign::PageAssignType::One
+                      && sharedPart->startPage == 4
+                      && sharedPart->endPage == 4,
+                  "A continued part assignment did not overlay only its unlinked fields");
+    const auto sharedRange = sharedDocument->getOthers()->get<PageGraphicAssign>(2, 0, 0);
+    expectMapping(sharedRange && sharedRange->startPage == 4 && sharedRange->endPage == 4,
+                  "A linked multipage assignment did not inherit the score page range");
+
+    const std::array<std::pair<std::int16_t, PageGraphicAssign::PageAssignType>, 4> displayTypes{{
             {std::int16_t(0x0001), PageGraphicAssign::PageAssignType::One},
             {std::int16_t(0x0002), PageGraphicAssign::PageAssignType::AllPages},
             {std::int16_t(0x0004), PageGraphicAssign::PageAssignType::Odd},

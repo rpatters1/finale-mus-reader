@@ -3,6 +3,8 @@
 
 #include "class_test_support.h"
 
+#include <fstream>
+
 namespace finale_mus_reader_tests {
 namespace {
 
@@ -45,7 +47,7 @@ void testClassRecordContinuationSegment()
         appendHeader(0x00b1, 1, 1, 12);
         block.data.insert(block.data.end(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
         // The continuation occupies the declared byte count including its repeated-size
-        // prefix. It is framing, not another searchable incidence.
+        // prefix. It belongs to the row, not to another searchable incidence.
         push32(12);
         block.data.insert(block.data.end(), {21, 22, 23, 24, 25, 26, 27, 28});
         push16(0);
@@ -68,6 +70,14 @@ void testClassRecordContinuationSegment()
         expectMapping(firstPayload.size() == 12 && firstPayload.front() == 1
                 && firstPayload.back() == 12,
             "A class-record continuation replaced the primary payload");
+        const auto continuation =
+            first ? index.getClassOthers().continuationOf(*first) : std::span<const std::uint8_t>{};
+        expectMapping(continuation.size() == 12 && continuation[4] == 21 &&
+                          continuation.back() == 28 && first->trailerFirst == 0 &&
+                          first->trailerSecond == 0x1234,
+                      "Class-record continuation or terminal words were not retained");
+        expectMapping(index.getClassOthers().partIdsForTag(0x00b1) == std::vector<std::uint16_t>{1},
+                      "Class-record source parts were not enumerated");
         const auto following = index.getClassOthers().get(0x00d6, 3, 0, 0);
         const auto followingPayload = following
             ? index.getClassOthers().payloadOf(*following) : std::span<const std::uint8_t>{};
@@ -128,6 +138,81 @@ void testDetailRowShape()
     expectMapping(index.getOthers().empty(), "A details block produced others rows");
 }
 
+void testClassRecordSharingModes()
+{
+    using ShareMode = musx::dom::EnigmaBase::ShareMode;
+    constexpr finale_mus_reader::CompactPartLayout measureLayouts[] = {{26, 8}};
+    const auto parsed = makeClassContainer(
+        {SyntheticClassRow{0x00b0, std::vector<std::int16_t>(13), 1},
+            SyntheticClassRow{0x00b0, std::vector<std::int16_t>(4), 1, 1}},
+        ByteOrder::BigEndian);
+    const auto index = LegacyRecordIndex::build(parsed);
+    const auto* compactRow = index.getClassOthers().get(0x00b0, 1, 0, 0, 1);
+    expectMapping(compactRow != nullptr, "The compact sharing test row was not decoded");
+    auto compact = *compactRow;
+    finale_mus_reader::RecordFamilySource compactSource{&index.getClassOthers(), compact.tag,
+        true, false, measureLayouts};
+    expectMapping(finale_mus_reader::recordShareMode(compactSource, compact) == ShareMode::Partial,
+                  "A known compact part class was not partially shared");
+
+    compact.tag = 0x00bb;
+    compactSource.identity = compact.tag;
+    expectMapping(finale_mus_reader::recordShareMode(compactSource, compact) == ShareMode::None,
+                  "A standalone full part class was not unshared");
+
+    compact.continuationSize = 24;
+    expectMapping(finale_mus_reader::recordShareMode(compactSource, compact) == ShareMode::Partial,
+                  "A continued part class was not partially shared");
+
+    compact.partId = musx::dom::SCORE_PARTID;
+    expectMapping(finale_mus_reader::recordShareMode(compactSource, compact) == ShareMode::All,
+                  "A continued score class was not shared to all parts");
+}
+
+void testControlledExpressionUnlinkContinuations()
+{
+    const auto indexFor = [](std::string_view name) {
+        const auto path =
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2012" / name;
+        std::ifstream input(path, std::ios::binary);
+        const std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>(input),
+                                              std::istreambuf_iterator<char>()};
+        return LegacyRecordIndex::build(
+            finale_mus_reader::container::parse(bytes.data(), bytes.size()));
+    };
+
+    const auto base = indexFor("F2012-noteartexp.mus");
+    expectMapping(base.getClassOthers().get(0x00b1, 1, 0, 0, 1) == nullptr,
+                  "The linked expression fixture unexpectedly contains a part record");
+
+    const auto unlinked = indexFor("F2012-noteartexp-unlnk.mus");
+    const auto* unlinkedRow = unlinked.getClassOthers().get(0x00b1, 1, 0, 0, 1);
+    const auto unlinkedMask = unlinkedRow ? unlinked.getClassOthers().continuationOf(*unlinkedRow)
+                                          : std::span<const std::uint8_t>{};
+    constexpr std::array<std::uint8_t, 24> expectedUnlinked{
+        0x18, 0, 0, 0,    0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0,    0, 0, 0x40, 0, 0, 0,    0,    0,    0,    0,    0};
+    expectMapping(unlinkedRow && std::equal(unlinkedMask.begin(), unlinkedMask.end(),
+                                            expectedUnlinked.begin(), expectedUnlinked.end()),
+                  "Unlink did not create the expected clear editable mask group");
+
+    const auto moved = indexFor("F2012-noteartexp-unlnk-move.mus");
+    const auto* movedRow = moved.getClassOthers().get(0x00b1, 1, 0, 0, 1);
+    const auto movedMask = movedRow ? moved.getClassOthers().continuationOf(*movedRow)
+                                    : std::span<const std::uint8_t>{};
+    constexpr std::array<std::uint8_t, 24> expectedMoved{
+        0x18, 0, 0, 0,    0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0,    0, 0, 0x40, 0, 0, 0,    0,    0xff, 0xff, 0,    0};
+    const finale_mus_reader::RecordFamilySource movedSource{
+        &moved.getClassOthers(), 0x00b1, true, false, {}};
+    expectMapping(movedRow &&
+                      std::equal(movedMask.begin(), movedMask.end(), expectedMoved.begin(),
+                                 expectedMoved.end()) &&
+                      finale_mus_reader::recordShareMode(movedSource, *movedRow) ==
+                          musx::dom::EnigmaBase::ShareMode::Partial,
+                  "Editing the unlinked expression did not change its retained mask");
+}
+
 // The others pool keeps working through the same normalized index, and the word stream is
 // still addressed across incidences.
 void testOtherRowsRemainSearchable()
@@ -151,6 +236,11 @@ void testOtherRowsRemainSearchable()
 }
 
 TEST_CASE("Class-record continuation segment", "[class]") { testClassRecordContinuationSegment(); }
+TEST_CASE("Class-record sharing modes", "[class]") { testClassRecordSharingModes(); }
+TEST_CASE("Controlled expression unlink continuations", "[class][reader]")
+{
+    testControlledExpressionUnlinkContinuations();
+}
 TEST_CASE("Detail row shape", "[class]") { testDetailRowShape(); }
 TEST_CASE("Other rows remain searchable", "[class]") { testOtherRowsRemainSearchable(); }
 

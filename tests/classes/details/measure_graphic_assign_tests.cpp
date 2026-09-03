@@ -82,9 +82,55 @@ void testMeasureGraphicAssignmentsAcrossEpochs()
     const finale_mus_reader::ImportContext partContext{bigEndianIndex, partProfile, noSource,
         partDocument, partReference, partReport, partPending, partConstruction};
     finale_mus_reader::details::importMeasureGraphicAssignments(partContext);
-    expectMapping(!partDocument->getDetails()->get<Target>(
-            musx::dom::SCORE_PARTID, 7, 12, musx::dom::Inci(0)),
-        "A part-owned zlib detail was imported into the score pool");
+    const auto partAssignment =
+        partDocument->getDetails()->get<Target>(2, 7, 12, musx::dom::Inci(0));
+    expectMapping(partAssignment && partAssignment->getSourcePartId() == 2 &&
+                      partAssignment->getShareMode() == musx::dom::EnigmaBase::ShareMode::None &&
+                      !partDocument->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 7, 12,
+                                                               musx::dom::Inci(0)),
+                  "A standalone part-owned zlib detail did not retain its "
+                  "identity and sharing mode");
+
+    auto partialTuple = tuple;
+    partialTuple[1] = 777;
+    partialTuple[2] = 888;
+    partialTuple[3] = 999;
+    partialTuple[7] = 0x11;
+    std::vector<std::uint16_t> partialMasks(18);
+    partialMasks[1] = 0xffff;
+    partialMasks[7] = 0x0010;
+    auto partialParsed = makeDetailClassContainer(
+        7, 12, 0, tuple, ByteOrder::BigEndian);
+    auto partialPart = makeDetailClassContainer(
+        7, 12, 2, partialTuple, ByteOrder::BigEndian, 0x041d, true, partialMasks);
+    auto& partialData = partialParsed.blocks.front().data;
+    partialData.insert(partialData.end(), partialPart.blocks.front().data.begin(),
+        partialPart.blocks.front().data.end());
+    partialParsed.blocks.front().info.decodedSize = partialData.size();
+    const auto partialIndex = LegacyRecordIndex::build(partialParsed);
+    auto partialSession = musx::factory::DocumentFactory::begin();
+    const auto partialDocument = partialSession.getDocument();
+    ImportReport partialReport(FormatEpoch::ZlibLegacy);
+    const finale_mus_reader::ImportContext partialContext{partialIndex, partProfile, noSource,
+        partialDocument, partReference, partialReport, partPending, partConstruction};
+    finale_mus_reader::details::importMeasureGraphicAssignments(partialContext);
+    const auto partialAssignment =
+        partialDocument->getDetails()->get<Target>(2, 7, 12, musx::dom::Inci(0));
+    expectMapping(partialAssignment && partialAssignment->left == 777
+            && partialAssignment->bottom == -324 && partialAssignment->width == 336
+            && partialAssignment->hidden,
+        "A continued measure graphic did not overlay only its unlinked fields");
+
+    const auto continued =
+        makeDetailClassContainer(7, 12, 2, tuple, ByteOrder::BigEndian, 0x041d, true);
+    const auto continuedIndex = LegacyRecordIndex::build(continued);
+    const auto continuedRows = continuedIndex.getClassDetails().getArray(0x041d, 7, 12, 2);
+    const finale_mus_reader::RecordFamilySource continuedSource{
+        &continuedIndex.getClassDetails(), 0x041d, true, true, {}};
+    expectMapping(continuedRows.size() == 1 &&
+                      finale_mus_reader::recordShareMode(continuedSource, continuedRows.front()) ==
+                          musx::dom::EnigmaBase::ShareMode::Partial,
+                  "A continued detail record did not select partial sharing");
 }
 
 void testFinale372MeasureGraphic()

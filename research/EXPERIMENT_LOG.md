@@ -2417,6 +2417,47 @@
   as Finale MUS documents. All 64,750 companion-backed `TimeSignatureOptions` leaves agree: 2,422
   Coda, 4,774 uncompressed, 28,742 DCL, and 28,812 zlib. No expected-difference rule is involved.
 
+## 2026-09-03 — Zlib part ownership and structural sharing
+
+- **Question:** Do zlib class-record headers directly encode EnigmaXML identity attributes, and
+  can part sharing be recovered from record structure without a parallel policy model?
+- **Controlled evidence:** `F2012-noteartexp.mus` contains only the score record for class
+  `0x00b1`, cmper 1. Unlinking the expression creates a part-1 record with an unchanged complete
+  primary snapshot and a same-sized continuation whose edit-specific mask group is zero. Moving
+  that unlinked expression 24 EVPU changes its primary horizontal offset and that group to
+  `0xffff`. The Finale 27 companions represent both part records as `shared="true"`.
+- **Cross-class comparison:** Continued part records for page-text assignments and smart shapes
+  likewise correspond to `shared="true"`. Full standalone page and staff-system records without
+  continuations correspond to `shared="false"`. `measSpec` instead uses a 26-byte score tuple and
+  an 8-byte compact part tuple and corresponds to `shared="true"`.
+- **Implementation:** Normalized zlib rows now retain part id, continuation bytes, both terminal
+  words, and distinct physical and effective payload views. One structural classifier returns
+  musxdom's existing `ShareMode`: score is `All`, a continued or importer-described compact part is
+  `Partial`, and another standalone part is `None`. For every continued part row, the row pool
+  begins the effective payload with the equal-sized score payload and applies the continuation as
+  a bit mask selecting stored part bits. Every importer reads this effective view before parsing,
+  so no class-specific overlay callback is required. All current zlib others/detail import paths
+  enumerate actual header part ids. Compact layouts remain score/part payload-size pairs owned by
+  each class importer; the `measSpec` 26/8-byte geometry exercises classification until its
+  importer is implemented.
+- **DOM boundary:** musxdom no longer retains per-field XML child names through
+  `getUnlinkedNodes`; no repository or MuseScore2 Finale-import consumer used them. Its
+  `PartSharingFactory` remains available for a future compact-layout importer, but continued
+  records are resolved generically as bytes before DOM construction.
+- **Bit-mask evidence:** The expression fixtures show a moved word changing its aligned mask from
+  zero to `0xffff`. Continued page-graphic records show bit `0x0010` selecting `hidden`
+  independently from the low-nibble page selection stored in the same word. The generic bit merge
+  removes all 23 formerly unexpected page-assignment leaves in the broad corpus without a page or
+  measure callback.
+- **Validation and confidence:** The final tracked capture imported 220 sources and 220 companions
+  with no unexpected differences. The final three-survey capture selected 16,317 occurrences;
+  16,228 imported, all 4,628 available companions imported, and no comparison was unexpected. The
+  89 pre-comparison failures remain 58 Finale LIB files and 31 inputs that do not classify as MUS.
+  No continued part row used by an importer lacked a structurally compatible score row. Header
+  identity, structural sharing, and the continuation bit overlay are therefore **strong** across
+  the observed zlib classes. Compact partial field layouts remain class-specific and open until
+  their importers are implemented.
+
 ## Commands
 
 Reproduction commands are in [README.md](README.md). Additional spot checks used `xxd -g 1`, `strings -a`, `unzip -l`, `unzip -p`, Python's `zlib`, `gzip`, `zipfile`, and `xml.etree.ElementTree`. Temporary decoded samples were written only under `/tmp`.

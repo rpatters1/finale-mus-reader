@@ -81,20 +81,90 @@ enum class RecordEncoding : std::uint8_t
     ClassRecord
 };
 
+/// @brief One compact part representation used by a class-record importer.
+/// @details Layout tables live with the importer that decodes the class. Multiple entries permit
+/// the same class to use different structural representations within the zlib epoch.
+struct CompactPartLayout
+{
+    std::size_t scorePayloadSize{};
+    std::size_t partPayloadSize{};
+};
+
 /// @brief One logical record family selected from either fixed rows or class records.
 struct RecordFamilySource
 {
     const records::LegacyRowPool* pool{};
     records::LegacyTag identity{};
     bool classRecords{};
+    bool details{};
+    std::span<const CompactPartLayout> compactPartLayouts;
 };
+
+/// @brief Returns the source parts that a selected family contains, score
+/// first.
+/// @details Fixed-row epochs currently normalize score data only. Class records
+/// state their part in each header, so their actual part set is returned.
+[[nodiscard]] std::vector<std::uint16_t> recordPartIds(const RecordFamilySource& source);
+
+/// @brief Returns every part/comparator key stored by a selected record family.
+[[nodiscard]] std::vector<std::pair<std::uint16_t, std::uint16_t>>
+recordKeys(const RecordFamilySource& source);
+
+/// @brief Derives a DOM sharing mode from one normalized record's physical
+/// form.
+/// @details Score records are always shared to all parts. A part continuation
+/// marks a partial instance. Classes with a compact part record are also
+/// partial when their importer-provided layout matches; other standalone part records are
+/// unshared.
+[[nodiscard]] musx::dom::EnigmaBase::ShareMode recordShareMode(const RecordFamilySource& source,
+                                                               const records::LegacyRow& row);
+
+/// @brief Creates an others instance with identity and sharing taken from its source row.
+template <typename T>
+[[nodiscard]] std::shared_ptr<T>
+createOthersRecordTarget(const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
+                         const records::LegacyRow& row, musx::dom::Cmper cmper,
+                         musx::dom::Inci inci = 0)
+{
+    const auto shareMode = recordShareMode(source, row);
+    std::shared_ptr<T> target;
+    if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t,
+                                          musx::dom::EnigmaBase::ShareMode, musx::dom::Cmper,
+                                          musx::dom::Inci>) {
+        target = std::make_shared<T>(document, row.partId, shareMode, cmper, inci);
+    } else {
+        target = std::make_shared<T>(document, row.partId, shareMode, cmper);
+    }
+    return target;
+}
+
+/// @brief Creates a details instance with identity and sharing taken from its
+/// source row.
+template <typename T>
+[[nodiscard]] std::shared_ptr<T>
+createDetailsRecordTarget(const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
+                          const records::LegacyRow& row, musx::dom::Cmper cmper1,
+                          musx::dom::Cmper cmper2, musx::dom::Inci inci = 0)
+{
+    const auto shareMode = recordShareMode(source, row);
+    std::shared_ptr<T> target;
+    if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t,
+                                          musx::dom::EnigmaBase::ShareMode, musx::dom::Cmper,
+                                          musx::dom::Cmper, musx::dom::Inci>) {
+        target = std::make_shared<T>(document, row.partId, shareMode, cmper1, cmper2, inci);
+    } else {
+        target = std::make_shared<T>(document, row.partId, shareMode, cmper1, cmper2);
+    }
+    return target;
+}
 
 /// @brief Selects a fixed-row family through the DCL epoch and its class-record replacement
 /// in the zlib epoch.
 [[nodiscard]] std::optional<RecordFamilySource> selectRecordFamilySource(
     const ImportContext& context, const records::LegacyRowPool& fixedPool,
     const records::LegacyRowPool& classPool, records::LegacyTag fixedTag,
-    records::LegacyTag classId);
+    records::LegacyTag classId, bool details = false,
+    std::span<const CompactPartLayout> compactPartLayouts = {});
 
 /// @brief Collects a record family's payload bytes in incidence order.
 [[nodiscard]] std::vector<std::uint8_t> collectRecordPayload(
@@ -437,7 +507,8 @@ struct ResolvedValue
 /// byte-order handling, long-word assembly, or provenance rules.
 [[nodiscard]] std::optional<ResolvedValue> readSourceValue(
     const records::LegacyRecordIndex& index, RecordEncoding encoding,
-    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder);
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder,
+    std::uint16_t partId = musx::dom::SCORE_PARTID);
 
 /// @brief Assigns a decoded value to a member, converting through the member's own type.
 template <typename T>
@@ -539,6 +610,7 @@ enum class TargetKind : std::uint8_t
 /// @brief One resolved destination object.
 struct MappingTarget
 {
+    std::uint16_t partId{};
     std::uint16_t cmper{};
     void* instance{};
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -547,9 +619,10 @@ struct MappingTarget
 };
 
 template <typename T>
-[[nodiscard]] MappingTarget makeMappingTarget(std::uint16_t cmper, T* instance)
+[[nodiscard]] MappingTarget makeMappingTarget(std::uint16_t partId, std::uint16_t cmper,
+    T* instance)
 {
-    return {cmper, instance
+    return {partId, cmper, instance
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
         , typeid(T)
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -582,8 +655,9 @@ struct MappingTable
     /// TargetKind::OthersFromRecords.
     records::LegacyTag recordIdentity{};
     /// @brief Creates and pools one object, for @ref TargetKind::OthersFromRecords.
-    MappingTarget (*createTarget)(
-        const musx::dom::DocumentPtr& document, std::uint16_t cmper){};
+    MappingTarget (*createTarget)(const musx::dom::DocumentPtr& document,
+        const RecordFamilySource& source, const records::LegacyRow& row,
+        std::uint16_t cmper){};
     const FieldMapping* fields{};
     std::size_t fieldCount{};
     /// @brief Optional pass over one target after every field of this table has been applied.
@@ -601,18 +675,21 @@ struct MappingTable
     /// classes it reads being imported first, which the registry order states.
     void (*finalizeTarget)(void* instance, const SourceProfile& profile,
         const musx::dom::DocumentPtr& document){};
+    /// @brief Compact score/part payload pairs recognized by this class importer.
+    std::span<const CompactPartLayout> compactPartLayouts;
 };
 
 /// @brief Creates one others object of type T and adds it to the document pool.
 template <typename T>
-[[nodiscard]] MappingTarget createOthersTarget(
-    const musx::dom::DocumentPtr& document, std::uint16_t cmper)
+[[nodiscard]] MappingTarget createOthersTarget(const musx::dom::DocumentPtr& document,
+    const RecordFamilySource& source, const records::LegacyRow& row,
+    std::uint16_t cmper)
 {
-    auto instance = std::make_shared<T>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+    auto instance = createOthersRecordTarget<T>(document, source, row, cmper);
+    if (!instance) return {};
     auto* raw = instance.get();
     document->getOthers()->add(T::XmlNodeName, std::move(instance));
-    return makeMappingTarget(cmper, raw);
+    return makeMappingTarget(row.partId, cmper, raw);
 }
 
 /// @brief Enumerates the single instance of an options class, if it was seeded.
@@ -624,7 +701,8 @@ template <typename T>
     if (const auto instance = document->getOptions()->template get<T>()) {
         // Pool instances are handed out const. Overlaying legacy values is the one
         // reason this library writes to them, so the cast is confined to here.
-        result.push_back(makeMappingTarget(0, const_cast<T*>(instance.get())));
+        result.push_back(makeMappingTarget(
+            musx::dom::SCORE_PARTID, 0, const_cast<T*>(instance.get())));
     }
     return result;
 }
@@ -640,7 +718,7 @@ template <typename T>
     std::vector<MappingTarget> result;
     for (const auto& instance : document->getOthers()->template getArray<T>(musx::dom::SCORE_PARTID)) {
         result.push_back(makeMappingTarget(
-            instance->getCmper(), const_cast<T*>(instance.get())));
+            musx::dom::SCORE_PARTID, instance->getCmper(), const_cast<T*>(instance.get())));
     }
     return result;
 }

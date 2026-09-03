@@ -1237,6 +1237,12 @@ hidden. Words 8-17 are packed left/all-page positioning, `startPage`, `endPage`,
 `0x01/0x02/0x04`, vertical top/bottom/center are `0x08/0x10/0x20`, margins/page-edge are
 `0x40/0x80`, and preserve-aspect is `0x100`.
 
+For a partially shared part assignment, the physical part snapshot's `startPage` and `endPage`
+may differ from the score when the score and part have different numbers of leading blank pages.
+The continuation masks for the observed assignments leave those fields linked, so the effective
+assignment uses the score range. The comparator, rather than those stored snapshot words, selects
+the assignment's page.
+
 Measure-attached graphics use that same field order and packed positioning word through word 17.
 An other row has six payload words, so an 18-word page assignment occupies exactly three rows. A
 detail row has five payload words after its second comparator, so the same assignment occupies four
@@ -1326,8 +1332,46 @@ the declared payload size including that prefix. Its terminal state is either `0
 `ffff 0000`; the latter occurs on classes `0x00cb` and `0x00cc` in this document. Advancing across
 145 such continuations consumes the complete 293,030-byte member and exposes 189 `ShapeData`, 115
 `ShapeDef`, and 189 `ShapeInstruction` records, exactly matching the independently parsed companion.
-The continuation's semantics remain open; part or sharing state is a candidate, so it is not exposed
-as another incidence.
+The continuation is not another incidence. Its first four bytes repeat the payload length; the
+remaining bytes align bit-for-bit with the corresponding prefix of the primary payload. A set bit
+selects the stored part bit and a clear bit retains the corresponding score bit. The reader keeps
+both the physical payload and continuation, and separately materializes this effective payload
+before any class importer parses it. The DOM therefore needs neither XML child-node names nor
+class-specific overlay callbacks.
+
+### Zlib part ownership and sharing
+
+**Strong across controlled Finale 2012 edits and score/part companion comparisons.** The stable
+class-record header fields correspond directly to the EnigmaXML object attributes: numeric class
+id selects the XML class, the comparator fields select `cmper`/`cmper1`/`cmper2`, and the header
+part id selects `part`. Score records have part zero and are always `ShareMode::All`.
+
+Part sharing is stated by the physical record form rather than by a separate header policy value:
+
+- a part record with a same-sized continuation is `ShareMode::Partial`; its primary payload is a
+  physical part snapshot and its continuation selects the unlinked bits that replace score bits;
+- a compact-layout part record is `ShareMode::Partial` and supplies only its compact fields over
+  the corresponding score object;
+- a full standalone part record without a continuation is `ShareMode::None`.
+
+Each class importer supplies its compact layouts as score/part payload-size pairs. Multiple pairs
+may describe one class if its representation changed during the zlib epoch; matching remains
+structural rather than version-gated. The first strong example is others class `0x00b0`
+(`measSpec`): 26 bytes per score tuple and 8 bytes per compact part tuple. This remains test-only
+until the Measure importer owns the table. Other observed standalone layouts include `pageSpec`
+(`0x00bb`, 24 bytes) and `staffSystemSpec` (`0x00df`, 36 bytes); both correspond to
+`shared="false"`. Continued `pageTextAssign` (`0x00c2`) and `smartShape` (`0x00d9`) part records
+correspond to `shared="true"`.
+
+The controlled `F2012-noteartexp*` trio isolates the continuation behavior for others class
+`0x00b1`. The linked score has only the score record. Unlinking the expression creates a part-1
+record with a 24-byte primary payload and a 24-byte continuation. Moving the unlinked expression
+24 EVPU changes its primary horizontal-offset word and changes the aligned continuation word from
+zero to `0xffff`. Thus unlink creates the physical part snapshot with its mask clear, while an edit
+marks the changed bits. Page-graphic evidence narrows this further: the `hidden` bit can be selected
+independently from the page-selection bits in the same packed word. Applying the continuation as a
+bit mask before class parsing produces exact companion values across the tracked and all-corpus
+comparisons.
 
 This later variable frame does not retain the earlier fixed 16-byte physical rows. Many payload sizes are multiples
 of the old 12-byte other capacity, suggesting that later versions coalesced successive incidences into one

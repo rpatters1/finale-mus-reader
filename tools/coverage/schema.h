@@ -14,6 +14,7 @@
 #include "coverage/context.h"
 #include "coverage/json.h"
 #include "coverage/value.h"
+#include "musx/dom/Others.h"
 
 namespace finale_mus_reader {
 namespace coverage {
@@ -96,10 +97,34 @@ Value observe(const Object& object, const SurveyContext& context, const Fields&.
     } else if constexpr (std::is_base_of_v<musx::dom::TextsBase, Object>) {
         instance.cmper1 = object.getTextNumber();
     }
+    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Object> ||
+                  std::is_base_of_v<musx::dom::DetailsBase, Object>) {
+        result.emplace("part_id", detail::schemaValue(object.getSourcePartId()));
+        result.emplace("share_mode", detail::schemaValue(object.getShareMode()));
+    }
     if (const auto* origin = context.report.findInstanceOrigin(instance)) {
         result.emplace("origin", originName(*origin));
     }
     return Value(std::move(result));
+}
+
+/// @brief Returns every physically stored instance, including objects for undefined parts.
+template <typename Class>
+auto sourceInstances(const musx::dom::DocumentPtr& document)
+{
+    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Class>) {
+        return document->getOthers()->template getAllSources<Class>();
+    } else {
+        static_assert(std::is_base_of_v<musx::dom::DetailsBase, Class>);
+        return document->getDetails()->template getAllSources<Class>();
+    }
+}
+
+/// @brief Returns every source-owned instance of a pooled others or details class.
+template <typename Class>
+auto sourceInstances(const SurveyContext& context)
+{
+    return sourceInstances<Class>(context.document);
 }
 
 template <typename Class>
@@ -115,6 +140,21 @@ std::string fieldOrigin(const SurveyContext& context, std::string_view member,
     const InstanceKey& instance)
 {
     return originName(context.report.fieldProvenance(instance, member).origin);
+}
+
+template <typename Class>
+std::string fieldOrigin(const SurveyContext& context, std::string_view member, const Class& value)
+{
+    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Class>) {
+        return fieldOrigin<Class>(
+            context, member,
+            instanceKey<Class>(value.getSourcePartId(), value.getCmper(), value.getInci()));
+    } else {
+        static_assert(std::is_base_of_v<musx::dom::DetailsBase, Class>);
+        return fieldOrigin<Class>(context, member,
+                                  instanceKey<Class>(value.getSourcePartId(), value.getCmper1(),
+                                                     value.getInci(), value.getCmper2()));
+    }
 }
 
 template <typename Class>

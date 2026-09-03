@@ -17,8 +17,8 @@ using namespace finale_mus_reader::coverage;
 
 Value observeFontDefinitions(const SurveyContext& ctx)
 {
-    const auto fonts = ctx.document->getOthers()->getArray<musx::dom::others::FontDefinition>(
-        musx::dom::SCORE_PARTID);
+    using Target = musx::dom::others::FontDefinition;
+    const auto fonts = sourceInstances<Target>(ctx);
 
     // A duplicate normalized name is not itself a defect -- Finale legitimately
     // clones font definitions -- but a duplicate that the source did not already

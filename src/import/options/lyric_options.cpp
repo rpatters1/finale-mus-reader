@@ -676,7 +676,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
                        numericGlobalClass(wordExtSelector), GLOBALS_CMPER, 0, 0)) {
             // Bytes, so the payload is read directly rather than through the word stream the
             // rest of this class uses.
-            const auto payload = index.getClassOthers().payloadOf(*row);
+            const auto payload = index.getClassOthers().effectivePayloadOf(*row);
             std::string stored;
             for (std::size_t at = punctuationTailWord * 2; at < payload.size(); ++at) {
                 if (payload[at] == 0) {

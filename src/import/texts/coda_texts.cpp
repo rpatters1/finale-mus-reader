@@ -82,7 +82,7 @@ std::string readCodaBlockText(const records::LegacyRowPool& pool,
         if (row == family.end()) {
             break;
         }
-        for (const auto byte : pool.payloadOf(*row)) {
+        for (const auto byte : pool.effectivePayloadOf(*row)) {
             if (byte == 0) {
                 return result;
             }

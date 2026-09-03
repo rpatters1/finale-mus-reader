@@ -8,6 +8,8 @@
 #include <tuple>
 #include <utility>
 
+#include "musx/util/Logger.h"
+
 namespace finale_mus_reader {
 namespace records {
 namespace {
@@ -210,8 +212,8 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             auto trailerOffset = primaryEnd;
             // Some records carry a same-sized continuation segment. Its first four bytes
             // repeat the payload length in the file's byte order. It has no independent
-            // class/key header, so the normalized row retains the primary payload and
-            // advances across the segment.
+            // class/key header, so the normalized row retains it with its primary payload
+            // and advances across the segment.
             bool hasContinuation = false;
             if (length >= 4
                 && length <= block.data.size() - primaryEnd
@@ -245,6 +247,14 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             decoded.payloadSize = length;
             const auto* body = header + headerSize;
             payload.insert(payload.end(), body, body + length);
+            if (hasContinuation) {
+                decoded.continuationOffset = static_cast<std::uint32_t>(payload.size());
+                decoded.continuationSize = length;
+                payload.insert(payload.end(), block.data.begin() + primaryEnd,
+                               block.data.begin() + trailerOffset);
+            }
+            decoded.trailerFirst = trailerFirst;
+            decoded.trailerSecond = trailerSecond;
             decoded.blockOffset = block.info.sourceOffset;
             decoded.decodedOffset = offset;
             result.push_back(decoded);
@@ -284,7 +294,47 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
     LegacyRowPool result;
     result.m_rows = std::move(rows);
     result.m_payload = std::move(payload);
+    constexpr std::size_t continuationPrefixSize = 4;
+    for (auto& row : result.m_rows) {
+        if (row.partId == musx::dom::SCORE_PARTID || row.continuationSize == 0) continue;
+        const auto* score = result.get(
+            row.tag, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
+        if (!score || score->payloadSize != row.payloadSize
+            || row.continuationSize != row.payloadSize
+            || row.continuationSize < continuationPrefixSize) {
+            continue;
+        }
+        const auto partPayload = result.payloadOf(row);
+        const auto scorePayload = result.payloadOf(*score);
+        const auto continuation = result.continuationOf(row);
+        row.effectivePayloadOffset = static_cast<std::uint32_t>(
+            result.m_effectivePartPayloads.size());
+        result.m_effectivePartPayloads.insert(
+            result.m_effectivePartPayloads.end(), scorePayload.begin(), scorePayload.end());
+        auto* effective = result.m_effectivePartPayloads.data() + row.effectivePayloadOffset;
+        for (std::size_t offset = 0;
+                offset < continuation.size() - continuationPrefixSize; ++offset) {
+            const auto mask = continuation[continuationPrefixSize + offset];
+            effective[offset] = static_cast<std::uint8_t>(
+                (scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
+        }
+        row.continuationOverlayReady = true;
+    }
     return result;
+}
+
+std::span<const std::uint8_t> LegacyRowPool::effectivePayloadOf(const LegacyRow& row) const
+{
+    const bool unresolvedContinuation = row.partId != musx::dom::SCORE_PARTID
+        && row.continuationSize != 0 && !row.continuationOverlayReady;
+    MUSX_ASSERT_IF(unresolvedContinuation) {
+        musx::util::Logger::log(musx::util::Logger::LogLevel::Warning,
+            "A continued part record has no structurally compatible score record.");
+        return payloadOf(row);
+    }
+    if (!row.continuationOverlayReady) return payloadOf(row);
+    return std::span<const std::uint8_t>(
+        m_effectivePartPayloads.data() + row.effectivePayloadOffset, row.payloadSize);
 }
 
 std::span<const LegacyRow> LegacyRowPool::getArray(
@@ -337,6 +387,23 @@ std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(
             result.push_back(row.cmper2);
         }
     }
+    return result;
+}
+
+std::vector<std::uint16_t> LegacyRowPool::partIdsForTag(LegacyTag tag) const
+{
+    std::vector<std::uint16_t> result;
+    for (const auto& row : m_rows) {
+        if (row.tag != tag || std::find(result.begin(), result.end(), row.partId) != result.end()) {
+            continue;
+        }
+        result.push_back(row.partId);
+    }
+    std::sort(result.begin(), result.end(), [](auto left, auto right) {
+        if (left == musx::dom::SCORE_PARTID) return true;
+        if (right == musx::dom::SCORE_PARTID) return false;
+        return left < right;
+    });
     return result;
 }
 

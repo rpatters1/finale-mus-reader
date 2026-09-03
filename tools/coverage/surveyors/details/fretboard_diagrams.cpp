@@ -13,8 +13,7 @@ Value observeFretboardDiagrams(const SurveyContext& ctx)
 {
     using Target = musx::dom::details::FretboardDiagram;
     Value::Array result;
-    for (const auto& diagram : ctx.document->getDetails()
-            ->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& diagram : sourceInstances<Target>(ctx)) {
         Value::Array cells;
         for (const auto& cell : diagram->cells) {
             cells.emplace_back(Value::Object{{"string", cell->string}, {"fret", cell->fret},

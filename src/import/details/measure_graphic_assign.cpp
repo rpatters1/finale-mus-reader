@@ -25,12 +25,12 @@ constexpr std::size_t measureGraphicAssignWordCount =
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportMeasureGraphicValue(const ImportContext& context, musx::dom::Cmper staffId,
-    musx::dom::Cmper meas, musx::dom::Inci inci, std::string name,
-    std::int64_t value, const records::LegacyRow& row)
+    musx::dom::Cmper meas, musx::dom::Inci inci, std::uint16_t partId,
+    std::string name, std::int64_t value, const records::LegacyRow& row)
 {
     FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<MeasureGraphicTarget>(musx::dom::SCORE_PARTID,
-        staffId, inci, meas), std::move(name), {ValueOrigin::LegacyMus,
+        instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas),
+        std::move(name), {ValueOrigin::LegacyMus,
         row.blockOffset, row.decodedOffset, value});
 }
 #else
@@ -40,9 +40,9 @@ void reportMeasureGraphicValue(const ImportContext& context, musx::dom::Cmper st
 void importMeasureGraphicFamily(const ImportContext& context,
     const RecordFamilySource& source)
 {
-    for (const auto staffId : source.pool->cmpersForTag(source.identity)) {
-        for (const auto meas : source.pool->secondCmpersForTag(source.identity, staffId)) {
-            const auto rows = source.pool->getArray(source.identity, staffId, meas);
+    for (const auto [partId, staffId] : recordKeys(source)) {
+        for (const auto meas : source.pool->secondCmpersForTag(source.identity, staffId, partId)) {
+            const auto rows = source.pool->getArray(source.identity, staffId, meas, partId);
             const auto words = collectRecordWords(source, rows, context.profile.byteOrder);
             if (words.size() % measureGraphicAssignWordCount != 0) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
@@ -54,9 +54,9 @@ void importMeasureGraphicFamily(const ImportContext& context,
                     at += measureGraphicAssignWordCount) {
                 const auto inci = static_cast<musx::dom::Inci>(
                     at / measureGraphicAssignWordCount);
-                auto target = std::make_shared<MeasureGraphicTarget>(context.document,
-                    musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
-                    staffId, meas, inci);
+                auto target = createDetailsRecordTarget<MeasureGraphicTarget>(
+                    context.document, source, rows.front(), staffId, meas, inci);
+                if (!target) continue;
                 const std::span<const std::int16_t> tuple(
                     words.data() + at, measureGraphicAssignWordCount);
                 populateGraphicAssignmentCommon(*target, tuple);
@@ -70,17 +70,17 @@ void importMeasureGraphicFamily(const ImportContext& context,
                     const auto slot = slots[index];
                     const auto& sourceRow = rows[source.classRecords ? 0
                         : (at + slot) / records::detailWordCount];
-                    reportMeasureGraphicValue(context, staffId, meas, inci,
+                    reportMeasureGraphicValue(context, staffId, meas, inci, partId,
                         names[index], tuple[slot], sourceRow);
                 }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                 const auto reportInstance = instanceKey<MeasureGraphicTarget>(
-                    musx::dom::SCORE_PARTID, staffId, inci, meas);
+                    partId, staffId, inci, meas);
                 context.report.setInstanceOrigin(reportInstance, ValueOrigin::LegacyMus);
                 const auto& positionRow = rows[source.classRecords ? 0
                     : (at + 8) / records::detailWordCount];
                 for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
-                    reportMeasureGraphicValue(context, staffId, meas, inci,
+                    reportMeasureGraphicValue(context, staffId, meas, inci, partId,
                         member, tuple[8], positionRow);
                 }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -97,7 +97,8 @@ void importMeasureGraphicAssignments(const ImportContext& context)
 {
     // The fixed-row selection also accepts a normalized Coda-banner mg family when present.
     const auto source = selectRecordFamilySource(context, context.index.getDetails(),
-        context.index.getClassDetails(), measureGraphicAssignTag, measureGraphicAssignClass);
+        context.index.getClassDetails(), measureGraphicAssignTag,
+        measureGraphicAssignClass, true);
     if (source) importMeasureGraphicFamily(context, *source);
 }
 

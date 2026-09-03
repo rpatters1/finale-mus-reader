@@ -32,8 +32,7 @@ Value observeSmartShapeCustomLines(const SurveyContext& ctx)
 {
     using CustomLine = musx::dom::others::SmartShapeCustomLine;
     Value::Array result;
-    for (const auto& line :
-         ctx.document->getOthers()->getArray<CustomLine>(musx::dom::SCORE_PARTID)) {
+    for (const auto& line : sourceInstances<CustomLine>(ctx)) {
         result.emplace_back(observe(
             *line, ctx, field("cmper", [](const CustomLine& value) { return value.getCmper(); }),
             field("line_style", &CustomLine::lineStyle),

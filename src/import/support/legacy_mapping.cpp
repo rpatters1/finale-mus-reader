@@ -68,17 +68,53 @@ std::optional<InstanceKey> importedInstanceKey(const musx::dom::EnigmaBase& obje
 
 std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context,
     const records::LegacyRowPool& fixedPool, const records::LegacyRowPool& classPool,
-    records::LegacyTag fixedTag, records::LegacyTag classId)
+    records::LegacyTag fixedTag, records::LegacyTag classId, bool details,
+    std::span<const CompactPartLayout> compactPartLayouts)
 {
     switch (context.profile.epoch) {
     case FormatEpoch::CodaBanner:
     case FormatEpoch::UncompressedLegacy:
     case FormatEpoch::DclLegacy:
-        return RecordFamilySource{&fixedPool, fixedTag, false};
+        return RecordFamilySource{&fixedPool, fixedTag, false, details};
     case FormatEpoch::ZlibLegacy:
-        return RecordFamilySource{&classPool, classId, true};
+        return RecordFamilySource{&classPool, classId, true, details, compactPartLayouts};
     }
     return std::nullopt;
+}
+
+std::vector<std::uint16_t> recordPartIds(const RecordFamilySource& source)
+{
+    if (!source.classRecords) return {musx::dom::SCORE_PARTID};
+    return source.pool->partIdsForTag(source.identity);
+}
+
+std::vector<std::pair<std::uint16_t, std::uint16_t>> recordKeys(const RecordFamilySource& source)
+{
+    std::vector<std::pair<std::uint16_t, std::uint16_t>> result;
+    for (const auto partId : recordPartIds(source)) {
+        for (const auto cmper : source.pool->cmpersForTag(source.identity, partId)) {
+            result.emplace_back(partId, cmper);
+        }
+    }
+    return result;
+}
+
+musx::dom::EnigmaBase::ShareMode recordShareMode(const RecordFamilySource& source,
+                                                 const records::LegacyRow& row)
+{
+    using ShareMode = musx::dom::EnigmaBase::ShareMode;
+    if (!source.classRecords || row.partId == musx::dom::SCORE_PARTID) {
+        return ShareMode::All;
+    }
+    if (row.continuationSize != 0) return ShareMode::Partial;
+
+    for (const auto& layout : source.compactPartLayouts) {
+        if (row.payloadSize != layout.partPayloadSize) continue;
+        const auto* score = source.pool->get(
+            source.identity, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
+        if (score && score->payloadSize == layout.scorePayloadSize) return ShareMode::Partial;
+    }
+    return ShareMode::None;
 }
 
 std::vector<std::uint8_t> collectRecordPayload(
@@ -86,7 +122,7 @@ std::vector<std::uint8_t> collectRecordPayload(
 {
     std::vector<std::uint8_t> result;
     for (const auto& row : rows) {
-        const auto payload = source.pool->payloadOf(row);
+        const auto payload = source.pool->effectivePayloadOf(row);
         result.insert(result.end(), payload.begin(), payload.end());
     }
     return result;
@@ -225,14 +261,15 @@ const std::vector<RegisteredImporter>& registeredImporters()
 // Reads a numeric value from a class-identified record, addressed by byte offset inside a
 // single record's payload rather than by word slot across an incidence stream.
 std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder)
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder,
+    std::uint16_t partId)
 {
     const auto* row = index.getClassOthers().get(
-        source.identity, cmper, 0, source.incidence);
+        source.identity, cmper, 0, source.incidence, partId);
     if (!row) {
         return std::nullopt;
     }
-    const auto payload = index.getClassOthers().payloadOf(*row);
+    const auto payload = index.getClassOthers().effectivePayloadOf(*row);
     const std::size_t width = source.width == ValueWidth::Long ? 4
         : source.width == ValueWidth::Byte ? 1 : 2;
     if (source.wordSlot + width > payload.size()) {
@@ -279,13 +316,13 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
 // Reads text from a class-identified record: the payload runs to its own end, so the name
 // simply occupies whatever remains after the fields before it.
 std::optional<std::string> readClassText(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source)
+    std::uint16_t cmper, const SourceLocation& source, std::uint16_t partId)
 {
-    const auto* row = index.getClassOthers().get(source.identity, cmper, 0, 0);
+    const auto* row = index.getClassOthers().get(source.identity, cmper, 0, 0, partId);
     if (!row) {
         return std::nullopt;
     }
-    const auto payload = index.getClassOthers().payloadOf(*row);
+    const auto payload = index.getClassOthers().effectivePayloadOf(*row);
     if (source.wordSlot >= payload.size()) {
         return std::nullopt;
     }
@@ -353,7 +390,7 @@ std::optional<std::string> readText(const records::LegacyRecordIndex& index,
             continue;
         }
         found = true;
-        const auto bytes = index.getOthers().payloadOf(row);
+        const auto bytes = index.getOthers().effectivePayloadOf(row);
         text.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
     }
     if (!found) {
@@ -470,10 +507,11 @@ musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
 
 std::optional<ResolvedValue> readSourceValue(
     const records::LegacyRecordIndex& index, RecordEncoding encoding,
-    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder)
+    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder,
+    std::uint16_t partId)
 {
     return encoding == RecordEncoding::ClassRecord
-        ? readClassValue(index, cmper, source, byteOrder)
+        ? readClassValue(index, cmper, source, byteOrder, partId)
         : readValue(index, cmper, source);
 }
 
@@ -507,7 +545,8 @@ GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
     if (!row) {
         return result;
     }
-    result.words = payloadWords(index.getClassOthers().payloadOf(*row), profile.byteOrder);
+    result.words = payloadWords(
+        index.getClassOthers().effectivePayloadOf(*row), profile.byteOrder);
     result.present = true;
     result.blockOffset = row->blockOffset;
     result.decodedOffset = row->decodedOffset;
@@ -745,8 +784,14 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
             const auto& pool = table.encoding == RecordEncoding::ClassRecord
                 ? index.getClassOthers() : index.getOthers();
             if (effective.applicable) {
-                for (const auto cmper : pool.cmpersForTag(table.recordIdentity)) {
-                    targets.push_back(table.createTarget(document, cmper));
+                const RecordFamilySource source{&pool, table.recordIdentity,
+                    table.encoding == RecordEncoding::ClassRecord, false,
+                    table.compactPartLayouts};
+                for (const auto [partId, cmper] : recordKeys(source)) {
+                    const auto rows = pool.getArray(table.recordIdentity, cmper, 0, partId);
+                    if (rows.empty()) continue;
+                    auto target = table.createTarget(document, source, rows.front(), cmper);
+                    if (target.instance) targets.push_back(target);
                 }
             }
         } else {
@@ -766,7 +811,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     continue;
                 }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                const InstanceKey reportInstance{target.classType, musx::dom::SCORE_PARTID,
+                const InstanceKey reportInstance{target.classType, target.partId,
                     table.targetKind == TargetKind::OptionsSingleton
                         ? std::optional<musx::dom::Cmper>{}
                         : std::optional<musx::dom::Cmper>{target.cmper},
@@ -794,7 +839,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     const bool classRecord = table.encoding == RecordEncoding::ClassRecord;
                     if (field.readable->kind == FieldKind::Text) {
                         const auto text = classRecord
-                            ? readClassText(index, selector, field.readable->source)
+                            ? readClassText(index, selector, field.readable->source, target.partId)
                             : readText(index, selector, field.readable->source);
                         if (text) {
                             field.readable->applyText(target.instance, *text);
@@ -808,7 +853,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                         continue;
                     }
                     const auto resolved = readSourceValue(index, table.encoding, selector,
-                        field.readable->source, profile.byteOrder);
+                        field.readable->source, profile.byteOrder, target.partId);
                     if (resolved) {
                         const auto adjusted = field.readable->sourceAdjustment
                             ? field.readable->sourceAdjustment(

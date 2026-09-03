@@ -24,7 +24,7 @@ Value observeFretboardStyles(const SurveyContext& ctx)
 {
     using Target = musx::dom::others::FretboardStyle;
     Value::Array result;
-    for (const auto& style : ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& style : sourceInstances<Target>(ctx)) {
         result.emplace_back(observe(
             *style, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("show_last_fret", &Target::showLastFret), field("rotate", &Target::rotate),

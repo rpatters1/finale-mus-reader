@@ -20,7 +20,7 @@ classifyFretInstrumentDifference(const DifferenceContext& context)
     using enum DifferenceCategory;
     if (context.category != Differs) return std::nullopt;
     static const std::regex member(
-        R"(^(fret_instruments\[cmper=\d+\]\.strings\[\d+\])\.(pitch|nut_offset)$)");
+        R"(^(fret_instruments\[(?:part_id=\d+,)?cmper=\d+\]\.strings\[\d+\])\.(pitch|nut_offset)$)");
     std::match_results<std::string_view::const_iterator> match;
     if (!std::regex_match(context.path.begin(), context.path.end(), match, member)) {
         return std::nullopt;
@@ -57,8 +57,7 @@ Value observeFretInstruments(const SurveyContext& ctx)
 {
     using Target = musx::dom::others::FretInstrument;
     Value::Array result;
-    for (const auto& instrument :
-         ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& instrument : sourceInstances<Target>(ctx)) {
         Value::Array strings;
         for (std::size_t index = 0; index < instrument->strings.size(); ++index) {
             const auto prefix = "strings[" + std::to_string(index) + "].";
