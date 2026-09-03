@@ -17,6 +17,11 @@ LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 HEADING = re.compile(r"^#{1,6} (.*)$", re.MULTILINE)
 
 
+def repo_relative(path):
+    """Repo-relative path with forward slashes, so prefix tests work on Windows too."""
+    return os.path.relpath(path, REPO).replace(os.sep, "/")
+
+
 def slug(text):
     """GitHub's heading slug: lowercase, drop everything but word chars, spaces and hyphens,
     then spaces become hyphens. Repeats are not collapsed, so an em dash between two words
@@ -41,7 +46,7 @@ def markdown_files():
             if not name.endswith(".md"):
                 continue
             path = os.path.join(root, name)
-            if os.path.relpath(path, REPO).startswith(SKIP_PREFIXES):
+            if repo_relative(path).startswith(SKIP_PREFIXES):
                 continue
             yield path
 
@@ -50,7 +55,7 @@ def main() -> int:
     anchor_cache = {}
     failures = []
     for path in markdown_files():
-        rel = os.path.relpath(path, REPO)
+        rel = repo_relative(path)
         text = open(path, encoding="utf-8").read()
         for match in LINK.finditer(text):
             target = match.group(1)

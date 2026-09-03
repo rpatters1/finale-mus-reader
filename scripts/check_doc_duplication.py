@@ -33,6 +33,11 @@ SKIP_PREFIXES = (
 TEMPLATED = re.compile(r"^\*\*(Covers|Read when|Confidence):\*\*", re.M)
 
 
+def repo_relative(path):
+    """Repo-relative path with forward slashes, so prefix tests work on Windows too."""
+    return os.path.relpath(path, REPO).replace(os.sep, "/")
+
+
 def normalize(block):
     """A paragraph as a comparable word list, or None if it is not prose."""
     if block.lstrip().startswith(("|", "#")) or TEMPLATED.search(block):
@@ -57,7 +62,7 @@ def doc_files():
         for name in sorted(files):
             if not name.endswith(".md"):
                 continue
-            rel = os.path.relpath(os.path.join(root, name), REPO)
+            rel = repo_relative(os.path.join(root, name))
             if not rel.startswith(SKIP_PREFIXES):
                 yield rel
 
