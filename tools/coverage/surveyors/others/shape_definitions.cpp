@@ -385,8 +385,7 @@ Value observeShapeDefs(const SurveyContext& ctx)
 {
     using Target = musx::dom::others::ShapeDef;
     Value::Array result;
-    for (const auto& definition :
-         ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& definition : sourceInstances<Target>(ctx)) {
         result.emplace_back(observe(
             *definition, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("instruction_list", &Target::instructionList),
@@ -414,10 +413,8 @@ Value observeShapeInstructionLists(const SurveyContext& ctx)
     std::size_t instructionCount = 0;
 
     Value::Array lists;
-    for (const auto& list :
-         ctx.document->getOthers()->getArray<musx::dom::others::ShapeInstructionList>(
-             musx::dom::SCORE_PARTID)) {
-        using Target = musx::dom::others::ShapeInstructionList;
+    using Target = musx::dom::others::ShapeInstructionList;
+    for (const auto& list : sourceInstances<Target>(ctx)) {
         Value::Array instructions;
         for (std::size_t index = 0; index < list->instructions.size(); ++index) {
             const auto& instruction = *list->instructions[index];
@@ -437,7 +434,10 @@ Value observeShapeInstructionLists(const SurveyContext& ctx)
                 ++undocumentedCount;
         }
         lists.emplace_back(
-            Value::Object{{"cmper", list->getCmper()}, {"instructions", std::move(instructions)}});
+            Value::Object{{"part_id", list->getSourcePartId()},
+                          {"share_mode", static_cast<std::int64_t>(list->getShareMode())},
+                          {"cmper", list->getCmper()},
+                          {"instructions", std::move(instructions)}});
     }
     Value::Object typeValues;
     for (const auto& [type, count] : instructionTypes) {
@@ -454,9 +454,8 @@ Value observeShapeData(const SurveyContext& ctx)
 {
     std::size_t valueCount = 0;
     Value::Array buffers;
-    for (const auto& data : ctx.document->getOthers()->getArray<musx::dom::others::ShapeData>(
-             musx::dom::SCORE_PARTID)) {
-        using Target = musx::dom::others::ShapeData;
+    using Target = musx::dom::others::ShapeData;
+    for (const auto& data : sourceInstances<Target>(ctx)) {
         Value::Array values;
         for (std::size_t index = 0; index < data->values.size(); ++index) {
             values.emplace_back(Value::Object{
@@ -467,7 +466,10 @@ Value observeShapeData(const SurveyContext& ctx)
             ++valueCount;
         }
         buffers.emplace_back(
-            Value::Object{{"cmper", data->getCmper()}, {"values", std::move(values)}});
+            Value::Object{{"part_id", data->getSourcePartId()},
+                          {"share_mode", static_cast<std::int64_t>(data->getShareMode())},
+                          {"cmper", data->getCmper()},
+                          {"values", std::move(values)}});
     }
     return Value::Object{{"buffers", std::move(buffers)}, {"value_count", valueCount}};
 }

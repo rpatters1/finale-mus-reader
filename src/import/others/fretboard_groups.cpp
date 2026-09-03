@@ -30,8 +30,8 @@ void importFretboardGroups(const ImportContext& context)
     const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretboardGroupTag, fretboardGroupClass);
     if (!source) return;
-    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
-        const auto rows = source->pool->getArray(source->identity, cmper);
+    for (const auto [partId, cmper] : recordKeys(*source)) {
+        const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) continue;
         const auto payload = collectRecordPayload(*source, rows);
         // Finale 2012 widens the fixed-capacity group name from bytes to UTF-16LE code units.
@@ -47,8 +47,9 @@ void importFretboardGroups(const ImportContext& context)
         }
         for (std::size_t at = 0; at + tupleSize <= payload.size(); at += tupleSize) {
             const auto inci = static_cast<musx::dom::Inci>(at / tupleSize);
-            auto target = std::make_shared<FretboardGroupTarget>(context.document,
-                musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper, inci);
+            auto target = createOthersRecordTarget<FretboardGroupTarget>(context.document, *source,
+                                                                         rows.front(), cmper, inci);
+            if (!target) continue;
             target->fretInstId = payloadWord(payload, at, context.profile.byteOrder);
             if (unicodeLayout) {
                 target->name = text::utf16LeToUtf8(std::span(payload).subspan(
@@ -59,8 +60,7 @@ void importFretboardGroups(const ImportContext& context)
                     context.profile.platform);
             }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto key = instanceKey<FretboardGroupTarget>(
-                musx::dom::SCORE_PARTID, cmper, inci);
+            const auto key = instanceKey<FretboardGroupTarget>(partId, cmper, inci);
             context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
             FINALE_MUS_READER_REPORT_FIELD(context.report, key, "fretInstId",
                 {ValueOrigin::LegacyMus, rows.front().blockOffset,

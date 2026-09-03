@@ -202,6 +202,18 @@ struct SyntheticClassRow
     std::uint16_t classId{};
     std::vector<std::int16_t> words;
     std::uint16_t cmper{GLOBALS_CMPER};
+    std::uint16_t partId{};
+    bool hasContinuation{};
+    std::vector<std::uint16_t> continuationMasks;
+
+    SyntheticClassRow(std::uint16_t classIdValue, std::vector<std::int16_t> wordValues,
+        std::uint16_t cmperValue = GLOBALS_CMPER, std::uint16_t partIdValue = 0,
+        bool continuation = false, std::vector<std::uint16_t> maskValues = {})
+        : classId(classIdValue), words(std::move(wordValues)), cmper(cmperValue),
+          partId(partIdValue), hasContinuation(continuation),
+          continuationMasks(std::move(maskValues))
+    {
+    }
 };
 
 /// @brief Builds a parsed container holding class-identified records, the 2007+ framing.
@@ -225,7 +237,7 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
     for (const auto& row : rows) {
         push16(row.classId);
         push16(row.cmper);
-        push16(0);
+        push16(row.partId);
         const auto length = static_cast<std::uint32_t>(row.words.size() * 2);
         if (byteOrder == ByteOrder::BigEndian) {
             for (int shift = 24; shift >= 0; shift -= 8) {
@@ -238,6 +250,16 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
         }
         for (const auto word : row.words) {
             push16(static_cast<std::uint16_t>(word));
+        }
+        if (row.hasContinuation) {
+            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length >> 16U)
+                                                     : static_cast<std::uint16_t>(length));
+            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length)
+                                                     : static_cast<std::uint16_t>(length >> 16U));
+            for (std::size_t slot = 0; slot + 2 < row.words.size(); ++slot) {
+                push16(slot < row.continuationMasks.size()
+                        ? row.continuationMasks[slot] : 0);
+            }
         }
         block.data.insert(block.data.end(), 4, 0);
     }
@@ -281,7 +303,8 @@ inline finale_mus_reader::container::ParsedContainer makeDetailContainer(
 inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
     std::uint16_t staffId, std::uint16_t meas, std::uint16_t partId,
     const std::vector<std::int16_t>& words, ByteOrder byteOrder,
-    std::uint16_t classId = 0x041d)
+    std::uint16_t classId = 0x041d, bool hasContinuation = false,
+    const std::vector<std::uint16_t>& continuationMasks = {})
 {
     auto parsed = makeClassContainer(classId, {}, byteOrder, staffId);
     auto& block = parsed.blocks.front();
@@ -308,6 +331,18 @@ inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
             block.data.push_back(static_cast<std::uint8_t>(length >> shift));
     }
     for (const auto word : words) push16(static_cast<std::uint16_t>(word));
+    if (hasContinuation) {
+        if (byteOrder == ByteOrder::BigEndian) {
+            push16(static_cast<std::uint16_t>(length >> 16U));
+            push16(static_cast<std::uint16_t>(length));
+        } else {
+            push16(static_cast<std::uint16_t>(length));
+            push16(static_cast<std::uint16_t>(length >> 16U));
+        }
+        for (std::size_t slot = 0; slot + 2 < words.size(); ++slot) {
+            push16(slot < continuationMasks.size() ? continuationMasks[slot] : 0);
+        }
+    }
     block.data.insert(block.data.end(), 4, 0);
     block.info.decodedSize = block.data.size();
     return parsed;

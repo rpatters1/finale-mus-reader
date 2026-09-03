@@ -568,7 +568,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
         const auto* row = index.getClassOthers().get(
             numericGlobalClass(clefTableSelector), GLOBALS_CMPER, 0, 0);
         if (row) {
-            const auto bytes = index.getClassOthers().payloadOf(*row);
+            const auto bytes = index.getClassOthers().effectivePayloadOf(*row);
             if (const auto tupleWords = classTupleWords(bytes.size(), profile.version)) {
                 const auto words = payloadWords(bytes, profile.byteOrder);
                 PhysicalClef provenance;

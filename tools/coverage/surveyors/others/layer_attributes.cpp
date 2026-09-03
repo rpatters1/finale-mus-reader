@@ -13,8 +13,7 @@ Value observeLayerAttributes(const SurveyContext& ctx)
 {
     using Target = musx::dom::others::LayerAttributes;
     Value::Array result;
-    for (const auto& layer : ctx.document->getOthers()
-            ->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& layer : sourceInstances<Target>(ctx)) {
         result.push_back(observe(*layer, ctx,
             field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("rest_offset", &Target::restOffset),

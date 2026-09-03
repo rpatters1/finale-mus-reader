@@ -5,6 +5,7 @@
 
 #include <map>
 
+#include "coverage/identity.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -18,13 +19,28 @@ std::int64_t fontInfoIntegerMember(const Value& object, std::string_view key,
     return value && value->isInteger() ? value->asInteger() : fallback;
 }
 
-std::map<std::int64_t, const Value*> fontInfoObjectsByCmper(const Value::Array& items)
+using FontInfoObjectKey = std::pair<std::int64_t, std::int64_t>;
+
+std::map<FontInfoObjectKey, const Value*> fontInfoObjectsByPartAndCmper(const Value::Array& items)
 {
-    std::map<std::int64_t, const Value*> result;
+    std::map<FontInfoObjectKey, const Value*> result;
     for (const auto& item : items) {
-        result.emplace(fontInfoIntegerMember(item, "cmper"), &item);
+        result.emplace(FontInfoObjectKey{fontInfoIntegerMember(item, "part_id"),
+                           fontInfoIntegerMember(item, "cmper")},
+            &item);
     }
     return result;
+}
+
+const Value* fontInfoObjectForPart(
+    const std::map<FontInfoObjectKey, const Value*>& objects, std::int64_t partId,
+    std::int64_t cmper)
+{
+    if (const auto found = objects.find({partId, cmper}); found != objects.end()) {
+        return found->second;
+    }
+    const auto score = objects.find({musx::dom::SCORE_PARTID, cmper});
+    return score == objects.end() ? nullptr : score->second;
 }
 
 } // namespace
@@ -50,17 +66,28 @@ std::set<std::string> comparisonFontReferencePaths(const SurveySnapshot& snapsho
     }
     const auto* listsValue = listsFound->second.find("lists");
     if (!listsValue || !listsValue->isArray()) return result;
-    const auto lists = fontInfoObjectsByCmper(listsValue->asArray());
+    const auto lists = fontInfoObjectsByPartAndCmper(listsValue->asArray());
+    std::map<FontInfoObjectKey, const Value*> buffers;
+    if (const auto buffersFound = snapshot.find("shape_data"); buffersFound != snapshot.end()) {
+        if (const auto* values = buffersFound->second.find("buffers"); values && values->isArray()) {
+            buffers = fontInfoObjectsByPartAndCmper(values->asArray());
+        }
+    }
     for (const auto& shape : shapesFound->second.asArray()) {
-        const auto list = lists.find(fontInfoIntegerMember(shape, "instruction_list"));
-        if (list == lists.end()) continue;
-        const auto* instructions = list->second->find("instructions");
+        const auto partId = fontInfoIntegerMember(shape, "part_id");
+        const auto* list = fontInfoObjectForPart(
+            lists, partId, fontInfoIntegerMember(shape, "instruction_list"));
+        if (!list) continue;
+        const auto* instructions = list->find("instructions");
         if (!instructions || !instructions->isArray()) continue;
+        const auto dataCmper = fontInfoIntegerMember(shape, "data_list");
+        const auto* buffer = fontInfoObjectForPart(buffers, partId, dataCmper);
+        const auto bufferPartId = buffer ? fontInfoIntegerMember(*buffer, "part_id") : partId;
         std::size_t offset = 0;
         for (const auto& instruction : instructions->asArray()) {
             if (fontInfoIntegerMember(instruction, "type") == 20) {
-                result.insert("shape_data.buffers[cmper=" +
-                              std::to_string(fontInfoIntegerMember(shape, "data_list")) +
+                result.insert("shape_data.buffers[" + partIdentityPrefix(bufferPartId) +
+                              "cmper=" + std::to_string(dataCmper) +
                               "].values[" + std::to_string(offset) + "].value");
             }
             offset += static_cast<std::size_t>(fontInfoIntegerMember(instruction, "num_data"));

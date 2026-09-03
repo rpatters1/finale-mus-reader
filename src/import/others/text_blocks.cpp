@@ -58,19 +58,19 @@ const records::LegacyRow& textBlockRow(const RecordFamilySource& source,
 }
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportValue(const ImportContext& context, musx::dom::Cmper cmper, const char* field,
-                 std::int64_t rawValue, const records::LegacyRow& row)
+void reportValue(const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper,
+                 const char* field, std::int64_t rawValue, const records::LegacyRow& row)
 {
     FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper), field,
+        instanceKey<Target>(partId, cmper), field,
         {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, rawValue});
 }
 
-void reportBehavior(const ImportContext& context, musx::dom::Cmper cmper, const char* field,
-                    std::int64_t value)
+void reportBehavior(const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper,
+                    const char* field, std::int64_t value)
 {
     FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<Target>(musx::dom::SCORE_PARTID, cmper), field,
+        instanceKey<Target>(partId, cmper), field,
         {ValueOrigin::LegacyBehavior, 0, 0, value});
 }
 #else
@@ -79,14 +79,14 @@ void reportBehavior(const ImportContext& context, musx::dom::Cmper cmper, const 
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void applyLegacyTextBlockCorners(
-    const ImportContext& context, musx::dom::Cmper cmper, Target& target)
+    const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper, Target& target)
 {
     // Legacy MUS TextBlocks predate rounded frames and therefore use square corners with a
     // zero radius.
     target.roundCorners = false;
     target.cornerRadius = 0;
-    reportBehavior(context, cmper, "roundCorners", 0);
-    reportBehavior(context, cmper, "cornerRadius", 0);
+    reportBehavior(context, partId, cmper, "roundCorners", 0);
+    reportBehavior(context, partId, cmper, "cornerRadius", 0);
 }
 
 void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmper,
@@ -101,8 +101,9 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
         return;
     }
 
-    auto target = std::make_shared<Target>(context.document, musx::dom::SCORE_PARTID,
-                                           musx::dom::EnigmaBase::ShareMode::All, cmper);
+    const auto partId = rows.front().partId;
+    auto target = createOthersRecordTarget<Target>(context.document, source, rows.front(), cmper);
+    if (!target) return;
     target->textId = static_cast<musx::dom::Cmper>(words[0]);
     target->width = words[1];
     target->height = words[2];
@@ -125,11 +126,11 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
     target->wordWrap = (flags & 0x0800U) != 0;
     target->inset = highFirstLong(words[8], words[9]);
     target->stdLineThickness = highFirstLong(words[10], words[11]);
-    applyLegacyTextBlockCorners(context, cmper, *target);
+    applyLegacyTextBlockCorners(context, partId, cmper, *target);
     if (words.size() > textTypeWord) {
         if (const auto textType = textTypeFromLegacy(words[textTypeWord])) {
             target->textType = *textType;
-            reportValue(context, cmper, "textType", words[textTypeWord],
+            reportValue(context, partId, cmper, "textType", words[textTypeWord],
                         textBlockRow(source, rows, textTypeWord));
         } else if (words[textTypeWord] != 0) {
             context.report.diagnostics.push_back(
@@ -142,27 +143,27 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
 
     constexpr const char* directNames[] = {"textId", "width", "height", "shapeId"};
     for (std::size_t slot = 0; slot < std::size(directNames); ++slot) {
-        reportValue(context, cmper, directNames[slot], words[slot],
+        reportValue(context, partId, cmper, directNames[slot], words[slot],
                     textBlockRow(source, rows, slot));
     }
-    reportValue(context, cmper, hasPercentageLineSpacing ? "lineSpacingPercentage"
-                                                         : "lineSpacingEvpu",
-                words[4], textBlockRow(source, rows, 4));
+    reportValue(context, partId, cmper, hasPercentageLineSpacing ? "lineSpacingPercentage"
+                                                                 : "lineSpacingEvpu",
+        words[4], textBlockRow(source, rows, 4));
     if (upgradesZeroPercentToEvpu)
-        reportBehavior(context, cmper, "lineSpacingEvpu", 0);
-    reportValue(context, cmper, "xAdd", words[5], textBlockRow(source, rows, 5));
-    reportValue(context, cmper, "yAdd", words[6], textBlockRow(source, rows, 6));
+        reportBehavior(context, partId, cmper, "lineSpacingEvpu", 0);
+    reportValue(context, partId, cmper, "xAdd", words[5], textBlockRow(source, rows, 5));
+    reportValue(context, partId, cmper, "yAdd", words[6], textBlockRow(source, rows, 6));
     constexpr const char* flagNames[] = {"justify", "newPos36", "showShape", "noExpandSingleWord",
                                          "wordWrap"};
     const std::int64_t flagValues[] = {flags & 0x0007U, (flags >> 3U) & 1U, (flags >> 9U) & 1U,
                                        (flags >> 10U) & 1U, (flags >> 11U) & 1U};
     for (std::size_t index = 0; index < std::size(flagNames); ++index) {
-        reportValue(context, cmper, flagNames[index], flagValues[index],
+        reportValue(context, partId, cmper, flagNames[index], flagValues[index],
                     textBlockRow(source, rows, 7));
     }
-    reportValue(context, cmper, "inset", highFirstLong(words[8], words[9]),
+    reportValue(context, partId, cmper, "inset", highFirstLong(words[8], words[9]),
                 textBlockRow(source, rows, 8));
-    reportValue(context, cmper, "stdLineThickness", highFirstLong(words[10], words[11]),
+    reportValue(context, partId, cmper, "stdLineThickness", highFirstLong(words[10], words[11]),
                 textBlockRow(source, rows, 10));
     context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
 }
@@ -172,9 +173,9 @@ void importStoredTextBlocks(const ImportContext& context)
     const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), textBlockTag, textBlockClass);
     if (!source) return;
-    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
+    for (const auto [partId, cmper] : recordKeys(*source)) {
         populateStoredTextBlock(context, cmper,
-            source->pool->getArray(source->identity, cmper), *source);
+            source->pool->getArray(source->identity, cmper, 0, partId), *source);
     }
 }
 
@@ -199,16 +200,16 @@ void importCodaTextBlocks(const ImportContext& context)
             target->showShape = false;
             target->noExpandSingleWord = false;
             target->wordWrap = true;
-            applyLegacyTextBlockCorners(context, textId, *target);
+            applyLegacyTextBlockCorners(context, musx::dom::SCORE_PARTID, textId, *target);
 
-            reportValue(context, textId, "textId", textId, row);
-            reportValue(context, textId, "justify", flags & 0x0003U, row);
-            reportBehavior(context, textId, "lineSpacingPercentage", 100);
-            reportBehavior(context, textId, "shapeId", 0);
-            reportBehavior(context, textId, "newPos36", 0);
-            reportBehavior(context, textId, "showShape", 0);
-            reportBehavior(context, textId, "noExpandSingleWord", 0);
-            reportBehavior(context, textId, "wordWrap", 1);
+            reportValue(context, musx::dom::SCORE_PARTID, textId, "textId", textId, row);
+            reportValue(context, musx::dom::SCORE_PARTID, textId, "justify", flags & 0x0003U, row);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "lineSpacingPercentage", 100);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "shapeId", 0);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "newPos36", 0);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "showShape", 0);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "noExpandSingleWord", 0);
+            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "wordWrap", 1);
             context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
         }
     }

@@ -75,6 +75,18 @@ struct LegacyRow
     /// representation common to every era.
     std::uint32_t payloadOffset{};
     std::uint32_t payloadSize{};
+    /// @brief Same-sized continuation bytes following a zlib primary payload, if present.
+    /// @details The repeated length prefix remains part of this span. Its remaining bytes are
+    /// bit masks selecting the part payload bits that replace the corresponding score bits.
+    std::uint32_t continuationOffset{};
+    std::uint32_t continuationSize{};
+    /// @brief Whether a continued part row has a structurally compatible score payload.
+    bool continuationOverlayReady{};
+    /// @brief Offset of this row's resolved bytes within the pool's effective-part storage.
+    std::uint32_t effectivePayloadOffset{};
+    /// @brief The two words terminating a zlib class record.
+    std::int16_t trailerFirst{};
+    std::int16_t trailerSecond{};
     std::uint8_t wordCount{};
     std::size_t blockOffset{};
     std::size_t decodedOffset{};
@@ -101,9 +113,20 @@ public:
         return std::span<const std::uint8_t>(m_payload.data() + row.payloadOffset, row.payloadSize);
     }
 
+    /// @brief Returns payload bytes with a continued part row resolved against its score row.
+    /// @details Physical payloads remain available through @ref payloadOf. For a continued part,
+    /// set continuation bits select the stored part bits and clear bits retain the score bits.
+    [[nodiscard]] std::span<const std::uint8_t> effectivePayloadOf(const LegacyRow& row) const;
+
+    /// @brief Returns a zlib row's uninterpreted continuation bytes, or an empty span.
+    [[nodiscard]] std::span<const std::uint8_t> continuationOf(const LegacyRow& row) const
+    {
+        if (row.continuationSize == 0) return {};
+        return std::span<const std::uint8_t>(m_payload.data() + row.continuationOffset,
+            row.continuationSize);
+    }
+
     /// @brief Returns every row of a family, in incidence order.
-    // TODO: Import part-owned records and their sharing modes; current importers deliberately
-    // select only SCORE_PARTID through this default.
     [[nodiscard]] std::span<const LegacyRow> getArray(
         LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0,
         std::uint16_t partId = musx::dom::SCORE_PARTID) const;
@@ -122,12 +145,16 @@ public:
         LegacyTag tag, std::uint16_t cmper1,
         std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
+    /// @brief Returns every distinct source part carried by a tag, score first.
+    [[nodiscard]] std::vector<std::uint16_t> partIdsForTag(LegacyTag tag) const;
+
     [[nodiscard]] bool empty() const { return m_rows.empty(); }
     [[nodiscard]] std::size_t size() const { return m_rows.size(); }
 
 private:
     std::vector<LegacyRow> m_rows;
     std::vector<std::uint8_t> m_payload;
+    std::vector<std::uint8_t> m_effectivePartPayloads;
 };
 
 /// @brief One payload word together with the provenance of the row that held it.

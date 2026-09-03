@@ -29,13 +29,14 @@ void importFretInstruments(const ImportContext& context)
     const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretInstrumentTag, fretInstrumentClass);
     if (!source) return;
-    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
-        const auto rows = source->pool->getArray(source->identity, cmper);
+    for (const auto [partId, cmper] : recordKeys(*source)) {
+        const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) continue;
         const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() < fretInstrumentStringsOffset) continue;
-        auto target = std::make_shared<FretInstrumentTarget>(context.document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+        auto target = createOthersRecordTarget<FretInstrumentTarget>(context.document, *source,
+                                                                     rows.front(), cmper);
+        if (!target) continue;
         const auto stepBits = static_cast<std::uint32_t>(
             payloadLong(payload, 0, context.profile.byteOrder, LongWordOrder::LowFirst));
         target->numFrets = payloadWord(payload, 4, context.profile.byteOrder);
@@ -60,7 +61,7 @@ void importFretInstruments(const ImportContext& context)
             }
         }
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FretInstrumentTarget>(musx::dom::SCORE_PARTID, cmper);
+        const auto key = instanceKey<FretInstrumentTarget>(partId, cmper);
         context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
         const auto report = [&](std::string member, auto value,
                                 ValueOrigin origin = ValueOrigin::LegacyMus) {

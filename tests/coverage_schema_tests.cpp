@@ -16,6 +16,33 @@
 namespace finale_mus_reader_tests {
 namespace {
 
+TEST_CASE("Coverage source instances enumerate physical parts without score fallbacks",
+    "[coverage]")
+{
+    using Target = musx::dom::others::FretboardStyle;
+    using ShareMode = musx::dom::EnigmaBase::ShareMode;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    auto score = std::make_shared<Target>(document, musx::dom::SCORE_PARTID,
+        ShareMode::All, musx::dom::Cmper{1});
+    auto scoreOnly = std::make_shared<Target>(document, musx::dom::SCORE_PARTID,
+        ShareMode::All, musx::dom::Cmper{2});
+    auto part = std::make_shared<Target>(
+        document, musx::dom::Cmper{2}, ShareMode::Partial, musx::dom::Cmper{1});
+    document->getOthers()->add(Target::XmlNodeName, std::move(score));
+    document->getOthers()->add(Target::XmlNodeName, std::move(scoreOnly));
+    document->getOthers()->add(Target::XmlNodeName, std::move(part));
+
+    finale_mus_reader::ImportReport emptyReport(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const finale_mus_reader::coverage::SurveyContext context{document, emptyReport};
+    const auto instances = finale_mus_reader::coverage::sourceInstances<Target>(context);
+    REQUIRE(instances.size() == 3);
+    REQUIRE(instances[0]->getSourcePartId() == musx::dom::SCORE_PARTID);
+    REQUIRE(instances[1]->getSourcePartId() == musx::dom::SCORE_PARTID);
+    REQUIRE(instances[2]->getSourcePartId() == 2);
+    REQUIRE(instances[2]->getCmper() == 1);
+}
+
 TEST_CASE("Coverage fields always materialize recorded provenance", "[coverage]")
 {
     using FontDefinition = musx::dom::others::FontDefinition;

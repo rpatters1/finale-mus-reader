@@ -20,7 +20,7 @@ template <typename Target>
 Value observeGraphicAssignments(const SurveyContext& ctx)
 {
     Value::Array result;
-    for (const auto& assign : ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& assign : sourceInstances<Target>(ctx)) {
         auto observed = observe(*assign, ctx,
             field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("inci", [](const Target& value) { return value.getInci().value_or(0); }),

@@ -16,7 +16,9 @@
 #include <vector>
 
 #include "coverage/common/font_info.h"
+#include "coverage/identity.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/CommonClasses.h"
 #include "musx/musx.h"
@@ -422,11 +424,11 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
                           const musx::dom::DocumentPtr& companionDocument)
 {
     using TextBlock = musx::dom::others::TextBlock;
+    using TextBlockKey = std::pair<musx::dom::Cmper, musx::dom::Cmper>;
     std::map<std::string, ReferentComparison> result;
-    std::map<musx::dom::Cmper, std::shared_ptr<const TextBlock>> companionByCmper;
-    for (const auto& item :
-         companionDocument->getOthers()->getArray<TextBlock>(musx::dom::SCORE_PARTID)) {
-        companionByCmper.emplace(item->getCmper(), item);
+    std::map<TextBlockKey, std::shared_ptr<const TextBlock>> companionByKey;
+    for (const auto& item : sourceInstances<TextBlock>(companionDocument)) {
+        companionByKey.emplace(TextBlockKey{item->getSourcePartId(), item->getCmper()}, item);
     }
     const auto rawText =
         [](const musx::dom::DocumentPtr& document,
@@ -440,11 +442,12 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
         const auto text = document->getTexts()->get<musx::dom::texts::BlockText>(block->textId);
         return text ? std::optional(text->text) : std::nullopt;
     };
-    for (const auto& sourceBlock :
-         sourceDocument->getOthers()->getArray<TextBlock>(musx::dom::SCORE_PARTID)) {
-        const auto companion = companionByCmper.find(sourceBlock->getCmper());
-        if (companion == companionByCmper.end()) continue;
-        const auto prefix = "text_blocks[cmper=" + std::to_string(sourceBlock->getCmper()) + ']';
+    for (const auto& sourceBlock : sourceInstances<TextBlock>(sourceDocument)) {
+        const auto key = TextBlockKey{sourceBlock->getSourcePartId(), sourceBlock->getCmper()};
+        const auto companion = companionByKey.find(key);
+        if (companion == companionByKey.end()) continue;
+        const auto prefix = "text_blocks[" + partIdentityPrefix(sourceBlock->getSourcePartId()) +
+                            "cmper=" + std::to_string(sourceBlock->getCmper()) + ']';
         const auto sourceText = rawText(sourceDocument, sourceBlock);
         const auto companionText = rawText(companionDocument, companion->second);
         if (!sourceText && !companionText) continue;

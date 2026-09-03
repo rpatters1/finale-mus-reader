@@ -17,8 +17,7 @@ Value observeMeasureGraphicAssignments(const SurveyContext& ctx)
 {
     using Target = musx::dom::details::MeasureGraphicAssign;
     Value::Array result;
-    for (const auto& assign : ctx.document->getDetails()
-            ->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& assign : sourceInstances<Target>(ctx)) {
         result.push_back(observe(*assign, ctx,
             field("cmper1", [](const Target& value) { return value.getCmper1(); }),
             field("cmper2", [](const Target& value) { return value.getCmper2(); }),

@@ -42,7 +42,8 @@ classifyFretboardGroupDifference(const DifferenceContext& context)
         context.byteOrder != finale_mus_reader::ByteOrder::BigEndian) {
         return std::nullopt;
     }
-    static const std::regex reference(R"(^fretboard_groups\[cmper=\d+,inci=\d+\]\.fret_inst_id$)");
+    static const std::regex reference(
+        R"(^fretboard_groups\[(?:part_id=\d+,)?cmper=\d+,inci=\d+\]\.fret_inst_id$)");
     if (std::regex_match(context.path.begin(), context.path.end(), reference) &&
         context.sourceValue.isInteger() && context.companionValue.isInteger()) {
         const auto source = context.sourceValue.asInteger();
@@ -52,7 +53,8 @@ classifyFretboardGroupDifference(const DifferenceContext& context)
             return DifferenceClassification::FinaleUpgradeLoss;
         }
     }
-    static const std::regex name(R"(^fretboard_groups\[cmper=\d+,inci=\d+\]\.name$)");
+    static const std::regex name(
+        R"(^fretboard_groups\[(?:part_id=\d+,)?cmper=\d+,inci=\d+\]\.name$)");
     if (std::regex_match(context.path.begin(), context.path.end(), name) &&
         context.sourceValue.isString() && context.companionValue.isString() &&
         hasByteSwappedFretboardSuffix(context.sourceValue.asString(),
@@ -66,7 +68,7 @@ Value observeFretboardGroups(const SurveyContext& ctx)
 {
     using Target = musx::dom::others::FretboardGroup;
     Value::Array result;
-    for (const auto& group : ctx.document->getOthers()->getArray<Target>(musx::dom::SCORE_PARTID)) {
+    for (const auto& group : sourceInstances<Target>(ctx)) {
         result.emplace_back(observe(
             *group, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
             field("inci", [](const Target& value) { return value.getInci().value_or(0); }),

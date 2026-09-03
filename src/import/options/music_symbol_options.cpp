@@ -302,7 +302,7 @@ void importMusicSymbolOptions(const ImportContext& context)
         const auto rows = context.index.getClassOthers().getArray(
             unicodeMusicSymbolsClass, GLOBALS_CMPER);
         if (rows.size() == 1) {
-            const auto payload = context.index.getClassOthers().payloadOf(rows.front());
+            const auto payload = context.index.getClassOthers().effectivePayloadOf(rows.front());
             const auto expectedSize = unicodeMusicSymbolsOffset
                 + fields.size() * unicodeCodepointSize
                 + unicodeMusicSymbolsTrailerSize;

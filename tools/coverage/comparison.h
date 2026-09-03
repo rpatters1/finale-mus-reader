@@ -21,6 +21,7 @@ struct ClassComparison
     std::uint64_t expected{};
     std::uint64_t unexpected{};
     std::uint64_t sourceOnly{};
+    std::uint64_t sourceOnlyPart{};
     std::uint64_t companionOnly{};
 };
 

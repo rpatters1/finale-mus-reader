@@ -32,22 +32,27 @@ class ClassStats:
     expected: int = 0
     unexpected: int = 0
     source_only: int = 0
+    source_only_part: int = 0
     companion_only: int = 0
 
     def add(self, values: list[int], epoch: str) -> None:
-        if len(values) != 5:
-            raise ValueError("comparison class counts must contain five values")
+        if len(values) not in (5, 6):
+            raise ValueError("comparison class counts must contain five or six values")
         self.same += values[0]
         if epoch == CODA_EPOCH:
             self.coda_expected += values[1]
         self.expected += values[1]
         self.unexpected += values[2]
         self.source_only += values[3]
-        self.companion_only += values[4]
+        if len(values) == 6:
+            self.source_only_part += values[4]
+            self.companion_only += values[5]
+        else:
+            self.companion_only += values[4]
 
     def values(self) -> list[int]:
         return [self.same, self.expected, self.unexpected,
-            self.source_only, self.companion_only]
+            self.source_only, self.source_only_part, self.companion_only]
 
 
 def read_rows(path: Path, show_progress: bool) -> Iterator[dict[str, Any]]:
@@ -200,7 +205,7 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
     print_table("Expected differences", ["rule", *expected_epochs, "total"], expected_rows)
 
     headers = ["class", "same", "coda-expected-diff", "expected-diff", "unexpected-diff",
-        "reader-only", "companion-only", "total"]
+        "reader-only-score", "reader-only-part", "companion-only", "total"]
     pool_rows: dict[str, list[list[str]]] = {}
     ordered_pools = [pool for pool in ("options", "others", "details", "texts")
         if pool in classes]
@@ -230,7 +235,8 @@ def report(rows: Iterable[dict[str, Any]], max_unexpected: int) -> bool:
         printed = True
     all_classes = [stats for pool_classes in classes.values() for stats in pool_classes.values()]
     totals = [sum(getattr(value, field) for value in all_classes)
-        for field in ("same", "expected", "unexpected", "source_only", "companion_only")]
+        for field in ("same", "expected", "unexpected", "source_only", "source_only_part",
+            "companion_only")]
     coda_expected_total = sum(value.coda_expected for value in all_classes)
     expected_coda_total = sum(expected_by_epoch.get(CODA_EPOCH, Counter()).values())
     if coda_expected_total != expected_coda_total:

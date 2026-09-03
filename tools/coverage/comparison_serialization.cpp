@@ -148,7 +148,7 @@ void writeCompactComparison(std::ostream& out, const ComparisonResult& compariso
         for (const auto& [name, counts] : classes) {
             out << (firstClass ? "" : ",") << jsonString(name) << ":[" << counts.same << ','
                 << counts.expected << ',' << counts.unexpected << ',' << counts.sourceOnly << ','
-                << counts.companionOnly << ']';
+                << counts.sourceOnlyPart << ',' << counts.companionOnly << ']';
             firstClass = false;
         }
         out << '}';

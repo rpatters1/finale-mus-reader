@@ -218,3 +218,30 @@ F2012-F372-noteopts.mus
     survive unchanged: class 0x003a words 0--2 contain 3, -5, 7, and class 0x0037
     words 3--4 contain -23, -47. This staged source links the controlled fixed-row
     locations to their Unicode-era class-record replacements.
+
+F2012-noteartexp.mus
+    sha256 4ffcb6b07d802e7cc2f1d0a8313e484a074bb0e099665ead8c23c3387a22c830
+-finale27/F2012-noteartexp.musx
+    sha256 844b927b851ec77c3860e9ecdbeabe0bb9226c2f0cb88d7f157a4961e5c2c05a
+    Controlled baseline containing one note expression in the score. The zlib others stream
+    contains class 0x00b1 cmper 1 only for part 0; the companion has no part-specific
+    note-expression element.
+
+F2012-noteartexp-unlnk.mus
+    sha256 34ac67494523e58c1939ab390910095cacb971c889b00309a216d5fead421690
+-finale27/F2012-noteartexp-unlnk.musx
+    sha256 31627bf26b1d8c4b0d09d489b0bb0ca9d63dd795ae13d0fe3bb97edf000bae2e
+    From the baseline, used Unlink Expression Object in part 1 without moving or otherwise
+    editing the expression. Finale adds a part-1 class 0x00b1 cmper 1 record. Its 24-byte primary
+    payload equals the score snapshot. Its same-sized continuation repeats the length, contains
+    stable framing/constant words, and leaves the edit-specific mask group clear. The companion
+    represents the part element as shared.
+
+F2012-noteartexp-unlnk-move.mus
+    sha256 4a7e05d0278fdb3a1d280c7b37060aa27094fbca85b21316b272cdf18fce46e4
+-finale27/F2012-noteartexp-unlnk-move.musx
+    sha256 0553e198c13b82c5cdbf36c7afd86ed20ff23cdd16cd199a1a08650cf0bfda1d
+    From the unlinked fixture, moved the expression 24 EVPU horizontally in part 1. The part
+    record's primary horizontal offset and one continuation mask group change; the companion
+    remains shared. Together the pair shows that unlink creates the partial snapshot with an
+    initially clear mask and a later edit marks the affected group.

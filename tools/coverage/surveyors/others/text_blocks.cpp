@@ -64,8 +64,7 @@ Value observeTextBlocks(const SurveyContext& ctx)
     using TextBlock = musx::dom::others::TextBlock;
 
     Value::Array result;
-    for (const auto& block :
-         ctx.document->getOthers()->getArray<TextBlock>(musx::dom::SCORE_PARTID)) {
+    for (const auto& block : sourceInstances<TextBlock>(ctx)) {
         result.push_back(observe(
             *block, ctx, field("cmper", [](const TextBlock& value) { return value.getCmper(); }),
             field("text_id", &TextBlock::textId), field("shape_id", &TextBlock::shapeId),

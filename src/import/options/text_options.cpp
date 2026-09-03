@@ -487,7 +487,7 @@ InsertBlock readInsertBlock(
         if (!row) {
             return result;
         }
-        const auto payload = index.getClassOthers().payloadOf(*row);
+        const auto payload = index.getClassOthers().effectivePayloadOf(*row);
         result.present = true;
         result.bytes.assign(payload.begin(), payload.end());
         // The payload's own length states the layout: Finale 2007-2010 write 96 bytes and

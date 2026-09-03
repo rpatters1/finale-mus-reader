@@ -151,7 +151,7 @@ std::size_t tupleCount(const FontOptionsLayout& layout,
     if (!row) {
         return 0;
     }
-    const auto bytes = index.getClassOthers().payloadOf(*row);
+    const auto bytes = index.getClassOthers().effectivePayloadOf(*row);
     if (const auto trailing = bytes.size() % tupleByteSize; trailing != 0) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,"Ignored " + std::to_string(trailing)
             + " trailing byte(s) after the last complete legacy font-options tuple."});

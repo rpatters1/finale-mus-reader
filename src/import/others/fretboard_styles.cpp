@@ -42,13 +42,14 @@ void importFretboardStyles(const ImportContext& context)
     const auto source = selectRecordFamilySource(context, context.index.getOthers(),
         context.index.getClassOthers(), fretboardStyleTag, fretboardStyleClass);
     if (!source) return;
-    for (const auto cmper : source->pool->cmpersForTag(source->identity)) {
-        const auto rows = source->pool->getArray(source->identity, cmper);
+    for (const auto [partId, cmper] : recordKeys(*source)) {
+        const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) continue;
         const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() < fretboardStyleRecordSize) continue;
-        auto target = std::make_shared<FretboardStyleTarget>(context.document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+        auto target = createOthersRecordTarget<FretboardStyleTarget>(context.document, *source,
+                                                                     rows.front(), cmper);
+        if (!target) continue;
         target->showLastFret = payloadWord(payload, 0, context.profile.byteOrder);
         target->rotate = payloadWord(payload, 2, context.profile.byteOrder);
         target->fingNumWhite = payloadWord(payload, 4, context.profile.byteOrder);
@@ -90,7 +91,7 @@ void importFretboardStyles(const ImportContext& context)
             fretboardStyleNumberTextOffset, fretboardStyleNumberTextSize),
             context.profile.platform);
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FretboardStyleTarget>(musx::dom::SCORE_PARTID, cmper);
+        const auto key = instanceKey<FretboardStyleTarget>(partId, cmper);
         context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
         const auto report = [&](std::string member, auto value) {
             FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),

@@ -16,6 +16,7 @@
 
 #include "coverage/common/font_info.h"
 #include "coverage/comparison_text.h"
+#include "coverage/identity.h"
 #include "coverage/support/source_gate.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/CommonClasses.h"
@@ -80,6 +81,7 @@ bool isNoncontentKey(std::string_view key)
     static const std::unordered_set<std::string> exact = {"origin",
                                                           "index",
                                                           "cmper",
+                                                          "part_id",
                                                           "_report_match_key",
                                                           "instruction_count",
                                                           "value_count",
@@ -117,6 +119,13 @@ bool isExcludedPath(std::string_view path)
     return false;
 }
 
+std::string listPartPrefix(const Value& item)
+{
+    const auto* partId = item.find("part_id");
+    return partId && partId->isInteger() ? partIdentityPrefix(partId->asInteger())
+                                         : std::string{};
+}
+
 std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& item)
 {
     if (!item.isObject()) return std::nullopt;
@@ -124,19 +133,28 @@ std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& 
         const auto* value = item.find(key);
         return value && value->isInteger() ? value : nullptr;
     };
+    const auto partPrefix = listPartPrefix(item);
     if (integer("cmper1") && integer("cmper2") && integer("inci")) {
         return std::pair{"identity",
-                         "cmper1=" + std::to_string(integer("cmper1")->asInteger()) +
+                         partPrefix + "cmper1=" +
+                             std::to_string(integer("cmper1")->asInteger()) +
                              ",cmper2=" + std::to_string(integer("cmper2")->asInteger()) +
                              ",inci=" + std::to_string(integer("inci")->asInteger())};
     }
     if (integer("cmper") && integer("inci")) {
-        return std::pair{"identity", "cmper=" + std::to_string(integer("cmper")->asInteger()) +
-                                         ",inci=" + std::to_string(integer("inci")->asInteger())};
+        return std::pair{"identity", partPrefix + "cmper=" +
+                                         std::to_string(integer("cmper")->asInteger()) +
+                                         ",inci=" +
+                                         std::to_string(integer("inci")->asInteger())};
     }
     for (const auto key : {"cmper", "number", "index"}) {
-        if (const auto* value = integer(key))
-            return std::pair{std::string(key), std::to_string(value->asInteger())};
+        if (const auto* value = integer(key)) {
+            if (partPrefix.empty()) {
+                return std::pair{std::string(key), std::to_string(value->asInteger())};
+            }
+            return std::pair{"identity",
+                partPrefix + key + "=" + std::to_string(value->asInteger())};
+        }
     }
     return std::nullopt;
 }
@@ -150,11 +168,16 @@ std::optional<std::pair<std::string, std::string>> listKey(std::string_view path
         }
     }
     if (path == "font_definitions.definitions" && item.isObject()) {
+        const auto partPrefix = listPartPrefix(item);
         if (const auto* cmper = item.find("cmper");
-            cmper && cmper->isInteger() && cmper->asInteger() == 0)
-            return std::pair{"cmper", "0"};
+            cmper && cmper->isInteger() && cmper->asInteger() == 0) {
+            if (partPrefix.empty()) return std::pair{"cmper", "0"};
+            return std::pair{"identity", partPrefix + "cmper=0"};
+        }
         if (const auto* name = item.find("normalized_name"); name && name->isString()) {
-            return std::pair{"normalized_name", canonicalFontName(name->asString())};
+            const auto normalized = canonicalFontName(name->asString());
+            if (partPrefix.empty()) return std::pair{"normalized_name", normalized};
+            return std::pair{"identity", partPrefix + "normalized_name=" + normalized};
         }
     }
     if (surveyorPool(surveyorClass(path)) == "texts" && item.isObject()) {
@@ -194,9 +217,12 @@ std::vector<std::string> listSegments(const Value::Array& items, std::string_vie
 }
 
 void collectLeaves(const Value& value, std::string path, std::string origin, bool includeOrigins,
-                   Leaves& result)
+                   bool partObject, Leaves& result, std::set<std::string>* partLeaves)
 {
     if (value.isObject()) {
+        if (const auto* partId = value.find("part_id"); partId && partId->isInteger()) {
+            partObject = partId->asInteger() != musx::dom::SCORE_PARTID;
+        }
         if (includeOrigins) {
             if (const auto* objectOrigin = value.find("origin");
                 objectOrigin && objectOrigin->isString())
@@ -217,15 +243,17 @@ void collectLeaves(const Value& value, std::string path, std::string origin, boo
                     childOrigin = found->asString();
                 }
             }
-            collectLeaves(child, childPath, childOrigin, includeOrigins, result);
+            collectLeaves(child, childPath, childOrigin, includeOrigins, partObject, result,
+                          partLeaves);
         }
     } else if (value.isArray()) {
         const auto segments = listSegments(value.asArray(), path);
         for (std::size_t index = 0; index < value.asArray().size(); ++index) {
             collectLeaves(value.asArray()[index], path + segments[index], origin, includeOrigins,
-                          result);
+                          partObject, result, partLeaves);
         }
     } else {
+        if (partObject && partLeaves) partLeaves->insert(path);
         result.insert_or_assign(std::move(path), std::pair{value, std::move(origin)});
     }
 }
@@ -308,10 +336,13 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         const auto companionClass = companion.find(className);
         Leaves sourceLeaves;
         Leaves companionLeaves;
+        std::set<std::string> sourcePartLeaves;
         if (sourceClass != source.end())
-            collectLeaves(sourceClass->second, className, {}, true, sourceLeaves);
+            collectLeaves(sourceClass->second, className, {}, true, false, sourceLeaves,
+                          &sourcePartLeaves);
         if (companionClass != companion.end())
-            collectLeaves(companionClass->second, className, {}, false, companionLeaves);
+            collectLeaves(companionClass->second, className, {}, false, false, companionLeaves,
+                          nullptr);
         std::set<std::string> paths;
         for (const auto& [path, unused] : sourceLeaves)
             if (!isClassifierMetadataPath(path)) paths.insert(path);
@@ -455,7 +486,11 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                                          origin});
                 }
             } else if (category == DifferenceCategory::ReaderOnly) {
-                ++stats.sourceOnly;
+                if (sourcePartLeaves.contains(path)) {
+                    ++stats.sourceOnlyPart;
+                } else {
+                    ++stats.sourceOnly;
+                }
             } else {
                 ++stats.companionOnly;
             }
