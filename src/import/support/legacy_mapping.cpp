@@ -305,12 +305,8 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
     } else {
         value = static_cast<std::int8_t>(payload[source.wordSlot]);
     }
-    if (source.bits.bitCount != 0) {
-        const auto mask = (std::uint64_t{1} << source.bits.bitCount) - 1U;
-        value = static_cast<std::int64_t>(
-            (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
-    }
-    return ResolvedValue{value, row->blockOffset, row->decodedOffset};
+    return ResolvedValue{extractBits(value, source.bits), row->blockOffset,
+        row->decodedOffset};
 }
 
 // Reads text from a class-identified record: the payload runs to its own end, so the name
@@ -368,12 +364,8 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         value = first->value;
     }
 
-    if (source.bits.bitCount != 0) {
-        const auto mask = (std::uint64_t{1} << source.bits.bitCount) - 1U;
-        value = static_cast<std::int64_t>(
-            (static_cast<std::uint64_t>(value) >> source.bits.firstBit) & mask);
-    }
-    return ResolvedValue{value, first->blockOffset, first->decodedOffset};
+    return ResolvedValue{extractBits(value, source.bits), first->blockOffset,
+        first->decodedOffset};
 }
 
 // Character payloads are not byte-order sensitive, so text is assembled from the raw bytes

@@ -46,7 +46,7 @@ const std::unordered_set<std::string> metadataKeys = {
     "header",    "warning_count", "diagnostics", "duration_ms",    "timings",
     "companion", "finder_type",   "error"};
 
-const std::unordered_set<std::string> excludedClasses = {"header", "layer_atts", "relationships"};
+const std::unordered_set<std::string> excludedClasses = {"header", "relationships"};
 
 bool startsWith(std::string_view value, std::string_view prefix)
 {

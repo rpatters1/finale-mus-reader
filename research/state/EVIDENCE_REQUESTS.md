@@ -288,6 +288,17 @@ nowhere else in the document. Three outcomes are each decisive: the companion ca
 and size on all four name types (fan-out confirmed), on `StaffNames` only (fan-out should be
 dropped), or on none (Finale 27 genuinely discards `Name`, and the divergence is deliberate).
 
+### C11 — Supplied/Analyzed — settles when Finale 3.x writes layer attributes
+
+Supplied as `tests/evidence/F372/F372-layer-adjrests.*`. Finale 3.7.2 writes the `LA` row, in the
+same layout every later fixed-row release uses, but only once a layer setting leaves its default:
+the fixture's only decoded change from its baseline sibling is four new rows. It also fixes the
+era's defaults, because enabling one checkbox produced a flag word with only that bit set. See
+[`../format/others/layer_attributes.md`](../format/others/layer_attributes.md).
+
+Still wanted for the same class: a controlled Coda-era pair, since no document of that era
+carrying the row has been seen and Finale 2.6.3 has two layers to store.
+
 ### S1 — Supplied/Analyzed — settles the pre-Finale-3.5 stem lengths
 
 Two controlled Finale 1.0.0 saves are now tracked as `tests/evidence/F100/F100-stemopts-changed.*`

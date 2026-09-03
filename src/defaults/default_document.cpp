@@ -121,7 +121,8 @@ std::size_t countAccepted(
 ParsedDefaultDocument parseDefault(
     XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform)
 {
-    constexpr std::size_t expectedLayerAttributes = 4;
+    // The baseline seeds exactly the modern layer range; musxdom names its size.
+    constexpr auto expectedLayerAttributes = static_cast<std::size_t>(musx::dom::MAX_LAYERS);
 
     ParsedDefaultDocument result;
     result.platform = platform == SourcePlatform::Windows
@@ -165,7 +166,8 @@ ParsedDefaultDocument parseDefault(
         return node->getTagName() == musx::dom::others::LayerAttributes::XmlNodeName;
     };
     if (countAccepted(result.others, result.optionLikeOthersFilter) != expectedLayerAttributes) {
-        throw std::runtime_error("Embedded default must contain exactly four layer attributes");
+        throw std::runtime_error("Embedded default must contain exactly "
+            + std::to_string(expectedLayerAttributes) + " layer attributes");
     }
     return result;
 }
