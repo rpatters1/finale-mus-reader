@@ -347,7 +347,10 @@ unchanged across Finale 2000, 2001–2006, 2007–2012, and the 26.2 compatibili
 
 **Confirmed** by running the reader over all 1,218 direct corpus files, last measured
 2026-08-09. Eight option mappings are promoted: four `MusicSpacingOptions` fields from selector
-`94(65534)` and the four `layerAtts.restOffset` values from `LA`. Font definitions are recovered
+`94(65534)` and the four `layerAtts` objects from `LA`, whose rest offset was the only recovered
+member when this was measured; the class is now complete, and its own layout, flag word, and
+release coverage are in
+[`../format/others/layer_attributes.md`](../format/others/layer_attributes.md). Font definitions are recovered
 separately and are not counted here; see
 [font_definitions.md](../format/others/font_definitions.md#font-definitions).
 
@@ -369,6 +372,12 @@ Three era facts follow:
   recover, and the four `layerAtts` objects correctly keep their Finale 27 default rest offsets.
   This is the fallback strategy working as intended, and `ImportReport` records those four values
   as synthesized rather than recovered.
+  **Refined 2026-09-03:** a release writes the row only once a layer setting leaves its default,
+  which is why the 24 purpose-built Finale 3.7.2 fixtures in `tracked-evidence` carry none while
+  these 28 authored files all do. The reader now supplies the era's own behavior for a layer with
+  no row rather than the Finale 27 default, so the sentence above about synthesized rest offsets
+  no longer describes what it does; see
+  [`../format/others/layer_attributes.md`](../format/others/layer_attributes.md).
 - **Ten Finale 97 documents carry no `LA` records** even though layers existed by then. That is a
   separate and unexplained case, and is **open**.
 - **Selector `94` is not observed before Finale 2000.** Finale 3.0 through 97 recover layer

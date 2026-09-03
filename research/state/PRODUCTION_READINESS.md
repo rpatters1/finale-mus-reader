@@ -132,8 +132,11 @@ incrementally without presenting inferred upgrade behavior as source data.
 
 **Status:** gap. **Confidence:** confirmed 2026-08-09.
 
-Eight values are recovered: four `layerAtts.restOffset` and four
-`MusicSpacingOptions` fields. `research/data/legacy_option_mappings.csv` holds
+Eight values are recovered: the four `layerAtts` objects and four
+`MusicSpacingOptions` fields. The layer objects are now complete rather than the rest offset
+alone; see
+[`../format/others/layer_attributes.md`](../format/others/layer_attributes.md).
+`research/data/legacy_option_mappings.csv` holds
 437 distilled field mappings and
 `research/data/legacy_direct_option_blocks.csv` five direct blocks. Everything
 not in that slice silently remains a Finale 27 default.
@@ -533,7 +536,7 @@ Classification as of 2026-08-09:
 
 | Tag | musxdom type | Seed? | Rationale |
 | --- | --- | --- | --- |
-| `layerAtts` | `LayerAttributes` | **yes** | Option-like; currently the entire allowlist. |
+| `layerAtts` | `LayerAttributes` | **yes** | Option-like; the entire allowlist. Overlaid, not replaced; see [`../format/others/layer_attributes.md`](../format/others/layer_attributes.md). |
 | `fontName` | `FontDefinition` | never | Referenced by seeded options, but must come from the MUS file; see P0.2. |
 | `shapeDef`, `shapeData`, `shapeList` | ShapeDesigner | never | Referenced by seeded options, but the ids are not transferable; see P2.2. |
 | `markingsCategory`, `markingsCategoryName`, `categoryStaffListScore`, `categoryStaffListParts` | category set | no | See P2.1. |

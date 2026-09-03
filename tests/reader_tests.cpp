@@ -10,6 +10,7 @@
 #include <cstring>
 #include <filesystem>
 #include <limits>
+#include <map>
 #include <stdexcept>
 #include <set>
 #include <string>
@@ -162,10 +163,16 @@ std::vector<std::uint8_t> makeUncompressedMus()
     constexpr auto byteOrder = ByteOrder::LittleEndian;
     auto result = makeBanner("2000", "WIN", byteOrder);
     std::vector<std::uint8_t> others;
-    appendOther(others, 0, "LA", words(11, 0, 0, 0, 0, 0), byteOrder);
+    // The flag word carries every layer boolean. Layer 0 takes the group the layer dialog has
+    // always had, layer 3 takes the low pair and the hidden-notes test, which no tracked
+    // fixture sets, and layers 1 and 2 leave it clear.
+    appendOther(others, 0, "LA", words(11, 0, 0, 0, 0, 0x0f80), byteOrder);
     appendOther(others, 1, "LA", words(-12, 0, 0, 0, 0, 0), byteOrder);
     appendOther(others, 2, "LA", words(13, 0, 0, 0, 0, 0), byteOrder);
-    appendOther(others, 3, "LA", words(-14, 0, 0, 0, 0, 0), byteOrder);
+    appendOther(others, 3, "LA", words(-14, 0, 0, 0, 0, 0x4003), byteOrder);
+    // The first comparator past the modern layer range, which musxdom reads no meaning into and
+    // the baseline never seeded. It is still something the file says, so the import must carry it.
+    appendOther(others, musx::dom::MAX_LAYERS, "LA", words(15, 0, 0, 0, 0, 0x0080), byteOrder);
     appendOther(others, MUSX_GLOBALS_CMPER, "94", words(2, 361, 1801, 13, 49, 0), byteOrder);
     appendUncompressedBlock(result, 1, others, byteOrder);
     appendUncompressedBlock(result, 2, {}, byteOrder);
@@ -449,8 +456,14 @@ void expectNoScoreContent(const ImportResult& result)
         "Output contains fallback measure number regions");
     expect(!result.document->getEntries()->get(1), "Output contains fallback entries");
     expect(result.document->getInstruments().empty(), "Output contains fallback instruments");
-    expect(result.document->getOthers()->getArray<others::LayerAttributes>(SCORE_PARTID).size() == 4,
-        "Output does not contain the four option-like layer attributes");
+    // The four option-like layer attributes are always present, seeded or recovered. The count
+    // is not asserted: a source is free to carry comparators beyond them, and those are imported
+    // rather than discarded, so a total above four is source content and not a fallback leak.
+    for (musx::dom::Cmper layer = 0; layer < musx::dom::MAX_LAYERS; ++layer) {
+        expect(static_cast<bool>(result.document->getOthers()
+                   ->get<others::LayerAttributes>(SCORE_PARTID, layer)),
+            "Output is missing option-like layer attributes " + std::to_string(layer));
+    }
 }
 
 void testControlledDclFile()
@@ -1102,6 +1115,177 @@ std::vector<std::uint8_t> makeCodaBannerPools(const std::vector<std::uint32_t>& 
     return result;
 }
 
+// Every persisted LayerAttributes member, paired with the flag bit that supplies it. The
+// rest offset has no bit and is checked separately.
+struct LayerFlagMember
+{
+    const char* member;
+    bool musx::dom::others::LayerAttributes::*field;
+    std::uint16_t mask;
+};
+
+const LayerFlagMember layerFlagMembers[] = {
+    {"ignoreHiddenLayers", &musx::dom::others::LayerAttributes::ignoreHiddenLayers, 0x0001},
+    {"hideLayer", &musx::dom::others::LayerAttributes::hideLayer, 0x0002},
+    {"freezTiesToStems", &musx::dom::others::LayerAttributes::freezTiesToStems, 0x0080},
+    {"onlyIfOtherLayersHaveNotes",
+        &musx::dom::others::LayerAttributes::onlyIfOtherLayersHaveNotes, 0x0100},
+    {"useRestOffset", &musx::dom::others::LayerAttributes::useRestOffset, 0x0200},
+    {"freezeStemsUp", &musx::dom::others::LayerAttributes::freezeStemsUp, 0x0400},
+    {"freezeLayer", &musx::dom::others::LayerAttributes::freezeLayer, 0x0800},
+    {"playback", &musx::dom::others::LayerAttributes::playback, 0x1000},
+    {"affectSpacing", &musx::dom::others::LayerAttributes::affectSpacing, 0x2000},
+    {"ignoreHiddenNotesOnly",
+        &musx::dom::others::LayerAttributes::ignoreHiddenNotesOnly, 0x4000},
+};
+
+// Asserts one layer against the record it came from, and asserts that the report carries an
+// entry for every member whatever this file supplied. The second half is what keeps a member
+// from quietly leaving the recovery model: a field with no entry is invisible to every
+// coverage survey, and its absence would otherwise look exactly like a default.
+// Members whose origin differs from the rest of their layer.
+//
+// A layer with no record reaches ignoreHiddenLayers and hideLayer without asserting anything,
+// because the baseline already holds false for both, so those stay Finale27Default while the
+// members that disagree become LegacyBehavior.
+const std::map<std::string, ValueOrigin> noRecordOrigins = {
+    {"ignoreHiddenLayers", ValueOrigin::Finale27Default},
+    {"hideLayer", ValueOrigin::Finale27Default},
+    {"playback", ValueOrigin::Finale27Default},
+    {"affectSpacing", ValueOrigin::Finale27Default}};
+
+// Playback and music spacing are decided by the era below Finale 2002 whatever the file stores,
+// but the baseline already holds the value the era implies, so nothing is asserted for them.
+const std::map<std::string, ValueOrigin> preFinale2002Origins = {
+    {"playback", ValueOrigin::Finale27Default},
+    {"affectSpacing", ValueOrigin::Finale27Default}};
+
+void expectLayer(const ImportResult& result, musx::dom::Cmper cmper, int restOffset,
+    std::uint16_t flags, ValueOrigin origin, const std::string& label,
+    const std::map<std::string, ValueOrigin>& overrides = {})
+{
+    const auto layer = result.document->getOthers()
+        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, cmper);
+    const auto where = label + " layer " + std::to_string(cmper);
+    expect(static_cast<bool>(layer), where + " is missing");
+    expect(layer->restOffset == restOffset, where + " rest offset is wrong");
+    expect(field(result, "others.layerAtts[" + std::to_string(cmper) + "].restOffset").origin
+            == origin,
+        where + " rest offset origin is wrong");
+    for (const auto& flag : layerFlagMembers) {
+        const bool expected = (flags & flag.mask) != 0;
+        expect(layer.get()->*flag.field == expected,
+            where + " " + flag.member + " is wrong");
+        const auto found = overrides.find(flag.member);
+        const auto expectedOrigin = found != overrides.end() ? found->second : origin;
+        expect(field(result,
+                   "others.layerAtts[" + std::to_string(cmper) + "]." + flag.member).origin
+                == expectedOrigin,
+            where + " " + flag.member + " origin is wrong");
+    }
+}
+
+// One fixture per claimed physical layout and byte order, plus the era that stores no record
+// at all. The flag word is the whole boolean surface of the class, so a layout that reached
+// the wrong word would show up as ten wrong members rather than one.
+void testLayerAttributes()
+{
+    const auto read = [](const char* relative) {
+        return Reader::readWithReport<TestXmlDocument>(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+    };
+
+    // Fixed rows, uncompressed, big-endian. The four flags of the original layer dialog.
+    // Finale 97 has no playback or music-spacing setting, so both bits are clear in the file and
+    // the era supplies them instead: 0x0f80 becomes 0x3f80.
+    const auto f97 = read("evidence/F97/Fin97-baseline.mus");
+    expectLayer(f97, 0, 4, 0x3f80, ValueOrigin::LegacyMus, "Finale 97", preFinale2002Origins);
+    expectLayer(f97, 1, -4, 0x3b80, ValueOrigin::LegacyMus, "Finale 97", preFinale2002Origins);
+    expectLayer(f97, 2, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 97", preFinale2002Origins);
+    expectLayer(f97, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 97", preFinale2002Origins);
+
+    // Fixed rows, DCL, big-endian. Playback, spacing, and the hidden-notes test are set here
+    // and clear in every earlier release.
+    const auto f2002 = read("evidence/F2002/F2002-baseline.mus");
+    expectLayer(f2002, 0, 6, 0x7f80, ValueOrigin::LegacyMus, "Finale 2002");
+    expectLayer(f2002, 1, -6, 0x7b80, ValueOrigin::LegacyMus, "Finale 2002");
+    expectLayer(f2002, 2, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2002");
+    expectLayer(f2002, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2002");
+
+    // Class records, both byte orders. The payload keeps the six-word stream the rows carried,
+    // so the flag word sits at byte offset 10.
+    const auto f2007 = read("evidence/F2007/F2007-lyric-hyphens.mus");
+    expect(f2007.report.byteOrder == ByteOrder::BigEndian,
+        "The Finale 2007 fixture is not big-endian");
+    expectLayer(f2007, 0, 6, 0x7f80, ValueOrigin::LegacyMus, "Finale 2007");
+    expectLayer(f2007, 1, -6, 0x7b80, ValueOrigin::LegacyMus, "Finale 2007");
+    expectLayer(f2007, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2007");
+
+    const auto f2012 = read("evidence/F2012/F2012-baseline.mus");
+    expect(f2012.report.byteOrder == ByteOrder::LittleEndian,
+        "The Finale 2012 fixture is not little-endian");
+    expectLayer(f2012, 0, 6, 0x7f80, ValueOrigin::LegacyMus, "Finale 2012");
+    expectLayer(f2012, 1, -6, 0x7b80, ValueOrigin::LegacyMus, "Finale 2012");
+    expectLayer(f2012, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2012");
+
+    // Finale 3.7.2 writes the record only once a layer setting leaves its default, and it is
+    // the same six-word row every later fixed-row release uses. Layers 2 and 3 carry a stored
+    // rest offset with the checkbox clear, which no other fixture exercises.
+    const auto adjrests = read("evidence/F372/F372-layer-adjrests.mus");
+    expect(adjrests.report.formatEpoch == FormatEpoch::UncompressedLegacy,
+        "The Finale 3.7.2 layer fixture was not classified as uncompressed");
+    expectLayer(adjrests, 0, 2, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
+        preFinale2002Origins);
+    expectLayer(adjrests, 1, -3, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
+        preFinale2002Origins);
+    expectLayer(adjrests, 2, 4, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
+        preFinale2002Origins);
+    expectLayer(adjrests, 3, -5, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
+        preFinale2002Origins);
+
+    // Its unmodified sibling stores no record at all. Every layer then takes the era's own
+    // behavior -- nothing set but playback and music spacing -- rather than the pinned baseline,
+    // which would assert freeze settings and a rest offset the document never had. Layers 2 and
+    // 3 reach the same values the baseline already holds, so only 0 and 1 assert anything.
+    const auto f372 = read("evidence/F372/F372-baseline.mus");
+    expectLayer(f372, 0, 0, 0x3000, ValueOrigin::LegacyBehavior, "Finale 3.7.2", noRecordOrigins);
+    expectLayer(f372, 1, 0, 0x3000, ValueOrigin::LegacyBehavior, "Finale 3.7.2", noRecordOrigins);
+    // Finale 2002 and later store both bits, so nothing is asserted and every member is read.
+    const auto f2002flags = read("evidence/F2002/F2002-baseline.mus");
+    expectLayer(f2002flags, 2, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2002 layer 2");
+    expectLayer(f372, 2, 0, 0x3000, ValueOrigin::Finale27Default, "Finale 3.7.2");
+    expectLayer(f372, 3, 0, 0x3000, ValueOrigin::Finale27Default, "Finale 3.7.2");
+
+    // The Coda-banner era stores none either, and its epoch is covered rather than gated out,
+    // so the same behavior applies there.
+    const auto f263 = read("evidence/F263/F263-baseline.mus");
+    expect(f263.report.formatEpoch == FormatEpoch::CodaBanner,
+        "The Finale 2.6.3 fixture was not classified as Coda-banner");
+    expectLayer(f263, 0, 0, 0x3000, ValueOrigin::LegacyBehavior, "Finale 2.6.3", noRecordOrigins);
+    expectLayer(f263, 3, 0, 0x3000, ValueOrigin::Finale27Default, "Finale 2.6.3");
+
+    // The synthetic little-endian fixed-row file, which is the only place the low two bits and
+    // the hidden-notes test are set without the dialog's own group beside them.
+    // The uncompressed epoch is wholly below the Finale 2002 boundary, so playback and music
+    // spacing are supplied here too, whatever the banner version claims.
+    const auto synthetic = Reader::readWithReport<TestXmlDocument>(makeUncompressedMus());
+    expectLayer(synthetic, 0, 11, 0x3f80, ValueOrigin::LegacyMus, "Synthetic",
+        preFinale2002Origins);
+    expectLayer(synthetic, 1, -12, 0x3000, ValueOrigin::LegacyMus, "Synthetic",
+        preFinale2002Origins);
+    expectLayer(synthetic, 3, -14, 0x7003, ValueOrigin::LegacyMus, "Synthetic",
+        preFinale2002Origins);
+    // The comparator the baseline has no object for is pooled from the record itself, so every
+    // member is source-owned and nothing about it can report a retained baseline default.
+    expect(synthetic.document->getOthers()
+            ->getAllSources<musx::dom::others::LayerAttributes>().size()
+                == musx::dom::MAX_LAYERS + 1,
+        "The layer record past the modern range did not reach the document");
+    expectLayer(synthetic, musx::dom::MAX_LAYERS, 15, 0x3080, ValueOrigin::LegacyMus, "Synthetic",
+        {{"playback", ValueOrigin::LegacyBehavior},
+            {"affectSpacing", ValueOrigin::LegacyBehavior}});
+}
+
 // An empty pool is an ordinary pool, not the end of the chain. The earliest documents store
 // nothing in their details pool and still carry an entries pool behind it, so a walk that
 // stopped on the first zero-page prologue would never reach it.
@@ -1135,6 +1319,7 @@ void testCodaBannerEmptyPool()
 
 TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
 TEST_CASE("Coda-banner empty pool", "[reader]") { testCodaBannerEmptyPool(); }
+TEST_CASE("Layer attributes", "[reader]") { testLayerAttributes(); }
 TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
 TEST_CASE("Coda blank shape definition", "[reader]")
 {

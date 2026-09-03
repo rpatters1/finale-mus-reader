@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **47 done, 3 partial, 140 to do, 190 registered musxdom classes** (verified against the registry
+- **48 done, 2 partial, 140 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-02). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and
@@ -46,16 +46,15 @@ P0.1, P0.3, and P1.4 are recorded as done or resolved.
 
 ## Known gaps and regressions
 
-- `LayerAttributes.restOffset` disagrees with its companion on 82 counts, every one of them a case
-  where the reader recovered nothing and the baseline supplied the value — the field is
-  unrecovered far more often than its coverage number suggests.
+- `LayerAttributes` is complete and agrees with its companion on every layer of every tracked
+  document. A layer with no stored record takes its era's behavior, and playback and music
+  spacing are supplied below Finale 2002, where neither setting exists.
   ([`format/others/layer_attributes.md`](format/others/layer_attributes.md))
 - 94 residual `FontOptions` disagreements remain classified but unexplained (P3.2).
 - Two companion differences are recorded rather than suppressed; the instrument errors behind them
   are worth reading before trusting a comparison script's field lookup.
   ([`investigations/regression_open_questions.md`](investigations/regression_open_questions.md))
-- `BookmarkText` and `ExpressionText` recover in pooled eras only; `LayerAttributes` is a stub
-  excluded from the completeness audit.
+- `BookmarkText` and `ExpressionText` recover in pooled eras only.
 
 ## Wanted evidence
 

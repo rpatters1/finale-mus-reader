@@ -70,6 +70,18 @@ struct BitRange
     std::uint8_t bitCount{};
 };
 
+/// @brief Narrows a decoded value to the bit range a mapping selected.
+/// @details A zero bit count returns the value unchanged, which is what makes a whole field and
+/// a bit range one code path. The shift is unsigned, so a negative word contributes its stored
+/// bits rather than its sign.
+[[nodiscard]] constexpr std::int64_t extractBits(std::int64_t value, BitRange bits)
+{
+    if (bits.bitCount == 0) return value;
+    const auto mask = (std::uint64_t{1} << bits.bitCount) - 1U;
+    return static_cast<std::int64_t>(
+        (static_cast<std::uint64_t>(value) >> bits.firstBit) & mask);
+}
+
 /// @brief Which record encoding a table reads, and therefore how its fields are addressed.
 enum class RecordEncoding : std::uint8_t
 {
@@ -654,7 +666,12 @@ struct MappingTable
     /// @brief Record identity whose comparators enumerate the objects, for @ref
     /// TargetKind::OthersFromRecords.
     records::LegacyTag recordIdentity{};
-    /// @brief Creates and pools one object, for @ref TargetKind::OthersFromRecords.
+    /// @brief Supplies the destination for one source record, for @ref
+    /// TargetKind::OthersFromRecords.
+    /// @details Called once per record identity the family carries, so the class decides what
+    /// each one means: pooling a new source-owned object is the usual answer, but a class the
+    /// baseline also seeds may return the seeded object of that identity instead and be overlaid
+    /// onto it. Returning an empty target skips the record.
     MappingTarget (*createTarget)(const musx::dom::DocumentPtr& document,
         const RecordFamilySource& source, const records::LegacyRow& row,
         std::uint16_t cmper){};

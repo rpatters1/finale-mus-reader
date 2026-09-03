@@ -11,7 +11,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**47 done, 3 partial, 140 to do, 190 total.** Verified class for class against the registry on
+**48 done, 2 partial, 140 to do, 190 total.** Verified class for class against the registry on
 2026-09-02: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -45,7 +45,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (11 done, 1 partial, 81 to do, 93 total)
+## others  (12 done, 0 partial, 81 to do, 93 total)
 
     [ ] AcciAmountFlats                                                         L1 library item
     [ ] AcciAmountSharps                                                        L1 library item
@@ -70,7 +70,7 @@ Explanation added here has to be removed again.
     [ ] KeyAttributes                                                           L1 library item
     [ ] KeyFormat                                                               L1 library item
     [ ] KeyMapArray                                                             L1 library item
-    [~] LayerAttributes                         layer_attributes.cpp            stub; completeness audit excluded
+    [x] LayerAttributes                         layer_attributes.cpp
     [ ] MarkingCategory                                                         L1 library item
     [ ] MarkingCategoryName                                                     L2 satellite
     [ ] Measure

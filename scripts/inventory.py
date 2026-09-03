@@ -135,6 +135,13 @@ def discover_sources(root: Path, excluded, sniff_content: bool) -> list[tuple[Pa
     return sorted(found, key=lambda item: norm(str(item[0].relative_to(root))))
 
 
+def corpus_fingerprint(loose_rows: list[dict]) -> str:
+    """Name the loose source population by its contents, never by its paths."""
+    digests = sorted(str(row["source_sha256"]) for row in loose_rows)
+    combined = hashlib.sha256("\n".join(digests).encode("utf-8")).hexdigest()
+    return f"corpus-{combined[:16]}"
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -339,6 +346,11 @@ def main() -> None:
         # source_* count loose files only, so these stay comparable with surveys
         # taken before archives could be included.
         "source_count": len(sources),
+        # A content-derived name for the loose source population, in the same shape as the
+        # mus-/arc- tokens: sorted so the filesystem walk order cannot change it, duplicates
+        # kept so that adding any file moves it, and archive members excluded so that a survey
+        # taken with and without archives still fingerprints the same corpus.
+        "corpus_fingerprint": corpus_fingerprint(loose),
         "source_bytes": sum(int(row["source_size"]) for row in loose),
         "export_count": len(exports),
         "matched_source_count": sum(bool(row["export_path"]) for row in rows),

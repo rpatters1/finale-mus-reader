@@ -16,7 +16,8 @@ namespace others {
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
 
-/// @brief Recovers the four others::LayerAttributes objects.
+/// @brief Recovers every others::LayerAttributes object the source stores, and supplies the
+/// era's own behavior for the layers it does not.
 void importLayerAttributes(const ImportContext& context);
 
 /// @brief Recovers source fret instrument definitions.

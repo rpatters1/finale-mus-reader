@@ -210,6 +210,26 @@ F372-F263-F100-stemdf-lines.mus / .etf / .musx
     companion preserves those values as `graceSlashWidth`, `stemWidth`, and XML
     `stemLift`, completing the two-stage migration from the original Coda floats.
 
+F372-layer-adjrests.mus / .etf / .musx
+    sha256 ae59c296f46aa085e787e1d14c198b52999103958bc4f584b99ad88a8677fd3d (.mus)
+    sha256 df29d895905d8d76066ce001433cb52835480ecde5b07e11d994421f4a62d8ce (.etf)
+    sha256 8ae7d1ce0f14cf549d134e42708b89698889ce6b63ee46fe9abd34e179fa1be3 (.musx)
+    Controlled from F372-baseline by giving all four layers a distinct "Adjust
+    Floating Rests by" value -- 2, -3, 4, -5 staff steps -- and enabling the
+    checkbox on layers 1 and 2 only (0-based 0 and 1). This is the fixture that
+    proves Finale 3.7.2 writes the `LA` record at all: the baseline carries none,
+    and this save adds four rows, `LA` cmpers 0-3, with the rest offset in word 0
+    and 0x0200 (LAYER_useRESTOFF) in word 5 of the two enabled layers. The ETF
+    repeats all four rows with the same values. The only other decoded change is
+    selectors 62 and 63 moving 415 to 414, which is incidental view state, plus
+    the `^11` save date.
+
+    Two layers therefore carry a stored rest offset with the checkbox clear,
+    which no other tracked fixture exercises, and 0x0200 occurs here without any
+    freeze flag beside it. The Finale 27 companion agrees on every member of all
+    four layers except `playback` and `affectSpacing`, extending that
+    pre-Finale-2002 disagreement back from Finale 97 to Finale 3.7.2.
+
 F372-activelayer-only.mus / .etf / .musx
     sha256 d7b7f74500574477011fedbb937f7bbe756917ca432885b28abec8c555a8a3ad (.mus)
     sha256 86d840f88166eda6d66a01b1f74d7d2980d32b8fe9b735c71daba67e60f6475b (.etf)
