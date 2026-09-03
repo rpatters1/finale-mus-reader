@@ -97,7 +97,7 @@ struct RecordFamilySource
     records::LegacyTag identity{};
     bool classRecords{};
     bool details{};
-    std::span<const CompactPartLayout> compactPartLayouts{};
+    std::span<const CompactPartLayout> compactPartLayouts;
 };
 
 /// @brief Returns the source parts that a selected family contains, score
@@ -676,7 +676,7 @@ struct MappingTable
     void (*finalizeTarget)(void* instance, const SourceProfile& profile,
         const musx::dom::DocumentPtr& document){};
     /// @brief Compact score/part payload pairs recognized by this class importer.
-    std::span<const CompactPartLayout> compactPartLayouts;
+    std::span<const CompactPartLayout> compactPartLayouts{};
 };
 
 /// @brief Creates one others object of type T and adds it to the document pool.
