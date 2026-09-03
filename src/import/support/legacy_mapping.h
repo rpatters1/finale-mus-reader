@@ -97,7 +97,7 @@ struct RecordFamilySource
     records::LegacyTag identity{};
     bool classRecords{};
     bool details{};
-    std::span<const CompactPartLayout> compactPartLayouts;
+    std::span<const CompactPartLayout> compactPartLayouts{};
 };
 
 /// @brief Returns the source parts that a selected family contains, score

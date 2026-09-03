@@ -24,10 +24,11 @@ TEST_CASE("Coverage source instances enumerate physical parts without score fall
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     auto score = std::make_shared<Target>(document, musx::dom::SCORE_PARTID,
-        ShareMode::All, 1);
+        ShareMode::All, musx::dom::Cmper{1});
     auto scoreOnly = std::make_shared<Target>(document, musx::dom::SCORE_PARTID,
-        ShareMode::All, 2);
-    auto part = std::make_shared<Target>(document, 2, ShareMode::Partial, 1);
+        ShareMode::All, musx::dom::Cmper{2});
+    auto part = std::make_shared<Target>(
+        document, musx::dom::Cmper{2}, ShareMode::Partial, musx::dom::Cmper{1});
     document->getOthers()->add(Target::XmlNodeName, std::move(score));
     document->getOthers()->add(Target::XmlNodeName, std::move(scoreOnly));
     document->getOthers()->add(Target::XmlNodeName, std::move(part));

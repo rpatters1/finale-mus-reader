@@ -96,7 +96,8 @@ void testGraphicAssignmentsAcrossEpochs()
         sharedIndex,     sharedProfile, noSource,      sharedDocument,
         sharedReference, sharedReport,  sharedPending, sharedConstruction};
     finale_mus_reader::others::importPageGraphicAssignments(sharedContext);
-    const auto sharedPart = sharedDocument->getOthers()->get<PageGraphicAssign>(2, 4, 0);
+    const auto sharedPart = sharedDocument->getOthers()->get<PageGraphicAssign>(
+        musx::dom::Cmper{2}, musx::dom::Cmper{4}, musx::dom::Inci{0});
     expectMapping(sharedPart && sharedPart->getSourcePartId() == 2 &&
                       sharedPart->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial &&
                       sharedPart->left == 777 && sharedPart->bottom == -48
@@ -105,7 +106,8 @@ void testGraphicAssignmentsAcrossEpochs()
                       && sharedPart->startPage == 4
                       && sharedPart->endPage == 4,
                   "A continued part assignment did not overlay only its unlinked fields");
-    const auto sharedRange = sharedDocument->getOthers()->get<PageGraphicAssign>(2, 0, 0);
+    const auto sharedRange = sharedDocument->getOthers()->get<PageGraphicAssign>(
+        musx::dom::Cmper{2}, musx::dom::Cmper{0}, musx::dom::Inci{0});
     expectMapping(sharedRange && sharedRange->startPage == 4 && sharedRange->endPage == 4,
                   "A linked multipage assignment did not inherit the score page range");
 
