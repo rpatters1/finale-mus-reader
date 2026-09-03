@@ -12,8 +12,11 @@ revise one layer without destabilizing the others.
 
 ## Hard rules
 
-- Read `AGENTS.md`, `research/README.md`, and `research/FORMAT_NOTES.md` before
-  changing a decoder. Follow any more specific repository guidance they identify.
+- Read `AGENTS.md`, `research/ORIENTATION.md`, and `research/STATE.md` before changing a
+  decoder, then open only the target class's own file: `src/import/<pool>/<name>.cpp` is
+  documented in `research/format/<pool>/<name>.md`, with its experiment history in
+  `research/investigations/<name>.md`. Use `research/INDEX.md` for anything else, and do not
+  read `research/` recursively. Follow any more specific repository guidance they identify.
 - Treat every locator or structure hint, including one from the user, as a hypothesis
   until supported by bytes. Preserve the hint and its provenance rather than silently
   promoting it to fact.
@@ -28,32 +31,12 @@ revise one layer without destabilizing the others.
   surveyor must enumerate every field from the first implementation, even when only a few
   have located source bytes. Do not wait for universal recovery knowledge, and do not
   advertise an untested epoch as supported.
-- **Never leave an epoch entirely uncovered by accident.** A gate that excludes a whole
-  epoch must say in a comment at the gate that the exclusion is intended and why: that
-  the era does not store the class, that it stores it somewhere still unlocated, or that
-  the evidence to place it is missing. An epoch silently absent from a gate is a defect,
-  not a scope decision, and it fails quietly: the class populates from reference defaults
-  and every field reports as synthesized, which looks exactly like a document that had
-  nothing to recover. Cover each epoch with at least one test, so that removing an epoch from
-  a gate has to break something.
-- **Prefer a structural marker to any gate.** If the record stream states which layout it is in --
-  a payload size, a collection length, a field that is quiescent in one era and packed in the next
-  -- read that rather than dating the file. Version coverage is permanently incomplete: whole
-  releases are missing from every corpus, the earliest era states no version on one platform, and a
-  version read without the container's byte order is wrong rather than absent. Prove the marker
-  against the corpus before relying on it, state what it costs on an ambiguous file, and say
-  whether a version gate would also have worked -- a preference stated as a necessity is a claim
-  that will not survive the next specimen. A test over unbounded content is a heuristic rather
-  than a marker: nothing distinguishes a header row from the first bytes of every font name a
-  user could install, so that boundary rightly stays a version range.
-- **Prefer an epoch gate to a version gate, and frame any version gate inside its epoch.** A
-  version range excludes eras nobody listed, and it fails closed on a file whose version
-  cannot be recovered — the Coda-banner era's Windows documents state a platform where its Mac
-  documents state a version, so they have none. Where a boundary really is a version, such as
-  a record layout changing at Finale 3.2 inside the uncompressed era, put the range on a table
-  already restricted to that epoch and bound it at both ends. Never invent a version to satisfy
-  a gate: a file that does not state one is telling you something, and a synthetic version
-  would be fabricated evidence.
+- **Choose the gating instrument by the hierarchy in
+  [`research/reference/decoder_rules.md`](../../../research/reference/decoder_rules.md):**
+  structural marker first, then epoch gate, then a version gate framed inside its epoch. That
+  file also states the rule that no epoch may be silently uncovered. Read it before writing a
+  gate; do not restate it here. What this skill adds is when to apply it: you are choosing the
+  instrument at Step 4, from the epoch samples of Step 3, before any table is written.
 - Treat ETF and modern MUSX companions as semantic references. They may normalize,
   synthesize, reorder, renumber, or discard source data. Where the reader deliberately
   disagrees with a companion -- keeping a value the upgrade discards, or declining to
@@ -75,18 +58,12 @@ revise one layer without destabilizing the others.
   its report over the controlled
   `tracked-evidence` survey is permitted without separate authorization; use that smallest
   reproducible cohort while developing and correcting the implementation.
-- Record recovered and synthesized values separately in `ImportReport`, and distinguish a
-  third case from both. A field that a later Finale exposes as a setting is often fixed
-  behavior in an earlier one: the value is known exactly, no record stores it, and the
-  version or epoch that introduced the setting is the boundary. Report that as
-  `ValueOrigin::LegacyBehavior`, not as a recovered value it has no bytes for and not as a
-  synthesized default it is not guessing at. Where a capture pass establishes such a field
-  before the mapping tables run, the tables leave its report entry alone rather than
-  overwriting it with a default.
-  Reserve it for a value the pinned baseline does not already supply, or supplies wrongly.
-  Where the baseline already carries what the era's behaviour implies, leave it there: the
-  baseline is generated from committed resources with recorded hashes, so asserting the same
-  value in code is a second copy of one fact rather than a safeguard against drift.
+- **Report value origin per
+  [`research/reference/options_fallback.md`](../../../research/reference/options_fallback.md),**
+  which defines `LegacyMus`, `LegacyBehavior`, `Finale27Default`, `Unmapped`, and `MusxOnly`, and
+  the rule that a value the pinned baseline already supplies is not asserted again in code. A
+  field a later Finale exposes as a setting is often fixed behavior in an earlier one; that is
+  `LegacyBehavior`, and finding its introducing version or epoch is part of Step 4.
 - **An implemented class is field-complete before it is recovery-complete.** Inventory every
   persisted musxdom field, including leaves of contained objects and every fixed collection
   element, directly from the class and its XML mapping. Give every leaf an initial reader/report
@@ -95,29 +72,14 @@ revise one layer without destabilizing the others.
   because no controlled fixture changes it. Unknown fields must therefore participate in generic
   companion comparison and produce unexpected differences when their values disagree.
 
-  Use `Unmapped` for a field that could have a legacy source but for which no source mapping has
-  been established in any layout or epoch. Use `MusxOnly` when evidence establishes that the field
-  postdates every supported legacy layout and therefore cannot be recovered. In either case its
-  value remains default-initialized for a source-owned object and remains at the seeded Finale 27
-  value for an options object. `Finale27Default` has a narrower meaning: the field is a
-  known member of the recovery model, but the applicable source layout does not supply it and no
-  legacy behavior overrides the baseline. This distinction prevents an importer that maps a field
-  in one epoch and deliberately falls back in another from looking like an importer that has never
-  investigated the field at all.
-
-  If the existing options instrumentation necessarily labels every untouched seeded value
-  `Finale27Default`, preserve that behavior only when the probe also emits an explicit structured
-  mapping status that distinguishes `unmapped` from `mapped-but-defaulted`. The probe is the
-  authority for that status; the Python report must not infer it from values, epochs, incidental
-  origins, or the presence of a mapping table. Prefer expressing `Unmapped` and `MusxOnly` directly
-  in `ValueOrigin` when that cleanly avoids a parallel status model.
-- Keep project-owned source files unity-build clean. A future build may combine many
-  class-specific translation units, and anonymous namespaces do not isolate names from
-  one another after CMake amalgamates those files. Use distinctive file-local aliases,
-  helpers, and constants. Use the instrumented development build for implementation and
-  coverage work. Run a non-instrumented build only as the final validation immediately before
-  opening a pull request, after the implementation, fixtures, tests, and coverage results have
-  stabilized. If no pull request is being opened, do not run a separate non-instrumented build.
+  Which origin each unrecovered field reports — `Unmapped`, `MusxOnly`, or `Finale27Default` — is
+  defined in [`research/reference/options_fallback.md`](../../../research/reference/options_fallback.md).
+- Keep project-owned source files unity-build clean, per
+  [`research/reference/code_conventions.md`](../../../research/reference/code_conventions.md).
+  Use the instrumented development build for implementation and coverage work. Run a
+  non-instrumented build only as the final validation immediately before opening a pull request,
+  after the implementation, fixtures, tests, and coverage results have stabilized. If no pull
+  request is being opened, do not run a separate non-instrumented build.
 - Do not commit, push, or publish unless the user separately requests it.
 
 ## Work interactively
@@ -567,10 +529,14 @@ Apply these as questions, not universal rules:
 
 ## Completion standard
 
-Before calling the implementation complete, update `research/MUSXDOM_CLASS_COVERAGE.md`:
+Before calling the implementation complete, update `research/state/MUSXDOM_CLASS_COVERAGE.md`:
 mark the class `[x]` when complete or `[~]` when partial, name its importer file, and adjust both
 the pool heading and whole-file totals. Keep explanation out of the checklist; its own preamble
 defines the terse format and routes findings to the research notes.
+
+Record the class's durable findings in `research/format/<pool>/<name>.md` and the investigation
+behind them in `research/investigations/<name>.md`, using the `maintain-documentation` skill.
+Remove any question it answered from `research/STATE.md`.
 
 After the user has approved the completed work and its pull request, identify the exact transient analysis artifacts that are unlikely to help with the next musxdom class, prompt for explicit approval, and clean up only the approved artifacts. Preserve reusable corpus inventories, path and companion mappings, and expensive archive caches.
 

@@ -2,11 +2,11 @@
 
 This catalogs numeric identifiers observed after decompressing record-framed zlib blocks. It does not claim that pre-2007 encoded bytes use the same identifiers. The proposed XML names come from corpus-wide count correlation with Finale 27 exports; conversion differences and count collisions remain possible. All candidate rankings are preserved in [`data/record_correlations.csv`](data/record_correlations.csv), and per-version raw observations in `private/generated/<survey_id>/record_catalog.csv` (local-only).
 
-Frame fields are described in [FORMAT_NOTES.md](../../FORMAT_NOTES.md). `Example offset` is relative to the decompressed zlib member, not the file.
+Frame fields are described in [zlib_blocks.md](../../format/container/zlib_blocks.md). `Example offset` is relative to the decompressed zlib member, not the file.
 
 ## Finale 2000 PDK tag reference
 
-This reference table records two-character tags identified from the publicly accessible Finale 2000 PDK at GUIDOLib commit `9f74ba9b3e287f240bbd454c2259fc3f7737c6ad`. The meanings are `public-PDK-derived`; every listed tag is also observed in the available ETF evidence. Rows marked binary-verified occur at the expected position in Finale 2000 or decoded 2002–2005 fixed rows. See FORMAT_NOTES.md for provenance and the independent framing checks.
+This reference table records two-character tags identified from the publicly accessible Finale 2000 PDK at GUIDOLib commit `9f74ba9b3e287f240bbd454c2259fc3f7737c6ad`. The meanings are `public-PDK-derived`; every listed tag is also observed in the available ETF evidence. Rows marked binary-verified occur at the expected position in Finale 2000 or decoded 2002–2005 fixed rows. See [pdk_public_evidence.md](../../reference/pdk_public_evidence.md) for provenance and [zlib_blocks.md](../../format/container/zlib_blocks.md) for the independent framing checks.
 
 | Tag | Logical meaning | Storage family | Verification |
 |---|---|---|---|

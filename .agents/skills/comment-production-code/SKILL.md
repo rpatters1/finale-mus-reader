@@ -70,14 +70,16 @@ Nothing is deleted; it moves.
 
 | Material | Home |
 |---|---|
-| How a mapping was established, and from what | `research/FORMAT_NOTES.md` |
+| How a mapping was established, and from what | `research/format/<pool>/<name>.md` |
 | What a specific fixture proves, and what it cost | `tests/evidence/<era>/provenance.txt` |
-| The investigation itself, including refuted predictions | `research/EXPERIMENT_LOG.md` |
-| What evidence is still wanted | `research/EVIDENCE_REQUESTS.md` |
+| The investigation itself, including refuted predictions | `research/investigations/<name>.md` |
+| A structural dead end worth never retrying | `research/history/FAILED_HYPOTHESES.md` |
+| What evidence is still wanted | `research/state/EVIDENCE_REQUESTS.md` |
 
 Before deleting a sentence from a comment, check it survives somewhere in that
 table. A refuted prediction is worth keeping — in the log, where the next person
-tempted by the same prediction will find it.
+tempted by the same prediction will find it. The `maintain-documentation` skill states where
+each of these goes and how to keep them from growing back into one file.
 
 ## Doxygen
 

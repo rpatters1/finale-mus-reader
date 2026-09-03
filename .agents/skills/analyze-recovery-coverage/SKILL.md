@@ -175,7 +175,7 @@ diagnostics may name private fixtures. User-facing or tracked findings use aggre
 reproducibility needs them, a small number of `corpus_id` tokens.
 
 Use the repository confidence vocabulary: `confirmed`, `strong`, `weak`, and `open`. Before
-changing shared findings, read `research/CITING_EVIDENCE.md`. If tracked deliverables are requested,
+changing shared findings, read `research/reference/CITING_EVIDENCE.md`. If tracked deliverables are requested,
 publish only sanitized aggregates and concise research notes, then apply the leak checks documented
 by `inventory-a-corpus`.
 
@@ -195,8 +195,8 @@ Keep these four questions separate:
 
 For class-focused work, determine the second answer independently of the report: compare the
 target's registered musxdom members with the importer and
-`research/MUSXDOM_CLASS_COVERAGE.md`, then consult the target section of
-`research/FORMAT_NOTES.md` for known open eras or fields. Enumerate the remaining members and
+`research/state/MUSXDOM_CLASS_COVERAGE.md`, then consult the class's own file,
+`research/format/<pool>/<name>.md`, for known open eras or fields. Enumerate the remaining members and
 epochs concisely; if none are known, say so explicitly. Update the checklist when that accounting
 changes.
 
