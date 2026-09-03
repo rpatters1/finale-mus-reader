@@ -72,6 +72,13 @@ hidden-layers flags as added later than the rest, which matches the
 flag-word values changing from `0x0f80`/`0x0b80`/`0x0000` to `0x7f80`/`0x7b80`/`0x3000` exactly at
 Finale 2002.
 
+**Direct check.** Finale 2000's layer dialog offers neither control, observed in the running
+application on 2026-09-03. Finale 2001 could not be checked the same way -- that installation
+would not run -- so the release immediately below the boundary is the one release whose UI has
+not been seen. It stores the same flag words as Finale 97, 98 and 2000, and its companions write
+both settings true, so nothing distinguishes it from the releases either side of it except the
+missing observation.
+
 **Result.** Neither setting exists before Finale 2002, so the era's behavior determines both and
 the stored bit is meaningless. The reader supplies `true` below the boundary. The three other late
 flags need no such treatment: their absent behavior is the `false` the cleared bit already

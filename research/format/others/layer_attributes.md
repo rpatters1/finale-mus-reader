@@ -137,7 +137,10 @@ imports whatever comparators a file states, so the shape costs nothing to suppor
 
 ## Playback and music spacing before Finale 2002
 
-**Confirmed.** No release before Finale 2002 offers a setting for either. Such a release always
+**Confirmed through Finale 2000; `strong` for Finale 2001.** No release before Finale 2002 offers
+a setting for either: Finale 2000's layer dialog has neither control. Finale 2001's own dialog has
+not been inspected, so that release rests on its stored flag words, which match every earlier
+release exactly, and on its companions, which write both settings true. Such a release always
 plays the layer back and always lets it affect music spacing, and bits 12 and 13 are clear in
 every one of them, so reading those bits yields the opposite of what the era did. The reader
 therefore declines to read them below the boundary and supplies the era's `true` instead, for all
