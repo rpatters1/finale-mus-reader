@@ -105,6 +105,27 @@ F2005/-finale27/F2005-acci-adjstart.musx
     word that changes, 24 -> 27; the ETF prints the same value and the Finale 27 companion
     writes <frontAcciSepar>27</frontAcciSepar>.
 
+F2005-rptopts-topstaff.mus
+    sha256 e8b4745c495277f222c4920bdcedfd7128f80eee21befea0ad22d971d0ef604f
+F2005-rptopts-topstaff.etf
+    sha256 ee2f7d2926e4d0be8747298bdf7e083aa27bf4fd1cbdef32fc6ae2a586f2e574
+F2005/-finale27/F2005-rptopts-topstaff.musx
+    sha256 e17346e595cc58ead82852eb103365f4878496cb14d91454711513a746115290
+    From F2005-baseline, Repeat Options remained at Top Staff Only. This is the baseline for
+    the staff-list edit below.
+
+F2005-rptopts-stafflist.mus
+    sha256 d06ac9c2fc9adc709c058b2e94d19d4f58e527acc2344c202e513a8796f25673
+F2005-rptopts-stafflist.etf
+    sha256 2feface2c37cdf77a4973cb034dd4cb7d975c5fe0e2020d9e8dd2df852fb7885
+F2005/-finale27/F2005-rptopts-stafflist.musx
+    sha256 0b1124ec6cc2ba0a7973a3bbaf545b4142608175d90fe94cc0e83326bb97f646
+    From F2005-rptopts-topstaff, Repeat Options changed to a new repeat staff list named
+    "Repeat Staves." The source adds one DC score row containing -1, two Dc name rows, one dc
+    parts row containing -3, and one io forced-parts row containing -3. No RepeatOptions row
+    changes. The Finale 27 companion predates the corrected source edit and is retained only as
+    provenance, not as its semantic companion.
+
 F2005-rpts-forparts.mus
     sha256 3b8e743c56390247d733669d93660c3a84ffaad748b18fc59fda880140ea901a
 F2005-rpts-forparts.etf

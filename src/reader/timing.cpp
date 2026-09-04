@@ -60,7 +60,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportShapeDefinitions: return "shape_definitions";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
-    case Phase::ImportStaffListCategories: return "staff_list_categories";
+    case Phase::ImportStaffLists: return "staff_lists";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";
     case Phase::ImportStaffOptions: return "staff_options";
     case Phase::ImportStemOptions: return "stem_options";

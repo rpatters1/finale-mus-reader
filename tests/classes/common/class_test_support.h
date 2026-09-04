@@ -441,6 +441,28 @@ inline const finale_mus_reader::FieldInfo& field(
     return field(result.report, target);
 }
 
+template <typename Target>
+inline const finale_mus_reader::FieldInfo& fieldFor(
+    const ImportReport& report, std::string_view target)
+{
+    const auto expected = expectedReportField(target);
+    for (const auto& [instance, fields] : report.fields) {
+        if (instance.classType != std::type_index(typeid(Target))) continue;
+        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        for (const auto& [member, info] : fields) {
+            if (member == expected.member) return info;
+        }
+    }
+    throw std::runtime_error(std::string("Missing mapping report for ").append(target));
+}
+
+template <typename Target>
+inline const finale_mus_reader::FieldInfo& fieldFor(
+    const ImportResult& result, std::string_view target)
+{
+    return fieldFor<Target>(result.report, target);
+}
+
 /// @brief Whether the report names a target at all, for a field a record is not expected to have.
 inline bool fieldPresent(const ImportReport& report, std::string_view target)
 {

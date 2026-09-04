@@ -92,7 +92,7 @@ void testShapeDefinitions()
             + std::to_string(earlyData && !earlyData->values.empty()
                     ? earlyData->values.front() : 0)
             + ")");
-    expect(field(early, "others.shapeData[1].values[0]").rawValue == 400,
+    expect(fieldFor<others::ShapeData>(early, "others.shapeData[1].values[0]").rawValue == 400,
         "The converted Finale 2.6 line width did not retain its source value in the report");
 }
 

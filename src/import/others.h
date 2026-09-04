@@ -53,8 +53,9 @@ void importShapeGraphicAssignments(const ImportContext& context);
 /// @brief Recovers SmartShapeCustomLine objects.
 void importSmartShapeCustomLines(const ImportContext& context);
 
-/// @brief Recovers marking-category staff lists, or supplies the canned lists before Finale 2009.
-void importStaffListCategories(const ImportContext& context);
+/// @brief Recovers category and repeat staff lists, supplying absent canned
+/// category lists.
+void importStaffLists(const ImportContext& context);
 
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);

@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-// The three marking-category staff-list components share a cmper. The score and
-// parts components have the same collection shape, while the optional name is a
-// scalar string.
+// Category and repeat staff-list components share a cmper within their family. All
+// membership and forced components have the same collection shape, while names are
+// scalar strings.
 
 #include <cstddef>
 #include <set>
@@ -53,7 +53,7 @@ classifyCategoryStaffListNameDifference(const DifferenceContext& context)
 }
 
 template <typename Target>
-Value observeCategoryStaffLists(const SurveyContext& ctx)
+Value observeStaffLists(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& list : sourceInstances<Target>(ctx)) {
@@ -74,9 +74,9 @@ Value observeCategoryStaffLists(const SurveyContext& ctx)
     return result;
 }
 
-Value observeCategoryStaffListNames(const SurveyContext& ctx)
+template <typename Target>
+Value observeStaffListNames(const SurveyContext& ctx)
 {
-    using Target = musx::dom::others::StaffListCategoryName;
     Value::Array result;
     for (const auto& name : sourceInstances<Target>(ctx)) {
         result.emplace_back(observe(
@@ -92,17 +92,54 @@ Value observeCategoryStaffListNames(const SurveyContext& ctx)
 
 Value observeCategoryStaffListParts(const SurveyContext& ctx)
 {
-    return observeCategoryStaffLists<musx::dom::others::StaffListCategoryParts>(ctx);
+    return observeStaffLists<musx::dom::others::StaffListCategoryParts>(ctx);
 }
 
 Value observeCategoryStaffListScore(const SurveyContext& ctx)
 {
-    return observeCategoryStaffLists<musx::dom::others::StaffListCategoryScore>(ctx);
+    return observeStaffLists<musx::dom::others::StaffListCategoryScore>(ctx);
+}
+
+Value observeCategoryStaffListNames(const SurveyContext& ctx)
+{
+    return observeStaffListNames<musx::dom::others::StaffListCategoryName>(ctx);
+}
+
+Value observeRepeatStaffListNames(const SurveyContext& ctx)
+{
+    return observeStaffListNames<musx::dom::others::StaffListRepeatName>(ctx);
+}
+
+Value observeRepeatStaffListParts(const SurveyContext& ctx)
+{
+    return observeStaffLists<musx::dom::others::StaffListRepeatParts>(ctx);
+}
+
+Value observeRepeatStaffListPartsForced(const SurveyContext& ctx)
+{
+    return observeStaffLists<musx::dom::others::StaffListRepeatPartsForced>(ctx);
+}
+
+Value observeRepeatStaffListScore(const SurveyContext& ctx)
+{
+    return observeStaffLists<musx::dom::others::StaffListRepeatScore>(ctx);
+}
+
+Value observeRepeatStaffListScoreForced(const SurveyContext& ctx)
+{
+    return observeStaffLists<musx::dom::others::StaffListRepeatScoreForced>(ctx);
 }
 
 COVERAGE_CLASS("others", "staff_list_category_names", observeCategoryStaffListNames,
                classifyCategoryStaffListNameDifference);
 COVERAGE_SURVEYOR("others", "staff_list_category_parts", observeCategoryStaffListParts);
 COVERAGE_SURVEYOR("others", "staff_list_category_score", observeCategoryStaffListScore);
+COVERAGE_SURVEYOR("others", "staff_list_repeat_names", observeRepeatStaffListNames);
+COVERAGE_SURVEYOR("others", "staff_list_repeat_parts", observeRepeatStaffListParts);
+COVERAGE_SURVEYOR(
+    "others", "staff_list_repeat_parts_forced", observeRepeatStaffListPartsForced);
+COVERAGE_SURVEYOR("others", "staff_list_repeat_score", observeRepeatStaffListScore);
+COVERAGE_SURVEYOR(
+    "others", "staff_list_repeat_score_forced", observeRepeatStaffListScoreForced);
 
 } // namespace

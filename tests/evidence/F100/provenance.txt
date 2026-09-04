@@ -17,6 +17,22 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-instlist.mus
+    sha256 e860efdeb383eedd7cb8195592d604bfbf1a5a6efc0ddbd4e74b558945cfd070
+    5,167 bytes. Creates one unnamed staff list. Selector `DC(1)` stores score
+    membership `[1]`, and `dc(1)` stores parts membership `[1, 2]`. The Finale 27
+    companion preserves both as repeat staff-list components and supplies the name
+    `Staff List 1`.
+
+F100-instlist.etf
+    sha256 9be56090e48722dffbf076e392e7cbe56fa04babd0d59364ad158658a0106295
+    The matching Finale 1.0.0 ETF export, whose `^DC(1)` and `^dc(1)` rows
+    independently confirm the stored memberships.
+
+-finale27/F100-instlist.musx
+    sha256 92309b65adf972c768310026778ee5988649ad3f41c59e70008eb547d4b90bf8
+    The unedited Finale 27 companion described by `../finale27-provenance.txt`.
+
 F100-music-font.mus
     sha256 931417967ea03e945f532e4157fb6ed210aa3989e6848d9b3c17ad10b67edadc
     4,655 bytes. Changes the music default to Symbol at 60 points. The raw
