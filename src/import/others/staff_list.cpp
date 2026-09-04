@@ -108,7 +108,7 @@ void importStaffListArrays(const ImportContext& context, const RecordFamilySourc
             }
             constexpr auto chunkBytes = records::otherWordCount * 2;
             for (std::size_t chunk = 0; chunk < payload.size(); chunk += chunkBytes) {
-                const auto chunkEnd = std::min(chunk + chunkBytes, payload.size());
+                const auto chunkEnd = (std::min)(chunk + chunkBytes, payload.size());
                 for (std::size_t offset = chunk; offset + 2 <= chunkEnd; offset += 2) {
                     const auto value = static_cast<std::int16_t>(
                         payloadWord(payload, offset, context.profile.byteOrder));
