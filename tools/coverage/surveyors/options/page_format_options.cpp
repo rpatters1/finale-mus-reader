@@ -3,7 +3,7 @@
 
 #include "coverage/registry.h"
 #include "coverage/schema.h"
-#include "coverage/common/page_format_info.h"
+#include "coverage/classification_rules.h"
 #include "musx/musx.h"
 
 namespace {

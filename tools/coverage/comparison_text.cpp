@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-#include "coverage/common/part_name_text.h"
 #include "coverage/comparison_text.h"
 
 #include <algorithm>

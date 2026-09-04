@@ -22,6 +22,7 @@ set_target_properties(Catch2 PROPERTIES
 finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
+    ../tools/coverage/classification_rules.cpp
     ../tools/coverage/json.cpp
     classes/common/legacy_record_tests.cpp
     classes/common/mapping_framework_tests.cpp

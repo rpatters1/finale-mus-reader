@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <string>
 
-#include "coverage/common/note_rest_info.h"
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"

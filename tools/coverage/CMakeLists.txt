@@ -8,6 +8,7 @@ file(GLOB_RECURSE COVERAGE_SURVEYOR_SOURCES CONFIGURE_DEPENDS
 
 add_executable(recovery_coverage_probe
     recovery_coverage_probe.cpp
+    classification_rules.cpp
     comparison.cpp
     comparison_text.cpp
     comparison_serialization.cpp
