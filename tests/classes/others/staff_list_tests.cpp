@@ -45,7 +45,8 @@ musx::dom::DocumentPtr repeatBaseline()
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     auto name = std::make_shared<RepeatName>(document, musx::dom::SCORE_PARTID,
-                                             musx::dom::EnigmaBase::ShareMode::All, 1);
+                                             musx::dom::EnigmaBase::ShareMode::All,
+                                             musx::dom::Cmper(1));
     name->name = "Baseline repeat list";
     document->getOthers()->add(RepeatName::XmlNodeName, name);
     return std::move(session).finish();
@@ -97,7 +98,8 @@ TEST_CASE("Finale 2009 category staff lists and platform names recover", "[class
         CHECK(parts->values == std::vector<musx::dom::StaffCmper>{-1, 2, 7});
         CHECK(reportedFieldCount(report) == 5);
         const auto* nameOrigin = report.findInstanceOrigin(
-            finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID, 3));
+            finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID,
+                musx::dom::Cmper(3)));
         REQUIRE(nameOrigin);
         CHECK(*nameOrigin == ValueOrigin::LegacyMus);
     }
@@ -121,7 +123,8 @@ TEST_CASE("Finale 2012 category names remain one-byte platform text", "[class]")
     CHECK(document->getOthers()->get<CategoryParts>(musx::dom::SCORE_PARTID, 3));
     CHECK(document->getOthers()->get<CategoryScore>(musx::dom::SCORE_PARTID, 5));
     CHECK(report.findInstanceOrigin(
-              finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID, 4)) != nullptr);
+              finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID,
+                  musx::dom::Cmper(4))) != nullptr);
 }
 
 TEST_CASE("Pre-Finale 2009 files receive the pinned category staff lists", "[class]")
@@ -161,9 +164,10 @@ TEST_CASE("Finale 2009 category lists are filled from four through eight", "[cla
     std::vector<SyntheticClassRow> rows;
     for (musx::dom::Cmper cmper = 1; cmper <= 4; ++cmper) {
         rows.emplace_back(
-            0x0130, std::vector<std::int16_t>{static_cast<std::int16_t>(cmper), 0, 0, 0, 0, 0},
-            cmper);
-        rows.emplace_back(0x0132, std::vector<std::int16_t>{-2, 0, 0, 0, 0, 0}, cmper);
+            std::uint16_t(0x0130),
+            std::vector<std::int16_t>{static_cast<std::int16_t>(cmper), 0, 0, 0, 0, 0}, cmper);
+        rows.emplace_back(
+            std::uint16_t(0x0132), std::vector<std::int16_t>{-2, 0, 0, 0, 0, 0}, cmper);
     }
     const auto report = importStaffLists(makeClassContainer(rows, ByteOrder::LittleEndian),
                                          profile, document, categoryBaseline());
