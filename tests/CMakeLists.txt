@@ -57,6 +57,7 @@ add_executable(finale_mus_reader_tests
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/part_definitions_tests.cpp
+    classes/others/part_globals_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/others/text_blocks_tests.cpp

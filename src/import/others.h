@@ -35,6 +35,9 @@ void importPageGraphicAssignments(const ImportContext& context);
 /// @brief Recovers PartDefinition objects, and supplies the score part every era has.
 void importPartDefinitions(const ImportContext& context);
 
+/// @brief Recovers the score- and part-specific global view settings.
+void importPartGlobals(const ImportContext& context);
+
 /// @brief Recovers ShapeDef objects and their owned instruction and data lists.
 void importShapeDefinitions(const ImportContext& context);
 
