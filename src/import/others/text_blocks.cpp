@@ -219,10 +219,14 @@ void importCodaTextBlocks(const ImportContext& context)
 
 void importTextBlocks(const ImportContext& context)
 {
-    if (context.profile.epoch == FormatEpoch::CodaBanner)
-        importCodaTextBlocks(context);
-    else
+    if (context.profile.epoch != FormatEpoch::CodaBanner) {
         importStoredTextBlocks(context);
+        return;
+    }
+    // A Coda-banner document names no text from its style rows: the two are paired by position
+    // against the block texts, so the text pool has to be complete first. Deferring the pass keeps
+    // that out of the registry's line order -- see @ref PendingReferences::checks.
+    context.pending.checks.push_back([&context] { importCodaTextBlocks(context); });
 }
 
 } // namespace others

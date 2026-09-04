@@ -20,7 +20,7 @@
   through the usual `numericGlobalClass` rule, and both byte orders are exercised by the Finale 2007 and 2012
   fixtures.
 - **Observation — three orderings, none of which matches musxdom.** The syllable alignment list is
-  `1 = centre, 2 = left, 3 = right` (the framework's `LYRICS_ALIGN_` constants, corroborated by every fixture for
+  `1 = center, 2 = left, 3 = right` (the framework's `LYRICS_ALIGN_` constants, corroborated by every fixture for
   1 and 2 and by no fixture at all for 3). The connection point runs `0x10`–`0x15` on the *smart-shape entry
   connection* scale and orders lyric/head/dot/duration/systemLeft/systemRight, where musxdom puts the two system
   attachments third and fourth. Bit 15 of each position's flags word is musxdom's `on`.
@@ -77,7 +77,7 @@
   importer has anyway.
 - **Loose end deliberately not implemented:** in pre-2004 documents Finale 27 synthesizes the starting connection's
   vertical offset as 1 when the word-extension positioning bit is set and 4 when it is not. Six fixture groups agree
-  and nothing else separates them; whether that is legacy behaviour or converter invention is **open**, so those
+  and nothing else separates them; whether that is legacy behavior or converter invention is **open**, so those
   documents keep the baseline's 1.
 - **Next evidence:** [L1](../state/EVIDENCE_REQUESTS.md) — one Finale 2005/2006 save moving as many of the eight still
   unlocated Lyric Options fields at once as the dialog exposes, after checking which of them that era's dialog
@@ -111,14 +111,14 @@
   word 4**, class `0x0047` byte 8, the fourth field of the row already holding `smartHyphenStart`,
   `wordExtMinLength` and `wordExtOffsetToNotehead`. The other three survivors are a coordinate and two values
   reading as a percent and a mask.
-- **Conclusion: confirmed.** The reader recovers the word from Finale 2012 and asserts the era's behaviour before
+- **Conclusion: confirmed.** The reader recovers the word from Finale 2012 and asserts the era's behavior before
   it. Verified end to end through the public reader over the whole companion-backed corpus: **1,189 of 1,189 agree,
   zero read failures**, including all 248 Finale 2012 documents. This also corrects a real defect rather than only
   improving provenance -- the previous version gate left every Finale 2012 document at the baseline's *ignored*,
   which was wrong for the 50 that do not ignore.
 - **Why it stays a version gate.** The record is twelve bytes in Finale 2007 and Finale 2012 alike, so its shape
   states nothing and only the release distinguishes them. The gate is bounded inside the zlib epoch and fails closed
-  onto the pre-2012 behaviour, which is the right answer for every release but one.
+  onto the pre-2012 behavior, which is the right answer for every release but one.
 - **Incidental:** the same sweep confirms selector `57` arrives with Finale 2004 across 941 documents, a gate
   previously resting on a handful of fixtures.
 - **Follow-up, same day: `lyricPunctuationToIgnore` closed by the requested fixture, which refuted the prediction
@@ -237,7 +237,7 @@
 - **A second corpus generalization corrected by the same fixture.** All 597 shipped Finale 2011 documents carry the
   switch set, and reading that as the release's default would have been wrong: `F2011-baseline.mus`, created new in
   Finale 2011, carries it clear. The 597 are Finale's own sample content, authored earlier and converted into the
-  release, and conversion switches ignoring off to preserve the older look -- the same behaviour the Finale 2012
+  release, and conversion switches ignoring off to preserve the older look -- the same behavior the Finale 2012
   cohort's 50 upgraded documents show. A corpus of one vendor's shipped content is not a sample of what a release
   writes for a new document.
 - **Automatic lyric numbering, located the same day by three coded saves.** Neither survey could reach it --

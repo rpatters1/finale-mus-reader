@@ -13,7 +13,7 @@
 
 #include <zlib.h>
 
-#include "score_encoder.h"
+#include "coverage/third_party/score_encoder.h"
 
 namespace finale_mus_reader::coverage {
 namespace {

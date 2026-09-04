@@ -154,7 +154,7 @@ space, which musxdom reads as a blank clef.
 
 **Why it substitutes is unknown.** Character 214 is `unpitchedPercussionClef2` in Sonata as well as in Petrucci and
 Pmusic, so this is not a codepoint that means something different in the substituted font, and an encoding
-difference does not explain it. The behaviour is recorded as observed and unexplained. The fourth difference is in
+difference does not explain it. The behavior is recorded as observed and unexplained. The fourth difference is in
 one of the same three files, whose index 7 also moved from `adjust 0, clefYDisp -4` to `adjust -5, clefYDisp -2`
 while keeping its character; that one is a single unexplained instance of position drift.
 
@@ -165,7 +165,7 @@ three files that share an identical table, so whatever selects that adjustment i
 **open**.
 
 This is the same font that needs a baseline adjustment where Petrucci does not, so both known Sonata-specific
-behaviours involve the same font, but no common cause has been established. **The reader keeps the stored character
+behaviors involve the same font, but no common cause has been established. **The reader keeps the stored character
 in every case.** Reproducing Finale's substitution is not attempted and is not a goal: the file says 214 and the
 importer says 214.
 
@@ -228,4 +228,4 @@ does store the courtesies it has as separate boolean words — the same controll
 
 The boundary is the epoch, not version 3.6.2. Finale 3.0 through 3.5 predate the option as well, but their files
 already carry bit 2 set, so reading the bit gives the correct answer for them, and an epoch gate says that in one
-line where a version range would have to name a release whose behaviour the bit already reports.
+line where a version range would have to name a release whose behavior the bit already reports.

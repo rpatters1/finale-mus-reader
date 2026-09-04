@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
+#include "coverage/common/part_name_text.h"
 #include "coverage/comparison_text.h"
 
 #include <algorithm>
@@ -346,7 +347,7 @@ TextComparison compareText(const std::string& className, const std::string& path
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
-                           bool partNameText);
+                           bool partNameText, bool synthesizedScoreName);
 
 void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
@@ -462,7 +463,7 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
         }
         const auto comparison =
             compareText("block_texts", {}, *sourceText, *companionText, sourceDocument,
-                        companionDocument, false);
+                        companionDocument, false, false);
         if (comparison.differences.contains(TextDifferenceClassification::Other) ||
             comparison.differences.contains(TextDifferenceClassification::MissingRun)) {
             result[prefix] = ReferentComparison::Renumbered;
@@ -476,13 +477,13 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
     return result;
 }
 
-std::pair<std::int64_t, std::set<std::int64_t>> partNameTextIds(const SurveySnapshot& snapshot)
+/// @brief The text ids a document's part definitions name, or empty when they name none.
+std::set<std::int64_t> partNameTextIds(const SurveySnapshot& snapshot)
 {
     const auto relationships = snapshot.find("relationships");
     if (relationships == snapshot.end()) return {};
     const auto* partNames = relationships->second.find("part_names");
     if (!partNames || !partNames->isObject()) return {};
-    const auto* totalParts = partNames->find("total_parts");
     const auto* textIds = partNames->find("text_ids");
     std::set<std::int64_t> ids;
     if (textIds && textIds->isArray()) {
@@ -490,31 +491,40 @@ std::pair<std::int64_t, std::set<std::int64_t>> partNameTextIds(const SurveySnap
             if (id.isInteger()) ids.insert(id.asInteger());
         }
     }
-    return {totalParts && totalParts->isInteger() ? totalParts->asInteger() : 0, std::move(ids)};
+    return ids;
+}
+
+/// @brief The block text number a comparison path names, for a path that names one.
+std::optional<std::int64_t> blockTextNumber(const std::string& className, const std::string& path)
+{
+    if (className != "block_texts") return std::nullopt;
+    static const std::regex blockTextPattern(R"(^block_texts\[number=(\d+)\]\.text$)");
+    std::smatch match;
+    if (!std::regex_match(path, match, blockTextPattern)) return std::nullopt;
+    return std::stoll(match[1].str());
 }
 
 bool isPartNameText(const std::string& className, const std::string& path,
                     const SurveySnapshot& source, const SurveySnapshot& companion)
 {
-    if (className != "block_texts") return false;
-    static const std::regex blockTextPattern(R"(^block_texts\[number=(\d+)\]\.text$)");
-    std::smatch match;
-    if (!std::regex_match(path, match, blockTextPattern)) return false;
-    const auto textId = std::stoll(match[1].str());
-    const auto [sourceParts, sourceIds] = partNameTextIds(source);
-    const auto [companionParts, companionIds] = partNameTextIds(companion);
-    if (sourceParts && companionParts) {
-        return sourceIds.contains(textId) && companionIds.contains(textId);
-    }
-    if (sourceParts) return sourceIds.contains(textId);
-    return companionIds.contains(textId);
+    const auto textId = blockTextNumber(className, path);
+    return textId
+        && partNameTextMatches(partNameTextIds(source), partNameTextIds(companion), *textId);
+}
+
+bool isSynthesizedScoreNameText(const std::string& className, const std::string& path,
+                                const SurveySnapshot& source, const SurveySnapshot& companion)
+{
+    const auto textId = blockTextNumber(className, path);
+    return textId
+        && synthesizedScoreNameText(partNameTextIds(source), partNameTextIds(companion), *textId);
 }
 
 TextComparison compareText(const std::string& className, const std::string& path,
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
-                           bool partNameText)
+                           bool partNameText, bool synthesizedScoreName)
 {
     const auto normalizeWhitespaceControls = [](std::string value) {
         std::erase_if(
@@ -529,7 +539,8 @@ TextComparison compareText(const std::string& className, const std::string& path
     if (classClassifier) {
         if (const auto classified =
                 classClassifier({path, normalizedSource, normalizedCompanion, std::nullopt,
-                                 std::nullopt, removedWhitespaceControl, partNameText})) {
+                                 std::nullopt, removedWhitespaceControl, partNameText,
+                                 synthesizedScoreName})) {
             return *classified;
         }
     }
@@ -568,7 +579,8 @@ TextComparison compareText(const std::string& className, const std::string& path
     if (classClassifier) {
         if (const auto classified =
                 classClassifier({path, normalizedSource, normalizedCompanion, sourcePlain,
-                                 companionPlain, removedWhitespaceControl, partNameText})) {
+                                 companionPlain, removedWhitespaceControl, partNameText,
+                                 synthesizedScoreName})) {
             return *classified;
         }
     }

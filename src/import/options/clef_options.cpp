@@ -544,7 +544,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     // Its documents always show a courtesy clef, so that is asserted here rather than read:
     // selector 44 is zero throughout the era, and its bit 2 would say the opposite.
     //
-    // Three neighbouring options -- the clef-to-key and clef-to-time spacings and
+    // Three neighboring options -- the clef-to-key and clef-to-time spacings and
     // "display clef only on first system" -- do not exist in that era either, but they need
     // no assertion. Both pinned baselines omit all three, so the seeded values are already
     // zero and false, which is what the era means. Where the baseline already gives the right

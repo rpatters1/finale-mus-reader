@@ -29,11 +29,13 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
                           const musx::dom::DocumentPtr& companionDocument);
 bool isPartNameText(const std::string& className, const std::string& path,
                     const SurveySnapshot& source, const SurveySnapshot& companion);
+bool isSynthesizedScoreNameText(const std::string& className, const std::string& path,
+                                const SurveySnapshot& source, const SurveySnapshot& companion);
 TextClassificationResult compareText(const std::string& className, const std::string& path,
                                      const std::string& source, const std::string& companion,
                                      const musx::dom::DocumentPtr& sourceDocument,
                                      const musx::dom::DocumentPtr& companionDocument,
-                                     bool partNameText);
+                                     bool partNameText, bool synthesizedScoreName);
 bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className,
                              const std::string& path);
 

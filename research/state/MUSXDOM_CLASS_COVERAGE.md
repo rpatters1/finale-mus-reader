@@ -5,13 +5,17 @@ as the registry is. Regenerate when musxdom adds a registered type.
 
     [x] done    [~] partial    [ ] not started
 
+`[x]` requires both halves: every field the class's known records can supply is recovered, and the
+class shows no unexpected companion difference across every registered survey. A field whose known
+records provably do not carry it reports `Unmapped` and does not by itself hold a class at `[~]`.
+
 **This file carries no commentary.** It is a checklist: one line per class, the file that
 recovers it, and the briefest possible status in the right-hand column. Anything that needs a
 sentence belongs in that class's own file under [`research/format/`](../format/); anything that
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**48 done, 2 partial, 140 to do, 190 total.** Verified class for class against the registry on
+**49 done, 2 partial, 139 to do, 190 total.** Verified class for class against the registry on
 2026-09-02: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -45,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (12 done, 0 partial, 81 to do, 93 total)
+## others  (13 done, 0 partial, 80 to do, 93 total)
 
     [ ] AcciAmountFlats                                                         L1 library item
     [ ] AcciAmountSharps                                                        L1 library item
@@ -90,7 +94,7 @@ Explanation added here has to be removed again.
     [x] PageGraphicAssign                       graphic_assignments.cpp
     [ ] PageOssiaAssign
     [ ] PageTextAssign
-    [ ] PartDefinition
+    [x] PartDefinition                          part_definitions.cpp
     [ ] PartGlobals
     [ ] PartVoicing
     [ ] PercussionNoteInfo                                                      L1 library item

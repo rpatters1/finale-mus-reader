@@ -34,8 +34,9 @@ struct CompanionArchive
 /// reader recovered from the legacy source it was saved from.
 /// @details A `.musx` is a real ZIP archive. Its EnigmaXML lives in one member, `score.dat`,
 /// itself gzip-compressed and then scrambled with a rolling XOR keystream; decoding it is
-/// `score_encoder.h`'s job (copied verbatim from the sibling denigma project, the algorithm's
-/// original home, rather than re-derived here). The other two pieces this returns are stored
+/// `third_party/score_encoder.h`'s job (copied verbatim from the sibling denigma project, the
+/// algorithm's original home, rather than re-derived here, and kept under `third_party/` so it
+/// stays that way). The other two pieces this returns are stored
 /// as ordinary, unscrambled ZIP members. musxdom's own `DocumentFactory` has no container
 /// awareness at all and wants exactly these bytes; nothing else in this codebase currently
 /// extracts them, since finale_mus_reader's own public API never touches a `.musx` file.

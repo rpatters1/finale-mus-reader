@@ -26,7 +26,7 @@ A comment in production code may contain:
   against the code.
 - **Mechanism.** How the format works, where that is what makes the code make
   sense — a layout, an encoding, an ordering constraint, a lifetime.
-- **Belief, labelled as belief.** A theory about the format that is untested or
+- **Belief, labeled as belief.** A theory about the format that is untested or
   only partly established, stated as a theory and marked with how far it is
   trusted. This repository decodes an undocumented format; a comment that admits
   uncertainty is worth more than one that hides it.

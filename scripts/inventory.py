@@ -10,7 +10,7 @@ many copies of one product, so the same filename recurs in every version
 directory by design; searching for a stem corpus-wide then pairs a Finale 2008
 source with a Finale 2011 export and labels the result by how rare the stem is
 rather than by how likely the pairing is.  One such run produced 7,266 ambiguous
-and 112 "unique" pairings, all of them false.  A guess that is labelled is still
+and 112 "unique" pairings, all of them false.  A guess that is labeled is still
 a guess, and a downstream comparison that trusts it reports one version's upgrade
 behavior as another's.
 

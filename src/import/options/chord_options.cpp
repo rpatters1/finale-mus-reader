@@ -221,20 +221,25 @@ void importChordOptions(const ImportContext& context)
         reportChordBehavior(context, "chordPercent", static_cast<std::int64_t>(unstatedChordPercent));
     }
 
-    const bool hasStyle = target->fretStyleId != 0
-        && context.document->getOthers()->get<musx::dom::others::FretboardStyle>(
-            musx::dom::SCORE_PARTID, target->fretStyleId);
-    const bool hasInstrument = target->fretInstId != 0
-        && context.document->getOthers()->get<musx::dom::others::FretInstrument>(
-            musx::dom::SCORE_PARTID, target->fretInstId);
-    if (!hasStyle) {
-        target->fretStyleId = reference->fretStyleId;
-        reportChordDefault(context, "fretStyleId");
-    }
-    if (!hasInstrument) {
-        target->fretInstId = reference->fretInstId;
-        reportChordDefault(context, "fretInstId");
-    }
+    // A source-owned fretboard style or instrument keeps its own comparator; one naming a definition
+    // the document does not contain takes the pinned default instead. Both pools belong to other
+    // importers, so the test cannot run here: it is registered for the phase that follows every
+    // importer, which is what lets this class sit anywhere in the registry.
+    context.pending.checks.push_back([&context, target, reference] {
+        const auto& others = *context.document->getOthers();
+        if (target->fretStyleId == 0
+            || !others.get<musx::dom::others::FretboardStyle>(
+                musx::dom::SCORE_PARTID, target->fretStyleId)) {
+            target->fretStyleId = reference->fretStyleId;
+            reportChordDefault(context, "fretStyleId");
+        }
+        if (target->fretInstId == 0
+            || !others.get<musx::dom::others::FretInstrument>(
+                musx::dom::SCORE_PARTID, target->fretInstId)) {
+            target->fretInstId = reference->fretInstId;
+            reportChordDefault(context, "fretInstId");
+        }
+    });
 }
 
 } // namespace options

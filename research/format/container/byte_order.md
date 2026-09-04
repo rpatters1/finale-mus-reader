@@ -82,7 +82,7 @@ eight templates and sixteen tutorial documents — and they settle every part of
 They carry a previously unseen banner *product*, not a new spelling: `Finale(TM) PC 1.0+ Copyright
 1987 by Coda. All rights reserved.` uses the same `Finale(TM)` spelling the Mac Coda-banner era
 uses, but its product field is `PC 1.0+` rather than a version number. The distinction matters,
-because the banner parser recognises the spelling perfectly well and it is the numeric-product test
+because the banner parser recognizes the spelling perfectly well and it is the numeric-product test
 that rejects these files. Their pool prologue reads
 `pages=20, pagesize=512` little-endian and nonsense big-endian, and the first record at `0x208` is
 `fe ff 31 30`: comparator `0xfffe`, the globals comparator, followed by the tag `01`, both
@@ -190,7 +190,7 @@ This is a better fit than treating `0x80` as the platform byte, for two reasons.
 platform arrived should leave the original at zero, not the newcomer. Second, if the field is a
 16-bit word at all then it is subject to byte order, and `0x80` is therefore the high byte on Mac
 and the low byte on Windows: comparing the two compares different halves of the field, so the
-`1`-versus-`0` pattern is an artefact of the comparison rather than a finding.
+`1`-versus-`0` pattern is an artifact of the comparison rather than a finding.
 
 What `0x04` actually means is **open**, and one specimen cannot separate the possibilities: with a
 single Windows value observed, "little-endian", "PC build" and "the next feature bit, which happened

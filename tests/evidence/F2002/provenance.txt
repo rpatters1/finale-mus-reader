@@ -26,7 +26,7 @@ F2002-fileinfo-text.etf
 F2002-fileinfo-text.musx
     sha256 14f0b0acec06b84891e693e802603a324c5be42bc0edc70c7ee941f5aead50b2
     An authored score with a real page-text layout, to which the four File Info
-    fields were added and labelled. It settles that **the header offsets still hold
+    fields were added and labeled. It settles that **the header offsets still hold
     across the DCL epoch**: all four are recovered from them here and confirmed
     field for field by the companion, so File Info moves into the text pool
     somewhere after Finale 2002 rather than at the epoch boundary.

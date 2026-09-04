@@ -33,7 +33,7 @@ using FontDefinitionSource = musx::dom::others::FontDefinition;
 // musxdom supplies every bit value, so this table states only which name reaches which bit.
 // The two exceptions are `outline` and `shadow`, which the modern format dropped and which
 // therefore have no musxdom constant; they are listed with the position they occupy so that a
-// file carrying one is neither reported unknown nor folded into a neighbouring style.
+// file carrying one is neither reported unknown nor folded into a neighboring style.
 constexpr std::uint16_t enigmaStyleOutline = 0x08;
 constexpr std::uint16_t enigmaStyleShadow = 0x10;
 

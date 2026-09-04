@@ -270,8 +270,13 @@ four layouts and a capture pass is still one registry entry. Keeping that knowle
 class file is what lets a later era be added by editing one translation unit, and what
 stops the generic mapping code from accumulating a branch per class.
 
-Order within a pool is free; order between pools is a dependency statement and belongs in
-a comment at the registry. Anything that must run after every pool is complete, such as
+Registry order is not a contract. Apart from the bootstrap pair the registry calls out, an
+importer must build the same document wherever it appears in the list, and entries are kept
+alphabetical within each pool so there is nothing to read into their order. An importer that
+needs another class's objects -- to resolve a recovered comparator against the pool that owns
+its referent, most often -- registers a check on `PendingReferences::checks`, which runs after
+every importer. Consulting another pool inline instead makes the class depend on a neighbor
+having run first, and nothing verifies that. Anything that must run after every pool is complete, such as
 copying reference objects, is a separate phase after the importers rather than an
 importer's responsibility. Tables and helpers that only the importer uses should be
 file-local; expose a stage separately only where a test needs to drive it alone.
@@ -289,7 +294,7 @@ Use the existing timing macros for those additions so a configuration without
 **`<pool>.h` declares importers and nothing else.** A stage a test drives on its own goes in
 `<pool>/test_access.h`, which no library code may include; a stage no test drives is
 file-local, in the class's own anonymous namespace. Do not export a stage for symmetry with a
-neighbouring class -- check who calls it. The distinction is worth keeping mechanical, because
+neighboring class -- check who calls it. The distinction is worth keeping mechanical, because
 a pool header that mixes the registry's contract with a test seam stops being readable as
 either, and an unused export looks like API to whoever reads it next. The same rule applies to
 the shared framework header: a helper whose only caller lives in its own translation unit

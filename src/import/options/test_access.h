@@ -17,7 +17,7 @@
 // A stage that no test drives does not belong here either. Make it file-local in the class's
 // own translation unit, where an anonymous namespace keeps it out of every other file's way.
 // Two multimeasure-rest stages were briefly declared here out of symmetry with their
-// neighbours, which is the mistake this comment exists to prevent.
+// neighbors, which is the mistake this comment exists to prevent.
 
 namespace finale_mus_reader {
 namespace options {

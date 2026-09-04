@@ -784,12 +784,30 @@ struct PendingCustomLineReference
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
 
-/// @brief Reference-object requests accumulated during capture and drained after all source pools.
+/// @brief Work deferred until every source pool is filled, and drained in one phase afterwards.
+/// @details Two kinds. A reference-object request copies an object out of the pinned baseline,
+/// which allocates comparators and therefore cannot run while a pool is still being filled. A
+/// deferred check is anything an importer can only decide once another class's objects exist --
+/// resolving a recovered comparator against the pool that owns its referent, most of all.
+///
+/// Deferring such a check is what keeps the importer registry an unordered list. An importer that
+/// consulted another pool directly would silently depend on running after whoever fills it, and
+/// that dependency would live in the registry's line order where nothing checks it.
 struct PendingReferences
 {
     std::vector<PendingShapeReference> shapes; ///< Shape definitions requested by recovered classes.
     std::vector<PendingCustomLineReference> customLines; ///< Custom lines requested by recovered classes.
+    /// @brief Checks to run once every importer has finished, in the order they were registered.
+    std::vector<std::function<void()>> checks;
 };
+
+/// @brief Runs every deferred check, in the order the importers registered them.
+/// @details The last step of the phase that follows every importer, and the reason registry order
+/// carries no meaning: an importer that needs another class's objects registers the work here and
+/// this runs it once every pool is filled. Exposed because a test that drives one importer alone
+/// still has to close the phase, and doing that by repeating the loop would let a test pass
+/// against a drain the reader no longer performs the same way.
+void runDeferredChecks(PendingReferences& pending);
 
 /// @brief Everything the importer for one musxdom class is handed.
 /// @details Passed by reference and outlived by nothing: it is built once per import and

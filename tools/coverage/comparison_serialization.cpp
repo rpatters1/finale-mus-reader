@@ -51,6 +51,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "missing-accidental-insert-default";
     case MissingSelector:
         return "missing-selector";
+    case PossiblyUnrecoverable:
+        return "possibly-unrecoverable";
     case PreConnectionEndpoint:
         return "pre-connection-endpoint";
     case ReaderCompletedConnectionArray:
@@ -65,6 +67,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "stem-connection-past-terminator";
     case StemHorizontalCorrection:
         return "stem-horizontal-correction";
+    case SynthesizedScoreName:
+        return "synthesized-score-name";
     case TransientTextBlock:
         return "transient-text-block";
     }
@@ -91,6 +95,8 @@ std::string_view textDifferenceName(TextDifferenceClassification classification)
         return "other";
     case Size:
         return "size";
+    case SynthesizedScoreName:
+        return "synthesized score name";
     case UnresolvedFont:
         return "unresolved font";
     case Whitespace:

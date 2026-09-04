@@ -64,11 +64,18 @@ enum class SourcePlatform
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 enum class ValueOrigin
 {
-    /// @brief A possible legacy source for this field has not yet been mapped.
-    /// @details This origin is assigned explicitly while format coverage is incomplete. It
-    /// differs from @ref Finale27Default, which is the default provenance of a retained seeded
+    /// @brief No legacy source for this field has been located.
+    /// @details The value remains default-initialized for a source-owned object or retains its
+    /// seeded value for an options object, so what accompanies this origin is a placeholder that
+    /// no evidence supports rather than a value anything determined.
+    ///
+    /// It covers both a field with no known source and a field whose known records demonstrably do
+    /// not carry it: both leave a value with no evidence behind it, and either may yet be recovered
+    /// from a record this library does not decode. The two are not distinguished here.
+    ///
+    /// It differs from @ref Finale27Default, which is the default provenance of a retained seeded
     /// value, and from @ref MusxOnly, which identifies a field known to postdate every supported
-    /// legacy layout.
+    /// legacy layout and therefore recoverable from nowhere.
     Unmapped,
     /// @brief The field postdates every supported legacy MUS layout.
     /// @details No source value can be recovered. The value remains default-initialized for a

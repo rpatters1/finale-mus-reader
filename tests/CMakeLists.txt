@@ -22,45 +22,47 @@ set_target_properties(Catch2 PROPERTIES
 finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
-    reader_tests.cpp
-    coverage_schema_tests.cpp
     ../tools/coverage/json.cpp
-    classes/options/augmentation_dot_options_tests.cpp
+    classes/common/legacy_record_tests.cpp
+    classes/common/mapping_framework_tests.cpp
+    classes/details/measure_graphic_assign_tests.cpp
     classes/options/accidental_options_tests.cpp
     classes/options/alternate_notation_options_tests.cpp
+    classes/options/augmentation_dot_options_tests.cpp
     classes/options/barline_options_tests.cpp
     classes/options/beam_options_tests.cpp
+    classes/options/chord_options_tests.cpp
     classes/options/clef_options_tests.cpp
     classes/options/flag_options_tests.cpp
     classes/options/font_options_tests.cpp
     classes/options/grace_note_options_tests.cpp
     classes/options/key_signature_options_tests.cpp
     classes/options/line_curve_options_tests.cpp
-    classes/others/fretboard_tests.cpp
-    classes/others/graphic_assignments_tests.cpp
-    classes/common/legacy_record_tests.cpp
     classes/options/lyric_options_tests.cpp
     classes/options/misc_options_tests.cpp
+    classes/options/multimeasure_rest_options_tests.cpp
     classes/options/music_symbol_options_tests.cpp
     classes/options/note_rest_options_tests.cpp
     classes/options/page_format_options_tests.cpp
-    classes/common/mapping_framework_tests.cpp
-    classes/details/measure_graphic_assign_tests.cpp
-    classes/options/multimeasure_rest_options_tests.cpp
     classes/options/piano_brace_bracket_options_tests.cpp
     classes/options/repeat_options_tests.cpp
-    classes/others/shape_definitions_tests.cpp
-    classes/others/smart_shape_custom_lines_tests.cpp
     classes/options/smart_shape_options_tests.cpp
     classes/options/staff_options_tests.cpp
     classes/options/stem_options_tests.cpp
-    classes/others/text_blocks_tests.cpp
     classes/options/text_options_tests.cpp
     classes/options/tie_options_tests.cpp
     classes/options/time_signature_options_tests.cpp
     classes/options/tuplet_options_tests.cpp
-    text_encoding_tests.cpp
-    classes/texts/text_pool_tests.cpp)
+    classes/others/fretboard_tests.cpp
+    classes/others/graphic_assignments_tests.cpp
+    classes/others/part_definitions_tests.cpp
+    classes/others/shape_definitions_tests.cpp
+    classes/others/smart_shape_custom_lines_tests.cpp
+    classes/others/text_blocks_tests.cpp
+    classes/texts/text_pool_tests.cpp
+    coverage_schema_tests.cpp
+    reader_tests.cpp
+    text_encoding_tests.cpp)
 finale_mus_reader_enable_unity(finale_mus_reader_tests)
 
 target_link_libraries(finale_mus_reader_tests PRIVATE

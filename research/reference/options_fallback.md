@@ -14,8 +14,8 @@ with this sequence:
 3. Seed or clone only the complete options pool into the imported document.
 4. Overlay every confidently recovered legacy option value.
 5. Leave absent, unknown, or unsupported values at the Finale 27 default. Prefer this even
-   where the source era's behaviour is known, whenever the baseline already carries the value
-   that behaviour implies. The baseline is generated from committed resources whose hashes
+   where the source era's behavior is known, whenever the baseline already carries the value
+   that behavior implies. The baseline is generated from committed resources whose hashes
    this document records, so it is effectively as fixed as a constant, and a value asserted
    in code beside a baseline that already agrees is a second copy of the same fact.
 6. Report recovered values separately from synthesized defaults, and separately again from
@@ -33,8 +33,12 @@ with this sequence:
 source layout does not supply it and no legacy behavior overrides the baseline. Two further cases
 must not collapse into it:
 
-- **`Unmapped`** — the field could have a legacy source, but no source mapping has been
-  established in any layout or epoch.
+- **`Unmapped`** — the field could have a legacy source, but none has been located in any layout
+  or epoch. This says nothing about how hard anyone looked: it covers a field nobody has
+  investigated and a field whose known records provably do not carry it, since both leave a value
+  no evidence supports and both may still be recovered from a record the reader has not reached.
+  Which of the two a field is belongs in its class's notes under `research/format/`, where the
+  evidence can be stated, and a class is not partial merely because a field reports this.
 - **`MusxOnly`** — evidence establishes that the field postdates every supported legacy layout
   and therefore cannot be recovered.
 

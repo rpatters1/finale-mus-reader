@@ -34,8 +34,10 @@ Value observeRelationships(const SurveyContext& ctx)
     for (const auto textId : partNameTextIds) {
         textIds.emplace_back(textId);
     }
-    return Value::Object{{"part_names", Value::Object{
-        {"total_parts", score ? 1 : 0}, {"text_ids", std::move(textIds)}}}};
+    // The ids alone, deliberately. A part count cannot stand in for "this side names a part":
+    // every imported document has a score part, including the eras that store no part definition,
+    // and that part carries no name. See isPartNameText in coverage/comparison_text.cpp.
+    return Value::Object{{"part_names", Value::Object{{"text_ids", std::move(textIds)}}}};
 }
 
 COVERAGE_SURVEYOR("metadata", "relationships", observeRelationships)

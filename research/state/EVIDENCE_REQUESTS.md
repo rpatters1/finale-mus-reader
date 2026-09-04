@@ -49,7 +49,7 @@ That may reflect the era rather than the corpus. Binaries of that period are not
 been transportable between platforms; a document moved between Mac and Windows had to travel as
 ETF. Byte order is the likely reason, since Mac documents of the era are uniformly big-endian and
 Windows documents uniformly little-endian. The two platforms were also on separate release
-schedules, so a Windows release may not correspond to any Mac version already catalogued here.
+schedules, so a Windows release may not correspond to any Mac version already cataloged here.
 When the schedules unified is not established: possibly as early as Finale 3.0, and certainly by
 Finale 97, which is internal 3.8.
 
@@ -335,7 +335,7 @@ measured rather than distilled.
 ### S6 — Proposed — what the Coda "Offset" means
 
 `21(65534)` word 0 is the augmentation-dot upstem-flag adjustment from Finale 3.0 on, confirmed
-against companions. A Finale 1.0.0 save reached the same word through a stem dialog labelled
+against companions. A Finale 1.0.0 save reached the same word through a stem dialog labeled
 "Offset", and Finale 27 discards the value when converting that era, so the companion cannot
 adjudicate. If Finale 1.0.0 or 2.6.3 exposes an augmentation-dot adjustment anywhere else in its
 UI, changing it and seeing whether `21(65534)` word 0 moves would settle whether the era shares the
@@ -372,7 +372,7 @@ Both saves behaved exactly as predicted, each moving one word and nothing else.
 `tests/evidence/F2005/F2005-textvert-center.*` moves `83` word 1 from 0 to 2, with the ETF reading
 `^83(65534) 0 2 0 0 0 0` and the companion gaining `<textVertAlign>center</textVertAlign>`. Center at 2, against
 the earlier fixtures' `bottom` at 1, fixes the legacy vertical list as `Top, Bottom, Center` — the same
-first/opposite/centre order as the two enums already confirmed — and leaves word 3 as `textIsEdgeAligned`.
+first/opposite/center order as the two enums already confirmed — and leaves word 3 as `textIsEdgeAligned`.
 
 `tests/evidence/F97/F97-expword-off.*` moves `82` word 5 from 1 to 0, with the ETF reading
 `^82(65534) 100 1 1 0 0 0` and the companion losing `<textExpandSingleWord/>`. That fixes word 5 and leaves word

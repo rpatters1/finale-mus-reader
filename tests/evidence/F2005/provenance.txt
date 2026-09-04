@@ -48,9 +48,9 @@ F2005-textvert-center.mus
     sha256 4fee0d73fa505cba481431c695d4df9d01f1a69bd319209b6e764a2a17e404d3
     From F2005-baseline, the vertical alignment set to Center and nothing else. Selector 83
     word 1 moves 0 -> 2, the ETF reads ^83(65534) 0 2 0 0 0 0, and the companion gains
-    <textVertAlign>center</textVertAlign>. Centre at 2, against the scalars save reading
-    bottom from a stored 1, fixes the legacy list as Top, Bottom, Centre -- the same
-    first/opposite/centre order as AlignJustify -- and leaves word 3 as the page-edge flag.
+    <textVertAlign>center</textVertAlign>. Center at 2, against the scalars save reading
+    bottom from a stored 1, fixes the legacy list as Top, Bottom, Center -- the same
+    first/opposite/center order as AlignJustify -- and leaves word 3 as the page-edge flag.
 
 F2005-linespace-to-evpu.mus
     sha256 4e03b6187689ad6daa21c81709d3e6751eff8d8acdce179f9bede390150e4494

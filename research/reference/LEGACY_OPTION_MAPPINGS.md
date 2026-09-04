@@ -523,7 +523,7 @@ Four lessons generalize to the 429 rows still unpromoted:
 - **A defaults fingerprint locates a record without any fixture.** The Finale 27 baseline states what the values
   should be; searching for that tuple across the record stream found the insert block in one pass. This works
   wherever a class has distinctive defaults, and it is cheaper than a controlled save.
-- **Finale orders its alignment enums first, opposite, centre.** `textJustify` stores `Left, Right, Center, Full,
+- **Finale orders its alignment enums first, opposite, center.** `textJustify` stores `Left, Right, Center, Full,
   ForcedFull` where musxdom has `Left, Center, Right, Full, ForcedFull`, and `textVertAlign` stores `Top, Bottom,
   Center` where musxdom has `Top, Center, Bottom`; both need positions 1 and 2 exchanged. `textHorzAlign` needs
   no change only because `AlignJustify` already uses Finale's order. Each was settled by exactly one specimen —
@@ -548,7 +548,7 @@ entries do.
 [`data/legacy_option_mappings.csv`](../data/legacy_option_mappings.csv) are all of it. They give five of the class's
 locations — `15` word 1, `35` word 5, `57` word 0, `67` word 5, and the four syllable positions across two
 incidences of `87` — and two numberings the corpus alone could not have supplied: the `LYRICS_ALIGN_` constants
-(`1 = centre, 2 = left, 3 = right`) and the `0x8000` "use this positioning" bit. Every one is corroborated by the
+(`1 = center, 2 = left, 3 = right`) and the `0x8000` "use this positioning" bit. Every one is corroborated by the
 fixtures where a fixture varies at all.
 
 What it does not have is as informative. **The framework models thirteen of the class's twenty-three fields and
@@ -574,7 +574,7 @@ Two lessons add to the `TextOptions` list:
   `0x10`. The framework has that enum under `FCSmartShapeEntryConnectStyle`, nowhere near its lyrics preferences,
   and it independently confirmed the base and the tail of an order the corpus had already fixed. It is also
   *incomplete* — it has no dotted-attachment entry — so it corroborates without governing.
-- **A field can be stored once and modelled twice.** musxdom keeps the starting connection's offsets both as that
+- **A field can be stored once and modeled twice.** musxdom keeps the starting connection's offsets both as that
   connection's own and as the dialog-level `wordExtHorzOffset`/`wordExtVertOffset`. Only a fixture that moves the
   value off its default shows the two are one thing; two fields agreeing at their defaults proves nothing.
 - **A null seeded member is a readable signal, and the right answer to it is usually to do nothing.**
