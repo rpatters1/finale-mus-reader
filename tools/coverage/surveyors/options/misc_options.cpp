@@ -11,8 +11,6 @@ namespace {
 
 using namespace finale_mus_reader::coverage;
 
-constexpr int betaDevelopmentStatus = 2;
-
 std::optional<DifferenceClassification>
 classifyMiscOptionsDifference(const DifferenceContext &context) {
   using enum DifferenceCategory;
@@ -30,7 +28,7 @@ classifyMiscOptionsDifference(const DifferenceContext &context) {
       context.origin == "legacy-behavior" && context.sourceValue.isBool() &&
       !context.sourceValue.asBool() && context.companionValue.isBool() &&
       context.companionValue.asBool() && context.sourceVersion &&
-      context.sourceVersion->devStatus == betaDevelopmentStatus) {
+      sourceIsBeta(context.sourceVersion)) {
     return DifferenceClassification::BetaDiscrepancy;
   }
   return std::nullopt;

@@ -63,6 +63,7 @@ enum class Phase : std::size_t
     ImportShapeDefinitions,
     ImportShapeGraphicAssignments,
     ImportSmartShapeCustomLines,
+    ImportStaffListCategories,
     ImportSmartShapeOptions,
     ImportStaffOptions,
     ImportStemOptions,

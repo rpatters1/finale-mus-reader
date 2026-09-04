@@ -208,6 +208,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/part_globals.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
+    src/import/others/staff_list_category.cpp
     src/import/others/text_blocks.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp

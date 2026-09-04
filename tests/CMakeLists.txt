@@ -63,6 +63,7 @@ add_executable(finale_mus_reader_tests
     classes/others/part_globals_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
+    classes/others/staff_list_category_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/texts/text_pool_tests.cpp
     coverage_schema_tests.cpp
