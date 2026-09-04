@@ -28,6 +28,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Custom smart-shape lines, guitar-bend boundary | [`smart_shape_custom_lines.md`](smart_shape_custom_lines.md) |
 | Layer attribute layout, release coverage, pre-2002 playback and spacing | [`layer_attributes.md`](layer_attributes.md) |
 | Part definition class id, flag word, default-name sign, the absent `pD` tag | [`part_definitions.md`](part_definitions.md) |
+| Part globals, pre-zlib options, Coda Scroll View cache, zlib class `0x0120` | [`part_globals.md`](part_globals.md) |
 
 Per-class investigations use the same filename as the class's reference file under
 `research/format/` and as its source file under `src/import/`:

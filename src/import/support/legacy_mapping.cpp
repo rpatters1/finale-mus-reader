@@ -245,6 +245,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),
+        FINALE_MUS_READER_IMPORTER(ImportPartGlobals, &others::importPartGlobals),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),

@@ -1,0 +1,138 @@
+// Copyright (c) 2026 Robert G. Patterson
+// SPDX-License-Identifier: MIT
+
+#include "import/others.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+
+#include "import/support/legacy_mapping.h"
+#include "musx/musx.h"
+
+namespace finale_mus_reader {
+namespace others {
+namespace {
+
+using PartGlobalsTarget = musx::dom::others::PartGlobals;
+
+constexpr records::LegacyTag partGlobalsClass = 0x0120;
+constexpr std::size_t partGlobalsPayloadSize = 12;
+
+constexpr std::size_t showTransposedOffset = 0;
+constexpr std::size_t scrollViewIUlistOffset = 2;
+constexpr std::size_t studioViewIUlistOffset = 4;
+constexpr std::size_t specialPartExtractionIUListOffset = 6;
+
+constexpr std::uint16_t showTransposedSelector = 12;
+constexpr std::size_t showTransposedWord = 0;
+constexpr std::uint16_t specialPartExtractionSelector = 23;
+constexpr std::size_t specialPartExtractionWord = 4;
+
+void reportPartGlobalsField(const ImportContext& context, const InstanceKey& key,
+    const char* member, const records::RecordWord& source, std::int64_t value,
+    records::LegacyTag identity)
+{
+    FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
+        FieldInfo{
+            ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset, value, identity});
+}
+
+void importFixedRowPartGlobals(const ImportContext& context)
+{
+    auto instance = std::make_shared<PartGlobalsTarget>(context.document, musx::dom::SCORE_PARTID,
+        musx::dom::EnigmaBase::ShareMode::All, musx::dom::MUSX_GLOBALS_CMPER);
+    const auto key =
+        instanceKey<PartGlobalsTarget>(musx::dom::SCORE_PARTID, musx::dom::MUSX_GLOBALS_CMPER);
+
+    if (const auto source = context.index.word(numericGlobalTag(showTransposedSelector),
+            musx::dom::MUSX_GLOBALS_CMPER, showTransposedWord)) {
+        instance->showTransposed = source->value != 0;
+        reportPartGlobalsField(context, key, "showTransposed", *source, instance->showTransposed,
+            numericGlobalTag(showTransposedSelector));
+    } else {
+        reportUnmappedField<PartGlobalsTarget>(
+            context.report, key, "showTransposed", instance->showTransposed);
+    }
+
+    instance->scrollViewIUlist = musx::dom::BASE_SYSTEM_ID;
+    instance->studioViewIUlist = musx::dom::STUDIO_VIEW_SYSTEM_ID;
+    FINALE_MUS_READER_REPORT_FIELD(context.report, key, "scrollViewIUlist",
+        FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, instance->scrollViewIUlist});
+    FINALE_MUS_READER_REPORT_FIELD(context.report, key, "studioViewIUlist",
+        FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, instance->studioViewIUlist});
+
+    if (const auto source = context.index.word(numericGlobalTag(specialPartExtractionSelector),
+            musx::dom::MUSX_GLOBALS_CMPER, specialPartExtractionWord)) {
+        instance->specialPartExtractionIUList = static_cast<musx::dom::Cmper>(source->value);
+        reportPartGlobalsField(context, key, "specialPartExtractionIUList", *source,
+            instance->specialPartExtractionIUList, numericGlobalTag(specialPartExtractionSelector));
+    } else {
+        reportUnmappedField<PartGlobalsTarget>(context.report, key, "specialPartExtractionIUList",
+            instance->specialPartExtractionIUList);
+    }
+
+    context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
+    context.document->getOthers()->add(PartGlobalsTarget::XmlNodeName, std::move(instance));
+}
+
+void importClassPartGlobals(const ImportContext& context)
+{
+    const RecordFamilySource source{.pool = &context.index.getClassOthers(),
+        .identity = partGlobalsClass,
+        .classRecords = true};
+    for (const auto [partId, cmper] : recordKeys(source)) {
+        const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
+        if (rows.empty())
+            continue;
+        const auto& row = rows.front();
+        const auto payload = source.pool->effectivePayloadOf(row);
+        if (payload.size() < partGlobalsPayloadSize) {
+            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                "Part globals record for part " + std::to_string(partId) +
+                    " is shorter than its layout."});
+            continue;
+        }
+        auto instance =
+            createOthersRecordTarget<PartGlobalsTarget>(context.document, source, row, cmper);
+        const auto word = [&](std::size_t offset) {
+            return payloadWord(payload, offset, context.profile.byteOrder);
+        };
+        instance->showTransposed = word(showTransposedOffset) != 0;
+        instance->scrollViewIUlist = word(scrollViewIUlistOffset);
+        instance->studioViewIUlist = word(studioViewIUlistOffset);
+        instance->specialPartExtractionIUList = word(specialPartExtractionIUListOffset);
+
+        const auto key = instanceKey<PartGlobalsTarget>(partId, cmper);
+        context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
+        const auto reportField = [&](const char* member, std::size_t offset, std::int64_t value) {
+            FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
+                FieldInfo{ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset + offset,
+                    value, source.identity});
+        };
+        reportField("showTransposed", showTransposedOffset, instance->showTransposed);
+        reportField("scrollViewIUlist", scrollViewIUlistOffset, instance->scrollViewIUlist);
+        reportField("studioViewIUlist", studioViewIUlistOffset, instance->studioViewIUlist);
+        reportField("specialPartExtractionIUList", specialPartExtractionIUListOffset,
+            instance->specialPartExtractionIUList);
+        context.document->getOthers()->add(PartGlobalsTarget::XmlNodeName, std::move(instance));
+    }
+}
+
+} // namespace
+
+void importPartGlobals(const ImportContext& context)
+{
+    if (sourceMatches(context.profile, EpochMask::Zlib)) {
+        importClassPartGlobals(context);
+    } else {
+        // Every pre-zlib epoch stores the two editable values among its numeric
+        // globals; linked parts do not exist there, so one score instance supplies
+        // the class.
+        importFixedRowPartGlobals(context);
+    }
+}
+
+} // namespace others
+} // namespace finale_mus_reader
