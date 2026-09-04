@@ -29,6 +29,15 @@ classifyBlockTextDifference(const TextDifferenceContext& context)
                 false, {TextDifferenceClassification::EmptyPartNameTemplate}, {}};
         }
     }
+    // A score name Finale wrote into an empty block the source already carries. The source's score
+    // part names no text, so this is not a part name recovered wrongly: it is the same synthesis
+    // that `synthesized-score-name` records on `partDef.nameId`, reaching the text pool because
+    // the block existed rather than being allocated fresh.
+    if (context.synthesizedScoreName && context.sourcePlain && context.companionPlain
+        && context.sourcePlain->empty() && *context.companionPlain == "Score") {
+        return TextClassificationResult{
+            false, {TextDifferenceClassification::SynthesizedScoreName}, {}};
+    }
     if (!context.sourcePlain || !context.companionPlain || !context.partNameText) {
         return std::nullopt;
     }

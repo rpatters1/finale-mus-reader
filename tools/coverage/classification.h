@@ -51,6 +51,7 @@ enum class DifferenceClassification
     LegacyPageParityText,
     MissingAccidentalInsertDefault,
     MissingSelector,
+    PossiblyUnrecoverable,
     PreConnectionEndpoint,
     ReaderCompletedConnectionArray,
     SetFontSubstitution,
@@ -58,6 +59,7 @@ enum class DifferenceClassification
     SmartLyricsEnabled,
     StemConnectionPastTerminator,
     StemHorizontalCorrection,
+    SynthesizedScoreName,
     TransientTextBlock
 };
 
@@ -71,6 +73,7 @@ enum class TextDifferenceClassification
     MissingRun,
     Other,
     Size,
+    SynthesizedScoreName,
     UnresolvedFont,
     Whitespace
 };
@@ -112,6 +115,8 @@ struct TextDifferenceContext
     std::optional<std::string_view> companionPlain;
     bool removedWhitespaceControl{};
     bool partNameText{};
+    /// @brief The companion's score part names this text and the reader's names none.
+    bool synthesizedScoreName{};
 };
 
 using TextDifferenceClassifierFn =

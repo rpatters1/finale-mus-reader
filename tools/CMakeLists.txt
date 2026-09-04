@@ -36,7 +36,10 @@ finale_mus_reader_add_tool(text_pool_probe PRIVATE_HEADERS)
 finale_mus_reader_add_tool(graphics_record_probe PRIVATE_HEADERS)
 finale_mus_reader_add_tool(fret_companion_probe)
 target_sources(fret_companion_probe PRIVATE coverage/support/musx_companion.cpp)
+# The tools root as well as the companion support directory: musx_companion.cpp reaches the
+# score.dat codec under coverage/third_party/ by its rooted path, as coverage's own target does.
 target_include_directories(fret_companion_probe PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/coverage/support")
 target_link_libraries(fret_companion_probe PRIVATE ${FINALE_MUS_READER_ZLIB_TARGET})
 

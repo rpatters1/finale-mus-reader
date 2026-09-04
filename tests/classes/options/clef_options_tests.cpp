@@ -418,7 +418,7 @@ void testClefOptionsCapture()
         expect(options->getClefDef(0)->middleCPos == -10
                 && options->getClefDef(0)->clefChar == 38
                 && options->getClefDef(0)->staffPosition == -6,
-            std::string("A baseline edit changed neighbouring clef fields in ") + era);
+            std::string("A baseline edit changed neighboring clef fields in ") + era);
         return result;
     };
 

@@ -13,7 +13,7 @@
 - 2,188,767 part-scoped converted elements;
 - 1,156,180 `shared="true"` and 1,032,587 `shared="false"` attributes.
 
-Code `0x011a` maps exactly to `partDef`. Part scope and sharing are likely encoded in the remaining key/flag fields and/or duplicated records inside the ordinary “other” and detail pools, not a named sharing block. Finale 27 may expand shared relationships during conversion, so the counts do not prove the legacy representation is duplicated. A controlled link/unlink test is essential.
+Code `0x011a` is `partDef`, now confirmed at byte level rather than by count; the class and its layout are in [`../others/part_definitions.md`](../others/part_definitions.md). Part scope and sharing are likely encoded in the remaining key/flag fields and/or duplicated records inside the ordinary “other” and detail pools, not a named sharing block. Finale 27 may expand shared relationships during conversion, so the counts do not prove the legacy representation is duplicated. A controlled link/unlink test is essential.
 
 ### Zlib part ownership and sharing
 

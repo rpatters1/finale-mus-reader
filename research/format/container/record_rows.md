@@ -92,7 +92,7 @@ See [RECORD_CATALOG.md](../../corpora/rpatters1-main/RECORD_CATALOG.md) for all 
 | `0x0092` | `frameSpec` | Pearson 0.999; exact in 273/375 (conversion expands some) |
 | `0x00a4` | `measNumbRegion` | exact whenever present; 368 files |
 | `0x00d9` | `smartShape` | Pearson 0.998; conversion differences observed |
-| `0x011a` | `partDef` | exact in 375/375 framed files |
+| `0x011a` | `partDef` | byte-level confirmation, [`../others/part_definitions.md`](../others/part_definitions.md) |
 | `0x03ef` | `acciAlter` | strong correlation with conversion differences |
 | `0x03f3` | `baselinesExprAboveStaff` | exact in 324/324 detail-framed files |
 | `0x0414` | `gfhold` | Pearson 0.999; exact in 291/324 |

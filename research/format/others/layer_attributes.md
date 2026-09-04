@@ -108,7 +108,7 @@ Two consequences follow, and both are deliberate:
   Deciding otherwise would make the reader the arbiter of what a document may contain.
 - **A part-scoped row becomes a part-owned object.** Finale's own UI cannot produce one, because
   layer attributes are not unlinkable, so this is a shape no authored document should have. It
-  costs nothing to handle correctly and nothing has to recognise it as a special case.
+  costs nothing to handle correctly and nothing has to recognize it as a special case.
 
 The four objects the baseline seeds are the whole of its `<others>` allowlist, described in
 [`../../reference/options_fallback.md`](../../reference/options_fallback.md). They are the

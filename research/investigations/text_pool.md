@@ -121,10 +121,10 @@
 - **Observation — a third argument width, and the one insert Finale 27 throws away.** `^time` takes a *single*
   digit where every previously observed argument was four or eight. Finale 27 emits no `^time` at all on
   conversion, so the companion cannot name it; the evidence is the fixture's own controlled pair, two blocks
-  labelled "Time" and "Time with seconds" differing in that one byte, which is exactly musxdom's `^time` flag.
+  labeled "Time" and "Time with seconds" differing in that one byte, which is exactly musxdom's `^time` flag.
   The reader carries it forward. Finale 27 dropping an insert says what that conversion does, not what the
   document contains, and recovering the latter is the whole job: discarding a command the file states and musxdom
-  can spell, on no better authority than a converter's choice, would be deleting content. The mapping is labelled
+  can spell, on no better authority than a converter's choice, would be deleting content. The mapping is labeled
   strong rather than confirmed because of the missing witness, not because the decision is in doubt.
 - **Observation — File Info leaves the header.** All seven fields are `^fileInfo(n)` records in the text pool,
   numbered by musxdom's own `FileInfoText::TextType` and confirmed field for field, while the header offsets that

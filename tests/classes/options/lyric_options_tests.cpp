@@ -405,7 +405,7 @@ void testLyricOptionsRecovery()
     }
 
     // Two Finale 2004 one-variable saves for the two switches that live on selector 57's
-    // neighbours. Both words exist in every era and mean nothing before Finale 2004, so each
+    // neighbors. Both words exist in every era and mean nothing before Finale 2004, so each
     // pair is what separates "this document turned the option off" from "this document's era
     // had no such option".
     const auto noSmartWext = read("evidence/F2004/F2004-lyropts-nosmart-wext.mus");

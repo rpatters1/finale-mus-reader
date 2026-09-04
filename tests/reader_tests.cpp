@@ -421,8 +421,23 @@ void expectNoScoreContent(const ImportResult& result)
         "Output contains fallback systems");
     expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(),
         "Output contains fallback pages");
-    expect(result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID).empty(),
-        "Output contains fallback part definitions");
+    // Part definitions are not absent: musxdom requires a score part, and every era has one
+    // whether or not it stored a record. What must not appear is the baseline's, which names a
+    // text block this document does not have -- so the reader's own score part carries no name.
+    {
+        const auto parts =
+            result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID);
+        expect(!parts.empty(), "Output has no score part definition");
+        const auto score = others::PartDefinition::getScore(result.document);
+        expect(score && score->partOrder == 0 && score->copies == 1,
+            "The score part definition is not the one this reader builds");
+        for (const auto& part : parts) {
+            expect(part->nameId == 0
+                    || result.document->getOthers()->get<others::TextBlock>(
+                           SCORE_PARTID, part->nameId) != nullptr,
+                "A part definition names a text block the document does not contain");
+        }
+    }
     // The pinned <others> element has 127 direct children; only the four layerAtts are
     // allowlisted. Font definitions cloned individually to resolve synthesized FontOptions
     // are intentional and do not constitute leaked baseline score content.

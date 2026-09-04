@@ -47,7 +47,7 @@ musx::dom::DocumentPtr makeTextOptionsDocument()
 // decides that from the records present rather than from the version, so a document that
 // predates them must recover the two old fields and leave the other eleven at the baseline.
 // The two enums are checked here because Finale orders its alignment lists first, opposite,
-// centre while musxdom puts centre second.
+// center while musxdom puts center second.
 void testTextOptionsScalars()
 {
     using TextOptions = musx::dom::options::TextOptions;
@@ -122,7 +122,7 @@ void testTextOptionsScalars()
     }
 
     // The same record with the two exchanged enum values, which is what separates Finale's
-    // order from musxdom's: a stored 2 is centre in both lists.
+    // order from musxdom's: a stored 2 is center in both lists.
     {
         ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(

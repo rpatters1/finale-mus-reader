@@ -100,18 +100,18 @@ what that dialog adds to the four settings Finale 3.x already had.
 That order is corpus-confirmed rather than inferred from the framework's field names, which matters because the
 last two positions carry identical values in almost every document and so discriminate nothing on their own. Five
 reference-corpus documents are the exception and all five agree: a Finale 2004 document stores `(1, 2)` in words
-6-8 against `(1, 1)` in words 9-11, with a companion whose `first` is centre/left and whose `systemStart` is
-centre/centre, and four documents from Finale 2000 and 2010 carry the pair the other way round. Both directions are
+6-8 against `(1, 1)` in words 9-11, with a companion whose `first` is center/left and whose `systemStart` is
+center/center, and four documents from Finale 2000 and 2010 carry the pair the other way round. Both directions are
 observed, so the two cannot be swapped.
 
-Its alignment and justification use a third numbering — `1 = centre, 2 = left, 3 = right`, from the framework's
+Its alignment and justification use a third numbering — `1 = center, 2 = left, 3 = right`, from the framework's
 `LYRICS_ALIGN_` constants — which is neither musxdom's `Left, Right, Center` nor its reverse. Every fixture that
 carries the selector stores 1 where its companion says `center` and 2 where it says `left`, for all four positions.
 **No surveyed document stores 3**: across all 1,189 companion pairs not one carries `right` as either an alignment
 or a justification, for any position, so the corpus could never have settled that member.
 `tests/evidence/F2000/F2000-lyropts-align-just.*` does, and supplies it twice over — the first syllable's alignment
 set to Right and the system-start syllable's justification set to Right, so a mapping that translated only one of
-the two fields would fail on it. Its companion reads `first` as right/left and `systemStart` as centre/right.
+the two fields would fail on it. Its companion reads `first` as right/left and `systemStart` as center/right.
 Against its parent the only options record that moves is selector 87's second incidence, where word 6 goes 1 to 3
 and word 10 goes 2 to 3. **All three members of the legacy alignment list are now verified against Finale's own
 conversion**, and the framework's `LYRICS_ALIGN_` constants are corroborated rather than relied on.
@@ -142,7 +142,7 @@ position's flag a placeholder with no UI, and musxdom likewise documents `on` as
 **Confirmed for Finale 2012 and for every earlier release, against all 1,189 adjacent-exact companion pairs of the
 reference corpus.** `lyricUseEdgePunctuation` is **selector `57` word 4**, class `0x0047` byte 8 in the zlib epoch —
 the fourth field of the six-word row that already holds `smartHyphenStart`, `wordExtMinLength` and
-`wordExtOffsetToNotehead`. The reader recovers it from Finale 2012 and asserts the era's behaviour before that; both
+`wordExtOffsetToNotehead`. The reader recovers it from Finale 2012 and asserts the era's behavior before that; both
 branches agree with their companions on all 1,189 documents, with no read failure.
 
 The boundary is **Finale 2011**, and getting there took a correction worth recording, because the reference corpus
@@ -176,7 +176,7 @@ Finale 2011 documents carry 1, and it is tempting to read that as the release's 
 `tests/evidence/F2011/F2011-baseline.mus`, created new in Finale 2011, carries **0** — a document made in that
 release ignores edge punctuation by default. The 597 are Finale's own sample and template files, authored earlier
 and converted into the release, and conversion switches ignoring off to preserve the older look. That is the same
-behaviour the Finale 2012 cohort shows, where the 50 documents carrying 1 are the upgraded ones and the 198 born in
+behavior the Finale 2012 cohort shows, where the 50 documents carrying 1 are the upgraded ones and the 198 born in
 2012 carry 0. **A corpus of one vendor's shipped content is not a sample of what a release writes for a new
 document.**
 
@@ -188,7 +188,7 @@ than clear; every other tracked Finale 2012 fixture sits on the ignored side. It
 are independent — ignoring is off there and the list is stock, so the record stays twelve bytes.
 **It is a version gate rather than a marker because nothing structural distinguishes the two cases**: the record is
 twelve bytes in Finale 2007 and in Finale 2012 alike, so its shape says nothing and only the release does. It is
-bounded inside the zlib epoch and fails closed onto the pre-2012 behaviour, which is right for every release but one.
+bounded inside the zlib epoch and fails closed onto the pre-2012 behavior, which is right for every release but one.
 
 The route to that word is worth recording, because the obvious search produced nine wrong answers first. Finale 2012
 is the only release whose documents vary, so the 248 companion-backed Finale 2012 documents are the only cohort that
@@ -330,7 +330,7 @@ nothing in the imported pools can draw. The honest value is false, and a future 
 systematic companion mismatch on every pre-2004 document as a result. That is intended.
 
 The underscore requirement is the quiet member of the group, since baseline and companions already leave it false;
-it is asserted on the same footing as `MultimeasureRestOptions::noHorizontalStretch`, because the era's behaviour
+it is asserted on the same footing as `MultimeasureRestOptions::noHorizontalStretch`, because the era's behavior
 is known rather than inherited.
 
 ### What the Coda-banner epoch recovers, and what remains open
@@ -375,7 +375,7 @@ The obvious-looking alternative is wrong and worth naming, because it was tried 
 not a seeded value needing repair — it is an absent one, and copying the reference document's own synthesized
 placeholder into it would put a value in the document that no document ever stated.
 
-`tests/mapping_tests.cpp` pins all three behaviours with a `LyricOptions` seeded to contradict every assertion the
+`tests/mapping_tests.cpp` pins all three behaviors with a `LyricOptions` seeded to contradict every assertion the
 reader makes, `hyphenChar` set to `~` among them. Removing the boolean assertion fails it, and so does hard-coding
 the hyphen character; both mutations were checked.
 
@@ -390,5 +390,5 @@ preference map names none of the eleven, and explicitly has no field for the alt
 One correlation is recorded and **not** implemented. In documents older than selector `55`, Finale 27 synthesizes
 the starting connection's vertical offset as 1 when the word-extension syllable positioning bit is set and 4 when
 it is not — six fixture groups agree, and no other record separates the two cases. Whether that is a real legacy
-behaviour or an artifact of the converter is unsettled, so the reader leaves those documents at the baseline's 1
+behavior or an artifact of the converter is unsettled, so the reader leaves those documents at the baseline's 1
 and the question stays **open**.

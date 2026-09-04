@@ -401,7 +401,9 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 const auto comparison = comparison_text::compareText(
                     className, path, sourceFound->second.first.asString(),
                     companionFound->second.first.asString(), sourceDocument, companionDocument,
-                    comparison_text::isPartNameText(className, path, source, companion));
+                    comparison_text::isPartNameText(className, path, source, companion),
+                    comparison_text::isSynthesizedScoreNameText(className, path, source,
+                                                                companion));
                 if (comparison.equivalent &&
                     comparison_text::hasSynthesizedTextState(source, className, path) &&
                     sourceFound->second.first != companionFound->second.first) {

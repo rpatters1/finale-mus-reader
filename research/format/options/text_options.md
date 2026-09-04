@@ -43,7 +43,7 @@ Finale 97 and later one carries all three. `05` and `13` are present in every er
 from the same words as every later era. That agrees with the report that the Coda-era UI exposes tab spacing and
 date format and no other document-wide text setting.
 
-**Three enums order their lists first, opposite, centre, and two of them therefore disagree with musxdom.**
+**Three enums order their lists first, opposite, center, and two of them therefore disagree with musxdom.**
 `AlignJustify` already uses Finale's order, `Left, Right, Center`, so `textHorzAlign` passes through untouched.
 `TextJustify` is `Left, Center, Right, Full, ForcedFull` in musxdom against `Left, Right, Center, Full,
 ForcedFull` in the file, and `VerticalAlignment` is `Top, Center, Bottom` against `Top, Bottom, Center`. Both need

@@ -87,7 +87,9 @@ Before editing any documentation, use the `maintain-documentation` skill.
   `private/generated/<survey_id>/`, fixtures in `private/evidence/<survey_id>/`.
   `private/regenerate.sh <survey_id>` rebuilds one corpus, `--all` rebuilds every
   configured one.
-- `third_party/`: permitted location for pinned, license-compatible codec code.
+- `third_party/`: permitted location for pinned, license-compatible codec code. A tool that
+  vendors a file verbatim keeps it in its own `third_party/` beside the code that uses it,
+  as `tools/coverage/third_party/` does; either way the contents are not ours to edit.
 
 Some implementation directories may be absent until the initial CMake
 scaffolding creates them.
@@ -99,12 +101,12 @@ solutions that centralize reuse and avoid boilerplate without introducing overly
 abstractions. A change with more red deletions than green insertions is a win. Every line of
 code should earn its place.
 
-In library and reader code, every fact and every behaviour has exactly one
+In library and reader code, every fact and every behavior has exactly one
 implementation. A second copy is a defect even when both copies are currently
 correct, because the two will diverge and the divergence will be silent.
 
 This is close to absolute. Treat an exception as needing extraordinary
-justification, stated in a comment at the site, rather than as a judgement call.
+justification, stated in a comment at the site, rather than as a judgment call.
 Duplication is not paid for by being convenient, by being small, or by the copies
 being far apart — distance makes it worse.
 
@@ -123,7 +125,7 @@ In practice:
   copies and only one was updated.
 
 Comments in `src/` and `include/` state how the code works, and how the format is believed to
-work where belief is all there is, with the confidence labelled. They do not carry how a
+work where belief is all there is, with the confidence labeled. They do not carry how a
 behavior was derived, which fixture or survey established it, or what was believed before. That
 material belongs in the class's file under `research/format/`, its experiment history under
 `research/investigations/`, and the fixture `provenance.txt` files. See the

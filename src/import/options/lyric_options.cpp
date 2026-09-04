@@ -107,7 +107,7 @@ constexpr EpochMask fixedRowLyricEpochs = EpochMask::CodaBanner | EpochMask::Fix
 /// @brief Translates the legacy lyric alignment numbering into musxdom's @c AlignJustify.
 /// @details The two orders disagree and neither is a rotation of the other: musxdom follows
 /// Finale's general `Left, Right, Center` order from zero, while the lyric records number
-/// their own list `1 = centre, 2 = left, 3 = right`. The numbering is the distilled
+/// their own list `1 = center, 2 = left, 3 = right`. The numbering is the distilled
 /// framework's. 1 and 2 are established for all four positions. **Believed: 3 is `right`,**
 /// which rests on the framework alone -- no document seen stores it.
 ///
@@ -191,7 +191,7 @@ constexpr std::size_t earlyWordExtConnectCount = wordExtConnectCount - 1;
 
 /// @brief Whether this source stores the Finale 2004 generation of smart-lyric settings.
 /// @details Selector 57 is the marker for the whole group, including the two switches that live
-/// on its neighbours: smart hyphens on selector 35 word 5 and smart word extensions on selector
+/// on its neighbors: smart hyphens on selector 35 word 5 and smart word extensions on selector
 /// 34 word 5. Both selectors exist in every era, but the words mean nothing before Finale 2004:
 /// they are zero in every document that predates the option, which arrives switched on. Reading
 /// them on such a document would turn the option off on the strength of a word that meant
@@ -718,7 +718,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     //
     // The underscore requirement is the quiet member of the group: the baseline already leaves
     // it false, and it is asserted for the same reason
-    // MultimeasureRestOptions::noHorizontalStretch is, because the era's behaviour is known
+    // MultimeasureRestOptions::noHorizontalStretch is, because the era's behavior is known
     // rather than inherited.
     if (!storesSmartLyricOptions(index, profile)) {
         target->useSmartHyphens = false;
@@ -732,7 +732,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // Automatic lyric numbering arrives with Finale 2011, so a document whose selector 58 is
     // still six words shows no automatic numbers at all. The pinned baseline agrees, and the
     // three switches are asserted anyway on the same footing as the smart-lyric group: the
-    // era's behaviour is known rather than inherited. `lyricAutoNumType` is left alone, because
+    // era's behavior is known rather than inherited. `lyricAutoNumType` is left alone, because
     // the numbering type of a document that displays no numbers means nothing.
     if (!storesAutoNumbering(index, profile)) {
         target->showAutoNumbersOnVerses = false;

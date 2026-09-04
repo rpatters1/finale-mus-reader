@@ -199,10 +199,15 @@ struct RegisteredImporter
 
 const std::vector<RegisteredImporter>& registeredImporters()
 {
-    // Keep one line per importer so the complete execution order stays directly scannable.
+    // One line per importer, alphabetical within each pool. **The order is not a contract**, apart
+    // from the bootstrap pair below: every other importer must produce the same document wherever
+    // it appears in this list. An importer that needs another class's objects registers a check on
+    // @ref PendingReferences::checks, which runs after every importer, rather than relying on a
+    // neighbor having run first -- a dependency expressed as line order is one nothing verifies.
     // clang-format off
     static const std::vector<RegisteredImporter> result = {
-        // bootstrap
+        // Bootstrap, and the one ordered pair: font definitions are the pool that font options
+        // resolve their ids against, and both run before anything that reads a recovered font.
         FINALE_MUS_READER_IMPORTER(ImportFontDefinitions, &others::importFontDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportFontOptions, &options::importFontOptions),
         // options
@@ -211,6 +216,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAugmentationDotOptions, &options::importAugmentationDotOptions),
         FINALE_MUS_READER_IMPORTER(ImportBarlineOptions, &options::importBarlineOptions),
         FINALE_MUS_READER_IMPORTER(ImportBeamOptions, &options::importBeamOptions),
+        FINALE_MUS_READER_IMPORTER(ImportChordOptions, &options::importChordOptions),
         FINALE_MUS_READER_IMPORTER(ImportClefOptions, &options::importClefOptions),
         FINALE_MUS_READER_IMPORTER(ImportFlagOptions, &options::importFlagOptions),
         FINALE_MUS_READER_IMPORTER(ImportGraceNoteOptions, &options::importGraceNoteOptions),
@@ -236,13 +242,11 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
-        // ChordOptions follows its source-owned fret definitions so its default references
-        // can be accepted only when their targets exist.
-        FINALE_MUS_READER_IMPORTER(ImportChordOptions, &options::importChordOptions),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
-        FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
+        FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
+        FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         // details
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
@@ -729,6 +733,11 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
             "Copied " + std::to_string(copiedCustomLines.size())
             + " Finale 27 custom line(s) for "
             + std::to_string(pending.customLines.size()) + " Smart Shape option field(s)."});
+    }
+
+    // Last within this phase: a check may read anything the copies above just added.
+    for (const auto& check : pending.checks) {
+        check();
     }
 }
 

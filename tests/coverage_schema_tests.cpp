@@ -11,6 +11,8 @@
 #include "coverage/common/music_symbol_info.h"
 #include "coverage/common/note_rest_info.h"
 #include "coverage/common/page_format_info.h"
+#include "coverage/common/part_definition_info.h"
+#include "coverage/common/part_name_text.h"
 #include "coverage/common/tie_options_info.h"
 
 namespace finale_mus_reader_tests {
@@ -514,6 +516,111 @@ TEST_CASE("Finale 2006 mixed-stem direction conversion loss is upgrade loss", "[
     context.sourceVersion = &finale2006;
     context.origin = "finale27-default";
     REQUIRE_FALSE(classifyTieOptionsDifference(context));
+}
+
+
+TEST_CASE("The synthesized score name is the only part-definition difference classified",
+    "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    using finale_mus_reader::FormatEpoch;
+    finale_mus_reader::ImportReport report(FormatEpoch::UncompressedLegacy);
+    const ComparisonLeaves none;
+    const auto classify = [&](std::string_view path, FormatEpoch epoch,
+                              std::string_view origin, const Value& source,
+                              const Value& companion) {
+        const DifferenceContext context{path, DifferenceCategory::Differs, origin, source,
+            companion, none, none, epoch, finale_mus_reader::ByteOrder::BigEndian, nullptr,
+            report};
+        return classifyPartDefinitionDifference(context);
+    };
+    const Value zero(std::int64_t{0});
+    const Value block(std::int64_t{28});
+    constexpr std::string_view scoreName = "part_defs[cmper=0].name_id";
+
+    REQUIRE(classify(scoreName, FormatEpoch::UncompressedLegacy, "legacy-behavior", zero, block)
+        == DifferenceClassification::SynthesizedScoreName);
+    REQUIRE(classify(scoreName, FormatEpoch::CodaBanner, "legacy-behavior", zero, block)
+        == DifferenceClassification::SynthesizedScoreName);
+    REQUIRE(classify(scoreName, FormatEpoch::DclLegacy, "legacy-behavior", zero, block)
+        == DifferenceClassification::SynthesizedScoreName);
+
+    // Every condition is load-bearing: none of these may be swallowed by the rule.
+    SECTION("the epoch that stores the member is never classified")
+    {
+        REQUIRE_FALSE(classify(scoreName, FormatEpoch::ZlibLegacy, "legacy-behavior", zero,
+            block));
+    }
+    SECTION("a recovered value that disagrees is never classified")
+    {
+        REQUIRE_FALSE(classify(scoreName, FormatEpoch::ZlibLegacy, "legacy-mus", block,
+            Value(std::int64_t{29})));
+        REQUIRE_FALSE(classify(scoreName, FormatEpoch::UncompressedLegacy, "legacy-mus", block,
+            Value(std::int64_t{29})));
+    }
+    SECTION("a linked part is never classified")
+    {
+        REQUIRE_FALSE(classify("part_defs[cmper=1].name_id", FormatEpoch::UncompressedLegacy,
+            "legacy-behavior", zero, block));
+    }
+    SECTION("another member of the score part is never classified")
+    {
+        REQUIRE_FALSE(classify("part_defs[cmper=0].copies", FormatEpoch::UncompressedLegacy,
+            "legacy-behavior", zero, block));
+    }
+    SECTION("a non-null reader value is never classified")
+    {
+        REQUIRE_FALSE(classify(scoreName, FormatEpoch::UncompressedLegacy, "legacy-behavior",
+            block, Value(std::int64_t{29})));
+    }
+    SECTION("a companion that supplies no name is never classified")
+    {
+        REQUIRE_FALSE(classify(scoreName, FormatEpoch::UncompressedLegacy, "legacy-behavior",
+            zero, zero));
+    }
+
+    SECTION("an unreachable member the companion sets is possibly unrecoverable")
+    {
+        constexpr std::string_view unlink = "part_defs[cmper=14].unlink_insts";
+        REQUIRE(classify(unlink, FormatEpoch::ZlibLegacy, "unmapped", Value(false), Value(true))
+            == DifferenceClassification::PossiblyUnrecoverable);
+        // A recovered value that disagrees is a real defect and must stay unexpected, as must a
+        // reader value the companion does not share the direction of.
+        REQUIRE_FALSE(classify(unlink, FormatEpoch::ZlibLegacy, "legacy-mus", Value(false),
+            Value(true)));
+        REQUIRE_FALSE(classify(unlink, FormatEpoch::ZlibLegacy, "unmapped", Value(true),
+            Value(false)));
+    }
+}
+
+
+TEST_CASE("A part name requires the reader to name the text, and the synthesis does not",
+    "[coverage]")
+{
+    using finale_mus_reader::coverage::partNameTextMatches;
+    using finale_mus_reader::coverage::synthesizedScoreNameText;
+    const std::set<std::int64_t> none;
+    const std::set<std::int64_t> names337{337};
+    const std::set<std::int64_t> names12{12};
+
+    // Both sides naming a text must agree on which, so an unrelated block is not swept in.
+    REQUIRE(partNameTextMatches(names337, names337, 337));
+    REQUIRE_FALSE(partNameTextMatches(names337, names12, 337));
+    REQUIRE_FALSE(partNameTextMatches(names12, names337, 337));
+    // A companion that names none defers to the reader.
+    REQUIRE(partNameTextMatches(names337, none, 337));
+
+    // A text only the companion names is not a part name the reader got wrong. It is the score
+    // name Finale synthesized, and it is classified as that instead.
+    REQUIRE_FALSE(partNameTextMatches(none, names337, 337));
+    REQUIRE(synthesizedScoreNameText(none, names337, 337));
+    REQUIRE_FALSE(synthesizedScoreNameText(none, names337, 12));
+
+    // The two are mutually exclusive, and neither fires when nothing names the text.
+    REQUIRE_FALSE(synthesizedScoreNameText(names337, names337, 337));
+    REQUIRE_FALSE(synthesizedScoreNameText(names12, names337, 337));
+    REQUIRE_FALSE(partNameTextMatches(none, none, 337));
+    REQUIRE_FALSE(synthesizedScoreNameText(none, none, 337));
 }
 
 } // namespace

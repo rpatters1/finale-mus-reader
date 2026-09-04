@@ -88,7 +88,7 @@ a future importer should map rather than discard. And no part of the header is
 published in survey evidence bundles: 433 of 1,289 files in `rpatters1-main`
 contain free text here, including author names, work titles, and in some files
 third-party email addresses. Publishing a metadata-free subset of the header
-becomes possible once these fields and their neighbours are named well enough to
+becomes possible once these fields and their neighbors are named well enough to
 excise by field rather than by scanning for readable text. No survey deliverable
 publishes header bytes.
 
