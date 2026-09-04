@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include "coverage/common/font_info.h"
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"

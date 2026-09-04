@@ -7,13 +7,8 @@
 
 #include "coverage/schema.h"
 
-#include "coverage/common/font_info.h"
-#include "coverage/common/music_symbol_info.h"
-#include "coverage/common/note_rest_info.h"
-#include "coverage/common/page_format_info.h"
-#include "coverage/common/part_definition_info.h"
-#include "coverage/common/part_name_text.h"
-#include "coverage/common/tie_options_info.h"
+#include "coverage/classification_rules.h"
+#include "coverage/comparison_text.h"
 
 namespace finale_mus_reader_tests {
 namespace {

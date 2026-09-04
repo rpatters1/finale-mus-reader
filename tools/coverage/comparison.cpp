@@ -14,6 +14,7 @@
 #include <tuple>
 #include <unordered_set>
 
+#include "coverage/classification_rules.h"
 #include "coverage/common/font_info.h"
 #include "coverage/comparison_text.h"
 #include "coverage/identity.h"

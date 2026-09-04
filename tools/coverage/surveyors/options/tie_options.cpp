@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "coverage/common/tie_options_info.h"
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
