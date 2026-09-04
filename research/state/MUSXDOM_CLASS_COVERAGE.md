@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**52 done, 2 partial, 136 to do, 190 total.** Verified class for class against the registry on
+**60 done, 2 partial, 128 to do, 190 total.** Verified class for class against the registry on
 2026-09-04: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (16 done, 0 partial, 77 to do, 93 total)
+## others  (24 done, 0 partial, 69 to do, 93 total)
 
     [ ] AcciAmountFlats                                                         L1 library item
     [ ] AcciAmountSharps                                                        L1 library item
@@ -117,14 +117,14 @@ Explanation added here has to be removed again.
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
     [ ] Staff
-    [ ] StaffListCategoryName                                                   L2 satellite
-    [ ] StaffListCategoryParts                                                  L2 satellite
-    [ ] StaffListCategoryScore                                                  L2 satellite
-    [ ] StaffListRepeatName
-    [ ] StaffListRepeatParts
-    [ ] StaffListRepeatPartsForced
-    [ ] StaffListRepeatScore
-    [ ] StaffListRepeatScoreForced
+    [x] StaffListCategoryName                   staff_list.cpp
+    [x] StaffListCategoryParts                  staff_list.cpp
+    [x] StaffListCategoryScore                  staff_list.cpp
+    [x] StaffListRepeatName                     staff_list.cpp
+    [x] StaffListRepeatParts                    staff_list.cpp
+    [x] StaffListRepeatPartsForced              staff_list.cpp
+    [x] StaffListRepeatScore                    staff_list.cpp
+    [x] StaffListRepeatScoreForced              staff_list.cpp
     [ ] StaffPlayData
     [ ] StaffStyle                                                              L1 library item
     [ ] StaffStyleAssign

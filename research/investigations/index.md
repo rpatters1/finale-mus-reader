@@ -17,7 +17,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Corpus enumeration, archives, fixture acquisition, coverage registration | [`corpus_surveys.md`](corpus_surveys.md) |
 | Finale 1.x–2.6 evidence and the 1.8.7–3.0 correlation | [`early_versions.md`](early_versions.md) |
 | Saving-version reads, printed-manual audit, 3.5/3.7 feature boundaries | [`version_boundaries.md`](version_boundaries.md) |
-| The private PDK Framework option-map audit | [`option_mappings.md`](option_mappings.md) |
+| The private format-reference option-map audit | [`option_mappings.md`](option_mappings.md) |
 | Part ownership, structural sharing, the sharing census | [`sharing.md`](sharing.md) |
 | Companion-comparison disagreements and the instrument errors behind them | [`regression_open_questions.md`](regression_open_questions.md) |
 | Text pool, binary command table, Coda-banner pool walk | [`text_pool.md`](text_pool.md) |
@@ -31,6 +31,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Layer attribute layout, release coverage, pre-2002 playback and spacing | [`layer_attributes.md`](layer_attributes.md) |
 | Part definition class id, flag word, default-name sign, the absent `pD` tag | [`part_definitions.md`](part_definitions.md) |
 | Part globals, pre-zlib options, Coda Scroll View cache, zlib class `0x0120` | [`part_globals.md`](part_globals.md) |
+| Staff-list identities, text width, forced arrays, and category baseline fill | Category: [`staff_list.md`](staff_list.md); repeat: [`repeat_options.md`](repeat_options.md) |
 
 Per-class investigations use the same filename as the class's reference file under
 `research/format/` and as its source file under `src/import/`:
