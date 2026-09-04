@@ -114,8 +114,12 @@ std::string comparisonFontIdentity(const SurveySnapshot& snapshot, std::int64_t 
 bool isComparisonFontReference(std::string_view path,
                                const std::set<std::string>& shapeFontPaths)
 {
-    constexpr std::string_view suffix = "_font_id";
-    return (path.size() >= suffix.size() && path.substr(path.size() - suffix.size()) == suffix) ||
+    constexpr std::string_view namedReferenceSuffix = "_font_id";
+    constexpr std::string_view nestedFontInfoSuffix = ".font_id";
+    const auto endsWith = [path](std::string_view suffix) {
+        return path.size() >= suffix.size() && path.substr(path.size() - suffix.size()) == suffix;
+    };
+    return endsWith(namedReferenceSuffix) || endsWith(nestedFontInfoSuffix) ||
            shapeFontPaths.contains(std::string(path));
 }
 

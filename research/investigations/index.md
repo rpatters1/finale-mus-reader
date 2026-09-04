@@ -22,6 +22,8 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Companion-comparison disagreements and the instrument errors behind them | [`regression_open_questions.md`](regression_open_questions.md) |
 | Text pool, binary command table, Coda-banner pool walk | [`text_pool.md`](text_pool.md) |
 | TextBlock storage and assembly | [`text_blocks.md`](text_blocks.md) |
+| Chord suffix element identities, layouts, and flags | [`chord_suffix_elements.md`](chord_suffix_elements.md) |
+| Chord suffix playback identity and zero fill | [`chord_suffix_playback.md`](chord_suffix_playback.md) |
 | Bookmarks | [`bookmark_text.md`](bookmark_text.md) |
 | Graphic assignment layout | [`graphic_assignments.md`](graphic_assignments.md) |
 | Fret record identities and layouts | [`fret_records.md`](fret_records.md) |

@@ -33,6 +33,8 @@ enum class Phase : std::size_t
     ImportBarlineOptions,
     ImportBeamOptions,
     ImportChordOptions,
+    ImportChordSuffixElements,
+    ImportChordSuffixPlayback,
     ImportClefOptions,
     ImportFlagOptions,
     ImportFontDefinitions,

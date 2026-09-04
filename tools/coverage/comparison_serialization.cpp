@@ -113,6 +113,8 @@ std::string_view transformationName(ComparisonTransformation transformation)
         return "Equivalent Enigma font-state serialization";
     case EquivalentTextBlockReferent:
         return "Equivalent TextBlock raw-text referent";
+    case FinaleAddedChordSuffixFiller:
+        return "Finale-added chord-suffix filler";
     case FinaleAddedStartObjectWrapper:
         return "Finale-added StartObject wrapper";
     case FinaleDroppedTimeInsert:

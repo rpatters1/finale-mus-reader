@@ -3,15 +3,31 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <set>
+
 #include "musx/musx.h"
 
 #include "coverage/schema.h"
 
 #include "coverage/classification_rules.h"
+#include "coverage/common/font_info.h"
 #include "coverage/comparison_text.h"
 
 namespace finale_mus_reader_tests {
 namespace {
+
+TEST_CASE("Coverage recognizes direct and nested font references", "[coverage]")
+{
+    using finale_mus_reader::coverage::isComparisonFontReference;
+    const std::set<std::string> dynamicReferences;
+
+    REQUIRE(isComparisonFontReference(
+        "chord_suffix_elements[cmper=1,inci=0].font.font_id", dynamicReferences));
+    REQUIRE(isComparisonFontReference(
+        "ss_line_styles[cmper=1].char_font_id", dynamicReferences));
+    REQUIRE_FALSE(isComparisonFontReference(
+        "font_definitions.definitions[normalized_name=maestro].cmper", dynamicReferences));
+}
 
 TEST_CASE("Coverage source instances enumerate physical parts without score fallbacks",
     "[coverage]")

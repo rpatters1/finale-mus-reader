@@ -13,6 +13,12 @@ namespace others {
 // translation unit. Accessors are used instead of static registration so a static archive
 // cannot discard an importer nothing else references.
 
+/// @brief Recovers the positioned elements that form chord suffix definitions.
+void importChordSuffixElements(const ImportContext& context);
+
+/// @brief Recovers chord-suffix playback intervals.
+void importChordSuffixPlayback(const ImportContext& context);
+
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
 

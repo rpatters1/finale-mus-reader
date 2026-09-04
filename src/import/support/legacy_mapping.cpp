@@ -239,6 +239,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTimeSignatureOptions, &options::importTimeSignatureOptions),
         FINALE_MUS_READER_IMPORTER(ImportTupletOptions, &options::importTupletOptions),
         // others
+        FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
+        FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),

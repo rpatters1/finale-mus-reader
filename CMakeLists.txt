@@ -196,6 +196,8 @@ add_library(finale_mus_reader STATIC
     src/import/options/tie_options.cpp
     src/import/options/time_signature_options.cpp
     src/import/options/tuplet_options.cpp
+    src/import/others/chord_suffix_elements.cpp
+    src/import/others/chord_suffix_playback.cpp
     src/import/others/font_definitions.cpp
     src/import/others/fret_instruments.cpp
     src/import/others/fretboard_groups.cpp
