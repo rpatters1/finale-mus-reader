@@ -31,6 +31,9 @@ void textBlockImport(const finale_mus_reader::container::ParsedContainer& parsed
     const finale_mus_reader::ImportContext context{
         index, profile, noSource, document, reference, report, pending, construction};
     finale_mus_reader::others::importTextBlocks(context);
+    // The Coda pass is deferred, because it pairs its rows against the imported text pool. A test
+    // driving one importer alone still has to close the phase the registry closes.
+    finale_mus_reader::runDeferredChecks(pending);
 }
 
 void testStoredTextBlocksAcrossEpochs()

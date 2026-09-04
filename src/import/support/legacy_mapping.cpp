@@ -248,13 +248,13 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
+        FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
         // details
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         // entries (none recovered yet)
         // texts
         FINALE_MUS_READER_IMPORTER(ImportTexts, &texts::importTexts),
-        FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
     };
     // clang-format on
     return result;
@@ -736,9 +736,7 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
     }
 
     // Last within this phase: a check may read anything the copies above just added.
-    for (const auto& check : pending.checks) {
-        check();
-    }
+    runDeferredChecks(pending);
 }
 
 } // namespace
@@ -768,6 +766,13 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
 }
 
+
+void runDeferredChecks(PendingReferences& pending)
+{
+    for (const auto& check : pending.checks) {
+        check();
+    }
+}
 
 void applyMappingTables(const std::vector<const MappingTable*>& tables,
     const records::LegacyRecordIndex& index, const SourceProfile& profile,

@@ -801,6 +801,14 @@ struct PendingReferences
     std::vector<std::function<void()>> checks;
 };
 
+/// @brief Runs every deferred check, in the order the importers registered them.
+/// @details The last step of the phase that follows every importer, and the reason registry order
+/// carries no meaning: an importer that needs another class's objects registers the work here and
+/// this runs it once every pool is filled. Exposed because a test that drives one importer alone
+/// still has to close the phase, and doing that by repeating the loop would let a test pass
+/// against a drain the reader no longer performs the same way.
+void runDeferredChecks(PendingReferences& pending);
+
 /// @brief Everything the importer for one musxdom class is handed.
 /// @details Passed by reference and outlived by nothing: it is built once per import and
 /// exists only for the duration of the pass over the registered importers.

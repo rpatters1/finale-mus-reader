@@ -76,9 +76,7 @@ musx::dom::Cmper importedFretStyleId(bool chordOptionsFirst, bool withFretboardS
         finale_mus_reader::others::importFretboardStyles(context);
         finale_mus_reader::options::importChordOptions(context);
     }
-    for (const auto& check : pending.checks) {
-        check();
-    }
+    finale_mus_reader::runDeferredChecks(pending);
     return document->getOptions()->get<ChordOptions>()->fretStyleId;
 }
 
