@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **50 done, 2 partial, 138 to do, 190 registered musxdom classes** (verified against the registry
+- **52 done, 2 partial, 136 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-04). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and

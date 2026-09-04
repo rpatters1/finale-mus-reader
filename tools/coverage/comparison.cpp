@@ -316,7 +316,8 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                   const ImportReport& sourceReport)
 {
     ComparisonResult result;
-    ComparisonPreparationContext preparation{source, companion, result.transformations};
+    ComparisonPreparationContext preparation{
+        source, companion, result.transformations, sourceEpoch};
     runComparisonPreparers(preparation);
     if (sourceEpoch == FormatEpoch::CodaBanner) {
         comparison_text::realignCodaBlockTexts(source, companion, sourceDocument,

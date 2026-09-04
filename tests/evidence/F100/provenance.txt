@@ -422,3 +422,15 @@ F100-tendydisp-17.mus / .etf / .musx
     From F100-baseline, changes only Tend YDisp from 0 to 17. Selector 35 word 5 is
     the sole decoded source change and the ETF repeats it. Finale 27 discards the edit:
     its complete TieOptions object is identical to the baseline's.
+
+F100-chordsuffs.mus / .etf / .musx
+    sha256 800f4949a5b6a7ee39159a639f6494d285d7de7caee53c95b70fc547dab96fa0 (.mus)
+    sha256 712ea8791ee6ffad93355e9124e19dd2260f22c7bcc985042ef4d096657e2ea0 (.etf)
+    sha256 7f9610b1fb7eb4a88421d6b74dedcd5d0ebcb38e2e76949a03782f0c6a711353 (.musx)
+    Creates two chord suffix definitions in Finale 1.0.0. Selector IV stores two
+    incidences for suffix 1 and one incidence for suffix 2 using the same six-word
+    layout as later fixed-row releases. Its packed font word 0x0c02 selects font id 2
+    at 12 points, and suffix 2 combines the numeric and flat-prefix flags as 0x0880.
+    Selector IK stores suffix 1 playback as 3, 7, 10, 0, 0, 0. The ETF repeats each
+    IV and IK word, and the Finale 27 companion preserves four suffix elements and all
+    six playback values.

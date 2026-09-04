@@ -82,6 +82,7 @@ enum class ComparisonTransformation
 {
     EquivalentEnigmaFontState,
     EquivalentTextBlockReferent,
+    FinaleAddedChordSuffixFiller,
     FinaleAddedStartObjectWrapper,
     FinaleDroppedTimeInsert,
     FinaleReformattedPartName,
@@ -95,6 +96,7 @@ struct ComparisonPreparationContext
     SurveySnapshot& source;
     SurveySnapshot& companion;
     std::map<ComparisonTransformation, std::uint64_t>& transformations;
+    FormatEpoch sourceEpoch;
 };
 
 using ComparisonPreparationFn = void (*)(ComparisonPreparationContext& context);

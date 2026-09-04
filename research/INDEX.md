@@ -32,7 +32,7 @@ reading the file.
 | Pool | Directory | Start at |
 |---|---|---|
 | options | [`format/options/`](format/options/index.md) | [`options/index.md`](format/options/index.md) for addressing, then the class file |
-| others | [`format/others/`](format/others/) | `font_definitions`, `shape_definitions`, `fret_records`, `graphic_assignments`, `smart_shape_custom_lines`, `text_blocks`, `layer_attributes`, `part_definitions`, `part_globals` |
+| others | [`format/others/`](format/others/) | `chord_suffix_elements`, `chord_suffix_playback`, `font_definitions`, `shape_definitions`, `fret_records`, `graphic_assignments`, `smart_shape_custom_lines`, `text_blocks`, `layer_attributes`, `part_definitions`, `part_globals` |
 | details | [`format/details/`](format/details/) | `fretboard_diagrams`, `measure_graphic_assign` |
 | texts | [`format/texts/`](format/texts/) | `text_pool` first, then `coda_texts`, `file_info_text`, `bookmark_text`, `expression_text` |
 

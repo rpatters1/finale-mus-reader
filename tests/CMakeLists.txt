@@ -23,7 +23,9 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 
 add_executable(finale_mus_reader_tests
     ../tools/coverage/classification_rules.cpp
+    ../tools/coverage/common/font_info.cpp
     ../tools/coverage/json.cpp
+    ../tools/coverage/value.cpp
     classes/common/legacy_record_tests.cpp
     classes/common/mapping_framework_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
@@ -54,6 +56,7 @@ add_executable(finale_mus_reader_tests
     classes/options/tie_options_tests.cpp
     classes/options/time_signature_options_tests.cpp
     classes/options/tuplet_options_tests.cpp
+    classes/others/chord_suffix_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/part_definitions_tests.cpp
