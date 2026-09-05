@@ -14,9 +14,9 @@ semantics but no disk locations. The consulted immutable documentation is
 (accessed 2026-08-31). `FCMusicCharacterPrefs` identifies the five vertical-rest values as
 EVPU adjustments in eighth-through-128th order; the consulted immutable documentation is
 [`class_f_c_music_character_prefs.html`](https://github.com/finale-lua/pdk-framework-docs/blob/c3c5ebf0335432812b286e79c9757ad023eb48f1/html/class_f_c_music_character_prefs.html)
-(accessed 2026-09-01). These descriptions are **public-PDK-derived**. Authorized read-only
-Framework history supplied the following initial locations, which remain
-**private-framework-derived** except where the source and companion evidence below corroborates
+(accessed 2026-09-01). These descriptions are **public-PDK-derived**. An independent format
+reference supplied the following initial locations, which remain **reference-derived** except
+where the source and companion evidence below corroborates
 them:
 
 | musxdom field | Preference property | Selector | Incidence | Word | Width |
@@ -25,8 +25,13 @@ them:
 | `doCrossStaffNotes` | `crossStaffInOriginal` | `12` | 0 | 4 | 2 |
 | `scaleManualPositioning` | `scaleManualPos` | `41` | 0 | 5 | 2 |
 
-The selector-1 location applies to DCL and later storage, not to the whole fixed-row family.
-The DCL importer retains it as **private-framework-derived** preliminary coverage; all 53
+The selector-1 location applies to DCL and later storage and to a late uncompressed layout,
+but not to the whole fixed-row family. In the uncompressed epoch, presence of `CS` comparator 1
+selects its word-5 bit; absence selects global selector `01` word 1. This structural discriminator
+is **weak**: `mus-ddd4b454121a57a1` and `mus-9005b59dbed36eed` both omit `CS`, store respectively
+one and zero at the later location, and have true and false semantic companions. The sampled
+Finale 3.7, 97, and 98 layouts retain `CS`; a broader census remains pending. The DCL importer
+retains selector 1 as **reference-derived** preliminary coverage; all 53
 distinct DCL sources in the current tracked-evidence scan store zero there and have false semantic
 companions, so none provides an independent positive test. The zlib importer derives classes
 `0x000f`, `0x001a`, and `0x0037` from the three selectors.
@@ -63,7 +68,7 @@ zero. Each is the sole decoded change in its controlled source and is repeated b
 Finale 27 companions preserve the corresponding values, so no boolean-to-EVPU conversion is
 required.
 
-The DCL importer uses the same locations as **private-framework-derived** preliminary coverage,
+The DCL importer uses the same locations as **reference-derived** preliminary coverage,
 but this is not independently confirmed: all 53 tracked DCL sources have raw tuples that differ
 from their Finale 27 companions, usually raw zeroes upgraded to `0, 0, 0, -24, -48`. That may be
 upgrade-time default synthesis, but a controlled DCL edit is needed to distinguish it from a
@@ -125,10 +130,8 @@ standard color set. The controlled `F2008-notehead-colors` source stores outline
 distinct edited channel values. Every value in both source records agrees exactly with its
 Finale 27 companion, establishing the planar order, unsigned 16-bit channels, and leading
 boolean independently of defaults. Finale 2007's controlled source has no class `0x0071`, in
-agreement with the **private-reference-derived** Finale year-to-year product summary identifying
-notehead colors as a Finale 2008 feature (SHA-256
-`7d25ac230626f98d63f5b91bb5034232a55c876886fafc6a16ecb24e95b55b0c`, accessed
-2026-09-01). The importer therefore uses record presence and the exact 42-word shape rather than
+agreement with an external product-history reference identifying notehead colors as a Finale
+2008 feature. The importer therefore uses record presence and the exact 42-word shape rather than
 a version gate. Earlier sources and a malformed or absent color record retain the pinned
 baseline and report `Finale27Default`.
 

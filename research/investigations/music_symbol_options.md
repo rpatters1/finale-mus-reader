@@ -118,3 +118,30 @@
   on that source-owned path are classified as `different_defaults`, after the separately
   characterized `stem-horizontal-correction` values. The refreshed tracked report has 29,353
   expected leaves and no unexpected leaves.
+
+## 2026-09-05 — Configured custom symbol font
+
+- **Contrary observation:** The current all-corpus capture has 23 unexpected
+  `MusicSymbolOptions` leaves in one Finale 2.6 source, `mus-d155ea3bad6a0a6f`. Its comparator-zero
+  music face is `PattersonSonata`, which is absent from the supplied `MacSymbolFonts.txt`. Every
+  retained example is the exact Mac Roman conversion of the source byte, including `0xba` to
+  `U+222B`, `0xdc` to `U+2039`, and `0xf0` to `U+F8FF`.
+- **Resolution:** Finale 27's conversion contradicts the assumption that comparator zero is
+  intrinsically a symbol font. The earlier `Pmusic` evidence does not establish that assumption
+  because `Pmusic` was listed in the converting machine's `MacSymbolFonts.txt`. Font comparator
+  zero and duplicate definitions now follow their own charset like every other resolved font;
+  the configured symbol-font list remains the name-based override for misleading legacy
+  charsets.
+- **Controlled follow-up:** After adding `PattersonSonata` to the converting machine's
+  `MacSymbolFonts.txt` and rebuilding the same companion, the focused comparison changed from
+  28 equal, 14 expected, and 23 unexpected `MusicSymbolOptions` leaves to 58 equal, 7 expected,
+  and no unexpected leaves. The high-byte music characters are now preserved as symbol values.
+  Inspection of the rebuilt companion shows that Finale left the `FontDefinition` charset at
+  its prior value rather than rewriting it as Mac symbol charset 4095.
+- **Conclusion:** Membership in `MacSymbolFonts.txt` controls Finale's interpretation and
+  conversion of the characters; it does not require Finale to normalize the persisted font
+  definition. The reader deliberately makes an imported definition self-describing by assigning
+  the symbol charset. A resulting reader-symbol versus companion-text charset difference is
+  conversion loss in the companion, not evidence that the character conversion is wrong.
+- **Confidence:** Weak. One source in `rpatters1-main` distinguishes the two behaviors; a
+  controlled custom-font fixture would make the result independently reproducible.

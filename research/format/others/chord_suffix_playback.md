@@ -16,3 +16,8 @@ even though they have no audible effect.
 
 The controlled Finale 1.0 fixture confirms the same `IK` selector, signed-word layout, and retained
 trailing zeroes in the Coda-banner epoch.
+
+**Weak beta exception:** one Finale 2008 beta source stores more than 64 logical playback values
+for five suffixes. Finale 27 retains values 0--63, writes zero padding at serialized positions 64
+and 65, and discards the remaining source words. The reader keeps every stored source word;
+coverage classifies only this F2008 `devStatus == 2` overflow region as `beta-discrepancy`.

@@ -562,25 +562,12 @@ static CodePage documentCodePage(const musx::dom::DocumentPtr& document)
 static std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
     musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
 {
-    if (fontId == 0) {
-        return std::nullopt;
-    }
     const auto definition = document->getOthers()
         ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fontId);
     if (!definition) {
         return unknownFont;
     }
     if (definition->calcIsSymbolFont()) {
-        return std::nullopt;
-    }
-    const auto defaultMusic = document->getOthers()
-        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
-    if (defaultMusic && !definition->name.empty()
-        && musx::dom::normalizeFontName(definition->name)
-            == musx::dom::normalizeFontName(defaultMusic->name)) {
-        // Believed: a second definition naming the default music face has the same
-        // symbol-glyph semantics as comparator zero even when its stored character set says
-        // text. The format supplies no separate statement that proves the duplicate's role.
         return std::nullopt;
     }
     return codePageForCharset(definition->charsetBank, definition->charsetVal);

@@ -94,7 +94,10 @@ source name. Its eight-byte C-string tail changes from ` (copy)\0` to `( ocyp\0)
 each adjacent byte, including the closing parenthesis with the terminator. Coverage classifies that
 exact big-endian fretboard-group name transformation as Finale upgrade loss. The same operation
 also covers a terminator in the first byte of a word: `Minor7 b5 R4\0t` becomes
-`Minor7 b5 R4t\0`, exposing the byte that followed the stored C string. The 12
+`Minor7 b5 R4t\0`, exposing the byte that followed the stored C string. Two big-endian Finale 2001
+DCL companions instead swap one word-aligned span in the middle of `Major with root on 5th string`
+while leaving its later suffix intact; the same exact adjacent-byte transformation is upgrade loss.
+The 12
 style-name differences exposed a musxdom mapping that used numeric token extraction for text. After
 that mapping was corrected to read the complete XML content, the source and companion style names
 agree. One Finale 2002 instrument retains a source diatonic-fret leaf that its companion omits; that

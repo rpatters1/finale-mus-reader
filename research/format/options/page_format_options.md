@@ -17,8 +17,8 @@ instances and confirms the dimensions, percentages, EVPU/EVPU16 units, margins, 
 switches, and sign conventions used by the destination class. This is
 **public-PDK-derived** semantic evidence from
 [`class_f_c_page_format_prefs.html`](https://github.com/finale-lua/pdk-framework-docs/blob/c3c5ebf0335432812b286e79c9757ad023eb48f1/html/class_f_c_page_format_prefs.html)
-(accessed 2026-09-01). Authorized read-only Framework history supplied the initial score and
-parts selector tables. Those locations remain **private-framework-derived** except where the
+(accessed 2026-09-01). An independent format reference supplied the initial score and
+parts selector tables. Those locations remain **reference-derived** except where the
 controlled and tracked evidence below independently corroborates them.
 
 The later fixed-row score layout uses selectors `14` and `15` for high-word-first page
@@ -74,13 +74,16 @@ so record presence is the direct layout marker and also guards the later score f
 switch. This works for unversioned sources; a damaged later document that loses selector `77` is
 indistinguishable and receives the single-set behavior.
 
-Before Finale 3.5, `IU(0)`/`Iu(0)` word 2 stores the score system-top margin and the
+Before Finale 3.5, `IU(0)`/`Iu(0)` word 2 is a signed 16-bit score system-top margin and the
 first-system top is that value plus selector `17` word 0. In the expanded Finale 3.5 layout,
-the system-top margin moves to word 5 and selector `03` word 0 supplies the additional
-first-system offset. Selector `75` presence identifies the expanded layout structurally.
-Across the 17 affected Finale 3.0/3.2 documents, word 2 exactly reproduces every companion
-system top, including the nonstandard values -220, -251, -71, and -101; a Finale 3.5 sample
-instead has zero in word 2 and -188 in word 5. **Strong.**
+words 4--5 instead form one signed 32-bit system-top margin in the source platform's word order,
+and selector `03` word 0 supplies the additional first-system offset. Selector `75` presence
+continues to identify the expanded layout structurally. Across the 17 affected Finale 3.0/3.2
+documents, word 2 exactly reproduces every companion system top, including the nonstandard values
+-220, -251, -71, and -101. Big-endian Finale 3.5, 97, and 2000 sources place the high word first;
+five little-endian Finale 98 sources place it second. The DCL boundary ends this representation:
+Finale 2001 and later fixed-row sources recover the signed 16-bit value from selector `17` word 0,
+and zlib sources retain that logical location in class `0x001f`. **Strong.**
 
 When present in the uncompressed layout, selector `77` stores the independent parts format. Its
 system distance is word 13 and its facing-pages switch is word 17, while words 19 and 20 are first-system top and left offsets
@@ -144,5 +147,11 @@ all-corpus capture selected 16,308 occurrences representing 7,272 distinct conte
 sources imported, all 4,619 available companions imported, and the 89 pre-comparison failures
 were 58 Finale library files plus 31 inputs that are not Finale MUS documents. Across those
 companions, `PageFormatOptions` has 239,770 equal leaves, 418 expected `adjustPageScope` default
-differences, and no unexpected differences. **Confirmed across every companion-backed source in
-the three inventoried corpora.**
+differences, and no unexpected differences.
+
+After new Finale 98 Windows companions were added, the next all-corpus capture contained 250,392
+equal `PageFormatOptions` leaves, 436 expected default differences, and 20 unexpected leaves. All
+20 are the score system top and the three values derived or copied from it in each of five
+little-endian sources. Their raw word pairs are the little-endian reversal of the already observed
+big-endian signed long; treating the pair as a single platform-ordered value accounts for every
+one. A broad recapture after that correction remains pending. **Strong.**

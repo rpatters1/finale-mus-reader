@@ -15,8 +15,8 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**62 done, 2 partial, 126 to do, 190 total.** Verified class for class against the registry on
-2026-09-04: every registered type appears here and nothing here is unregistered.
+**74 done, 2 partial, 114 to do, 190 total.** Verified class for class against the registry on
+2026-09-05: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
 
@@ -49,12 +49,12 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (26 done, 0 partial, 67 to do, 93 total)
+## others  (35 done, 0 partial, 58 to do, 93 total)
 
-    [ ] AcciAmountFlats                                                         L1 library item
-    [ ] AcciAmountSharps                                                        L1 library item
-    [ ] AcciOrderFlats                                                          L1 library item
-    [ ] AcciOrderSharps                                                         L1 library item
+    [x] AcciAmountFlats                         custom_keys.cpp
+    [x] AcciAmountSharps                        custom_keys.cpp
+    [x] AcciOrderFlats                          custom_keys.cpp
+    [x] AcciOrderSharps                         custom_keys.cpp
     [ ] ArticulationDef                                                         L1 library item
     [ ] BeatChartElement
     [x] ChordSuffixElement                      chord_suffix_elements.cpp
@@ -71,9 +71,9 @@ Explanation added here has to be removed again.
     [x] FretInstrument                          fret_instruments.cpp
     [x] FretboardGroup                          fretboard_groups.cpp
     [x] FretboardStyle                          fretboard_styles.cpp
-    [ ] KeyAttributes                                                           L1 library item
-    [ ] KeyFormat                                                               L1 library item
-    [ ] KeyMapArray                                                             L1 library item
+    [x] KeyAttributes                           custom_keys.cpp
+    [x] KeyFormat                               custom_keys.cpp
+    [x] KeyMapArray                             custom_keys.cpp
     [x] LayerAttributes                         layer_attributes.cpp
     [x] MarkingCategory                         marking_category.cpp
     [x] MarkingCategoryName                     marking_category.cpp
@@ -142,10 +142,10 @@ Explanation added here has to be removed again.
     [ ] TextRepeatText                                                          L2 satellite
     [ ] TimeCompositeLower
     [ ] TimeCompositeUpper
-    [ ] TonalCenterFlats                                                        L1 library item
-    [ ] TonalCenterSharps                                                       L1 library item
+    [x] TonalCenterFlats                        custom_keys.cpp
+    [x] TonalCenterSharps                       custom_keys.cpp
 
-## details  (2 done, 0 partial, 58 to do, 60 total)
+## details  (5 done, 0 partial, 55 to do, 60 total)
 
     [ ] AccidentalAlterations
     [ ] ArticulationAssign
@@ -171,8 +171,8 @@ Explanation added here has to be removed again.
     [ ] Bracket
     [ ] CenterShape
     [ ] ChordAssign
-    [ ] ClefOctaveFlats                                                         L1 library item
-    [ ] ClefOctaveSharps                                                        L1 library item
+    [x] ClefOctaveFlats                         custom_key_octaves.cpp
+    [x] ClefOctaveSharps                        custom_key_octaves.cpp
     [ ] CrossStaff
     [ ] CustomDownStem
     [ ] CustomUpStem
@@ -182,7 +182,7 @@ Explanation added here has to be removed again.
     [x] FretboardDiagram                        fretboard_diagrams.cpp
     [ ] GFrameHold
     [ ] IndependentStaffDetails
-    [ ] KeySymbolListElement                                                    L1 library item
+    [x] KeySymbolListElement                    key_symbol_list.cpp
     [ ] LyricAssignChorus
     [ ] LyricAssignSection
     [ ] LyricAssignVerse

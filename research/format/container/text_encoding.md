@@ -7,23 +7,18 @@
 ## Encoding
 
 Text is encoded per font, not per document: the font in force at that point in the string
-names the code page through its own `charsetBank` and `charsetVal`. Two cases are not a code
-page at all and preserve the byte as the code point of the same value:
+names the code page through its own `charsetBank` and `charsetVal`. A font whose character set
+says symbol, which musxdom's `calcIsSymbolFont` decides, has no code page and preserves the byte
+as the code point of the same value. `MacSymbolFonts.txt` is an external override for character
+interpretation: Finale treats a listed face's characters as symbol values, but does not
+necessarily change the persisted `FontDefinition` charset to match.
 
-- a font whose character set says symbol, which musxdom's `calcIsSymbolFont` decides;
-- font id 0, the default music font, whose bytes are glyph numbers whatever its record says.
-  Finale 97 records Mac Roman for its own `Pmusic`, yet Finale 27 converts the same document's
-  expression characters byte for byte and rewrites the font as a symbol font. The character
-  set fields did not start carrying the symbol marker until the compressed eras.
-
-**Believed, not confirmed:** the same rule extends to a nonzero definition with the same
-normalized name as font 0.
-`mus-bb73336c4c45f509` defines `Pmusic` at both 0 and 23 with Mac Roman character sets, and
-four expression records explicitly select comparator 23 before bytes `0x82` or `0x8d`.
-Finale 27 rewrites those runs under `Font0` and preserves the byte values, but that conversion
-also had `Pmusic` in the machine's user-editable `MacSymbolFonts.txt`. The observation is
-consistent with typeface identity deciding the runs; it cannot distinguish that rule from the
-machine-local override.
+Comparator zero and definitions sharing its normalized name do not independently confer symbol
+semantics. **Weak:** one Finale 2.6 source uses the unlisted custom face `PattersonSonata` at
+comparator zero with the synthesized Mac Roman charset; Finale 27 converts its high bytes through
+Mac Roman. The earlier apparent counterexample uses `Pmusic`, which was present in the converting
+machine's `MacSymbolFonts.txt`, so that observation establishes the configured name override rather
+than a comparator rule. See `research/investigations/music_symbol_options.md`.
 
 The Finale 2011 source `mus-94547730f50a1e38` defines `FinaleAlphaNotes` with Mac
 charset 0 and uses it as the Noteheads font. Both occurrences of the identical source upgrade
@@ -34,6 +29,11 @@ its bank and receives musxdom's symbol charset for that bank. The returned docum
 carries the semantic adjustment, while `ImportReport` retains the stored charset as the raw
 value and labels the result `LegacyMusAdjusted`. The name-based rule applies to both banks,
 matching the prior decoding behavior; it does not reinterpret a Windows font as a Mac font.
+**Weak:** a rebuilt companion for `mus-d155ea3bad6a0a6f` preserves the configured
+`PattersonSonata` characters as symbol values while leaving its `FontDefinition` charset
+unchanged. Thus the `FinaleAlphaNotes` rewrite is not a general conversion rule. When the reader's
+self-describing symbol charset differs from such a companion's retained text charset, the
+font-definition difference is conversion loss rather than a character-decoding disagreement.
 
 Legacy line breaks are carriage returns and become line feeds: Finale 27 writes `\n` where
 `F97-fileinfo-short.mus` has `\r`, and emits no `&#xD;` anywhere.
@@ -57,8 +57,7 @@ run of text: a clef character, a stem-connection symbol, a custom line style's c
 text symbol insert are each a byte in the encoding of the font their own record names, not a
 code point. Decoding one through the wrong encoding does not merely garble it -- it names a
 different glyph, which is why a symbol font's byte must survive untouched rather than being read
-as Mac Roman. `text::codePageForDocumentFont` answers the question once, including that font id
-zero is the default music font whatever charset its record claims, and
+as Mac Roman. `text::codePageForDocumentFont` answers the question once, and
 `text::codepointFromByte` applies the answer to one character.
 
 Where no font names an encoding, fall back to the platform default: Mac Roman on Mac and

@@ -61,7 +61,11 @@
   2002 companion omits a stored diatonic-fret leaf. The group name's eight-byte C-string tail is
   transformed from ` (copy)\0` to `( ocyp\0)`, swapping each adjacent byte including the final
   parenthesis with the terminator. It is classified as `finale-upgrade-loss` only for that exact
-  big-endian transformation. The 12 style-name differences exposed a musxdom mapping that used
+  big-endian transformation. Two Finale 2001 sources, `mus-04f5ea61668a02e2` and
+  `mus-d82396b42ef0dac6`, expose the same operation over a middle span: source
+  `Major with root on 5th string` becomes `Major with roo tno5 hts tring`, with the words in name
+  byte positions 12–23 swapped and the remaining suffix unchanged. The classifier therefore also
+  accepts an exact contiguous word-aligned adjacent-byte swap. The 12 style-name differences exposed a musxdom mapping that used
   numeric token extraction for text; after that mapping was corrected to read the complete XML
   content, those names agree. The diatonic-fret omission remains visible and unclassified pending
   review.
@@ -72,9 +76,9 @@
   payload containing exactly two 204-byte tuples. Their instrument comparators occur at offsets 0
   and 204, and their names begin at offsets 12 and 216 as UTF-16LE, independently matching the two
   Finale 27 companion incidences. The 12 tracked Finale 2012 fixtures contain no fretboard-group
-  source record, which is why tracked-evidence coverage did not exercise this boundary. Authorized
-  Framework history names a distinct F2012 group layout; that corroboration remains
-  `private-framework-derived`, while the byte layout itself is independently corpus-verified.
+  source record, which is why tracked-evidence coverage did not exercise this boundary. An
+  independent format reference names a distinct F2012 group layout; that corroboration remains
+  reference-derived, while the byte layout itself is independently corpus-verified.
 - **All-corpus F2012 correction:** After selecting the 204-byte tuple and UTF-16LE name at the
   shared Finale 2012 Unicode boundary, group reader-only leaves fell from 164,184 to zero and
   unexpected group differences fell from 28,729 to eight. The same-leaf count rose from 654,673

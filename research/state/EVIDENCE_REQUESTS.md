@@ -196,7 +196,7 @@ automatic layout changes:
 
 Use distinctive nondefault values and record the exact UI value, Finale version/build, and platform for each copy.
 Store publishable pairs under `tests/evidence/options/<version>/`. This is the smallest high-value test of the
-private-framework-derived mappings and exercises two-byte, four-byte, numeric, boolean, and five separate musxdom
+reference-derived mappings and exercises two-byte, four-byte, numeric, boolean, and five separate musxdom
 destinations.
 
 ### C7 — Analyzed — default-font sequence and early-location verification
@@ -631,6 +631,20 @@ the surveyed corpora, which do contain documents of that range carrying at least
 fields. The reasoning holds only for the lower bound, where an unfilled dialog and an absent
 dialog leave identical bytes; it never held for the placement question, which any filled document
 of the era settles.
+
+### X8 — Proposed — custom keys in the original and uncompressed epochs
+
+Create one minimal custom-key document in Finale 1.0.0 and, if available, the equivalent document
+in a Finale 3.x–2000 release. Give the custom key distinctive nondefault values in every dialog the
+release exposes: format/map, positive and negative accidental order and amount, tonal centers,
+attributes, clef octave placement, and accidental symbols. Save the MUS and export ETF without an
+intervening resave; also make a Finale 27 companion and record the exact source version/build.
+
+The tracked Coda-banner and uncompressed fixtures exercise only `KeyFormat` and the two
+tonal-center arrays. They do not establish whether the complete custom-key cloud uses all twelve
+fixed tags in those epochs, nor whether the pre-zlib `KeyMapArray` pair reversal extends back to
+Finale 1.0. A minimal controlled pair would settle both questions and could become the public
+fixture needed to raise the current weak layout confidence.
 
 ## Status legend
 

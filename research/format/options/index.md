@@ -10,11 +10,11 @@
 beginning of the 2007+ `0x001a` block, identified by primary key `0xfffe`; many are fixed 12-byte records, while some
 have large variable payloads. ETF represents the corresponding older globals as `^NN(65534)` records.
 
-Authorized read-only inspection of privately supplied PDK Framework histories yielded a 437-row union across
+An independently maintained legacy-format reference yielded a 437-row union across
 24 logical preference groups: 435 current mappings plus two original-branch locations needed for older Finale
 behavior. The table identifies tags, comparators, incidents, word slots, widths, conversion rules,
 semantic fields, and some version gates. Available ETFs independently contain the selectors used by 386 rows, but
-field meanings and offsets remain `private-framework-derived` until controlled binary comparisons verify them. See
+field meanings and offsets remain reference-derived until controlled binary comparisons verify them. See
 [`LEGACY_OPTION_MAPPINGS.md`](../../reference/LEGACY_OPTION_MAPPINGS.md) and
 [`data/legacy_option_mappings.csv`](../../data/legacy_option_mappings.csv).
 
@@ -28,14 +28,14 @@ connections at `^40(65534)`. All selectors are ETF-observed; see
 One file per musxdom options class, named after its source file in `src/import/options/`:
 
 `accidental_options` · `alternate_notation_options` · `barline_options` · `beam_options` ·
-`clef_options` · `flag_options` · `font_options` · `grace_note_options` ·
+`chord_options` · `clef_options` · `flag_options` · `font_options` · `grace_note_options` ·
 `key_signature_options` · `line_curve_options` · `lyric_options` · `misc_options` ·
 `multimeasure_rest_options` · `music_symbol_options` · `note_rest_options` ·
 `page_format_options` · `piano_brace_bracket_options` · `repeat_options` ·
 `smart_shape_options` · `staff_options` · `stem_options` · `text_options` · `tie_options` ·
 `time_signature_options` · `tuplet_options`
 
-`AugmentationDotOptions`, `ChordOptions`, and `MusicSpacingOptions` are implemented but have no
+`AugmentationDotOptions` and `MusicSpacingOptions` are implemented but have no
 dedicated notes yet; their locations are in
 [`../../reference/LEGACY_OPTION_MAPPINGS.md`](../../reference/LEGACY_OPTION_MAPPINGS.md).
 

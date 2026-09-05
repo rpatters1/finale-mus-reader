@@ -5,8 +5,10 @@
 
 #include "coverage/classification_rules.h"
 #include "coverage/registry.h"
+#include "coverage/schema.h"
 #include "coverage/value.h"
 #include "import/support/field_manifest.h"
+#include "import/support/legacy_mapping.h"
 
 namespace {
 

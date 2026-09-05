@@ -13,6 +13,18 @@ namespace others {
 // translation unit. Accessors are used instead of static registration so a static archive
 // cannot discard an importer nothing else references.
 
+/// @brief Recovers flat accidental amounts for custom key signatures.
+void importAcciAmountFlats(const ImportContext& context);
+
+/// @brief Recovers sharp accidental amounts for custom key signatures.
+void importAcciAmountSharps(const ImportContext& context);
+
+/// @brief Recovers flat accidental ordering for custom key signatures.
+void importAcciOrderFlats(const ImportContext& context);
+
+/// @brief Recovers sharp accidental ordering for custom key signatures.
+void importAcciOrderSharps(const ImportContext& context);
+
 /// @brief Recovers the positioned elements that form chord suffix definitions.
 void importChordSuffixElements(const ImportContext& context);
 
@@ -30,6 +42,15 @@ void importFretboardGroups(const ImportContext& context);
 
 /// @brief Recovers source fretboard styles.
 void importFretboardStyles(const ImportContext& context);
+
+/// @brief Recovers custom key attributes.
+void importKeyAttributes(const ImportContext& context);
+
+/// @brief Recovers custom key formats.
+void importKeyFormats(const ImportContext& context);
+
+/// @brief Recovers custom key step maps.
+void importKeyMapArrays(const ImportContext& context);
 
 /// @brief Recovers every others::LayerAttributes object the source stores, and supplies the
 /// era's own behavior for the layers it does not.
@@ -63,6 +84,12 @@ void importStaffLists(const ImportContext& context);
 
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
+
+/// @brief Recovers flat tonal-center tables for custom key signatures.
+void importTonalCenterFlats(const ImportContext& context);
+
+/// @brief Recovers sharp tonal-center tables for custom key signatures.
+void importTonalCenterSharps(const ImportContext& context);
 
 } // namespace others
 } // namespace finale_mus_reader

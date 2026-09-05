@@ -23,3 +23,18 @@ its ETF repeats those six words and its Finale 27 companion retains a six-value 
 The final 2026-09-04 `tracked-evidence` recovery-coverage snapshot compared 224 sources with
 companions. Retaining every stored word produced 5,005 exact interval matches with no expected,
 unexpected, reader-only, or companion-only leaves.
+
+## 2026-09-05 — Finale 2008 beta overlength arrays
+
+The all-corpus capture exposed five playback arrays in the Finale 2008 beta source
+`mus-c7a7d904a38f8182`. Direct record inspection shows source class `0x007e` payloads longer than
+64 logical values. Direct companion inspection shows that Finale 27 stores exactly 66 `data`
+elements for each affected suffix: source positions 0--63 are unchanged, positions 64 and 65 are
+zero padding, and all later source positions are absent.
+
+The ten nonzero source values at positions 64 and 65 therefore compare against companion zero.
+Four 72-word source arrays each retain six additional source-only words, and one 84-word array
+retains eighteen, accounting for all 42 source-only leaves. The reader preserves those source
+values. Coverage classifies the two padded positions and the source-only tail as
+`beta-discrepancy`, gated by zlib Finale 2008 and `devStatus == 2`. **Weak:** one beta source
+establishes the behavior.

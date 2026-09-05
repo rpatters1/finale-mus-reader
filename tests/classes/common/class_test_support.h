@@ -129,10 +129,17 @@ inline void expect(bool condition, const std::string& message)
     expectMapping(condition, message);
 }
 
-inline ImportResult readFixture(const std::filesystem::path& relativePath)
+inline constexpr std::string_view fixtureLegacySymbolFonts =
+    "Maestro\nPetrucci\nPmusic\nSonata\n";
+
+inline ImportResult readFixture(const std::filesystem::path& relativePath,
+    std::string_view macSymbolFonts = {})
 {
+    const auto* symbolFontBytes = reinterpret_cast<const std::uint8_t*>(macSymbolFonts.data());
+    const finale_mus_reader::ReaderOptions options{
+        std::span<const std::uint8_t>(symbolFontBytes, macSymbolFonts.size())};
     return Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relativePath);
+        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relativePath, options);
 }
 
 /// @brief One synthetic 16-byte legacy row.
@@ -278,16 +285,22 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
 
 inline finale_mus_reader::container::ParsedContainer makeDetailContainer(
     FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
-    const std::vector<std::int16_t>& words, const char* tag = "mg")
+    const std::vector<std::int16_t>& words, const char* tag = "mg",
+    ByteOrder byteOrder = ByteOrder::BigEndian)
 {
     finale_mus_reader::container::ParsedContainer parsed(epoch);
-    parsed.byteOrder = ByteOrder::BigEndian;
+    parsed.byteOrder = byteOrder;
     finale_mus_reader::container::DecodedBlock block;
     block.info.type = epoch == FormatEpoch::DclLegacy ? 0x0010 : 0x0002;
     for (std::size_t at = 0; at < words.size(); at += finale_mus_reader::records::detailWordCount) {
         const auto push16 = [&](std::uint16_t value) {
-            block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
-            block.data.push_back(static_cast<std::uint8_t>(value));
+            if (byteOrder == ByteOrder::BigEndian) {
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+                block.data.push_back(static_cast<std::uint8_t>(value));
+            } else {
+                block.data.push_back(static_cast<std::uint8_t>(value));
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+            }
         };
         push16(staffId);
         push16(meas);

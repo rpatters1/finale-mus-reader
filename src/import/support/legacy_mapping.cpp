@@ -239,11 +239,18 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTimeSignatureOptions, &options::importTimeSignatureOptions),
         FINALE_MUS_READER_IMPORTER(ImportTupletOptions, &options::importTupletOptions),
         // others
+        FINALE_MUS_READER_IMPORTER(ImportAcciAmountFlats, &others::importAcciAmountFlats),
+        FINALE_MUS_READER_IMPORTER(ImportAcciAmountSharps, &others::importAcciAmountSharps),
+        FINALE_MUS_READER_IMPORTER(ImportAcciOrderFlats, &others::importAcciOrderFlats),
+        FINALE_MUS_READER_IMPORTER(ImportAcciOrderSharps, &others::importAcciOrderSharps),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
+        FINALE_MUS_READER_IMPORTER(ImportKeyAttributes, &others::importKeyAttributes),
+        FINALE_MUS_READER_IMPORTER(ImportKeyFormats, &others::importKeyFormats),
+        FINALE_MUS_READER_IMPORTER(ImportKeyMapArrays, &others::importKeyMapArrays),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportMarkingCategories, &others::importMarkingCategories),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
@@ -254,8 +261,13 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         FINALE_MUS_READER_IMPORTER(ImportStaffLists, &others::importStaffLists),
         FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
+        FINALE_MUS_READER_IMPORTER(ImportTonalCenterFlats, &others::importTonalCenterFlats),
+        FINALE_MUS_READER_IMPORTER(ImportTonalCenterSharps, &others::importTonalCenterSharps),
         // details
+        FINALE_MUS_READER_IMPORTER(ImportClefOctaveFlats, &details::importClefOctaveFlats),
+        FINALE_MUS_READER_IMPORTER(ImportClefOctaveSharps, &details::importClefOctaveSharps),
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
+        FINALE_MUS_READER_IMPORTER(ImportKeySymbolListElements, &details::importKeySymbolListElements),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         // entries (none recovered yet)
         // texts

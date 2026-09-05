@@ -8,6 +8,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "musx/musx.h"
 
@@ -18,6 +19,8 @@ namespace {
 using NoteRestOptionsTarget = musx::dom::options::NoteRestOptions;
 
 constexpr const char *noteRestOptionsReportPrefix = "options.noteRestOptions";
+constexpr std::string_view earlyShapeNoteTag = "CS";
+constexpr std::uint16_t shapeNoteSelector = 1;
 constexpr std::uint16_t noteColorSelector = 99;
 constexpr std::size_t noteColorCount = music_theory::STANDARD_12EDO_STEPS;
 constexpr std::size_t noteColorFirstWord = 1;
@@ -42,13 +45,38 @@ bool storesRestPositionAdjustments(const records::LegacyRecordIndex &index,
   return readGlobalWords(index, profile, restPositionSelector).present;
 }
 
+bool storesEarlyShapeNoteSwitch(const records::LegacyRecordIndex &index,
+                                const SourceProfile &) {
+  // Believed: uncompressed layouts state which shape-note location they use by
+  // retaining or removing the CS family. A Finale 2000 version gate would select
+  // the observed later layout, but this marker also works when the header version
+  // is unavailable. If both candidate records are absent, the seeded value remains.
+  return index.getOthers()
+             .get(records::packTag(earlyShapeNoteTag), shapeNoteSelector, 0, 0) !=
+         nullptr;
+}
+
+bool storesLateShapeNoteSwitch(const records::LegacyRecordIndex &index,
+                               const SourceProfile &profile) {
+  return !storesEarlyShapeNoteSwitch(index, profile);
+}
+
 const FieldMapping codaNoteRestOptionFields[] = {
     MUS_WORD(NoteRestOptionsTarget, "12", GLOBALS_CMPER, 0, 4,
              doCrossStaffNotes),
 };
 
+const FieldMapping earlyUncompressedShapeNoteFields[] = {
+    MUS_BIT(NoteRestOptionsTarget, earlyShapeNoteTag, shapeNoteSelector, 0, 5, 7,
+            doShapeNotes),
+};
+
+const FieldMapping lateUncompressedShapeNoteFields[] = {
+    MUS_NUMERIC_WORD(NoteRestOptionsTarget, shapeNoteSelector, 0, 1,
+                     doShapeNotes),
+};
+
 const FieldMapping uncompressedNoteRestOptionFields[] = {
-    MUS_BIT(NoteRestOptionsTarget, "CS", 1, 0, 5, 7, doShapeNotes),
     MUS_WORD(NoteRestOptionsTarget, "12", GLOBALS_CMPER, 0, 4,
              doCrossStaffNotes),
     MUS_WORD(NoteRestOptionsTarget, "41", GLOBALS_CMPER, 0, 5,
@@ -112,6 +140,30 @@ const MappingTable &uncompressedNoteRestOptionsTable() {
       .enumerateTargets = &enumerateOptionsTarget<NoteRestOptionsTarget>,
       .fields = uncompressedNoteRestOptionFields,
       .fieldCount = std::size(uncompressedNoteRestOptionFields)};
+  return table;
+}
+
+const MappingTable &earlyUncompressedShapeNoteTable() {
+  static const MappingTable table{
+      .reportPrefix = noteRestOptionsReportPrefix,
+      .epochs = EpochMask::Uncompressed,
+      .applies = &storesEarlyShapeNoteSwitch,
+      .targetKind = TargetKind::OptionsSingleton,
+      .enumerateTargets = &enumerateOptionsTarget<NoteRestOptionsTarget>,
+      .fields = earlyUncompressedShapeNoteFields,
+      .fieldCount = std::size(earlyUncompressedShapeNoteFields)};
+  return table;
+}
+
+const MappingTable &lateUncompressedShapeNoteTable() {
+  static const MappingTable table{
+      .reportPrefix = noteRestOptionsReportPrefix,
+      .epochs = EpochMask::Uncompressed,
+      .applies = &storesLateShapeNoteSwitch,
+      .targetKind = TargetKind::OptionsSingleton,
+      .enumerateTargets = &enumerateOptionsTarget<NoteRestOptionsTarget>,
+      .fields = lateUncompressedShapeNoteFields,
+      .fieldCount = std::size(lateUncompressedShapeNoteFields)};
   return table;
 }
 
@@ -264,7 +316,8 @@ void reportDefaultedNoteRestFields(const ImportContext &context,
 
 void importNoteRestOptions(const ImportContext &context) {
   applyMappingTables(
-      {&codaNoteRestOptionsTable(), &uncompressedNoteRestOptionsTable(),
+      {&codaNoteRestOptionsTable(), &earlyUncompressedShapeNoteTable(),
+       &lateUncompressedShapeNoteTable(), &uncompressedNoteRestOptionsTable(),
        &dclNoteRestOptionsTable(), &classNoteRestOptionsTable(),
        &fixedRowRestPositionTable(), &classRestPositionTable()},
       context.index, context.profile, context.document, context.report);

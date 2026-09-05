@@ -17,13 +17,13 @@ using ChordOptionsTarget = musx::dom::options::ChordOptions;
 // Coda-banner documents have no document-level chord preferences to overlay. The pinned
 // baseline supplies their chord behavior, so only the typed fixed-row epoch uses these rows.
 constexpr EpochMask chordFixedRowEpochs = EpochMask::FixedRow;
-constexpr std::int64_t preFinale2000ChordAccidentalLift = 12;
+constexpr std::int64_t preFinale37ChordAccidentalLift = 12;
 constexpr double unstatedChordPercent = 100.0;
 
 bool sourceStoresChordAccidentalLifts(const SourceProfile& profile)
 {
     return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy,
-        versions::finale2000);
+        versions::finale3_7);
 }
 
 bool sourceStoresSimpleChordSpelling(const SourceProfile& profile)
@@ -203,12 +203,12 @@ void importChordOptions(const ImportContext& context)
     reportChordDefault(context, "useFretboardFont");
 
     if (!sourceStoresChordAccidentalLifts(context.profile)) {
-        target->chordSharpLift = preFinale2000ChordAccidentalLift;
-        target->chordFlatLift = preFinale2000ChordAccidentalLift;
-        target->chordNaturalLift = preFinale2000ChordAccidentalLift;
-        reportChordBehavior(context, "chordSharpLift", preFinale2000ChordAccidentalLift);
-        reportChordBehavior(context, "chordFlatLift", preFinale2000ChordAccidentalLift);
-        reportChordBehavior(context, "chordNaturalLift", preFinale2000ChordAccidentalLift);
+        target->chordSharpLift = preFinale37ChordAccidentalLift;
+        target->chordFlatLift = preFinale37ChordAccidentalLift;
+        target->chordNaturalLift = preFinale37ChordAccidentalLift;
+        reportChordBehavior(context, "chordSharpLift", preFinale37ChordAccidentalLift);
+        reportChordBehavior(context, "chordFlatLift", preFinale37ChordAccidentalLift);
+        reportChordBehavior(context, "chordNaturalLift", preFinale37ChordAccidentalLift);
     }
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         target->useSimpleChordSpelling = false;

@@ -96,7 +96,7 @@ TEST_CASE("A charset that names no script falls to the bank default", "[text]")
     CHECK(toUtf8(kMacAccented, Bank::Windows, 77) == "CŽlino");
 }
 
-TEST_CASE("A duplicate of font zero preserves symbol glyph bytes", "[text]")
+TEST_CASE("Document font character sets apply regardless of comparator", "[text]")
 {
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
@@ -109,7 +109,8 @@ TEST_CASE("A duplicate of font zero preserves symbol glyph bytes", "[text]")
         document->getOthers()->add(musx::dom::others::FontDefinition::XmlNodeName, font);
     }
 
-    CHECK(toUtf8("\xb0", document, 23, UnresolvedFontFallback::Text) == "°");
+    CHECK(toUtf8("\xb0", document, 0, UnresolvedFontFallback::Text) == "∞");
+    CHECK(toUtf8("\xb0", document, 23, UnresolvedFontFallback::Text) == "∞");
 }
 
 TEST_CASE("An unresolved font uses the caller's content fallback", "[text]")

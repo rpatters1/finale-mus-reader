@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "import/support/legacy_mapping.h"
@@ -19,6 +20,9 @@ std::optional<DifferenceClassification> classifyStemDifference(const DifferenceC
 {
     using enum DifferenceCategory;
     using enum DifferenceClassification;
+    if (const auto encodingError = classifyStemConnectionEncodingError(context)) {
+        return encodingError;
+    }
     if (context.category == Differs &&
         context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
         context.origin == "legacy-mus" &&
