@@ -24,6 +24,9 @@ Do not read this directory recursively. Open the one file that matches your subj
 | TextBlock storage and assembly | [`text_blocks.md`](text_blocks.md) |
 | Chord suffix element identities, layouts, and flags | [`chord_suffix_elements.md`](chord_suffix_elements.md) |
 | Chord suffix playback identity and zero fill | [`chord_suffix_playback.md`](chord_suffix_playback.md) |
+| Custom-key others records and map ordering | [`custom_keys.md`](custom_keys.md) |
+| Custom-key clef octave arrays | [`custom_key_octaves.md`](custom_key_octaves.md) |
+| Custom-key accidental symbol lists | [`key_symbol_list.md`](key_symbol_list.md) |
 | Bookmarks | [`bookmark_text.md`](bookmark_text.md) |
 | Graphic assignment layout | [`graphic_assignments.md`](graphic_assignments.md) |
 | Fret record identities and layouts | [`fret_records.md`](fret_records.md) |
@@ -40,7 +43,7 @@ Per-class investigations use the same filename as the class's reference file und
 `flag_options` · `font_options` · `grace_note_options` · `line_curve_options` · `lyric_options` ·
 `multimeasure_rest_options` · `music_symbol_options` · `note_rest_options` ·
 `page_format_options` · `piano_brace_bracket_options` · `repeat_options` ·
-`smart_shape_options` · `staff_options` · `text_options` · `tie_options` ·
+`smart_shape_options` · `staff_options` · `stem_options` · `text_options` · `tie_options` ·
 `time_signature_options`
 
 A class with no file here has no recorded experiment history yet.

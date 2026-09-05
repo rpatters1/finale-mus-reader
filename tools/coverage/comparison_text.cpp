@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "coverage/common/font_info.h"
+#include "coverage/common/text_controls.h"
 #include "coverage/identity.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
@@ -526,8 +527,7 @@ TextComparison compareText(const std::string& className, const std::string& path
                            bool partNameText, bool synthesizedScoreName)
 {
     const auto normalizeWhitespaceControls = [](std::string value) {
-        std::erase_if(
-            value, [](unsigned char character) { return character >= 0x01 && character <= 0x07; });
+        std::erase_if(value, isFinaleWhitespaceControl);
         return value;
     };
     const auto normalizedSource = normalizeWhitespaceControls(source);

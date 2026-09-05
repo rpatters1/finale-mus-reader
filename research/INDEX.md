@@ -32,8 +32,8 @@ reading the file.
 | Pool | Directory | Start at |
 |---|---|---|
 | options | [`format/options/`](format/options/index.md) | [`options/index.md`](format/options/index.md) for addressing, then the class file |
-| others | [`format/others/`](format/others/) | `chord_suffix_elements`, `chord_suffix_playback`, `font_definitions`, `shape_definitions`, `fret_records`, `graphic_assignments`, `smart_shape_custom_lines`, `staff_list`, `text_blocks`, `layer_attributes`, `marking_category`, `part_definitions`, `part_globals` |
-| details | [`format/details/`](format/details/) | `fretboard_diagrams`, `measure_graphic_assign` |
+| others | [`format/others/`](format/others/) | `chord_suffix_elements`, `chord_suffix_playback`, `custom_keys`, `font_definitions`, `shape_definitions`, `fret_records`, `graphic_assignments`, `smart_shape_custom_lines`, `staff_list`, `text_blocks`, `layer_attributes`, `marking_category`, `part_definitions`, `part_globals` |
+| details | [`format/details/`](format/details/) | `custom_key_octaves`, `key_symbol_list`, `fretboard_diagrams`, `measure_graphic_assign` |
 | texts | [`format/texts/`](format/texts/) | `text_pool` first, then `coda_texts`, `file_info_text`, `bookmark_text`, `expression_text` |
 
 Class-by-class implementation status: [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).

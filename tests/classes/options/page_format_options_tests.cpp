@@ -170,6 +170,9 @@ TEST_CASE("Page format options recover score and parts fixed rows", "[class]")
     for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
         auto rows = pageFormatFixedRows(byteOrder);
         rows.push_back({10, "FI", {64, 0, -32768, 0, 0, 0}});
+        rows.push_back({0, "IU", byteOrder == ByteOrder::BigEndian
+                    ? std::array<std::int16_t, 6>{1, 0, 0, 0, -2, -4464}
+                    : std::array<std::int16_t, 6>{1, 0, 0, 0, -4464, -2}});
         ImportReport report(FormatEpoch::DclLegacy);
         verifyRecoveredPageFormats(*importPageFormatOptions(
                                        makeContainer(rows, FormatEpoch::DclLegacy, byteOrder),
@@ -372,24 +375,30 @@ TEST_CASE("Pre-Finale 3.5 page format derives later fields before sharing with p
 
 TEST_CASE("Finale 3.5 page format uses the expanded current-system layout", "[class]")
 {
-    auto rows = pageFormatFixedRows();
-    std::erase_if(rows,
-        [](const SyntheticRow& row) { return std::string_view(row.tag) == "77"; });
-    rows.push_back({GLOBALS_CMPER, "75", {0, 0, 0, 0, 0, 0}});
-    rows.push_back({0, "IU", {1, 0, 0, 0, -1, -188}});
-    const auto parsed = makeContainer(rows, FormatEpoch::UncompressedLegacy);
-    const auto storedSystemTop = LegacyRecordIndex::build(parsed).word(
-        finale_mus_reader::records::packTag("IU"), 0, 5);
-    expectMapping(storedSystemTop && storedSystemTop->value == -188,
-        "The synthetic Finale 3.5 current-system row was not indexed");
-    ImportReport report(FormatEpoch::UncompressedLegacy);
-    const auto options = importPageFormatOptions(
-        parsed,
-        FormatEpoch::UncompressedLegacy, report, finale_mus_reader::versions::finale3_2);
-    const auto& score = *options->pageFormatScore;
-    expectMapping(score.sysMarginTop == -188 && score.firstSysMarginTop == -141
-            && score.rightPageMarginTop == 31 && score.firstSysMarginLeft == 49,
-        "The structural Finale 3.5 marker did not select the expanded page-format layout");
+    for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+        for (const auto* tag : {"IU", "Iu"}) {
+            auto rows = pageFormatFixedRows(byteOrder);
+            std::erase_if(rows,
+                [](const SyntheticRow& row) { return std::string_view(row.tag) == "77"; });
+            rows.push_back({GLOBALS_CMPER, "75", {0, 0, 0, 0, 0, 0}});
+            const std::array<std::int16_t, 6> currentSystem =
+                byteOrder == ByteOrder::BigEndian
+                ? std::array<std::int16_t, 6>{1, 0, 0, 0, -2, -4464}
+                : std::array<std::int16_t, 6>{1, 0, 0, 0, -4464, -2};
+            rows.push_back({0, tag, currentSystem});
+            const auto parsed =
+                makeContainer(rows, FormatEpoch::UncompressedLegacy, byteOrder);
+            ImportReport report(FormatEpoch::UncompressedLegacy);
+            const auto options = importPageFormatOptions(parsed,
+                FormatEpoch::UncompressedLegacy, report,
+                finale_mus_reader::versions::finale3_5);
+            const auto& score = *options->pageFormatScore;
+            expectMapping(score.sysMarginTop == -70000
+                    && score.firstSysMarginTop == -69953
+                    && score.rightPageMarginTop == 31 && score.firstSysMarginLeft == 49,
+                "The expanded page-format layout did not recover its signed system-top long");
+        }
+    }
 }
 
 TEST_CASE("Pre-Finale 3.5 collision avoidance is a scalar flag", "[class]")

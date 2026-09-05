@@ -3,10 +3,13 @@
 
 #include "coverage/classification_rules.h"
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
+#include "coverage/common/text_controls.h"
 #include "coverage/support/source_gate.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
@@ -14,6 +17,16 @@
 namespace finale_mus_reader {
 namespace coverage {
 namespace {
+
+std::optional<bool> fontDefinitionSymbolStatus(const ComparisonLeaves& leaves,
+    std::string_view path, std::string_view field)
+{
+    auto symbolPath = std::string(path.substr(0, path.size() - field.size()));
+    symbolPath.append(fontDefinitionIsSymbolField);
+    const auto found = leaves.find(symbolPath);
+    if (found == leaves.end() || !found->second.first.isBool()) return std::nullopt;
+    return found->second.first.asBool();
+}
 
 std::optional<DifferenceClassification>
 classifySymbolFontEquivalence(const DifferenceContext& context)
@@ -24,15 +37,23 @@ classifySymbolFontEquivalence(const DifferenceContext& context)
     const auto field = context.path.ends_with(bankField) ? bankField
         : context.path.ends_with(valueField) ? valueField : std::string_view{};
     if (field.empty()) return std::nullopt;
-    auto symbolPath = std::string(context.path.substr(0, context.path.size() - field.size()));
-    symbolPath.append(fontDefinitionIsSymbolField);
-    const auto isSymbol = [&symbolPath](const ComparisonLeaves& leaves) {
-        const auto found = leaves.find(symbolPath);
-        return found != leaves.end() && found->second.first.isBool() &&
-            found->second.first.asBool();
-    };
-    return isSymbol(context.source) && isSymbol(context.companion)
+    return fontDefinitionSymbolStatus(context.source, context.path, field) == true &&
+            fontDefinitionSymbolStatus(context.companion, context.path, field) == true
         ? std::optional{DifferenceClassification::SymbolFontEquivalence}
+        : std::nullopt;
+}
+
+std::optional<DifferenceClassification>
+classifySymbolFontConversionLoss(const DifferenceContext& context)
+{
+    constexpr std::string_view valueField = "charset_val";
+    if (context.category != DifferenceCategory::Differs ||
+        context.origin != "legacy-mus-adjusted" || !context.path.ends_with(valueField)) {
+        return std::nullopt;
+    }
+    return fontDefinitionSymbolStatus(context.source, context.path, valueField) == true &&
+            fontDefinitionSymbolStatus(context.companion, context.path, valueField) == false
+        ? std::optional{DifferenceClassification::FinaleUpgradeLoss}
         : std::nullopt;
 }
 
@@ -49,6 +70,9 @@ std::optional<DifferenceClassification>
 classifyFontDefinitionDifference(const DifferenceContext& context)
 {
     if (const auto symbolFont = classifySymbolFontEquivalence(context)) return symbolFont;
+    if (const auto symbolFontLoss = classifySymbolFontConversionLoss(context)) {
+        return symbolFontLoss;
+    }
     constexpr std::string_view charsetBankField = "charset_bank";
     constexpr std::string_view charsetValueField = "charset_val";
     if (context.category == DifferenceCategory::Differs &&
@@ -90,6 +114,82 @@ classifyFontDefinitionDifference(const DifferenceContext& context)
     if (context.category == DifferenceCategory::Differs &&
         context.origin == "finale27-default" && context.path.ends_with(".pitch")) {
         return DifferenceClassification::CharsetPitchDifference;
+    }
+    return std::nullopt;
+}
+
+std::optional<DifferenceClassification>
+classifyKeySymbolListDifference(const DifferenceContext& context)
+{
+    constexpr std::string_view pathSuffix = "].accidental_string";
+    const bool keySymbolListPath = context.path.starts_with(keySymbolListElementsCoverageKey) &&
+        context.path.size() > keySymbolListElementsCoverageKey.size() &&
+        context.path[keySymbolListElementsCoverageKey.size()] == '[';
+    if (context.category == DifferenceCategory::ReaderOnly &&
+        context.epoch == FormatEpoch::CodaBanner && keySymbolListPath) {
+        const auto bracket = context.path.find(']');
+        if (bracket != std::string_view::npos) {
+            const auto objectPrefix = std::string(context.path.substr(0, bracket + 1));
+            const auto cmper2 = comparisonIntegerLeaf(
+                context.source, objectPrefix + ".cmper2");
+            constexpr std::array<std::int64_t, 6> elementalSlots{
+                1, 2, 4, 65532, 65534, 65535};
+            const auto accidental = context.source.find(objectPrefix + ".accidental_string");
+            const auto companionObject = context.companion.find(objectPrefix + ".cmper1");
+            if (cmper2 && std::find(elementalSlots.begin(), elementalSlots.end(), *cmper2) !=
+                    elementalSlots.end() &&
+                accidental != context.source.end() && accidental->second.second == "legacy-mus" &&
+                companionObject == context.companion.end()) {
+                return DifferenceClassification::FinaleUpgradeLoss;
+            }
+        }
+    }
+    if (context.category == DifferenceCategory::Differs &&
+        context.epoch == FormatEpoch::CodaBanner && context.origin == "legacy-mus" &&
+        keySymbolListPath && context.path.ends_with(pathSuffix) &&
+        context.sourceValue.isString() && context.companionValue.isString()) {
+        auto source = std::string_view(context.sourceValue.asString());
+        const auto storedSize = source.size();
+        while (!source.empty() &&
+            isFinaleWhitespaceControl(static_cast<unsigned char>(source.back()))) {
+            source.remove_suffix(1);
+        }
+        if (source.size() != storedSize && source == context.companionValue.asString()) {
+            return DifferenceClassification::WhitespaceControl;
+        }
+    }
+    if (context.category != DifferenceCategory::Differs ||
+        context.epoch == FormatEpoch::CodaBanner || context.origin != "legacy-mus" ||
+        !keySymbolListPath || !context.path.ends_with(pathSuffix) ||
+        !context.sourceValue.isString() || !context.companionValue.isString()) {
+        return std::nullopt;
+    }
+
+    // Finale's upgrade is treated as corrupt only when its result differs solely by changing
+    // every affected Petrucci double-sharp code from U+00DC to U+008B.
+    constexpr std::string_view doubleSharp = "\xC3\x9C";
+    constexpr std::string_view mojibake = "\xC2\x8B";
+    auto upgraded = context.sourceValue.asString();
+    bool replaced = false;
+    std::size_t offset = 0;
+    while ((offset = upgraded.find(doubleSharp, offset)) != std::string::npos) {
+        upgraded.replace(offset, doubleSharp.size(), mojibake);
+        offset += mojibake.size();
+        replaced = true;
+    }
+    return replaced && upgraded == context.companionValue.asString()
+        ? std::optional{DifferenceClassification::TextEncodingError}
+        : std::nullopt;
+}
+
+std::optional<DifferenceClassification>
+classifyMultimeasureRestOptionsDifference(const DifferenceContext& context)
+{
+    if (context.category == DifferenceCategory::Differs &&
+        context.path == "mmrest_options.num_start" && context.origin == "legacy-mus" &&
+        context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 &&
+        context.companionValue.isInteger() && context.companionValue.asInteger() == 1) {
+        return DifferenceClassification::FinaleUpgradeNormalization;
     }
     return std::nullopt;
 }
@@ -156,6 +256,31 @@ classifyNoteRestOptionsDifference(const DifferenceContext& context)
         }
     }
     return std::nullopt;
+}
+
+std::optional<DifferenceClassification>
+classifyStemConnectionEncodingError(const DifferenceContext& context)
+{
+    constexpr std::string_view symbolSuffix = ".symbol";
+    if (context.category != DifferenceCategory::Differs ||
+        context.epoch != FormatEpoch::UncompressedLegacy || context.origin != "legacy-mus" ||
+        context.sourceReport.sourcePlatform != SourcePlatform::MacOS ||
+        !context.path.starts_with("stem_options.stem_connections[") ||
+        !context.path.ends_with(symbolSuffix) || !context.sourceValue.isInteger() ||
+        context.sourceValue.asInteger() != 0x00c0 || !context.companionValue.isInteger() ||
+        context.companionValue.asInteger() != 0x00bf) {
+        return std::nullopt;
+    }
+    const auto prefix =
+        std::string(context.path.substr(0, context.path.size() - symbolSuffix.size()));
+    const auto sourceFont = context.source.find(prefix + ".font_name");
+    const auto companionFont = context.companion.find(prefix + ".font_name");
+    return sourceFont != context.source.end() && companionFont != context.companion.end() &&
+            sourceFont->second.first.isString() && companionFont->second.first.isString() &&
+            sourceFont->second.first.asString() == "Times" &&
+            companionFont->second.first.asString() == "Times"
+        ? std::optional{DifferenceClassification::TextEncodingError}
+        : std::nullopt;
 }
 
 std::optional<DifferenceClassification>

@@ -25,6 +25,10 @@ std::string_view phaseName(Phase phase)
     case Phase::MacSymbolFonts: return "mac_symbol_fonts";
     case Phase::RecordIndex: return "record_index";
     case Phase::ImportAccidentalOptions: return "accidental_options";
+    case Phase::ImportAcciAmountFlats: return "acci_amount_flats";
+    case Phase::ImportAcciAmountSharps: return "acci_amount_sharps";
+    case Phase::ImportAcciOrderFlats: return "acci_order_flats";
+    case Phase::ImportAcciOrderSharps: return "acci_order_sharps";
     case Phase::ImportAlternateNotationOptions: return "alternate_notation_options";
     case Phase::ImportAugmentationDotOptions: return "augmentation_dot_options";
     case Phase::ImportBarlineOptions: return "barline_options";
@@ -32,6 +36,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportChordSuffixElements: return "chord_suffix_elements";
     case Phase::ImportChordSuffixPlayback: return "chord_suffix_playback";
+    case Phase::ImportClefOctaveFlats: return "clef_octave_flats";
+    case Phase::ImportClefOctaveSharps: return "clef_octave_sharps";
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportFontDefinitions: return "font_definitions";
@@ -42,11 +48,15 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportFretboardStyles: return "fretboard_styles";
     case Phase::ImportGraceNoteOptions: return "grace_note_options";
     case Phase::ImportKeySignatureOptions: return "key_signature_options";
+    case Phase::ImportKeyAttributes: return "key_attributes";
+    case Phase::ImportKeyFormats: return "key_formats";
+    case Phase::ImportKeyMapArrays: return "key_map_arrays";
     case Phase::ImportLayerAttributes: return "layer_atts";
     case Phase::ImportMarkingCategories: return "marking_categories";
     case Phase::ImportLineCurveOptions: return "line_curve_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";
+    case Phase::ImportKeySymbolListElements: return "key_symbol_list_elements";
     case Phase::ImportMiscOptions: return "misc_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";
@@ -68,6 +78,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportTextBlocks: return "text_blocks";
     case Phase::ImportTextOptions: return "text_options";
     case Phase::ImportTexts: return "texts";
+    case Phase::ImportTonalCenterFlats: return "tonal_center_flats";
+    case Phase::ImportTonalCenterSharps: return "tonal_center_sharps";
     case Phase::ImportTieOptions: return "tie_options";
     case Phase::ImportTimeSignatureOptions: return "time_signature_options";
     case Phase::ImportTupletOptions: return "tuplet_options";

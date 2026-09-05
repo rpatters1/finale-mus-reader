@@ -35,6 +35,12 @@ std::optional<DifferenceClassification> classifyChordDifference(const Difference
         context.companionValue.asBool()) {
         return DifferenceClassification::DifferentDefaults;
     }
+    if (context.path == "chord_options.fret_style_id" && sourceIsBeta(context.sourceVersion) &&
+        sourceIsVersion(context.epoch, context.sourceVersion,
+                        finale_mus_reader::FormatEpoch::ZlibLegacy,
+                        finale_mus_reader::versions::finale2008)) {
+        return DifferenceClassification::BetaDiscrepancy;
+    }
     if (context.path == "chord_options.use_simple_chord_spelling" &&
         sourceIsVersion(context.epoch, context.sourceVersion,
                         finale_mus_reader::FormatEpoch::UncompressedLegacy,
@@ -59,7 +65,7 @@ Value observeChordOptions(const SurveyContext& ctx)
                           field("show_fretboards", &Target::showFretboards),
                           field("fret_style_id", &Target::fretStyleId),
                           field("fret_inst_id", &Target::fretInstId),
-                          field("multi_fret_items_per_string", &Target::multiFretItemsPerStr),
+                          field("multi_fret_items_per_str", &Target::multiFretItemsPerStr),
                           field("use_fretboard_font", &Target::useFretboardFont),
                           field("italicize_capo_chords", &Target::italicizeCapoChords),
                           field("chord_alignment", &Target::chordAlignment),

@@ -139,6 +139,26 @@ TEST_CASE("Note/rest options recover fixed-row preferences", "[class]") {
   }
 }
 
+TEST_CASE("Late uncompressed note/rest options recover the relocated shape-note switch",
+          "[class]") {
+  const std::vector<SyntheticRow> rows{
+      {GLOBALS_CMPER, "01", {0, 1, 0, 0, 0, 0}},
+      {GLOBALS_CMPER, "12", {0, 0, 0, 0, 0, 0}},
+      {GLOBALS_CMPER, "41", {0, 0, 0, -24, -48, 0}},
+  };
+  ImportReport report(FormatEpoch::UncompressedLegacy);
+  const auto options = importNoteRestOptions(
+      makeContainer(rows, FormatEpoch::UncompressedLegacy),
+      FormatEpoch::UncompressedLegacy, report);
+
+  REQUIRE(options->doShapeNotes);
+  const auto *shapeNotes =
+      report.findField<NoteRestOptionsTarget>("doShapeNotes");
+  REQUIRE(shapeNotes);
+  REQUIRE(shapeNotes->origin == ValueOrigin::LegacyMus);
+  REQUIRE(shapeNotes->sourceIdentity == finale_mus_reader::numericGlobalTag(1));
+}
+
 TEST_CASE(
     "Note/rest options recover class-record preferences in either byte order",
     "[class]") {

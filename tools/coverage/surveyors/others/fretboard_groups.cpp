@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 
+#include "coverage/common/byte_swap.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
@@ -12,7 +13,6 @@
 namespace {
 
 using namespace finale_mus_reader::coverage;
-using finale_mus_reader::instanceKey;
 
 bool hasByteSwappedFretboardSuffix(std::string_view source, std::string_view companion)
 {
@@ -57,8 +57,10 @@ classifyFretboardGroupDifference(const DifferenceContext& context)
         R"(^fretboard_groups\[(?:part_id=\d+,)?cmper=\d+,inci=\d+\]\.name$)");
     if (std::regex_match(context.path.begin(), context.path.end(), name) &&
         context.sourceValue.isString() && context.companionValue.isString() &&
-        hasByteSwappedFretboardSuffix(context.sourceValue.asString(),
-                                      context.companionValue.asString())) {
+        (hasContiguousAdjacentByteSwap(context.sourceValue.asString(),
+             context.companionValue.asString()) ||
+            hasByteSwappedFretboardSuffix(context.sourceValue.asString(),
+                context.companionValue.asString()))) {
         return DifferenceClassification::FinaleUpgradeLoss;
     }
     return std::nullopt;
@@ -74,9 +76,10 @@ Value observeFretboardGroups(const SurveyContext& ctx)
             field("inci", [](const Target& value) { return value.getInci().value_or(0); }),
             field("fret_inst_id", &Target::fretInstId), field("name", &Target::name),
             field("origin_fret_inst_id", [&ctx](const Target& value) {
-                return fieldOrigin<Target>(ctx, "fretInstId",
-                                           instanceKey<Target>(value.getSourcePartId(),
-                                                               value.getCmper(), value.getInci()));
+                return fieldOrigin<Target>(ctx, "fretInstId", value);
+            }),
+            field("origin_name", [&ctx](const Target& value) {
+                return fieldOrigin<Target>(ctx, "name", value);
             })));
     }
     return result;

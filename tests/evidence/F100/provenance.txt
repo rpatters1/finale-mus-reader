@@ -29,6 +29,33 @@ F100-instlist.etf
     The matching Finale 1.0.0 ETF export, whose `^DC(1)` and `^dc(1)` rows
     independently confirm the stored memberships.
 
+F100-keysiglib.mus
+    sha256 400798fffc5f0ed84161efae5326a65c13bdbcefed06868d4a8773b25575dde1
+    6,191 bytes. Made by opening the controlled Finale 1.0.0 baseline and loading
+    the supplied key-signature library. Custom key cmper 2 references accidental
+    symbol list 1. Its 63 physical `KS` rows represent 46 unique comparator
+    pairs; 17 pairs have a second, identical incidence.
+
+F100-keysiglib.etf
+    sha256 5a559d61f84d9f9a07e4bd78bade017d7aecef5a647111df4ac535d978ce5ac7
+    The matching Finale 1.0.0 ETF export, independently carrying the same `KS`
+    comparator pairs and payload words.
+
+-finale27/F100-keysiglib.musx
+    sha256 7b1d2598d3d79c18962e9a105c2a371c8cdc0ab5ed1edf4ca2bc7564ce653ced
+    The unedited Finale 27 companion. It preserves 40 comparator pairs, omits
+    the six one-character elemental slots, and rewrites 26 surviving strings.
+
+-finale27/F100-keysiglib-maybefixed.musx
+    sha256 26e45528cb6bf2b75c07f7211873be5731124e4044be8efe663d30bcbce16e21
+    16,289 bytes. Derived from the companion above by changing the Petrucci
+    preference from the converted legacy size 71 to 24 points, then opening and
+    saving the accidental-symbol list through a Lua key-signature editor. The
+    Lua API found all source slots, but the resulting EnigmaXML retains exactly
+    the original companion's 40 `keySymList` elements and strings. It also adds
+    custom key cmper 3 and normalizes unrelated options, so it is retained as an
+    upgrade-behavior experiment rather than as the source's semantic companion.
+
 -finale27/F100-instlist.musx
     sha256 92309b65adf972c768310026778ee5988649ad3f41c59e70008eb547d4b90bf8
     The unedited Finale 27 companion described by `../finale27-provenance.txt`.

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "musx/musx.h"
@@ -43,6 +44,7 @@ Value observeMultimeasureRestOptions(const SurveyContext& ctx)
         originField<Target>("origin_autoUpdateMmRests", "autoUpdateMmRests"));
 }
 
-COVERAGE_SURVEYOR("options", "mmrest_options", observeMultimeasureRestOptions);
+COVERAGE_CLASS("options", "mmrest_options", observeMultimeasureRestOptions,
+    classifyMultimeasureRestOptionsDifference);
 
 } // namespace

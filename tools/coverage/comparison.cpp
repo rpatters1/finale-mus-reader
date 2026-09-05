@@ -127,7 +127,8 @@ std::string listPartPrefix(const Value& item)
                                          : std::string{};
 }
 
-std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& item)
+std::optional<std::pair<std::string, std::string>> ordinaryListKey(
+    const Value& item, bool matchCmperPairWithoutIncidence = false)
 {
     if (!item.isObject()) return std::nullopt;
     const auto integer = [&](std::string_view key) -> const Value* {
@@ -141,6 +142,12 @@ std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& 
                              std::to_string(integer("cmper1")->asInteger()) +
                              ",cmper2=" + std::to_string(integer("cmper2")->asInteger()) +
                              ",inci=" + std::to_string(integer("inci")->asInteger())};
+    }
+    if (matchCmperPairWithoutIncidence && integer("cmper1") && integer("cmper2")) {
+        return std::pair{"identity",
+                         partPrefix + "cmper1=" +
+                             std::to_string(integer("cmper1")->asInteger()) +
+                             ",cmper2=" + std::to_string(integer("cmper2")->asInteger())};
     }
     if (integer("cmper") && integer("inci")) {
         return std::pair{"identity", partPrefix + "cmper=" +
@@ -187,7 +194,7 @@ std::optional<std::pair<std::string, std::string>> listKey(std::string_view path
             return std::pair{"semantic", reportKey->asString()};
         }
     }
-    return ordinaryListKey(item);
+    return ordinaryListKey(item, path == keySymbolListElementsCoverageKey);
 }
 
 std::vector<std::string> listSegments(const Value::Array& items, std::string_view path)

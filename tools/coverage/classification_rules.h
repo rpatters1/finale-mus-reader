@@ -13,10 +13,18 @@ namespace coverage {
 
 /// @brief Classifier metadata populated through FontDefinition::calcIsSymbolFont().
 inline constexpr std::string_view fontDefinitionIsSymbolField = "is_symbol";
+inline constexpr std::string_view keySymbolListElementsCoverageKey =
+    "key_symbol_list_elements";
 
 bool isClassifierMetadataPath(std::string_view path);
 std::optional<DifferenceClassification>
 classifyFontDefinitionDifference(const DifferenceContext& context);
+
+std::optional<DifferenceClassification>
+classifyKeySymbolListDifference(const DifferenceContext& context);
+
+std::optional<DifferenceClassification>
+classifyMultimeasureRestOptionsDifference(const DifferenceContext& context);
 
 std::optional<DifferenceClassification>
 classifyDoubleWholeSlashConversionLoss(const DifferenceContext& context);
@@ -31,6 +39,8 @@ inline constexpr std::string_view noteRestDrop128thLeaf = "drop128th_rest";
 
 std::optional<DifferenceClassification>
 classifyNoteRestOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification>
+classifyStemConnectionEncodingError(const DifferenceContext& context);
 std::optional<DifferenceClassification>
 classifyPageFormatOptionsDifference(const DifferenceContext& context);
 

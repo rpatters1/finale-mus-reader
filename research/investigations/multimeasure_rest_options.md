@@ -58,3 +58,15 @@
   `tests/mapping_tests.cpp`, `tools/options_coverage_probe.cpp`, `scripts/options_coverage_report.py`,
   [`multimeasure_rest_options.md`](../format/options/multimeasure_rest_options.md#multimeasure-rest-defaults). The two coverage-tool names
   refer to the deleted historical tools identified in the 2026-08-12 entry above.
+
+## 2026-09-05 — Finale 27 normalizes a stored zero number threshold
+
+- **Observation:** Finale 97 source `mus-1e8f7cc5864a248e` stores selector 25 incidence 0 as
+  `(500, 0, -50, 11, 0, 0)` and incidence 1 as `(48, 0, 0, 0, 0, 0)`. The established later
+  layout therefore gives `numStart` the sourced value zero; the neighboring recovered fields all
+  agree with the companion.
+- The companion's raw EnigmaXML explicitly contains `<numStart>1</numStart>`, excluding the XML
+  parser, surveyor, and comparison code as causes.
+- **Conclusion (weak):** Finale 27 normalizes stored `numStart` zero to one while upgrading this
+  source. The reader preserves zero and the coverage rule recognizes only the exact sourced
+  `0 -> 1` transformation. Evidence: `mus-1e8f7cc5864a248e` in `rpatters1-main`.

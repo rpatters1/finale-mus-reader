@@ -18,3 +18,17 @@
   `different_defaults` only when its source origin is `Finale27Default`. The tracked recapture
   completed all 191 sources and companions; this changes the class result from 8,593 equal plus
   two unexpected leaves to 8,593 equal plus two expected leaves, with no unexpected differences.
+
+## 2026-09-05 — Late-uncompressed shape-note switch relocation
+
+- **Question:** Does a Finale 2000 document without the earlier `CS` row retain the Use Shape
+  Notes switch anywhere recoverable?
+- **Source comparison:** `mus-ddd4b454121a57a1` and `mus-9005b59dbed36eed` are both Finale
+  `5.0.0.5`, development status 2. Neither has `CS`; their global selector `01` word 1 values are
+  respectively one and zero.
+- **Companion comparison:** Their semantic companions respectively write and omit
+  `doShapeNotes`. Reading selector `01` only when the uncompressed source omits `CS` makes both
+  agree while preserving the confirmed earlier `CS` mapping.
+- **Result:** The retained 27-document unexpected-differences cohort completed with all sources
+  and companions readable. `NoteRestOptions` had 1,215 equal leaves and no differences. The
+  discriminator remains **weak** pending a broader census of uncompressed layouts.

@@ -47,7 +47,9 @@ enum class DifferenceClassification
     EnigmaTextDifference,
     FinaleTextBlockRenumbering,
     FinaleUpgradeLoss,
+    FinaleUpgradeNormalization,
     FontMetricApproximation,
+    TextEncodingError,
     LegacyPageParityText,
     MissingAccidentalInsertDefault,
     MissingSelector,
@@ -60,7 +62,8 @@ enum class DifferenceClassification
     StemConnectionPastTerminator,
     StemHorizontalCorrection,
     SynthesizedScoreName,
-    TransientTextBlock
+    TransientTextBlock,
+    WhitespaceControl
 };
 
 enum class TextDifferenceClassification

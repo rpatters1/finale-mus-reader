@@ -226,17 +226,33 @@ const FieldMapping fixedScorePreFinale35LowerSystemFields[] = {
         &adjustUncompressedFirstSystemTop, pageFormatScore->firstSysMarginTop),
 };
 
-const FieldMapping fixedScoreFinale35UpperSystemFields[] = {
-    MUS_WORD(PageFormatOptionsTarget, "IU", 0, 0, 5, pageFormatScore->sysMarginTop),
-    MUS_WORD_ADJUSTED(PageFormatOptionsTarget, "IU", 0, 0, 5,
-        &adjustUncompressedFirstSystemTop, pageFormatScore->firstSysMarginTop),
+// The expanded current-system row stores its system top as a signed long whose
+// two words follow the source platform's order.
+#define FINALE35_SYSTEM_FIELDS(tagValue, order) \
+    MUS_LONG(PageFormatOptionsTarget, tagValue, 0, 0, 4, order, \
+        pageFormatScore->sysMarginTop), \
+    withSourceAdjustment( \
+        MUS_LONG(PageFormatOptionsTarget, tagValue, 0, 0, 4, order, \
+            pageFormatScore->firstSysMarginTop), \
+        &adjustUncompressedFirstSystemTop)
+
+const FieldMapping fixedScoreFinale35BigEndianUpperSystemFields[] = {
+    FINALE35_SYSTEM_FIELDS("IU", LongWordOrder::HighFirst),
 };
 
-const FieldMapping fixedScoreFinale35LowerSystemFields[] = {
-    MUS_WORD(PageFormatOptionsTarget, "Iu", 0, 0, 5, pageFormatScore->sysMarginTop),
-    MUS_WORD_ADJUSTED(PageFormatOptionsTarget, "Iu", 0, 0, 5,
-        &adjustUncompressedFirstSystemTop, pageFormatScore->firstSysMarginTop),
+const FieldMapping fixedScoreFinale35BigEndianLowerSystemFields[] = {
+    FINALE35_SYSTEM_FIELDS("Iu", LongWordOrder::HighFirst),
 };
+
+const FieldMapping fixedScoreFinale35LittleEndianUpperSystemFields[] = {
+    FINALE35_SYSTEM_FIELDS("IU", LongWordOrder::LowFirst),
+};
+
+const FieldMapping fixedScoreFinale35LittleEndianLowerSystemFields[] = {
+    FINALE35_SYSTEM_FIELDS("Iu", LongWordOrder::LowFirst),
+};
+
+#undef FINALE35_SYSTEM_FIELDS
 
 const FieldMapping fixedScalarCollisionPageFormatFields[] = {
     MUS_BIT(PageFormatOptionsTarget, figureTag, fileInfoSelector, 0, 2, 0,
@@ -566,17 +582,35 @@ bool storesPreFinale35LowerSystemLayout(
         && hasUncompressedLowerSystemRecord(index, profile);
 }
 
-bool storesFinale35UpperSystemLayout(
+bool storesFinale35BigEndianUpperSystemLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return storesFinale35OptionLayout(index, profile)
+        && profile.byteOrder == ByteOrder::BigEndian
         && hasUncompressedUpperSystemRecord(index, profile);
 }
 
-bool storesFinale35LowerSystemLayout(
+bool storesFinale35BigEndianLowerSystemLayout(
     const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return storesFinale35OptionLayout(index, profile)
+        && profile.byteOrder == ByteOrder::BigEndian
+        && hasUncompressedLowerSystemRecord(index, profile);
+}
+
+bool storesFinale35LittleEndianUpperSystemLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return storesFinale35OptionLayout(index, profile)
+        && profile.byteOrder == ByteOrder::LittleEndian
+        && hasUncompressedUpperSystemRecord(index, profile);
+}
+
+bool storesFinale35LittleEndianLowerSystemLayout(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+{
+    return storesFinale35OptionLayout(index, profile)
+        && profile.byteOrder == ByteOrder::LittleEndian
         && hasUncompressedLowerSystemRecord(index, profile);
 }
 
@@ -615,27 +649,51 @@ const MappingTable& fixedScorePreFinale35LowerSystemTable()
     return table;
 }
 
-const MappingTable& fixedScoreFinale35UpperSystemTable()
+const MappingTable& fixedScoreFinale35BigEndianUpperSystemTable()
 {
     static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
         .epochs = EpochMask::Uncompressed,
-        .applies = &storesFinale35UpperSystemLayout,
+        .applies = &storesFinale35BigEndianUpperSystemLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
-        .fields = fixedScoreFinale35UpperSystemFields,
-        .fieldCount = std::size(fixedScoreFinale35UpperSystemFields)};
+        .fields = fixedScoreFinale35BigEndianUpperSystemFields,
+        .fieldCount = std::size(fixedScoreFinale35BigEndianUpperSystemFields)};
     return table;
 }
 
-const MappingTable& fixedScoreFinale35LowerSystemTable()
+const MappingTable& fixedScoreFinale35BigEndianLowerSystemTable()
 {
     static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
         .epochs = EpochMask::Uncompressed,
-        .applies = &storesFinale35LowerSystemLayout,
+        .applies = &storesFinale35BigEndianLowerSystemLayout,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
-        .fields = fixedScoreFinale35LowerSystemFields,
-        .fieldCount = std::size(fixedScoreFinale35LowerSystemFields)};
+        .fields = fixedScoreFinale35BigEndianLowerSystemFields,
+        .fieldCount = std::size(fixedScoreFinale35BigEndianLowerSystemFields)};
+    return table;
+}
+
+const MappingTable& fixedScoreFinale35LittleEndianUpperSystemTable()
+{
+    static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
+        .epochs = EpochMask::Uncompressed,
+        .applies = &storesFinale35LittleEndianUpperSystemLayout,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
+        .fields = fixedScoreFinale35LittleEndianUpperSystemFields,
+        .fieldCount = std::size(fixedScoreFinale35LittleEndianUpperSystemFields)};
+    return table;
+}
+
+const MappingTable& fixedScoreFinale35LittleEndianLowerSystemTable()
+{
+    static const MappingTable table{.reportPrefix = pageFormatReportPrefix,
+        .epochs = EpochMask::Uncompressed,
+        .applies = &storesFinale35LittleEndianLowerSystemLayout,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PageFormatOptionsTarget>,
+        .fields = fixedScoreFinale35LittleEndianLowerSystemFields,
+        .fieldCount = std::size(fixedScoreFinale35LittleEndianLowerSystemFields)};
     return table;
 }
 
@@ -938,8 +996,10 @@ void importPageFormatOptions(const ImportContext& context)
                            &fixedScoreUncompressedPageFormatTable(),
                            &fixedScorePreFinale35UpperSystemTable(),
                            &fixedScorePreFinale35LowerSystemTable(),
-                           &fixedScoreFinale35UpperSystemTable(),
-                           &fixedScoreFinale35LowerSystemTable(),
+                           &fixedScoreFinale35BigEndianUpperSystemTable(),
+                           &fixedScoreFinale35BigEndianLowerSystemTable(),
+                           &fixedScoreFinale35LittleEndianUpperSystemTable(),
+                           &fixedScoreFinale35LittleEndianLowerSystemTable(),
                            &fixedPartsCommonPageFormatTable(),
                            &fixedPartsBigEndianDimensionsTable(),
                            &fixedPartsLittleEndianDimensionsTable(),

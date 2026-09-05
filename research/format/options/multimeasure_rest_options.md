@@ -64,9 +64,13 @@ document across 0, 1, 2, 4, 5, 14, 16, 21, 22 and 25, and words 2–3 move toget
 the Coda era and are `(0, 0)` in Finale 3.0 and 3.2. Finale 27's conversion carries nothing from them, so no
 companion can name them; they are **open**.
 
-Agreement with exact Finale 27 companions is complete: all 1,130 companion-backed later-layout documents match
-on all nine scalars and on `useSymbols`, and all 59 companion-backed early-layout documents match on all three,
-with no disagreement of any kind.
+**Superseded in one case:** the original survey found complete agreement with exact Finale 27
+companions: all 1,130 companion-backed later-layout documents matched on all nine scalars and on
+`useSymbols`, and all 59 companion-backed early-layout documents matched on all three. A later
+companion for `mus-1e8f7cc5864a248e` exposes one exception: the Finale 97 source stores `numStart`
+as zero and Finale 27 explicitly writes it as one. The reader preserves zero; coverage classifies
+only that `0 -> 1` conversion as Finale upgrade normalization. **Weak:** this normalization is
+represented by one source and companion in `rpatters1-main`.
 
 Two boundaries do not coincide with the layout marker:
 

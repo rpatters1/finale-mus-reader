@@ -251,8 +251,7 @@ void testClefOptionsCapture()
 {
     using ClefOptions = musx::dom::options::ClefOptions;
     const auto read = [](const char* relative) {
-        return Reader::readWithReport<TestXmlDocument>(
-            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+        return readFixture(relative, fixtureLegacySymbolFonts);
     };
     const auto clefs = [](const ImportResult& result) {
         const auto options = result.document->getOptions()->get<ClefOptions>();

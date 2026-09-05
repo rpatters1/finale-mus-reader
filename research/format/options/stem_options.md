@@ -34,6 +34,13 @@ The symbol's high byte is zero in **every element of every fixed-row file in bot
 ever packed beside it; the reader still narrows to the low byte, because a symbol font character may be
 stored sign-extended, as clef characters demonstrably are.
 
+One Mac Finale 97 source exposes a companion encoding error for a text-font connection.
+`mus-d4cddb217051faf7` stores byte `0xc0` under a Times font definition that states Windows
+charset 0. The reader therefore recovers U+00C0, while the companion explicitly writes U+00BF,
+the MacRoman interpretation of the same byte, and retains that Windows font definition. The
+reader preserves the font-directed result and coverage classifies the companion discrepancy as
+`text-encoding-error`. **Weak:** this exact conversion has one observed source.
+
 A tracked Finale 1.0.0 flag-character fixture stores 0 for the first connection's `upStemHorz`,
 while its Finale 27 companion carries -59. The unrelated flag edits do not establish a source
 location for that upgraded value, which may be calculated. Coverage therefore classifies a

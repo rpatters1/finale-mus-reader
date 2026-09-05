@@ -43,8 +43,12 @@ std::string_view differenceName(DifferenceClassification classification)
         return "finale-text-block-renumbering";
     case FinaleUpgradeLoss:
         return "finale-upgrade-loss";
+    case FinaleUpgradeNormalization:
+        return "finale-upgrade-normalization";
     case FontMetricApproximation:
         return "font-metric-approximation";
+    case TextEncodingError:
+        return "text-encoding-error";
     case LegacyPageParityText:
         return "legacy-page-parity-text";
     case MissingAccidentalInsertDefault:
@@ -71,6 +75,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "synthesized-score-name";
     case TransientTextBlock:
         return "transient-text-block";
+    case WhitespaceControl:
+        return "whitespace-control";
     }
     throw std::logic_error("unhandled difference classification");
 }

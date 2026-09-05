@@ -11,7 +11,7 @@
   and converts from 96 EVPUs to musxdom's raw value 1536. The converted document duplicates the
   source set into score and parts.
 - **Later mappings:** Public `FCPageFormatPrefs` documentation supplied semantic and unit
-  contracts; authorized Framework history supplied preliminary score/parts selector locations.
+  contracts; an independent format reference supplied preliminary score/parts selector locations.
   Synthetic fixed-row and class-record tests exercise every contained leaf and both zlib byte
   orders.
 - **Refined fixed-row layouts:** A first targeted comparison against F2000, F2002, and F2008
@@ -50,6 +50,24 @@
   at word 2 and its system top at word 5. Selector `75` presence selects the expanded layout;
   before it appears, first-system top adds selector `17` word 0 without the later selector-`03`
   offset.
+- **Expanded system-top width and word order:** The earlier word-5 interpretation explained the
+  available big-endian sources only because their observed values fit in 16 bits and word 4 was
+  their sign extension. Five newly companion-backed Finale 98 Windows sources refute that
+  interpretation: they store the same sign-extension pairs in the opposite word order, so reading
+  word 5 produces -1 while the companions contain -80 or -188. The sources are
+  `rpatters1-installs:mus-b83837e54efd4140`,
+  `rpatters1-installs:mus-8d87ac0d9f50c187`,
+  `rpatters1-installs:mus-c5ed03545bd058a5`,
+  `rpatters1-installs:mus-6767ebeee8a4a1ae`, and
+  `rpatters1-installs:mus-9a00dc9a26252fbf`. The refreshed all-corpus snapshot consequently has
+  20 unexpected `PageFormatOptions` leaves: the score value and its three derived or copied leaves
+  in each source. The accepted layout is one signed 32-bit value at words 4--5, high word first on
+  big-endian sources and low word first on little-endian sources. Selector `75` remains the
+  established lower structural gate. The DCL epoch is the upper structural gate and returns the
+  field to signed 16-bit selector `17` word 0; sampled Finale 2001, 2002, 2005, and 2006 sources and
+  the corresponding zlib class through Finale 2012 agree with their companions. Synthetic tests
+  exercise both tag spellings and both platform orders with -70000, which cannot pass through a
+  16-bit read, and inject the same row into DCL to verify that the epoch-specific selector wins.
 - **Staff-height UI boundary:** The Finale 2002 for Windows Read Me (August 2001, SHA-256
   `d55b9e2094ca347304fa340d68624e3433178ae0332b6a24a3eb4761f866f0ae`) lists Absolute Staff
   Sizing under “New Features in Finale 2002” and describes direct control of resulting staff

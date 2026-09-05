@@ -314,7 +314,8 @@ TEST_CASE("Later expanded music-symbol characters begin with Finale 3.5.1", "[cl
 TEST_CASE("Coda key-signature characters decode ordinary accidental bytes through the key font",
     "[class][reader]")
 {
-    const auto result = readFixture("evidence/F263/F263-musechars.mus");
+    const auto result = readFixture(
+        "evidence/F263/F263-musechars.mus", fixtureLegacySymbolFonts);
     const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
     for (const auto member : {std::string_view("keySigNatural"),
@@ -352,7 +353,8 @@ TEST_CASE("Coda leaves 8vb-down at the pinned default", "[class][reader]")
 TEST_CASE("Finale 1 flag character controls map to primary and second flags",
     "[class][reader]")
 {
-    const auto result = readFixture("evidence/F100/F100-flagchars.mus");
+    const auto result = readFixture(
+        "evidence/F100/F100-flagchars.mus", fixtureLegacySymbolFonts);
     const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(options);
 
@@ -377,7 +379,8 @@ TEST_CASE("Finale 1 flag character controls map to primary and second flags",
 TEST_CASE("Pre-Unicode music symbols use their category font encodings",
     "[class][reader]")
 {
-    const auto accidentalResult = readFixture("evidence/F100/F100-accis.mus");
+    const auto accidentalResult = readFixture(
+        "evidence/F100/F100-accis.mus", fixtureLegacySymbolFonts);
     const auto accidentalOptions = accidentalResult.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(accidentalOptions);
     CHECK(accidentalOptions->dblFlat == 0xba);
@@ -385,7 +388,8 @@ TEST_CASE("Pre-Unicode music symbols use their category font encodings",
     CHECK(accidentalOptions->chordDblFlat == 0x222b);
     CHECK(accidentalOptions->chordDblSharp == 0x2039);
 
-    const auto keyResult = readFixture("evidence/F100/F100-key-font.mus");
+    const auto keyResult = readFixture(
+        "evidence/F100/F100-key-font.mus", fixtureLegacySymbolFonts);
     const auto keyOptions = keyResult.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
     REQUIRE(keyOptions);
     CHECK(keyOptions->dblFlat == 0xba);
@@ -488,7 +492,7 @@ TEST_CASE("Finale 97 stores the default measure rest in selector 9 word 4",
              std::pair{"evidence/F97/Fin97-baseline.mus", char32_t{183}},
              std::pair{"evidence/F97/F97-def-measrest.mus", char32_t{206}},
          }) {
-        const auto result = readFixture(fixture);
+        const auto result = readFixture(fixture, fixtureLegacySymbolFonts);
         const auto options = result.document->getOptions()->get<MusicSymbolOptionsTestTarget>();
         REQUIRE(options);
         INFO(fixture);

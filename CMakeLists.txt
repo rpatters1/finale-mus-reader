@@ -165,7 +165,9 @@ add_library(finale_mus_reader STATIC
     src/container/product_banner.cpp
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
+    src/import/details/custom_key_octaves.cpp
     src/import/details/fretboard_diagrams.cpp
+    src/import/details/key_symbol_list.cpp
     src/import/details/measure_graphic_assign.cpp
     src/import/header/header.cpp
     src/import/options/accidental_options.cpp
@@ -198,6 +200,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/tuplet_options.cpp
     src/import/others/chord_suffix_elements.cpp
     src/import/others/chord_suffix_playback.cpp
+    src/import/others/custom_keys.cpp
     src/import/others/font_definitions.cpp
     src/import/others/fret_instruments.cpp
     src/import/others/fretboard_groups.cpp
