@@ -28,12 +28,12 @@ void appendFixedRows(std::vector<SyntheticRow> &rows, std::uint16_t cmper,
 
 std::vector<std::int16_t> customKeyMapWords(ByteOrder byteOrder) {
   constexpr std::array<std::pair<std::int16_t, std::int16_t>, 6> steps{{
-      {0, static_cast<std::int16_t>(0x8000)},
-      {0, 0},
-      {1, static_cast<std::int16_t>(0x8000)},
-      {1, 0},
-      {2, static_cast<std::int16_t>(0x8000)},
-      {2, 0},
+      {std::int16_t(0), std::int16_t(0x8000)},
+      {std::int16_t(0), std::int16_t(0)},
+      {std::int16_t(1), std::int16_t(0x8000)},
+      {std::int16_t(1), std::int16_t(0)},
+      {std::int16_t(2), std::int16_t(0x8000)},
+      {std::int16_t(2), std::int16_t(0)},
   }};
   std::vector<std::int16_t> result;
   result.reserve(steps.size() * 2);
