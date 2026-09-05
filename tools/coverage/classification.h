@@ -140,6 +140,7 @@ struct DifferenceContext
     const SourceVersion* sourceVersion;
     const ImportReport& sourceReport;
     RelatedDifference relatedDifference{};
+    std::string_view companionFontIdentity{};
 };
 
 using DifferenceClassifierFn =

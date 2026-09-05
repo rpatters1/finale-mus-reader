@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**60 done, 2 partial, 128 to do, 190 total.** Verified class for class against the registry on
+**62 done, 2 partial, 126 to do, 190 total.** Verified class for class against the registry on
 2026-09-04: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (24 done, 0 partial, 69 to do, 93 total)
+## others  (26 done, 0 partial, 67 to do, 93 total)
 
     [ ] AcciAmountFlats                                                         L1 library item
     [ ] AcciAmountSharps                                                        L1 library item
@@ -75,8 +75,8 @@ Explanation added here has to be removed again.
     [ ] KeyFormat                                                               L1 library item
     [ ] KeyMapArray                                                             L1 library item
     [x] LayerAttributes                         layer_attributes.cpp
-    [ ] MarkingCategory                                                         L1 library item
-    [ ] MarkingCategoryName                                                     L2 satellite
+    [x] MarkingCategory                         marking_category.cpp
+    [x] MarkingCategoryName                     marking_category.cpp
     [ ] Measure
     [ ] MeasureExprAssign
     [ ] MeasureNumberRegion
@@ -132,7 +132,7 @@ Explanation added here has to be removed again.
     [ ] StaffUsed
     [ ] SystemLock
     [ ] TempoChange
-    [x] TextBlock                              text_blocks.cpp
+    [x] TextBlock                               text_blocks.cpp
     [ ] TextExpressionDef                                                       L1 library item
     [ ] TextExpressionEnclosure                                                 L2 satellite
     [ ] TextRepeatAssign

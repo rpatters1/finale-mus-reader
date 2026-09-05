@@ -29,6 +29,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Fret record identities and layouts | [`fret_records.md`](fret_records.md) |
 | Custom smart-shape lines, guitar-bend boundary | [`smart_shape_custom_lines.md`](smart_shape_custom_lines.md) |
 | Layer attribute layout, release coverage, pre-2002 playback and spacing | [`layer_attributes.md`](layer_attributes.md) |
+| Marking category records, name width, enum mapping, flags, and fallback differences | [`marking_category.md`](marking_category.md) |
 | Part definition class id, flag word, default-name sign, the absent `pD` tag | [`part_definitions.md`](part_definitions.md) |
 | Part globals, pre-zlib options, Coda Scroll View cache, zlib class `0x0120` | [`part_globals.md`](part_globals.md) |
 | Staff-list identities, text width, forced arrays, and category baseline fill | Category: [`staff_list.md`](staff_list.md); repeat: [`repeat_options.md`](repeat_options.md) |

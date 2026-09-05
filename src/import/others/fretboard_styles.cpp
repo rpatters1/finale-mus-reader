@@ -28,7 +28,8 @@ void populateFretboardStyleFont(const ImportContext& context,
     std::shared_ptr<musx::dom::FontInfo>& target)
 {
     target = std::make_shared<musx::dom::FontInfo>(context.document);
-    target->fontId = payloadWord(payload, at, context.profile.byteOrder);
+    target->fontId = context.construction.assignFontId(
+        payloadWord(payload, at, context.profile.byteOrder));
     target->fontSize = static_cast<std::int16_t>(
         payloadWord(payload, at + 2, context.profile.byteOrder));
     target->setEnigmaStyles(payloadWord(

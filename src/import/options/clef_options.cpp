@@ -123,7 +123,7 @@ struct PhysicalClef
     /// switch off is inert: assigning it would introduce an offset the source never applied.
     bool baselineEnabled{};
     std::uint16_t shapeId{};
-    std::uint16_t fontId{};
+    std::uint16_t fontComparator{};
     std::int16_t fontSize{};
     /// @brief Whether the source stored the character as a code point rather than as a byte in
     /// the clef's own font encoding.
@@ -156,7 +156,7 @@ PhysicalClef decodeTuple(
     result.baselineIsEfix = true;
     result.baselineEnabled = true;
     result.shapeId = static_cast<std::uint16_t>(wordAt(words, first + 4 + shift));
-    result.fontId = static_cast<std::uint16_t>(wordAt(words, first + 5 + shift));
+    result.fontComparator = static_cast<std::uint16_t>(wordAt(words, first + 5 + shift));
     result.fontSize = wordAt(words, first + 6 + shift);
     result.fontEffects = static_cast<std::uint16_t>(wordAt(words, first + 7 + shift));
     result.flags = static_cast<std::uint16_t>(wordAt(words, first + 8 + shift));
@@ -210,7 +210,8 @@ void reportClefField(ImportReport& report, std::size_t index, const char* member
 /// the case that makes the difference visible.
 void insertRecoveredClef(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<ClefOptionsTarget>& target,
-    const PhysicalClef& stored, ImportReport& report)
+    const PhysicalClef& stored, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto index = target->clefDefs.size();
     auto def = std::make_shared<ClefDef>(target);
@@ -229,7 +230,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
         // musxdom's own resolver rejects useOwnFont without a font, so the instance is
         // always created when the bit is set, even if the stored triple were empty.
         auto font = std::make_shared<FontInfo>(target->getDocument());
-        font->fontId = musx::dom::Cmper(stored.fontId);
+        font->fontId = construction.assignFontId(musx::dom::Cmper(stored.fontComparator));
         font->fontSize = stored.fontSize;
         font->setEnigmaStyles(stored.fontEffects);
         def->font = std::move(font);
@@ -239,7 +240,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
     def->clefChar = stored.charIsCodepoint
         ? static_cast<char32_t>(stored.clefChar)
         : text::codepointFromByte(static_cast<std::uint8_t>(stored.clefChar),
-            document, def->useOwnFont ? musx::dom::Cmper(stored.fontId) : 0,
+            document, def->useOwnFont ? musx::dom::Cmper(stored.fontComparator) : 0,
             text::UnresolvedFontFallback::Symbol);
     target->clefDefs.push_back(std::move(def));
 
@@ -261,7 +262,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
         stored.baselineDifference, block, decoded);
     if ((stored.flags & useOwnFontBit) != 0) {
         reportClefField(report, index, "font.fontId", ValueOrigin::LegacyMus,
-            stored.fontId, block, decoded);
+            stored.fontComparator, block, decoded);
         reportClefField(report, index, "font.fontSize", ValueOrigin::LegacyMus,
             stored.fontSize, block, decoded);
         reportClefField(report, index, "font.effects", ValueOrigin::LegacyMus,
@@ -272,7 +273,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
 bool captureFromWordStream(const musx::dom::DocumentPtr& document,
     const std::vector<std::int16_t>& words, std::size_t tupleWords,
     const PhysicalClef& provenance, const std::shared_ptr<ClefOptionsTarget>& target,
-    ImportReport& report)
+    ImportReport& report, musx::factory::ConstructionContext& construction)
 {
     if (tupleWords == 0 || words.size() % tupleWords != 0) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table holds " + std::to_string(words.size())
@@ -284,7 +285,7 @@ bool captureFromWordStream(const musx::dom::DocumentPtr& document,
         auto stored = decodeTuple(words, first, tupleWords);
         stored.blockOffset = provenance.blockOffset;
         stored.decodedOffset = provenance.decodedOffset;
-        insertRecoveredClef(document, target, stored, report);
+        insertRecoveredClef(document, target, stored, report, construction);
     }
     return true;
 }
@@ -292,7 +293,8 @@ bool captureFromWordStream(const musx::dom::DocumentPtr& document,
 /// @brief Recovers the eight separately stored clefs of the pre-2001 eras.
 bool captureEarlyClefs(const musx::dom::DocumentPtr& document,
     const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report)
+    const std::shared_ptr<ClefOptionsTarget>& target, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     // Read the document-wide switch from the first clef's record before any clef is built.
     const auto* firstRow = index.getOthers().get(
@@ -327,7 +329,7 @@ bool captureEarlyClefs(const musx::dom::DocumentPtr& document,
         stored.push_back(clef);
     }
     for (const auto& clef : stored) {
-        insertRecoveredClef(document, target, clef, report);
+        insertRecoveredClef(document, target, clef, report, construction);
     }
     return true;
 }
@@ -503,21 +505,11 @@ const MappingTable& classClefOptionsTable()
     return table;
 }
 
-void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report,
-    musx::factory::ConstructionContext& construction)
+void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& report)
 {
     const auto target = document->getOptions()->get<ClefOptionsTarget>();
     if (!target) {
         return;
-    }
-    // Only the source capture path gives a clef a font, and nothing rewrites the comparator
-    // afterwards, so what a definition holds now is what the finished document holds.
-    // Completion from the reference never adds one -- it throws if the baseline ever grows a
-    // clef font -- so there is no second origin to reconcile here.
-    for (const auto& def : target->clefDefs) {
-        if (def && def->useOwnFont && def->font) {
-            construction.registerFontId(def->font->fontId);
-        }
     }
     // The default clef is an index into the collection, and musxdom's accessor throws on an
     // out-of-range one. Warn and leave the recovered value rather than clamping it: clamping
@@ -535,7 +527,7 @@ void validateClefOptions(const musx::dom::DocumentPtr& document, ImportReport& r
 void captureClefOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
-    PendingReferences& pending)
+    PendingReferences& pending, musx::factory::ConstructionContext& construction)
 {
     auto target = std::make_shared<ClefOptionsTarget>(document);
     copyScalarsFromReference(referenceDocument, target);
@@ -591,7 +583,7 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
                         "character's word order is unverified for it."});
                 }
                 captureFromWordStream(
-                    document, words, *tupleWords, provenance, target, report);
+                    document, words, *tupleWords, provenance, target, report, construction);
             } else {
                 report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Legacy clef table payload of "
                     + std::to_string(bytes.size())
@@ -605,14 +597,14 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
         provenance.decodedOffset = family.decodedOffset;
         if (family.present) {
             captureFromWordStream(
-                document, family.words, narrowTupleWords, provenance, target, report);
+                document, family.words, narrowTupleWords, provenance, target, report, construction);
         } else if (profile.epoch == FormatEpoch::CodaBanner
             || profile.epoch == FormatEpoch::UncompressedLegacy) {
             // Only these two eras keep clefs in selectors 28 through 35. Falling back on the
             // mere absence of selector 95 would be wrong for a DCL file that happens to lack
             // it: those selectors still exist there and hold unrelated option words, so the
             // reader would fabricate eight clef definitions and report them as recovered.
-            captureEarlyClefs(document, index, profile, target, report);
+            captureEarlyClefs(document, index, profile, target, report, construction);
         } else {
             report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"The clef table is absent from a source era that "
                 "stores one; every clef definition came from the Finale 27 baseline."});
@@ -636,11 +628,11 @@ void importClefOptions(const ImportContext& context)
     // one logical group: they share a report prefix and disagree only about where this era
     // keeps the scalars.
     captureClefOptions(context.index, context.profile, context.document,
-        context.referenceDocument, context.report, context.pending);
+        context.referenceDocument, context.report, context.pending, context.construction);
     applyMappingTables(
         {&clefOptionsTable(), &earlyClefOptionsTable(), &classClefOptionsTable()},
         context.index, context.profile, context.document, context.report);
-    validateClefOptions(context.document, context.report, context.construction);
+    validateClefOptions(context.document, context.report);
 }
 
 } // namespace options

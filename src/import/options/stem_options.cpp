@@ -48,7 +48,7 @@ constexpr std::uint32_t maximumCodepoint = 0x10FFFF;
 /// @brief One stem connection as the source stores it, before any musxdom semantics.
 struct PhysicalConnection
 {
-    std::uint16_t fontId{};
+    std::uint16_t fontComparator{};
     /// @brief Whether the source stored the symbol as a code point rather than as a byte in
     /// the connection's own font encoding.
     bool symbolIsCodepoint{};
@@ -68,7 +68,7 @@ PhysicalConnection decodeElement(
     // layouts from becoming two independently maintained field lists.
     const std::size_t shift = elementWords == wideElementWords ? 1 : 0;
     PhysicalConnection result;
-    result.fontId = static_cast<std::uint16_t>(wordAt(words, first));
+    result.fontComparator = static_cast<std::uint16_t>(wordAt(words, first));
     result.symbol = shift == 0
         ? narrowCodepoint(wordAt(words, first + 1))
         : wideCodepoint(wordAt(words, first + 1), wordAt(words, first + 2));
@@ -101,7 +101,8 @@ void reportConnectionField(ImportReport& report, std::size_t index, const char* 
 void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     const std::shared_ptr<StemOptionsTarget>& target,
     const PhysicalConnection& stored, bool adjustmentsAreEvpu,
-    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report)
+    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto index = target->stemConnections.size();
     const auto toEfix = [adjustmentsAreEvpu](std::int16_t stored) {
@@ -109,7 +110,7 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
             ? musx::dom::Efix(stored * efixPerEvpu) : musx::dom::Efix(stored);
     };
     auto connection = std::make_shared<StemConnection>();
-    connection->fontId = musx::dom::Cmper(stored.fontId);
+    connection->fontId = construction.assignFontId(musx::dom::Cmper(stored.fontComparator));
     connection->symbol = stored.symbolIsCodepoint
         ? static_cast<char32_t>(stored.symbol)
         : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol),
@@ -120,7 +121,8 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
     connection->downStemHorz = toEfix(stored.downStemHorz);
     target->stemConnections.push_back(std::move(connection));
 
-    reportConnectionField(report, index, "fontId", stored.fontId, blockOffset, decodedOffset);
+    reportConnectionField(
+        report, index, "fontId", stored.fontComparator, blockOffset, decodedOffset);
     reportConnectionField(report, index, "symbol",
         static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
     // The raw stored words, not the assigned Efix. A pre-Finale-3.5 value is scaled on the
@@ -349,7 +351,8 @@ const MappingTable& classStemScalarsTable()
 } // namespace
 
 void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+    const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto pooled = document->getOptions()->get<StemOptionsTarget>();
     if (!pooled) {
@@ -426,29 +429,8 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
             break;
         }
         insertRecoveredConnection(document, target, stored,
-            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report);
-    }
-}
-
-void validateStemOptions(const musx::dom::DocumentPtr& document,
-    musx::factory::ConstructionContext& construction)
-{
-    const auto target = document->getOptions()->get<StemOptionsTarget>();
-    if (!target) {
-        return;
-    }
-    // A connection names a font by comparator, and one that no recovered definition answers is
-    // preserved exactly as stored: it is what the source says, and replacing it with a default
-    // would invent a typeface the document never named. The test is whether the document
-    // defines the comparator, not whether the comparator is zero -- what zero means belongs to
-    // musxdom, which resolves it to the default music font and guarantees a definition for it.
-    //
-    // Registering is what keeps "preserved as stored" from meaning "unusable". The comparator
-    // stays exactly as the source wrote it, and musxdom mints a placeholder definition for it
-    // at the end of construction, logging the substitution itself -- captured into this same
-    // report -- so nothing here needs to duplicate that check.
-    for (const auto& connection : target->stemConnections) {
-        construction.registerFontId(connection->fontId);
+            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report,
+            construction);
     }
 }
 
@@ -459,13 +441,13 @@ void importStemOptions(const ImportContext& context)
     // by whichever of the four tables this file's era matches; the other three still report
     // their fields, so a document from an era a table does not cover shows its supported
     // fields sitting at their synthesized defaults rather than not at all.
-    captureStemOptions(context.index, context.profile, context.document, context.report);
+    captureStemOptions(context.index, context.profile, context.document, context.report,
+        context.construction);
     applyMappingTables({&earlyStemScalarsTable(), &codaFloatStemSizesTable(),
                            &codaMigratedStemSizesTable(), &earlyStemSizesTable(),
                            &stemScalarsTable(), &loneStemFlagTable(), &packedStemFlagTable(),
                            &classStemScalarsTable()},
         context.index, context.profile, context.document, context.report);
-    validateStemOptions(context.document, context.construction);
 }
 
 } // namespace options

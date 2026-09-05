@@ -438,11 +438,11 @@ void expectNoScoreContent(const ImportResult& result)
                 "A part definition names a text block the document does not contain");
         }
     }
-    // The pinned <others> element has 127 direct children; only the four layerAtts are
-    // allowlisted. Font definitions cloned individually to resolve synthesized FontOptions
-    // are intentional and do not constitute leaked baseline score content.
-    expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).empty(),
-        "Output contains fallback marking categories");
+    // The pinned <others> element is not copied wholesale. The seven canned marking
+    // categories are imported deliberately because pre-Finale-2009 expressions need the
+    // category identities that Finale supplies when upgrading them.
+    expect(result.document->getOthers()->getArray<others::MarkingCategory>(SCORE_PARTID).size() == 7,
+        "Output does not contain exactly the canned marking categories");
     // Shapes are no longer absent. The two tablature clef definitions completed from the
     // baseline are drawn as shapes, and those shapes are copied in so the clefs render. Nothing
     // else may ride along, so every shape present must be one a clef definition names.
@@ -665,7 +665,9 @@ void testBigEndianClassRecords()
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    expect(fonts.size() == 9, "The big-endian font table size is incorrect");
+    // Nine source definitions plus the two typefaces needed by the pre-2009 categories.
+    expect(fonts.size() == 11,
+        "The big-endian font table size is incorrect: " + std::to_string(fonts.size()));
     const auto maestro = result.document->getOthers()->get<FontDefinition>(
         musx::dom::SCORE_PARTID, 0);
     expect(maestro && maestro->name == "Maestro" && maestro->charsetVal == 0xfff,
@@ -686,9 +688,12 @@ void testFinale2006RemainsFixedRow()
         "The Finale 2006 fixture was not classified as DCL");
     expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
         "Finale 2006 music spacing was not recovered through the fixed-row path");
+    // Nine source definitions plus the two typefaces needed by the pre-2009 categories.
     expect(result.document->getOthers()
-        ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size() == 9,
-        "The Finale 2006 font table size is incorrect");
+        ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size() == 11,
+        "The Finale 2006 font table size is incorrect: "
+            + std::to_string(result.document->getOthers()
+                    ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size()));
     // The fifth block is present and empty, which is what distinguishes this era.
     expect(result.report.blocks.size() == 5,
         "Finale 2006 should carry a fifth block");

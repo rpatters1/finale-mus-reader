@@ -45,19 +45,9 @@ revise one layer without destabilizing the others.
   rather than a decoding error.
 - Keep corpora read-only and paths private. Use controlled tracked evidence or ignored
   `private/` output according to repository policy.
-- **Do not run a full-corpus recovery probe/report cycle without the user's explicit
-  authorization.**
-  Implementing a class, invoking this skill, asking for corpus validation, or authorizing an
-  earlier cycle does not authorize a new full-corpus invocation. Treat any probe over private
-  corpora, multiple registered surveys, an all-corpus manifest, or every registered survey, and
-  any generation or refresh of a report from such results, as full-corpus. This prohibition
-  includes reruns made only to refresh output after a surveyor, schema, field name, metadata, or
-  report change. Ask before each cycle and wait for approval; authorization covers the requested
-  probe and its immediate analysis, not a later refresh. This authorization boundary overrides
-  any broader-run default in the coverage-analysis skill. Iterating `recovery_coverage_probe` and
-  its report over the controlled
-  `tracked-evidence` survey is permitted without separate authorization; use that smallest
-  reproducible cohort while developing and correcting the implementation.
+- Before any recovery-coverage capture, read and follow
+  [Full-corpus authorization](../analyze-recovery-coverage/SKILL.md#full-corpus-authorization).
+  That section is the sole authority for the capture boundary in this workflow.
 - **Report value origin per
   [`research/reference/options_fallback.md`](../../../research/reference/options_fallback.md),**
   which defines `LegacyMus`, `LegacyBehavior`, `Finale27Default`, `Unmapped`, and `MusxOnly`, and
@@ -455,10 +445,10 @@ head start; it is Step 8 performed on nothing, and it has to be run again afterw
 anyway. Start with `tracked-evidence` and iterate there as needed. After all planned tracked
 fixtures are present, re-survey them exactly once as the final prerequisite to the first
 probe/report cycle that needs those new fixtures; do not re-survey between cycles unless more
-fixtures have been added. Define any broader cohort
-with the user and obtain explicit authorization immediately before launching its probe: all
-fixtures, loose only, ETF-backed, Finale-27-backed, or an explicit union or intersection.
-Authorization for one broader run does not cover a later rerun.
+fixtures have been added. Define any broader cohort with the user—such as all fixtures, loose only,
+ETF-backed, Finale-27-backed, or an explicit union or intersection—then follow
+[Full-corpus authorization](../analyze-recovery-coverage/SKILL.md#full-corpus-authorization)
+immediately before launching its probe.
 
 **Name the surveys as well as the cohort, and say what each one can and cannot answer.**
 When the user authorizes a broader cohort, account for every included survey registered in
@@ -506,15 +496,15 @@ and wait for the user's interpretation before classifying any of them as expecte
 approved rule may continue to classify the behavior it already describes, but a new class must
 not be fitted to those rules by analogy without review.
 
-Before calling the work complete, ask the user whether to run the regression over every
-registered survey. Run it only after explicit authorization for that invocation, then present
-the per-survey import table from `recovery_coverage_report.py`'s output. If authorization is
-not given, do not run it: report that broad regression was not performed and base the handoff
-on tracked evidence and ordinary tests. The regression is only as wide as its surveyor list,
-and a class recovering correctly for its own fixtures can still break another class for every
-document in a corpus -- a shared decoder touched along the way (the text encoding, a font
-lookup, the record index) is exactly what an authorized full-survey run can catch and what
-per-class tests cannot.
+Before calling the work complete, offer the regression over every registered survey and apply
+[Full-corpus authorization](../analyze-recovery-coverage/SKILL.md#full-corpus-authorization).
+If the capture is run, present the per-survey import table from
+`recovery_coverage_report.py`'s output. Otherwise report that broad regression was not performed
+and base the handoff on tracked evidence and ordinary tests. The regression is only as wide as its
+surveyor list, and a class recovering correctly for its own fixtures can still break another class
+for every document in a corpus -- a shared decoder touched along the way (the text encoding, a font
+lookup, the record index) is exactly what an authorized full-survey run can catch and what per-class
+tests cannot.
 
 ## Transferable lessons from FontOptions
 
@@ -549,9 +539,9 @@ Finish with a concise account of the implemented class and fields, supported epo
 version gates, controlled fixtures and tests, corpus coverage, synthesized fallback,
 known upgrade variances, every still-unmapped field, every MUSX-only field, remaining open layouts, and the next
 smallest evidence request.
-If the user authorized the full regression in Step 8, include its per-survey import table.
-Otherwise state plainly that no full-corpus probe was authorized or run; absence of that table
-must never be used as a reason to launch the probe without permission.
+State whether the full regression in Step 8 was run under
+[Full-corpus authorization](../analyze-recovery-coverage/SKILL.md#full-corpus-authorization),
+and include its per-survey import table only when it was run.
 Call the result partial whenever any epoch or field remains unsupported.
 
 **State every completely uncovered epoch explicitly, every time.** Name the epoch, say

@@ -357,21 +357,25 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const bool inSource = sourceFound != sourceLeaves.end();
             const bool inCompanion = companionFound != companionLeaves.end();
             const bool fontReference = isComparisonFontReference(path, shapeSetFontPaths);
+            std::string sourceFontIdentity;
+            std::string companionFontIdentity;
             if (inSource && inCompanion && fontReference && sourceFound->second.first.isInteger() &&
                 companionFound->second.first.isInteger()) {
-                const auto sourceName =
+                sourceFontIdentity =
                     comparisonFontIdentity(source, sourceFound->second.first.asInteger());
-                const auto companionName =
+                companionFontIdentity =
                     comparisonFontIdentity(companion, companionFound->second.first.asInteger());
-                if (!sourceName.empty() && sameFontName(sourceName, companionName)) {
+                if (!sourceFontIdentity.empty() &&
+                    sameFontName(sourceFontIdentity, companionFontIdentity)) {
                     ++stats.same;
                     continue;
                 }
                 if (shapeSetFontPaths.contains(path)) {
                     ++stats.expected;
                     ++result.expected[DifferenceClassification::SetFontSubstitution];
-                    ++result.fontSubstitutions[(sourceName.empty() ? "?" : sourceName) + '\t' +
-                                               (companionName.empty() ? "?" : companionName)];
+                    ++result.fontSubstitutions[
+                        (sourceFontIdentity.empty() ? "?" : sourceFontIdentity) + '\t' +
+                        (companionFontIdentity.empty() ? "?" : companionFontIdentity)];
                     continue;
                 }
             }
@@ -468,7 +472,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const DifferenceContext differenceContext{
                 path,         category,        origin,      sourceValue,     companionValue,
                 sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
-                sourceReport, relatedDifference};
+                sourceReport, relatedDifference, companionFontIdentity};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;
