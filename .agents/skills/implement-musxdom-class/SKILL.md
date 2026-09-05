@@ -66,10 +66,9 @@ revise one layer without destabilizing the others.
   defined in [`research/reference/options_fallback.md`](../../../research/reference/options_fallback.md).
 - Keep project-owned source files unity-build clean, per
   [`research/reference/code_conventions.md`](../../../research/reference/code_conventions.md).
-  Use the instrumented development build for implementation and coverage work. Run a
-  non-instrumented build only as the final validation immediately before opening a pull request,
-  after the implementation, fixtures, tests, and coverage results have stabilized. If no pull
-  request is being opened, do not run a separate non-instrumented build.
+  Use the instrumented development build for implementation and coverage work. When the work is
+  ready for pull-request delivery, follow
+  [`prepare-pull-request`](../prepare-pull-request/SKILL.md) for final local validation and delivery.
 - Do not commit, push, or publish unless the user separately requests it.
 
 ## Work interactively

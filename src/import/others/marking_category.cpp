@@ -111,14 +111,14 @@ std::shared_ptr<musx::dom::FontInfo> readMarkingCategoryFont(
     return result;
 }
 
-void reportMarkingCategoryFont([[maybe_unused]] const ImportContext& context,
-    [[maybe_unused]] const InstanceKey& key,
-    [[maybe_unused]] std::string prefix,
-    [[maybe_unused]] const musx::dom::FontInfo& font,
-    [[maybe_unused]] const records::LegacyRow& row,
-    [[maybe_unused]] std::size_t offset)
-{
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+void reportMarkingCategoryFont(const ImportContext& context,
+    const InstanceKey& key,
+    std::string prefix,
+    const musx::dom::FontInfo& font,
+    const records::LegacyRow& row,
+    std::size_t offset)
+{
     const auto report = [&](std::string member, std::size_t memberOffset, std::int64_t value) {
         FINALE_MUS_READER_REPORT_FIELD(context.report, key, prefix + std::move(member),
             FieldInfo{ValueOrigin::LegacyMus, row.blockOffset,
@@ -132,8 +132,8 @@ void reportMarkingCategoryFont([[maybe_unused]] const ImportContext& context,
     report("strikeout", 4, font.strikeout);
     report("absolute", 4, font.absolute);
     report("hidden", 4, font.hidden);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void reportMarkingCategory([[maybe_unused]] const ImportContext& context,
     [[maybe_unused]] const CategoryTarget& category,
