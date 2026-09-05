@@ -601,7 +601,8 @@ void reportInsertField(ImportReport& report, const char* insertName, const char*
 /// against zero: what zero means is musxdom's business, and a document that defines it has
 /// nothing to report.
 bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+    const musx::dom::DocumentPtr& document, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto block = readInsertBlock(index, profile);
     if (!block.present) {
@@ -645,7 +646,7 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         const auto effects = static_cast<std::uint16_t>(
             readInsertField(block, base, insertFontEffectsOffset, 2, profile.byteOrder));
         auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
-        font->fontId = fontId;
+        font->fontId = construction.assignFontId(fontId);
         font->fontSize = fontSize;
         font->setEnigmaStyles(effects);
         insert->symFont = std::move(font);
@@ -695,7 +696,8 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
 /// unchanged and guarantees a definition exists at zero in this document, which is exactly the
 /// part a caller that skipped the call for zero would leave undone.
 void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto pooled = document->getOptions()->get<TextTarget>();
     if (!pooled) {
@@ -731,7 +733,7 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
                     "No free font comparator remained for Finale 27 font \""
                         + referenceFont->name + "\"; substituted font id 0."});
             }
-            insert.symFont->fontId = fontId;
+            insert.symFont->fontId = construction.assignFontId(fontId);
         }
 
         const InsertBlock absent;
@@ -754,30 +756,6 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
 
 } // namespace
 
-/// @brief Registers the font comparator every symbol insert finally holds.
-/// @details Runs after both paths that can set one -- the recovered block and the seeded
-/// fallback -- because they disagree about what the final value is: the recovered path keeps
-/// the source's own comparator, while the fallback replaces the baseline's with whatever
-/// `importFontDefinitionInto` returned. Registering inside either path would register a value
-/// the other might have overwritten.
-///
-/// The fallback's comparators are already defined in this document, so registering them
-/// changes nothing; they are registered anyway because which path ran is not this function's
-/// business, and a rule with an exception is the kind that stops holding later.
-void registerSymbolInsertFonts(const musx::dom::DocumentPtr& document,
-    musx::factory::ConstructionContext& construction)
-{
-    const auto pooled = document->getOptions()->get<TextTarget>();
-    if (!pooled) {
-        return;
-    }
-    for (const auto& [type, insert] : pooled->symbolInserts) {
-        if (insert && insert->symFont) {
-            construction.registerFontId(insert->symFont->fontId);
-        }
-    }
-}
-
 void importTextOptions(const ImportContext& context)
 {
     clearSeededLineSpacing(context.index, context.profile, context.document);
@@ -786,7 +764,8 @@ void importTextOptions(const ImportContext& context)
     // not keeps the baseline's, which then need their font comparators translated into this
     // document's numbering and reporting as the synthesized defaults they are.
     const bool recovered = captureSymbolInserts(
-        context.index, context.profile, context.document, context.report);
+        context.index, context.profile, context.document, context.report,
+        context.construction);
     applyMappingTables({&textStampTable(), &textMetricsTable(), &textLayoutTable(),
                            &lineSpacingPercentTable(), &lineSpacingEvpuTable(),
                            &classTextStampTable(), &classTextMetricsTable(),
@@ -796,9 +775,9 @@ void importTextOptions(const ImportContext& context)
 
     if (!recovered) {
         reportSeededSymbolInserts(
-            context.document, context.referenceDocument, context.report);
+            context.document, context.referenceDocument, context.report,
+            context.construction);
     }
-    registerSymbolInsertFonts(context.document, context.construction);
 }
 
 } // namespace options

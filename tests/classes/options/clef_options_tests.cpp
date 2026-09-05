@@ -18,7 +18,8 @@ void testClefTupleDecoding()
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(LegacyRecordIndex::build(parsed),
-            profile, document, makeClefReferenceDocument(), report, pending);
+            profile, document, makeClefReferenceDocument(), report, pending,
+            session.getConstructionContext());
         return document->getOptions()->get<ClefOptions>();
     };
 
@@ -81,7 +82,7 @@ void testClefTupleDecoding()
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeContainer(dclRows)), profile, document,
-            makeClefReferenceDocument(), report, pending);
+            makeClefReferenceDocument(), report, pending, session.getConstructionContext());
         std::size_t recovered = 0;
         anyMappingReportedField(report, [&](const auto& member, const auto& info) {
             if (info.origin == ValueOrigin::LegacyMus
@@ -106,8 +107,7 @@ void testClefTupleDecoding()
         }
         document->getOptions()->add(ClefOptions::XmlNodeName, options);
         ImportReport report(FormatEpoch::UncompressedLegacy);
-        musx::factory::ConstructionContext construction;
-        finale_mus_reader::options::validateClefOptions(document, report, construction);
+        finale_mus_reader::options::validateClefOptions(document, report);
         expectMapping(options->defaultClef == 99,
             "An out-of-range default clef index was silently corrected");
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
@@ -117,7 +117,7 @@ void testClefTupleDecoding()
             "An out-of-range default clef index was accepted without a warning");
         ImportReport clean(FormatEpoch::UncompressedLegacy);
         options->defaultClef = 17;
-        finale_mus_reader::options::validateClefOptions(document, clean, construction);
+        finale_mus_reader::options::validateClefOptions(document, clean);
         expectMapping(clean.diagnostics.empty(), "A valid default clef index warned");
     }
 
@@ -212,7 +212,8 @@ void testClefTupleDecoding()
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::BigEndian)),
-            profile, document, makeClefReferenceDocument(), report, pending);
+            profile, document, makeClefReferenceDocument(), report, pending,
+            session.getConstructionContext());
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
                           [](const finale_mus_reader::Diagnostic& entry) {
                               return entry.message.find("unverified") != std::string::npos;
@@ -234,7 +235,8 @@ void testClefTupleDecoding()
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
             LegacyRecordIndex::build(makeClassContainer(0x006d, wide, ByteOrder::LittleEndian)),
-            profile, document, makeClefReferenceDocument(), report, pending);
+            profile, document, makeClefReferenceDocument(), report, pending,
+            session.getConstructionContext());
         expectMapping(document->getOptions()->get<ClefOptions>()->clefDefs.size() == 20,
             "The pre-Unicode reading of an ambiguous payload did not use the narrow tuple");
     }

@@ -119,7 +119,8 @@ void importChordSuffixElements(const ImportContext& context)
                     payloadWord(payload, at + 4, context.profile.byteOrder));
                 target->ydisp = static_cast<std::int16_t>(
                     payloadWord(payload, at + 6, context.profile.byteOrder));
-                target->font->fontId = payloadWord(payload, at + 8, context.profile.byteOrder);
+                target->font->fontId = context.construction.assignFontId(
+                    payloadWord(payload, at + 8, context.profile.byteOrder));
                 target->font->fontSize = static_cast<std::int16_t>(
                     payloadWord(payload, at + 10, context.profile.byteOrder));
                 effects = payloadWord(payload, at + 12, context.profile.byteOrder);
@@ -138,7 +139,7 @@ void importChordSuffixElements(const ImportContext& context)
                 target->ydisp = static_cast<std::int16_t>(
                     payloadWord(payload, at + 4, context.profile.byteOrder));
                 const auto sizeFont = payloadWord(payload, at + 6, context.profile.byteOrder);
-                target->font->fontId = sizeFont & 0x00ffU;
+                target->font->fontId = context.construction.assignFontId(sizeFont & 0x00ffU);
                 target->font->fontSize = sizeFont >> 8U;
                 effects = payloadWord(payload, at + 8, context.profile.byteOrder);
                 flags = payloadWord(payload, at + 10, context.profile.byteOrder);

@@ -43,6 +43,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportGraceNoteOptions: return "grace_note_options";
     case Phase::ImportKeySignatureOptions: return "key_signature_options";
     case Phase::ImportLayerAttributes: return "layer_atts";
+    case Phase::ImportMarkingCategories: return "marking_categories";
     case Phase::ImportLineCurveOptions: return "line_curve_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";

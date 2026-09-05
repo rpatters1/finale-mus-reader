@@ -480,7 +480,8 @@ void importSmartShapeCustomLines(const ImportContext& context)
             ValueOrigin::LegacyMus);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
         if (line->charParams) {
-            context.construction.registerFontId(line->charParams->font->fontId);
+            line->charParams->font->fontId = context.construction.assignFontId(
+                line->charParams->font->fontId);
         }
     }
 }

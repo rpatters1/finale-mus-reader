@@ -39,6 +39,9 @@ that task rather than reconstructing the procedure:
   user asks to implement a class; it moves from small epoch samples to a narrow
   implementation and then hands broad validation to
   `analyze-recovery-coverage`.
+- `.agents/skills/prepare-pull-request/`: perform final local validation and deliver a feature
+  branch after the user asks to prepare or open a pull request. Read it at the transition from
+  implementation to PR delivery.
 - `.agents/skills/maintain-documentation/`: the rules for changing anything under `research/`.
   Read this before adding a finding, recording an experiment, updating status, or creating a
   research document.

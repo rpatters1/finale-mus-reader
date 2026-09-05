@@ -59,7 +59,8 @@ void testMissingRecoveredFontDefinitionFallback()
 
     ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::options::repairMissingRecoveredFontDefinitions(
-        targetDocument, referenceDocument, targetOptions, report);
+        targetDocument, referenceDocument, targetOptions, report,
+        targetSession.getConstructionContext());
 
     // The whole tuple comes from the reference, not just the face. A point size is not
     // independent of the face it was chosen for, so pairing a substituted face with the
@@ -90,6 +91,10 @@ void testMissingRecoveredFontDefinitionFallback()
         "The designed-in font substitution emitted a user-facing warning");
     expectMapping(report.diagnostics.size() == 2,
         "The font substitution was not recorded at verbose level");
+    const auto finished = std::move(targetSession).finish();
+    expectMapping(!finished->getOthers()->get<FontDefinition>(
+            musx::dom::SCORE_PARTID, 99),
+        "A replaced font reference left an unused missing-font definition");
 }
 
 void testFontDefinitions()
@@ -100,10 +105,12 @@ void testFontDefinitions()
     using musx::dom::others::FontDefinition;
     const auto fonts = result.document->getOthers()
         ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    // Nine source definitions, plus two introduced from the baseline: one for a FontOptions type
-    // this source does not store, and one for the typeface the copied tablature clef shapes draw
-    // their character in. A shape that names a font the target lacks brings that font with it.
-    expect(fonts.size() == 11, "F2002 font table plus required fallback fonts is incorrect");
+    // Nine source definitions, plus three introduced from the baseline: one for a FontOptions
+    // type this source does not store, one for the copied tablature clef shapes, and one for the
+    // pre-2009 marking categories. Imported objects bring the typefaces they reference with them.
+    expect(fonts.size() == 12,
+        "F2002 font table plus required fallback fonts is incorrect: "
+            + std::to_string(fonts.size()));
 
     const auto fontAt = [&](musx::dom::Cmper cmper) {
         const auto font = result.document->getOthers()->get<FontDefinition>(

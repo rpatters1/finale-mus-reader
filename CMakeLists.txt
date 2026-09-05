@@ -132,7 +132,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 49dd08b0feebfd237faf803ef1480d0c362bdeea
+            GIT_TAG b02525d412bd56975858991443f1b3af76b5f11d
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -204,6 +204,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/fretboard_styles.cpp
     src/import/others/graphic_assignments.cpp
     src/import/others/layer_attributes.cpp
+    src/import/others/marking_category.cpp
     src/import/others/part_definitions.cpp
     src/import/others/part_globals.cpp
     src/import/others/shape_definitions.cpp

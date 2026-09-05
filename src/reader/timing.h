@@ -46,6 +46,7 @@ enum class Phase : std::size_t
     ImportGraceNoteOptions,
     ImportKeySignatureOptions,
     ImportLayerAttributes,
+    ImportMarkingCategories,
     ImportLineCurveOptions,
     ImportLyricOptions,
     ImportMeasureGraphicAssignments,

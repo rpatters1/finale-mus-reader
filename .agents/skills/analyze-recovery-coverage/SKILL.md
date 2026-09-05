@@ -19,6 +19,24 @@ Rerun `recovery_coverage_probe` only when its observations may have changed, suc
 - importer, surveyor, musxdom, comparison, or classification behavior changed;
 - the selected corpus/cohort changed.
 
+#### Full-corpus authorization
+
+Authorization to run an all-corpus capture permits exactly one capture. Any subsequent code or
+classification change makes that snapshot stale but does not authorize another capture. Report the
+stale state and wait for fresh, explicit user approval before rerunning.
+
+Treat any probe over private corpora, multiple registered surveys, an all-corpus manifest, every
+registered survey, or any cohort other than the controlled `tracked-evidence` survey as a
+full-corpus capture. Implementing a class, invoking this skill, asking for corpus validation, or
+authorization for an earlier capture does not authorize a new one. Ask immediately before every
+full-corpus capture and wait for approval. Authorization covers the requested probe and its
+immediate analysis, not a later refresh after a surveyor, schema, field-name, metadata,
+classification, or other code change.
+
+Iterating the probe and report over `tracked-evidence` is permitted without separate authorization;
+use it as the reproducible development cohort. Rendering an existing JSONL snapshot does not create
+a new capture and remains part of the rendering loop below.
+
 **Before every capture cycle, including `tracked-evidence`, pass the surveyor-name preflight.**
 Manually inspect only surveyor source files changed or untracked relative to the current branch's
 `HEAD`; unchanged committed surveyors are outside this preflight. For each ordinary member in those

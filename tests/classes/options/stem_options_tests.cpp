@@ -32,8 +32,9 @@ std::shared_ptr<musx::dom::options::StemOptions> captureStems(
     const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report)
 {
+    musx::factory::ConstructionContext construction;
     finale_mus_reader::options::captureStemOptions(
-        LegacyRecordIndex::build(parsed), profile, document, report);
+        LegacyRecordIndex::build(parsed), profile, document, report, construction);
     return std::const_pointer_cast<musx::dom::options::StemOptions>(
         document->getOptions()->get<musx::dom::options::StemOptions>());
 }
@@ -171,7 +172,7 @@ void testStemStaleUnicodeRecord()
 // A connection names its font by comparator. A dangling one is preserved rather than replaced,
 // because a default would invent a typeface the source never named; registering it is what lets
 // musxdom mint and log a placeholder for it at the end of construction instead of leaving the
-// comparator unusable, which is what testDanglingFontComparatorRequiresRegistration verifies.
+// comparator unusable, which is what testDanglingFontComparatorRequiresAssignment verifies.
 void testStemFontReferenceValidation()
 {
     ImportReport report(FormatEpoch::UncompressedLegacy);
@@ -180,8 +181,6 @@ void testStemFontReferenceValidation()
         makeContainer({{GLOBALS_CMPER, "40", {7, 192, 768, -768, 0, 0}},
             {GLOBALS_CMPER, "40", {0, 0, 0, 0, 0, 0}}}),
         profileFor(5, 0), document, report);
-    musx::factory::ConstructionContext construction;
-    finale_mus_reader::options::validateStemOptions(document, construction);
     expectMapping(options->stemConnections.size() == 1
             && options->stemConnections[0]->fontId == 7,
         "A stem connection did not keep the font comparator the source stated");
@@ -191,16 +190,13 @@ void testStemFontReferenceValidation()
 // writes some definition for every comparator it uses, even a placeholder of its own. The
 // state this reader must survive -- a hand-edited or otherwise malformed source naming a font
 // id its own table never defines -- has to be built synthetically instead. This constructs it
-// directly against musxdom's own construction session, twice: once exactly as an importer that
-// forgot to register the comparator would leave it, and once as the reader actually does.
+// directly against musxdom's own construction session, twice: once with a raw assignment and
+// once through the construction operation every importer assignment uses.
 //
 // Both documents give a TextOptions symbol insert a font id no FontDefinition in the document
-// answers. The only difference is whether that id is registered with the session's own
-// ConstructionContext before the session finishes -- which is what
-// options::registerSymbolInsertFonts does in the real pipeline -- and that difference is the
-// whole story: unregistered, FontInfo::getName throws exactly as it did before musxdom offered
-// a placeholder; registered, the same call resolves to musxdom's "Missing Font (n)" spelling.
-void testDanglingFontComparatorRequiresRegistration()
+// answers. A raw assignment remains unresolved; assignFontId registers the same value as part
+// of the assignment and resolves it to musxdom's "Missing Font (n)" spelling at finish.
+void testDanglingFontComparatorRequiresAssignment()
 {
     using TextOptions = musx::dom::options::TextOptions;
     using Insert = musx::dom::options::AccidentalInsertSymbolType;
@@ -213,14 +209,13 @@ void testDanglingFontComparatorRequiresRegistration()
         options->textLineSpacingPercent = 100;
         auto insert = std::make_shared<TextOptions::InsertSymbolInfo>(options);
         auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
-        font->fontId = danglingFontId;
+        font->fontId = registerComparator
+            ? session.getConstructionContext().assignFontId(danglingFontId)
+            : danglingFontId;
         font->fontSize = 12;
         insert->symFont = std::move(font);
         options->symbolInserts[Insert::Sharp] = std::move(insert);
         document->getOptions()->add(TextOptions::XmlNodeName, options);
-        if (registerComparator) {
-            session.getConstructionContext().registerFontId(danglingFontId);
-        }
         return std::move(session).finish();
     };
 
@@ -543,7 +538,7 @@ TEST_CASE("Stem pre-Finale-3.5 units", "[class]") { testStemPreFinale35Units(); 
 TEST_CASE("Stem connections are source owned", "[class]") { testStemConnectionsAreSourceOwned(); }
 TEST_CASE("Stale Unicode stem record", "[class]") { testStemStaleUnicodeRecord(); }
 TEST_CASE("Stem font reference validation", "[class]") { testStemFontReferenceValidation(); }
-TEST_CASE("Dangling font comparator requires registration", "[class]") { testDanglingFontComparatorRequiresRegistration(); }
+TEST_CASE("Dangling font comparator requires construction assignment", "[class]") { testDanglingFontComparatorRequiresAssignment(); }
 
 } // namespace
 } // namespace finale_mus_reader_tests

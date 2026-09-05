@@ -35,6 +35,10 @@ void importFretboardStyles(const ImportContext& context);
 /// era's own behavior for the layers it does not.
 void importLayerAttributes(const ImportContext& context);
 
+/// @brief Recovers marking categories and their names, supplying the canned categories only
+/// when the source predates Finale 2009.
+void importMarkingCategories(const ImportContext& context);
+
 /// @brief Recovers page graphic assignments and their embedded-graphic references.
 void importPageGraphicAssignments(const ImportContext& context);
 

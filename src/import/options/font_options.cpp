@@ -292,27 +292,82 @@ bool isStructuralTupleFill(std::size_t tupleCount, std::size_t physicalOrdinal,
         && isZeroTuple(fontId, size, effects);
 }
 
+musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, musx::dom::Cmper referenceId,
+    ImportReport& report);
+
+struct ResolvedFontTuple
+{
+    musx::dom::Cmper fontId{};
+    int fontSize{};
+    std::uint16_t effects{};
+    bool fromReference{};
+};
+
+ResolvedFontTuple resolveRecoveredTuple(const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument, FontType type,
+    musx::dom::Cmper fontId, int fontSize, std::uint16_t effects,
+    ImportReport& report)
+{
+    if (document->getOthers()->get<FontDefinition>(musx::dom::SCORE_PARTID, fontId)) {
+        return {fontId, fontSize, effects, false};
+    }
+    const auto reference = referenceDocument->getOptions()->get<FontOptionsTarget>();
+    if (!reference) {
+        throw std::logic_error("FontOptions reference document is incomplete");
+    }
+    const auto referenceFont = reference->getFontInfo(type);
+
+    // A missing MUS definition leaves no name to reconcile, so select the reference
+    // definition by semantic FontOptions type and take its entire tuple. Point size and
+    // effects are face-dependent; retaining either source value would combine values that
+    // existed in neither document. The imported reference face may reuse an existing target
+    // definition by normalized name or occupy the next available comparator.
+    const auto resolvedId = resolveReferenceFont(
+        document, referenceDocument, referenceFont->fontId, report);
+    report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
+        "Legacy FontOptions type "
+        + std::to_string(static_cast<std::size_t>(type))
+        + " referenced missing font definition " + std::to_string(fontId)
+        + "; used the same-type Finale 27 reference font, size and effects as target"
+          " font id " + std::to_string(resolvedId) + '.'});
+    return {resolvedId, referenceFont->fontSize,
+        referenceFont->getEnigmaStyles(), true};
+}
+
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
+    const musx::dom::DocumentPtr& referenceDocument,
     const std::shared_ptr<FontOptionsTarget>& target, FontType type,
     const ResolvedValue& fontId, const ResolvedValue& size,
-    const ResolvedValue& effects, ImportReport& report
+    const ResolvedValue& effects, ImportReport& report,
+    musx::factory::ConstructionContext& construction
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     , ValueOrigin origin = ValueOrigin::LegacyMus
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     )
 {
+    const auto resolved = resolveRecoveredTuple(document, referenceDocument, type,
+        musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value)),
+        static_cast<std::int16_t>(size.value),
+        static_cast<std::uint16_t>(effects.value), report);
     auto font = std::make_shared<FontInfo>(document);
-    font->fontId = musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value));
-    font->fontSize = static_cast<std::int16_t>(size.value);
-    font->setEnigmaStyles(static_cast<std::uint16_t>(effects.value));
+    font->fontId = construction.assignFontId(resolved.fontId);
+    font->fontSize = resolved.fontSize;
+    font->setEnigmaStyles(resolved.effects);
     target->fontOptions.insert_or_assign(type, std::move(font));
 
-    reportField(report, type, "fontId", origin,
-        static_cast<std::uint16_t>(fontId.value), fontId.blockOffset, fontId.decodedOffset);
-    reportField(report, type, "fontSize", origin,
-        static_cast<std::int16_t>(size.value), size.blockOffset, size.decodedOffset);
-    reportField(report, type, "effects", origin,
-        static_cast<std::uint16_t>(effects.value), effects.blockOffset, effects.decodedOffset);
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    const auto resolvedOrigin = resolved.fromReference ? ValueOrigin::Finale27Default : origin;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    reportField(report, type, "fontId", resolvedOrigin,
+        resolved.fontId, resolved.fromReference ? 0 : fontId.blockOffset,
+        resolved.fromReference ? 0 : fontId.decodedOffset);
+    reportField(report, type, "fontSize", resolvedOrigin,
+        resolved.fontSize, resolved.fromReference ? 0 : size.blockOffset,
+        resolved.fromReference ? 0 : size.decodedOffset);
+    reportField(report, type, "effects", resolvedOrigin,
+        resolved.effects, resolved.fromReference ? 0 : effects.blockOffset,
+        resolved.fromReference ? 0 : effects.decodedOffset);
 }
 
 /// @brief Resolves a reference font into this document, reporting when it cannot be done.
@@ -366,13 +421,9 @@ void retargetReportedOrigin(ImportReport& report, FontType type,
 
 void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
-    const auto reference = referenceDocument->getOptions()->get<FontOptionsTarget>();
-    if (!reference) {
-        throw std::logic_error("FontOptions reference document is incomplete");
-    }
-
     for (const auto& [type, font] : target->fontOptions) {
         const auto missingId = font->fontId;
         if (document->getOthers()->get<FontDefinition>(
@@ -380,54 +431,26 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
             continue;
         }
 
-        // The missing MUS definition leaves no name that can be reconciled. Select the
-        // reference definition by semantic FontOptions type instead. That selected face
-        // may reuse an existing target definition by normalized name; otherwise it is
-        // cloned into the next sequential target comparator.
-        //
-        // The whole tuple is taken, not just the face. Point size is not independent of
-        // the face it was chosen for -- the same number renders at visibly different sizes
-        // across faces, and the effects mask can be equally face-specific -- so pairing a
-        // substituted face with the source's size produces a combination that existed in
-        // neither document. The source tuple has already been judged untrustworthy by the
-        // time this runs, since its font id names nothing.
-        //
-        // It also removes the era's worst recovered values. Sixteen documents carry a
-        // negative fretboard point size, and every one of them reaches it through a
-        // dangling font id; Finale 27 rewrites those to zero, which is no more renderable
-        // than the negative and is a guard for its own renderer rather than a judgment
-        // about the value. Taking the reference size yields the only usable result.
-        const auto referenceFont = reference->getFontInfo(type);
-        const auto resolvedId = resolveReferenceFont(
-            document, referenceDocument, referenceFont->fontId, report);
+        const auto resolved = resolveRecoveredTuple(document, referenceDocument, type,
+            missingId, font->fontSize, font->getEnigmaStyles(), report);
         auto replacement = std::make_shared<FontInfo>(document);
-        replacement->fontId = resolvedId;
-        replacement->fontSize = referenceFont->fontSize;
-        replacement->setEnigmaStyles(referenceFont->getEnigmaStyles());
+        replacement->fontId = construction.assignFontId(resolved.fontId);
+        replacement->fontSize = resolved.fontSize;
+        replacement->setEnigmaStyles(resolved.effects);
         target->fontOptions.insert_or_assign(type, std::move(replacement));
 
         // Nothing in this tuple came from the source any more, so the report must stop saying
         // it did: leaving these as LegacyMus would make a substituted value look recovered.
-        retargetReportedOrigin(report, type, "fontId", resolvedId);
-        retargetReportedOrigin(report, type, "fontSize", referenceFont->fontSize);
-        retargetReportedOrigin(report, type, "effects", referenceFont->getEnigmaStyles());
-
-        // Verbose, not a warning: a designed-in fallback that leaves the document usable.
-        // The three retargeted entries above already say Finale27Default, which is the
-        // machine-readable form of the same fact, so this exists only for someone reading
-        // a log to understand why.
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "Legacy FontOptions type "
-            + std::to_string(static_cast<std::size_t>(type))
-            + " referenced missing font definition " + std::to_string(missingId)
-            + "; used the same-type Finale 27 reference font, size and effects as target"
-              " font id " + std::to_string(resolvedId) + '.'});
+        retargetReportedOrigin(report, type, "fontId", resolved.fontId);
+        retargetReportedOrigin(report, type, "fontSize", resolved.fontSize);
+        retargetReportedOrigin(report, type, "effects", resolved.effects);
     }
 }
 
 void completeFromReference(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     const auto reference = referenceDocument->getOptions()->get<FontOptionsTarget>();
     if (!reference) {
@@ -441,8 +464,8 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         }
         const auto source = reference->getFontInfo(type);
         auto font = std::make_shared<FontInfo>(document);
-        font->fontId = resolveReferenceFont(
-            document, referenceDocument, source->fontId, report);
+        font->fontId = construction.assignFontId(resolveReferenceFont(
+            document, referenceDocument, source->fontId, report));
         font->fontSize = source->fontSize;
         font->setEnigmaStyles(source->getEnigmaStyles());
         target->fontOptions.emplace(type, font);
@@ -458,15 +481,17 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
 
 void repairMissingRecoveredFontDefinitions(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report)
+    const std::shared_ptr<FontOptionsTarget>& target, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     repairMissingRecoveredFontDefinitionsImpl(
-        document, referenceDocument, target, report);
+        document, referenceDocument, target, report, construction);
 }
 
 void captureFontOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report)
+    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+    musx::factory::ConstructionContext& construction)
 {
     auto target = std::make_shared<FontOptionsTarget>(document);
 
@@ -483,12 +508,12 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
             const auto effects = readEarlyTupleField(
                 index, tuple, TupleField::Effects, profile.byteOrder);
             if (fontId && size && effects) {
-                insertRecoveredTuple(document, target, tuple.type,
-                    *fontId, *size, *effects, report);
+                insertRecoveredTuple(document, referenceDocument, target, tuple.type,
+                    *fontId, *size, *effects, report, construction);
                 if (tuple.type == FontType::StaffNames) {
                     for (const auto companion : codaNameCompanionTypes) {
-                        insertRecoveredTuple(document, target, companion,
-                            *fontId, *size, *effects, report
+                        insertRecoveredTuple(document, referenceDocument, target, companion,
+                            *fontId, *size, *effects, report, construction
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
                             , ValueOrigin::LegacyBehavior
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
@@ -516,7 +541,9 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
                     *fontId, *size, *effects)) {
                 reportPhysicalTuple(report, physicalOrdinal, *fontId, *size, *effects);
             } else if (const auto type = semanticType(profile, physicalOrdinal)) {
-                insertRecoveredTuple(document, target, *type, *fontId, *size, *effects, report);
+                insertRecoveredTuple(
+                    document, referenceDocument, target, *type,
+                    *fontId, *size, *effects, report, construction);
             } else {
                 reportPhysicalTuple(report, physicalOrdinal, *fontId, *size, *effects);
                 if (!isZeroTuple(*fontId, *size, *effects) && profile.epoch == FormatEpoch::ZlibLegacy) {
@@ -528,35 +555,8 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
         }
     }
 
-    repairMissingRecoveredFontDefinitions(
-        document, referenceDocument, target, report);
-    completeFromReference(document, referenceDocument, target, report);
+    completeFromReference(document, referenceDocument, target, report, construction);
     document->getOptions()->add(FontOptionsTarget::XmlNodeName, std::move(target));
-}
-
-/// @brief Registers the font comparator every FontOptions type finally holds.
-/// @details This must run after @ref repairMissingRecoveredFontDefinitions, not alongside the
-/// capture that first sets a comparator. A recovered tuple whose font id names nothing is
-/// replaced wholesale by the same-type reference tuple, so the comparator capture wrote is not
-/// the one the document keeps. Registering during capture would mint a placeholder definition
-/// for a discarded id -- a font named `Missing Font (n)` that nothing in the document refers
-/// to, which is worse than the throw it was meant to prevent because it looks like data.
-///
-/// The repair leaves no dangling comparator behind, so in practice this registers ids that are
-/// already defined and nothing is minted. It is here because that is a property of the repair
-/// pass rather than of this class, and the two are free to change independently.
-void registerFontOptionFonts(const musx::dom::DocumentPtr& document,
-    musx::factory::ConstructionContext& construction)
-{
-    const auto target = document->getOptions()->get<FontOptionsTarget>();
-    if (!target) {
-        return;
-    }
-    for (const auto& [type, font] : target->fontOptions) {
-        if (font) {
-            construction.registerFontId(font->fontId);
-        }
-    }
 }
 
 void importFontOptions(const ImportContext& context)
@@ -565,8 +565,7 @@ void importFontOptions(const ImportContext& context)
     // versioned semantic map or a baseline entry completed with a remapped font id, and
     // neither is a fixed source location a table row could name.
     captureFontOptions(context.index, context.profile, context.document,
-        context.referenceDocument, context.report);
-    registerFontOptionFonts(context.document, context.construction);
+        context.referenceDocument, context.report, context.construction);
 }
 
 } // namespace options
