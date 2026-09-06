@@ -85,6 +85,9 @@ void importStaffLists(const ImportContext& context);
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
 
+/// @brief Recovers text expression definitions.
+void importTextExpressionDefs(const ImportContext& context);
+
 /// @brief Recovers flat tonal-center tables for custom key signatures.
 void importTonalCenterFlats(const ImportContext& context);
 

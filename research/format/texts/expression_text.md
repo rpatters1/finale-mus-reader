@@ -1,38 +1,15 @@
 # ExpressionText
 
-**Covers:** Where expression text lived before it moved into the text pool.
-**Read when:** Working on expression text in the pre-pool eras.
-**Confidence:** partial; pooled eras only.
+**Covers:** The two construction paths for expression raw text.
+**Read when:** Working on expression text or its owning definition.
+**Confidence:** partial; see the owning definition's evidence and remaining scope.
 
-## Expression text before it moved into the pool
+Pooled expression text is recovered by `src/import/texts/text_pool.cpp`. Earlier inline text
+is synthesized by the [TextExpressionDef importer](../others/text_expression_defs.md), which
+owns its font, text conversion, and TextBlock construction rules.
+Recovery-report comparison is currently deferred with the
+[owning definition cluster](../others/text_expression_defs.md#coverage-and-remaining-work).
 
-**Confirmed** for the uncompressed epoch. Finale 2000 and earlier keep expression text inside
-the text expression definition, in the `DT` family, one expression per comparator:
-
-| Location | Field |
-|---|---|
-| incidence 0, byte 0 | point size |
-| incidence 0, byte 1 | font definition comparator |
-| incidence 0, word 1 | `nfx` style bits |
-| incidence 1 onward | the display text, twelve bytes per row, ending at the first NUL |
-
-**Recovering it is deferred until `TextExpressionDef` is imported.** The layout above is
-established, and the reader once synthesized an Enigma string from it, but a text pool full of
-expression strings with no definitions behind them claims more coverage than it has: the
-definition is what gives the text its meaning. The synthesis is removed rather than switched
-off, and a test asserts that these eras produce no `ExpressionText`, so reinstating it is a
-deliberate act.
-
-**The move happens inside the DCL epoch, not at it.** Finale 2002 still keeps display text in
-`DT` under exactly the layout above — `F2002-fileinfo-text.mus` holds `ffff`, `pppp` and
-`Tempo (=#)` there, matching its companion's expressions — and its text pool carries no
-`^expression` record at all. By Finale 2006 the display text has moved to the pool and the string
-embedded in `DT` is the expression's *description* instead, `Below Staff (Vel. 127)` and the
-like. Reading `DT` as display text in that later range would fill the texts pool with category
-descriptions.
-
-The move is therefore bounded between Finale 2003 and Finale 2006 and is otherwise **open**. No
-document of that range defines an expression.
-
-The Coda-banner `DT` layout differs again — its size is a whole word rather than a packed
-byte, and its text incidence carries further fields after the string — and is **open**.
+The previous deferral of early synthesis is superseded by that importer. The previous Coda
+whole-word-size hypothesis is retained and revised in its
+[investigation](../../investigations/text_expression_defs.md#revised-hypotheses).

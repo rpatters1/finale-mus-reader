@@ -188,7 +188,7 @@ std::optional<std::pair<std::string, std::string>> listKey(std::string_view path
             return std::pair{"identity", partPrefix + "normalized_name=" + normalized};
         }
     }
-    if (surveyorPool(surveyorClass(path)) == "texts" && item.isObject()) {
+    if (item.isObject()) {
         if (const auto* reportKey = item.find("_report_match_key");
             reportKey && reportKey->isString()) {
             return std::pair{"semantic", reportKey->asString()};

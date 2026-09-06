@@ -76,6 +76,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportStaffOptions: return "staff_options";
     case Phase::ImportStemOptions: return "stem_options";
     case Phase::ImportTextBlocks: return "text_blocks";
+    case Phase::ImportTextExpressionDefs: return "text_expression_defs";
     case Phase::ImportTextOptions: return "text_options";
     case Phase::ImportTexts: return "texts";
     case Phase::ImportTonalCenterFlats: return "tonal_center_flats";

@@ -112,6 +112,10 @@ def print_table(title: str, headers: list[str], rows: Iterable[list[str]],
 
 
 def truncate(value: Any) -> str:
+    if isinstance(value, dict) and "resolved_enigma_text" in value:
+        resolved = value["resolved_enigma_text"]
+        content = "<unresolved>" if resolved is None else json.dumps(resolved, ensure_ascii=False)
+        return f"id {value['id']} → {content}"
     rendered = json.dumps(value, ensure_ascii=False)
     return rendered if len(rendered) <= VALUE_WIDTH else rendered[:VALUE_WIDTH - 1] + "…"
 

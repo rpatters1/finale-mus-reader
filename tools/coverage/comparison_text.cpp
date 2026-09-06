@@ -346,8 +346,8 @@ using TextComparison = TextClassificationResult;
 TextComparison compareText(const std::string& className, const std::string& path,
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
-                           const musx::dom::DocumentPtr& companionDocument,
-                           bool partNameText, bool synthesizedScoreName);
+                           const musx::dom::DocumentPtr& companionDocument, bool partNameText,
+                           bool synthesizedScoreName);
 
 void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
@@ -429,21 +429,18 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
     std::map<std::string, ReferentComparison> result;
     std::map<TextBlockKey, std::shared_ptr<const TextBlock>> companionByKey;
     for (const auto& item : sourceInstances<TextBlock>(companionDocument)) {
-        companionByKey.emplace(TextBlockKey{item->getSourcePartId(), item->getCmper()}, item);
+        if (item->textType == TextBlock::TextType::Block)
+            companionByKey.emplace(TextBlockKey{item->getSourcePartId(), item->getCmper()}, item);
     }
     const auto rawText =
         [](const musx::dom::DocumentPtr& document,
            const std::shared_ptr<const TextBlock>& block) -> std::optional<std::string> {
         if (block->textId == 0) return std::nullopt;
-        if (block->textType == TextBlock::TextType::Expression) {
-            const auto text =
-                document->getTexts()->get<musx::dom::texts::ExpressionText>(block->textId);
-            return text ? std::optional(text->text) : std::nullopt;
-        }
         const auto text = document->getTexts()->get<musx::dom::texts::BlockText>(block->textId);
         return text ? std::optional(text->text) : std::nullopt;
     };
     for (const auto& sourceBlock : sourceInstances<TextBlock>(sourceDocument)) {
+        if (sourceBlock->textType != TextBlock::TextType::Block) continue;
         const auto key = TextBlockKey{sourceBlock->getSourcePartId(), sourceBlock->getCmper()};
         const auto companion = companionByKey.find(key);
         if (companion == companionByKey.end()) continue;
@@ -461,9 +458,8 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
             }
             continue;
         }
-        const auto comparison =
-            compareText("block_texts", {}, *sourceText, *companionText, sourceDocument,
-                        companionDocument, false, false);
+        const auto comparison = compareText("block_texts", {}, *sourceText, *companionText,
+                                            sourceDocument, companionDocument, false, false);
         if (comparison.differences.contains(TextDifferenceClassification::Other) ||
             comparison.differences.contains(TextDifferenceClassification::MissingRun)) {
             result[prefix] = ReferentComparison::Renumbered;
@@ -477,7 +473,8 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
     return result;
 }
 
-/// @brief The text ids a document's part definitions name, or empty when they name none.
+/// @brief The text ids a document's part definitions name, or empty when they
+/// name none.
 std::set<std::int64_t> partNameTextIds(const SurveySnapshot& snapshot)
 {
     const auto relationships = snapshot.find("relationships");
@@ -494,7 +491,8 @@ std::set<std::int64_t> partNameTextIds(const SurveySnapshot& snapshot)
     return ids;
 }
 
-/// @brief The block text number a comparison path names, for a path that names one.
+/// @brief The block text number a comparison path names, for a path that names
+/// one.
 std::optional<std::int64_t> blockTextNumber(const std::string& className, const std::string& path)
 {
     if (className != "block_texts") return std::nullopt;
@@ -508,23 +506,23 @@ bool isPartNameText(const std::string& className, const std::string& path,
                     const SurveySnapshot& source, const SurveySnapshot& companion)
 {
     const auto textId = blockTextNumber(className, path);
-    return textId
-        && partNameTextMatches(partNameTextIds(source), partNameTextIds(companion), *textId);
+    return textId &&
+           partNameTextMatches(partNameTextIds(source), partNameTextIds(companion), *textId);
 }
 
 bool isSynthesizedScoreNameText(const std::string& className, const std::string& path,
                                 const SurveySnapshot& source, const SurveySnapshot& companion)
 {
     const auto textId = blockTextNumber(className, path);
-    return textId
-        && synthesizedScoreNameText(partNameTextIds(source), partNameTextIds(companion), *textId);
+    return textId &&
+           synthesizedScoreNameText(partNameTextIds(source), partNameTextIds(companion), *textId);
 }
 
 TextComparison compareText(const std::string& className, const std::string& path,
                            const std::string& source, const std::string& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
-                           const musx::dom::DocumentPtr& companionDocument,
-                           bool partNameText, bool synthesizedScoreName)
+                           const musx::dom::DocumentPtr& companionDocument, bool partNameText,
+                           bool synthesizedScoreName)
 {
     const auto normalizeWhitespaceControls = [](std::string value) {
         std::erase_if(value, isFinaleWhitespaceControl);
@@ -536,10 +534,9 @@ TextComparison compareText(const std::string& className, const std::string& path
         normalizedSource != source || normalizedCompanion != companion;
     const auto classClassifier = textDifferenceClassifier(className);
     if (classClassifier) {
-        if (const auto classified =
-                classClassifier({path, normalizedSource, normalizedCompanion, std::nullopt,
-                                 std::nullopt, removedWhitespaceControl, partNameText,
-                                 synthesizedScoreName})) {
+        if (const auto classified = classClassifier(
+                {path, normalizedSource, normalizedCompanion, std::nullopt, std::nullopt,
+                 removedWhitespaceControl, partNameText, synthesizedScoreName})) {
             return *classified;
         }
     }
@@ -576,10 +573,9 @@ TextComparison compareText(const std::string& className, const std::string& path
     const auto sourcePlain = plainText(*sourceChunks);
     const auto companionPlain = plainText(*companionChunks);
     if (classClassifier) {
-        if (const auto classified =
-                classClassifier({path, normalizedSource, normalizedCompanion, sourcePlain,
-                                 companionPlain, removedWhitespaceControl, partNameText,
-                                 synthesizedScoreName})) {
+        if (const auto classified = classClassifier(
+                {path, normalizedSource, normalizedCompanion, sourcePlain, companionPlain,
+                 removedWhitespaceControl, partNameText, synthesizedScoreName})) {
             return *classified;
         }
     }

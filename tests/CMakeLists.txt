@@ -67,8 +67,15 @@ add_executable(finale_mus_reader_tests
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/others/staff_list_tests.cpp
     classes/others/text_blocks_tests.cpp
+    classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
     coverage_schema_tests.cpp
+    ../tools/coverage/comparison_text.cpp
+    ../tools/coverage/registry.cpp
+    ../tools/coverage/value.cpp
+    ../tools/coverage/common/font_info.cpp
+    ../tools/coverage/surveyors/others/text_expression_defs.cpp
+    ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp
     text_encoding_tests.cpp)
 finale_mus_reader_enable_unity(finale_mus_reader_tests)

@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**74 done, 2 partial, 114 to do, 190 total.** Verified class for class against the registry on
+**74 done, 3 partial, 113 to do, 190 total.** Verified class for class against the registry on
 2026-09-05: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (35 done, 0 partial, 58 to do, 93 total)
+## others  (35 done, 1 partial, 57 to do, 93 total)
 
     [x] AcciAmountFlats                         custom_keys.cpp
     [x] AcciAmountSharps                        custom_keys.cpp
@@ -133,7 +133,7 @@ Explanation added here has to be removed again.
     [ ] SystemLock
     [ ] TempoChange
     [x] TextBlock                               text_blocks.cpp
-    [ ] TextExpressionDef                                                       L1 library item
+    [~] TextExpressionDef                       text_expression_defs.cpp        comparison/positioning await assignments
     [ ] TextExpressionEnclosure                                                 L2 satellite
     [ ] TextRepeatAssign
     [ ] TextRepeatDef                                                           L1 library item
@@ -216,7 +216,7 @@ Explanation added here has to be removed again.
 
     [x] BlockText                               text_pool.cpp, coda_texts.cpp
     [~] BookmarkText                            text_pool.cpp                   pooled eras only
-    [~] ExpressionText                          text_pool.cpp                   pooled eras only
+    [~] ExpressionText                          text_pool.cpp, text_expression_defs.cpp   early + pooled
     [x] FileInfoText                            text_pool.cpp,
                                                 file_info_text.cpp
     [x] LyricsChorus                            text_pool.cpp, coda_texts.cpp

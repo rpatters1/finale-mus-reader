@@ -261,6 +261,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         FINALE_MUS_READER_IMPORTER(ImportStaffLists, &others::importStaffLists),
         FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
+        FINALE_MUS_READER_IMPORTER(ImportTextExpressionDefs, &others::importTextExpressionDefs),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterFlats, &others::importTonalCenterFlats),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterSharps, &others::importTonalCenterSharps),
         // details
@@ -786,6 +787,9 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
 
 void runDeferredChecks(PendingReferences& pending)
 {
+    for (const auto& materialize : pending.materialize) {
+        materialize();
+    }
     for (const auto& check : pending.checks) {
         check();
     }

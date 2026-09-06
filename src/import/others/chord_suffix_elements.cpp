@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/others.h"
+#include "import/support/legacy_font.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -139,8 +140,7 @@ void importChordSuffixElements(const ImportContext& context)
                 target->ydisp = static_cast<std::int16_t>(
                     payloadWord(payload, at + 4, context.profile.byteOrder));
                 const auto sizeFont = payloadWord(payload, at + 6, context.profile.byteOrder);
-                target->font->fontId = context.construction.assignFontId(sizeFont & 0x00ffU);
-                target->font->fontSize = sizeFont >> 8U;
+                assignPackedFont(*target->font, context.construction, sizeFont);
                 effects = payloadWord(payload, at + 8, context.profile.byteOrder);
                 flags = payloadWord(payload, at + 10, context.profile.byteOrder);
                 target->symbol = text::codepointFromByte(

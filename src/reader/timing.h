@@ -79,6 +79,7 @@ enum class Phase : std::size_t
     ImportStaffOptions,
     ImportStemOptions,
     ImportTextBlocks,
+    ImportTextExpressionDefs,
     ImportTextOptions,
     ImportTexts,
     ImportTonalCenterFlats,

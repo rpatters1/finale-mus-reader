@@ -255,30 +255,22 @@ void testFileInfoText()
         "Empty header slots should not create File Info objects");
 }
 
-// Expression text is recovered only where the source keeps it in the text pool. The fixed-row
-// eras keep it inside the text expression definition instead, in the `DT` family, and
-// synthesizing an Enigma string from that is deferred until `TextExpressionDef` itself is
-// imported: the definition is what gives the text its meaning, and a text pool full of
-// expression strings with no definitions behind them claims more coverage than it has.
-//
-// This asserts the absence so that reinstating the synthesis is a deliberate act rather than a
-// side effect.
-void testEarlyExpressionTextDeferred()
+void testEarlyExpressionTextSynthesis()
 {
     using musx::dom::texts::ExpressionText;
     for (const char* fixture : {"evidence/F97/F97-fileinfo-short.mus",
              "evidence/F2000/F2000-multilayer.mus", "evidence/F263/F263-baseline.mus"}) {
         const auto result = readTextFixture(fixture);
-        expectText(countOf<ExpressionText>(result) == 0,
-            std::string(fixture) + " synthesized expression text from a record rather than "
-            + "reading it from the text pool");
+        const auto definitions = result.document->getOthers()
+            ->getArray<musx::dom::others::TextExpressionDef>(musx::dom::SCORE_PARTID);
+        expectText(countOf<ExpressionText>(result) == definitions.size(),
+            std::string(fixture) + " did not synthesize one text per expression definition");
     }
 
-    // The epochs that do pool it are unaffected, which is what says the deferral is about the
-    // source layout rather than about the class.
+    // Pooled text retains its source numbering and count.
     const auto pooled = readTextFixture("evidence/F2006/F2006-embedded-tiff.mus");
     expectText(countOf<ExpressionText>(pooled) == 41,
-        "Pooled expression text was lost along with the synthesized kind");
+        "Pooled expression text was lost during definition import");
 }
 
 // The compressed epochs write their commands in the binary form, so this is where the code
@@ -684,7 +676,10 @@ void testCodaBannerBlockTexts()
         ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 3);
     const auto right = later.document->getOthers()
         ->get<musx::dom::others::TextBlock>(musx::dom::SCORE_PARTID, 2);
-    expectText(blocks.size() == 9 && centered && centered->textId == 3
+    const auto ordinaryCount = std::count_if(blocks.begin(), blocks.end(), [](const auto& block) {
+        return block->textType == musx::dom::others::TextBlock::TextType::Block;
+    });
+    expectText(ordinaryCount == 9 && centered && centered->textId == 3
             && centered->justify == musx::dom::others::TextBlock::TextJustify::Center
             && !centered->noExpandSingleWord && right && right->textId == 2
             && right->justify == musx::dom::others::TextBlock::TextJustify::Right
@@ -902,9 +897,9 @@ void testEnigmaFontResolutionCache()
 
 TEST_CASE("Uncompressed text pool", "[texts]") { testUncompressedTextPool(); }
 TEST_CASE("File info text", "[texts]") { testFileInfoText(); }
-TEST_CASE("Early expression text deferred", "[texts]")
+TEST_CASE("Early expression text synthesis", "[texts]")
 {
-    testEarlyExpressionTextDeferred();
+    testEarlyExpressionTextSynthesis();
 }
 TEST_CASE("Compressed text pools", "[texts]") { testCompressedTextPool(); }
 TEST_CASE("Finale 2008 inserts and pooled file info", "[texts]")

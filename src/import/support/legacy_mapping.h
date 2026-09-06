@@ -797,11 +797,13 @@ struct PendingReferences
 {
     std::vector<PendingShapeReference> shapes; ///< Shape definitions requested by recovered classes.
     std::vector<PendingCustomLineReference> customLines; ///< Custom lines requested by recovered classes.
+    /// @brief Completes source-owned pools before checks allocate or resolve their referents.
+    std::vector<std::function<void()>> materialize;
     /// @brief Checks to run once every importer has finished, in the order they were registered.
     std::vector<std::function<void()>> checks;
 };
 
-/// @brief Runs every deferred check, in the order the importers registered them.
+/// @brief Completes deferred pool materialization, then runs the registered checks.
 /// @details The last step of the phase that follows every importer, and the reason registry order
 /// carries no meaning: an importer that needs another class's objects registers the work here and
 /// this runs it once every pool is filled. Exposed because a test that drives one importer alone
