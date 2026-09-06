@@ -38,6 +38,9 @@ reading the file.
 
 Class-by-class implementation status: [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 
+Text expression definitions and synthesis: [`format/others/text_expression_defs.md`](format/others/text_expression_defs.md).
+Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning migration](format/others/text_expression_defs.md#attachment-modes-and-positioning-migration).
+
 ## Current work — `state/`
 
 | Read | Contains | Read when |

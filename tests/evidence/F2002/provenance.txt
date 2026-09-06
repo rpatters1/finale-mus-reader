@@ -1,6 +1,30 @@
 Version 2002a.r1
 Mac OS 9.0.4 running in SheepShaver
 
+F2002-exp-unbalanced.mus
+    sha256 8f6acf6facf8a4fd15a8a027cf8647f3d3acd5966c2f5da87dd328c87cc06b06
+F2002-exp-unbalanced.etf
+    sha256 a6dfa42948a7db8ad3487d15dc2e1f7e95086da8b77c77b0a1ad385f0140ef0e
+-finale27/F2002-exp-unbalanced.musx
+    sha256 6605d0d80028be33a4d93786093dea48392b5959fbb5f450c340bcb56b41f61b
+    Changes the partial-hide fixture's closing bracket to a question mark,
+    yielding "test is <hidden?". The DT header is unchanged; decoded byte
+    0x1553 changes from 0x3e to 0x3f. The companion hides "hidden?" through
+    end of text, so an opening bracket does not require a matching close.
+
+F2002-exp-hidepartial.mus
+    sha256 0b8c0890375c91a2fdd5c1ca7585fd4ba110f48f2d8192f980b770b0b9934f9b
+F2002-exp-hidepartial.etf
+    sha256 8be74d6ee89c2a4f8363a6cb8f51f5a8c07bdd16ab411841078dd049493b1f7a
+-finale27/F2002-exp-hidepartial.musx
+    sha256 d6aa8512fa6498183951979969c021bbb810b31c322274a6d1130c00f08fc352
+    User-authored partial-hidden expression. DT comparator 1 has packed font/size
+    0x0c01, effects zero, flags 0xc200, and inline text "test is <hidden>".
+    The header begins at block 0x200, decoded offset 0x1530. The companion
+    removes the brackets and applies the hidden style only to "hidden";
+    "test is " remains visible. This verifies the F2002 behavior, not the
+    exact F2001/F2002 boundary.
+
 F2002-norevstem-len96.mus
     sha256 4f3603b58bee6f24a475f895346c98df887a0699cde50bbbeff8d3c7d81b67d6
     2,649 bytes. Changes the normal stem length from 84 to 96 and switches off

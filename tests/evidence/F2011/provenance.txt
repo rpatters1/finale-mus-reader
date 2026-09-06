@@ -1,5 +1,32 @@
 Finale 2011 (internal version 16.0), zlib era, little-endian, Mac origin.
 
+F2011-rehearsal-mark-matchplay.mus
+    sha256 414128b8e4f8378c4dea1493a23a9d2bd8267cc33b2ac33920ad941575f1b4b4
+-finale27/F2011-rehearsal-mark-matchplay.musx
+    sha256 35b2cba047d4a53ec570720435843d3e0e1306fb6e8ea814c937061e1689f7e8
+    Supplied by the repository owner as the match-playback variant of the
+    rehearsal baseline below. Expression comparator 1 changes logical word 5
+    from 0400 to 5401 and auxiliary word 3 from zero to 1024. The companion adds
+    matchPlayback, auxiliary-data use, tempo playback, and the same beat duration.
+    Other expression payload bytes remain unchanged. The fixture verifies the
+    mapping in Finale 2011, not the provisional Finale 2010 introduction date.
+
+F2011-rehearsal-mark.mus
+    sha256 3012dfe7f5deaa4f35420565e6490b0f2cfa536491bfa1b45f21dd9b64788ed3
+-finale27/F2011-rehearsal-mark.musx
+    sha256 f6bf326f1a7ff7225d7d12c68012926cbf3dcb096d2a7a6bbf1fd36de4e50dd5
+F2011-rehearsal-mark-hidemeas.mus
+    sha256 b15ea3ab2ee278d74311954e225728c8f4a99280c38656f217b305e7a4d553bd
+-finale27/F2011-rehearsal-mark-hidemeas.musx
+    sha256 98cab842f3954c35594e7de050262f3e7ca5078ef0bd1c425ab328fd96d71d6d
+    Supplied by the repository owner as a controlled rehearsal-mark pair. The
+    second expression hides measure numbers; the first does not. Their class
+    0x00f1 comparator 1 payloads differ only in logical word 5, 0400 versus 8400.
+    Only the second Finale 27 companion includes the hideMeasureNum element.
+    Both use actual measure-number sequencing, stored as 6 in logical word 1.
+    This pair verifies Finale 2011 behavior; it does not establish the proposed
+    Finale 2010 introduction because that release is not working for the owner.
+
 Origin: created by the repository owner on a Finale 2011 installation obtained for
 this question. Finale 2011 is the release neither private corpus contains as an
 authored document, and the release this class's boundaries turned out to depend on.

@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **74 done, 2 partial, 114 to do, 190 registered musxdom classes** (verified against the registry
+- **74 done, 3 partial, 113 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-05). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and
@@ -29,6 +29,9 @@ status and date:
 P0.1, P0.3, and P1.4 are recorded as done or resolved.
 
 ## Open questions
+
+- Text-expression comparison and positioning await assignment recovery; description-start selection remains unresolved.
+  ([attachment and layout notes](format/others/text_expression_defs.md#attachment-modes-and-positioning-migration))
 
 - No byte-order marker has been found in the 3.x-and-later header; order is inferred from framing.
   The six bytes at `0x062` remain uninterpreted.
@@ -55,7 +58,8 @@ P0.1, P0.3, and P1.4 are recorded as done or resolved.
 - Two companion differences are recorded rather than suppressed; the instrument errors behind them
   are worth reading before trusting a comparison script's field lookup.
   ([`investigations/regression_open_questions.md`](investigations/regression_open_questions.md))
-- `BookmarkText` and `ExpressionText` recover in pooled eras only.
+- `BookmarkText` recovers in pooled eras only. Text expression recovery is partial;
+  [remaining fields and upgrade questions](format/others/text_expression_defs.md).
 
 ## Wanted evidence
 

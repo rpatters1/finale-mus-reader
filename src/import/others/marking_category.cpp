@@ -11,6 +11,7 @@
 #include <span>
 #include <string>
 
+#include "import/support/expression_alignment.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -45,59 +46,6 @@ constexpr std::uint16_t usesStaffListMask = 0x0010;
 constexpr std::uint16_t usesBreakMmRestsMask = 0x0040;
 constexpr std::uint16_t userCreatedMask = 0x0080;
 constexpr std::uint16_t breakMmRestMask = 0x0400;
-
-std::optional<musx::dom::AlignJustify> markingCategoryJustification(std::uint16_t stored)
-{
-    using A = musx::dom::AlignJustify;
-    switch (stored) {
-    case 0: return A::Left;
-    case 1: return A::Center;
-    case 2: return A::Right;
-    default: return std::nullopt;
-    }
-}
-
-std::optional<musx::dom::others::HorizontalMeasExprAlign> markingCategoryHorizontalAlignment(
-    std::uint16_t stored)
-{
-    using A = musx::dom::others::HorizontalMeasExprAlign;
-    switch (stored) {
-    case 0: return A::LeftBarline;
-    case 1: return A::StartTimeSig;
-    case 2: return A::AfterClefKeyTime;
-    case 3: return A::Manual;
-    case 4: return A::CenterOverBarlines;
-    case 5: return A::CenterOverMusic;
-    case 6: return A::RightBarline;
-    case 7: return A::StartOfMusic;
-    case 9: return A::LeftOfAllNoteheads;
-    case 10: return A::Stem;
-    case 11: return A::CenterPrimaryNotehead;
-    case 12: return A::CenterAllNoteheads;
-    case 13: return A::LeftOfPrimaryNotehead;
-    case 14: return A::RightOfAllNoteheads;
-    default: return std::nullopt;
-    }
-}
-
-std::optional<musx::dom::others::VerticalMeasExprAlign> markingCategoryVerticalAlignment(
-    std::uint16_t stored)
-{
-    using A = musx::dom::others::VerticalMeasExprAlign;
-    switch (stored) {
-    case 0: return A::AboveStaff;
-    case 1: return A::BelowStaff;
-    case 2: return A::Manual;
-    case 3: return A::RefLine;
-    case 4: return A::TopNote;
-    case 5: return A::BottomNote;
-    case 6: return A::AboveEntry;
-    case 7: return A::BelowEntry;
-    case 8: return A::AboveStaffOrEntry;
-    case 9: return A::BelowStaffOrEntry;
-    default: return std::nullopt;
-    }
-}
 
 std::shared_ptr<musx::dom::FontInfo> readMarkingCategoryFont(
     const ImportContext& context, std::span<const std::uint8_t> payload, std::size_t offset)
@@ -243,16 +191,16 @@ void importSourceMarkingCategories(const ImportContext& context)
         category->numberFont =
             readMarkingCategoryFont(context, payload, markingCategoryFontOffsets[2]);
         if (const auto value =
-                markingCategoryJustification(word(markingCategoryJustificationOffset))) {
+                expressionJustification(word(markingCategoryJustificationOffset))) {
             category->justification = *value;
         }
         if (const auto value =
-                markingCategoryHorizontalAlignment(word(markingCategoryHorzAlignOffset))) {
+                expressionHorizontalAlignment(word(markingCategoryHorzAlignOffset))) {
             category->horzAlign = *value;
         }
         category->horzOffset = static_cast<std::int16_t>(word(markingCategoryHorzOffsetOffset));
         if (const auto value =
-                markingCategoryVerticalAlignment(word(markingCategoryVertAlignOffset))) {
+                expressionVerticalAlignment(word(markingCategoryVertAlignOffset))) {
             category->vertAlign = *value;
         }
         category->vertOffsetEntry =

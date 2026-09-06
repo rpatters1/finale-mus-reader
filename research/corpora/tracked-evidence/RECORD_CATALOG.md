@@ -161,7 +161,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00bc` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x2ee6) |
 | `0x00be` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0x1c22) |
 | `0x00bf` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x2f3e) |
-| `0x00c0` | unknown | unknown/options | open | 2011, 2012 | 12 | `mus-d89543077eefeae6` (0:0x1e24) |
+| `0x00c0` | textExprDef | others | weak | 2011, 2012 | 12 | `mus-b15ea3ab2ee278d7` (0:0x1d8e) |
 | `0x00c2` | unknown | unknown/options | open | 2008 | 144 | `mus-ed8096788fa377bf` (0:0x1db4) |
 | `0x00d5` | shapeList | others | strong | 2007, 2008, 2011, 2012 | 84, 168, 180, 264 | `mus-86fafceb1ef2ebe2` (0:0x1c48) |
 | `0x00d6` | shapeDef | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1ee2) |
@@ -180,13 +180,13 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00e7` | staffSpec | others | weak | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |
 | `0x00e8` | staffStyle | others | weak | 2012 | 300 | `mus-f99c887dff9cdaa1` (0:0x289e) |
 | `0x00eb` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x37be) |
-| `0x00f1` | unknown | unknown/options | open | 2011, 2012 | 36, 48 | `mus-d89543077eefeae6` (0:0x24a0) |
+| `0x00f1` | textExprDef | others | weak | 2011, 2012 | 36, 48, 60 | `mus-b15ea3ab2ee278d7` (0:0x23bc) |
 | `0x00f7` | unknown | unknown/options | open | 2012 | 48 | `mus-4ffcb6b07d802e7c` (0:0x28dc) |
 | `0x0112` | unknown | unknown/options | open | 2007, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2360) |
 | `0x011a` | partGlobals | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x237a) |
 | `0x0120` | unknown | unknown/options | open | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x2394) |
 | `0x0122` | moviePlayerState | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x23ae) |
-| `0x012c` | markingsDialogList | others | weak | 2011, 2012 | 12, 24 | `mus-d89543077eefeae6` (0:0x25e6) |
+| `0x012c` | markingsDialogList | others | weak | 2011, 2012 | 12, 24 | `mus-b15ea3ab2ee278d7` (0:0x2454) |
 | `0x012d` | markingsCategoryName | others | weak | 2011, 2012 | 36 | `mus-eb742704c65232a2` (0:0x23be) |
 | `0x012e` | markingsCategoryName | others | weak | 2011, 2012 | 12, 24, 36 | `mus-eb742704c65232a2` (0:0x251c) |
 | `0x0130` | categoryStaffListScore | others | weak | 2011, 2012 | 12 | `mus-eb742704c65232a2` (0:0x260e) |

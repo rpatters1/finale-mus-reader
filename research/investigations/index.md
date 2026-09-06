@@ -22,6 +22,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Companion-comparison disagreements and the instrument errors behind them | [`regression_open_questions.md`](regression_open_questions.md) |
 | Text pool, binary command table, Coda-banner pool walk | [`text_pool.md`](text_pool.md) |
 | TextBlock storage and assembly | [`text_blocks.md`](text_blocks.md) |
+| Text expression epochs, synthesis, and companion IDs | [`text_expression_defs.md`](text_expression_defs.md) |
 | Chord suffix element identities, layouts, and flags | [`chord_suffix_elements.md`](chord_suffix_elements.md) |
 | Chord suffix playback identity and zero fill | [`chord_suffix_playback.md`](chord_suffix_playback.md) |
 | Custom-key others records and map ordering | [`custom_keys.md`](custom_keys.md) |

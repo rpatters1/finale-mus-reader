@@ -200,7 +200,8 @@ void printUsage()
         "usage: recovery_coverage_probe [-h|--help] "
         "[--min-diagnostic-level=verbose|info|warning|error] "
         "[--mac-symbol-fonts=path] "
-        "[--include-timings] [--progress] <corpus-tsv> <output-jsonl>\n");
+        "[--include-timings] [--progress] "
+        "<corpus-tsv> <output-jsonl>\n");
 }
 
 // Keep this in sync with Options and parseOptions(): every flag accepted there must be
