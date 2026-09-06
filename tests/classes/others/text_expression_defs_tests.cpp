@@ -65,7 +65,8 @@ TEST_CASE("Inline hidden spans preserve surrounding text and effects", "[class][
             auto session = musx::factory::DocumentFactory::begin();
             const auto document = session.getDocument();
             auto font = std::make_shared<musx::dom::others::FontDefinition>(
-                document, 0, musx::dom::EnigmaBase::ShareMode::All, 1);
+                document, musx::dom::Cmper(0), musx::dom::EnigmaBase::ShareMode::All,
+                musx::dom::Cmper(1));
             font->name = "Times";
             document->getOthers()->add(font->XmlNodeName, font);
             const std::string plain = "A>x>>B<y<z>^#<open";
@@ -157,8 +158,8 @@ TEST_CASE("SmartMusic playback normalizes with retained source provenance",
     const auto result = readFixture("evidence/F2006/F2006-embedded-tiff.mus");
     for (const auto cmper : {29, 30, 31, 32, 17}) {
         const bool smartMusic = cmper != 17;
-        const auto expression =
-            result.document->getOthers()->get<TestExpression>(musx::dom::SCORE_PARTID, cmper);
+        const auto expression = result.document->getOthers()->get<TestExpression>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper(cmper));
         REQUIRE(expression);
         CHECK(expression->playbackType == (smartMusic ? musx::dom::others::PlaybackType::None
                                                       : musx::dom::others::PlaybackType::Tempo));
@@ -353,7 +354,8 @@ TEST_CASE("Legacy expression note selectors translate independently", "[class][t
             document, report,  pending,  session.getConstructionContext()};
         finale_mus_reader::others::importTextExpressionDefs(context);
         for (int code = 0; code <= 9; ++code) {
-            const auto expression = document->getOthers()->get<TestExpression>(0, code + 1);
+            const auto expression = document->getOthers()->get<TestExpression>(
+                0, musx::dom::Cmper(code + 1));
             REQUIRE(expression);
             const auto prefix = "others.textExprDef[" + std::to_string(code + 1) + "].";
             const auto& h = field(report, prefix + "horzMeasExprAlign");
