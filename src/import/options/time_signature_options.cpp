@@ -129,25 +129,24 @@ const MappingTable& classTimeSignatureTable()
     return table;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportCodaTimeSignatureDefaults(const ImportContext& context)
 {
-    if (context.profile.epoch != FormatEpoch::CodaBanner)
-        return;
-    const auto target = context.document->getOptions()->get<TimeSignatureOptionsTarget>();
-    if (!target)
-        return;
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+        const auto target = context.document->getOptions()->get<TimeSignatureOptionsTarget>();
+        if (!target) return;
 
-    const auto key = instanceKey<TimeSignatureOptionsTarget>();
-    const auto reportDefault = [&](const char* member, std::int64_t value) {
-        context.report.setField(key, member, {ValueOrigin::Finale27Default, 0, 0, value});
-    };
-    // The Coda layout has no supported source for these later fields.
-    reportDefault("cautionaryTimeChanges", target->cautionaryTimeChanges);
-    reportDefault("timeLowerLift", target->timeLowerLift);
-    reportDefault("timeAbrvLift", target->timeAbrvLift);
+        const auto key = reporting.template instanceKey<TimeSignatureOptionsTarget>();
+        const auto reportDefault = [&](const char* member, std::int64_t value) {
+            reporting.report().setField(
+                key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
+        };
+        // The Coda layout has no supported source for these later fields.
+        reportDefault("cautionaryTimeChanges", target->cautionaryTimeChanges);
+        reportDefault("timeLowerLift", target->timeLowerLift);
+        reportDefault("timeAbrvLift", target->timeAbrvLift);
+    });
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void applySharedTimeSignatureDistances(const ImportContext& context)
 {
@@ -164,9 +163,9 @@ void applySharedTimeSignatureDistances(const ImportContext& context)
     const auto reportShared = [&](const char* member, musx::dom::Evpu& parts,
                                   musx::dom::Evpu score) {
         parts = score;
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<TimeSignatureOptionsTarget>(), member,
-            {ValueOrigin::LegacyBehavior, 0, 0, score});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<TimeSignatureOptionsTarget>(member, score);
+        });
     };
 
     // A fixed-row selector-18 family without its second incidence has one set of distances
@@ -182,9 +181,7 @@ void applySharedTimeSignatureDistances(const ImportContext& context)
 
 void importTimeSignatureOptions(const ImportContext& context)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     reportCodaTimeSignatureDefaults(context);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     applyMappingTables(
         {&codaTimeSignatureTable(), &fixedTimeSignatureTable(), &classTimeSignatureTable()},
         context.index, context.profile, context.document, context.report);

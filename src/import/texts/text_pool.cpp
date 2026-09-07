@@ -22,21 +22,6 @@
 namespace finale_mus_reader {
 namespace texts {
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
-    bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized)
-{
-    FINALE_MUS_READER_REPORT_TEXT_FIELD(report, instance, std::move(member), TextFieldInfo{
-        fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
-}
-
-void recordTextFieldInfo(ImportReport& report, const InstanceKey& instance, std::string member,
-    const text::ConvertedEnigmaText& converted)
-{
-    recordTextFieldInfo(report, instance, std::move(member), converted.fontWasSynthesized,
-        converted.sizeWasSynthesized, converted.effectsWereSynthesized);
-}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 namespace {
 
@@ -63,9 +48,7 @@ struct TextKeyword
     void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
         Cmper number, std::string&& text);
     std::string_view nodeName;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    std::type_index classType;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[no_unique_address]] ReportClass reportClass;
     TextFontType defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
     /// @details `texts::FileInfoText` throws on a number outside its own enumeration, so a
@@ -88,11 +71,7 @@ template <typename Target>
 TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
     bool (*accepts)(Cmper) = nullptr)
 {
-    return TextKeyword{
-        keyword, &createText<Target>, Target::XmlNodeName,
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        typeid(Target),
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, ReportClass::of<Target>(),
         defaultFontType, accepts};
 }
 
@@ -428,14 +407,14 @@ void importLaterTextPool(const ImportContext& context)
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextReportConstruction);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const InstanceKey instance{found->classType, musx::dom::SCORE_PARTID,
-                record->number, std::nullopt, std::nullopt};
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instance, "text",
-                {ValueOrigin::LegacyMus, 0,
-                record->start, static_cast<std::int64_t>(converted.text.size())});
-            recordTextFieldInfo(context.report, instance, "text", converted);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto instance = reporting.instanceKey(
+                    found->reportClass, musx::dom::SCORE_PARTID, record->number);
+                reporting.report().setField(instance, "text",
+                    {Reporting::Origin::LegacyMus, 0, record->start,
+                        static_cast<std::int64_t>(converted.text.size())});
+                reporting.textField(instance, "text", converted);
+            });
         }
 
         {

@@ -124,34 +124,32 @@ const MappingTable& classGraceNoteTable()
     return table;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportCodaDefaults(const ImportContext& context)
 {
-    if (context.profile.epoch != FormatEpoch::CodaBanner) return;
-    const auto target = context.document->getOptions()->get<GraceNoteOptionsTarget>();
-    if (!target) return;
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+        const auto target = context.document->getOptions()->get<GraceNoteOptionsTarget>();
+        if (!target) return;
 
-    const auto key = instanceKey<GraceNoteOptionsTarget>();
-    const auto reportDefault = [&](const char* member, std::int64_t value) {
-        context.report.setField(
-            key, member, {ValueOrigin::Finale27Default, 0, 0, value});
-    };
-    // Coda supplies no supported source for these later fields. They deliberately retain
-    // the pinned values instead of acquiring speculative mappings from unrelated records.
-    reportDefault("tabGracePerc", target->tabGracePerc);
-    reportDefault("playbackDuration", target->playbackDuration);
-    reportDefault("entryOffset", target->entryOffset);
-    reportDefault("slashFlaggedGraceNotes", target->slashFlaggedGraceNotes);
+        const auto key = reporting.template instanceKey<GraceNoteOptionsTarget>();
+        const auto reportDefault = [&](const char* member, std::int64_t value) {
+            reporting.report().setField(
+                key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
+        };
+        // Coda supplies no supported source for these later fields. They deliberately retain
+        // the pinned values instead of acquiring speculative mappings from unrelated records.
+        reportDefault("tabGracePerc", target->tabGracePerc);
+        reportDefault("playbackDuration", target->playbackDuration);
+        reportDefault("entryOffset", target->entryOffset);
+        reportDefault("slashFlaggedGraceNotes", target->slashFlaggedGraceNotes);
+    });
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace
 
 void importGraceNoteOptions(const ImportContext& context)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     reportCodaDefaults(context);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     applyMappingTables({&codaGraceNoteTable(), &codaFloatGraceSlashWidthTable(),
                            &codaMigratedGraceSlashWidthTable(), &fixedGraceNoteTable(),
                            &classGraceNoteTable()},

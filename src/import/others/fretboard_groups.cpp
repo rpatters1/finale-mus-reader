@@ -59,13 +59,14 @@ void importFretboardGroups(const ImportContext& context)
                     at + fretboardGroupNameOffset, narrowFretboardGroupNameSize),
                     context.profile.platform);
             }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto key = instanceKey<FretboardGroupTarget>(partId, cmper, inci);
-            context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, "fretInstId",
-                {ValueOrigin::LegacyMus, rows.front().blockOffset,
-                    rows.front().decodedOffset, target->fretInstId});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key =
+                    reporting.template instanceKey<FretboardGroupTarget>(partId, cmper, inci);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reporting.report().setField(key, "fretInstId",
+                    {Reporting::Origin::LegacyMus, rows.front().blockOffset,
+                        rows.front().decodedOffset, target->fretInstId});
+            });
             context.document->getOthers()->add(FretboardGroupTarget::XmlNodeName,
                 std::move(target));
         }

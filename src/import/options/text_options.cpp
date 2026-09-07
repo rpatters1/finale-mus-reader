@@ -571,21 +571,18 @@ InsertBlock readInsertBlock(
     return static_cast<char32_t>((high << 16U) | low);
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportInsertField(ImportReport& report, const char* insertName, const char* member,
-    ValueOrigin origin, std::int64_t rawValue, const InsertBlock& block)
+template <typename Reporting>
+void reportInsertField(Reporting& reporting, const char* insertName, const char* member,
+    typename Reporting::Origin origin, std::int64_t rawValue, const InsertBlock& block)
 {
-    FieldInfo info{origin, 0, 0, rawValue};
-    if (origin == ValueOrigin::LegacyMus) {
+    typename Reporting::FieldInfo info{origin, 0, 0, rawValue};
+    if (origin == Reporting::Origin::LegacyMus) {
         info.blockOffset = block.blockOffset;
         info.decodedOffset = block.decodedOffset;
     }
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<TextTarget>(),
+    reporting.report().setField(reporting.template instanceKey<TextTarget>(),
         "symbolInserts[" + std::string(insertName) + "]." + member, std::move(info));
 }
-#else
-#define reportInsertField(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Rebuilds the five accidental inserts from the source's own block.
 /// @details Every element is replaced rather than overlaid, because the block states all five
@@ -663,19 +660,26 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
 
         target->symbolInserts[insertOrder[ordinal]] = std::move(insert);
 
-        reportInsertField(report, name, "trackingBefore", ValueOrigin::LegacyMus,
-            target->symbolInserts[insertOrder[ordinal]]->trackingBefore, block);
-        reportInsertField(report, name, "trackingAfter", ValueOrigin::LegacyMus,
-            target->symbolInserts[insertOrder[ordinal]]->trackingAfter, block);
-        reportInsertField(report, name, "baselineShiftPerc", ValueOrigin::LegacyMus,
-            target->symbolInserts[insertOrder[ordinal]]->baselineShiftPerc, block);
-        reportInsertField(report, name, "symFont.fontId", ValueOrigin::LegacyMus, fontId, block);
-        reportInsertField(report, name, "symFont.fontSize", ValueOrigin::LegacyMus, fontSize, block);
-        reportInsertField(report, name, "symFont.effects", ValueOrigin::LegacyMus, effects, block);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportInsertField(reporting, name, "trackingBefore", Reporting::Origin::LegacyMus,
+                target->symbolInserts[insertOrder[ordinal]]->trackingBefore, block);
+            reportInsertField(reporting, name, "trackingAfter", Reporting::Origin::LegacyMus,
+                target->symbolInserts[insertOrder[ordinal]]->trackingAfter, block);
+            reportInsertField(reporting, name, "baselineShiftPerc", Reporting::Origin::LegacyMus,
+                target->symbolInserts[insertOrder[ordinal]]->baselineShiftPerc, block);
+            reportInsertField(
+                reporting, name, "symFont.fontId", Reporting::Origin::LegacyMus, fontId, block);
+            reportInsertField(
+                reporting, name, "symFont.fontSize", Reporting::Origin::LegacyMus, fontSize, block);
+            reportInsertField(
+                reporting, name, "symFont.effects", Reporting::Origin::LegacyMus, effects, block);
+        });
         // The byte the source stored, not the code point it decoded to, matching how the
         // clef and stem-connection reports name the same kind of value.
-        reportInsertField(report, name, "symChar", ValueOrigin::LegacyMus,
-            static_cast<std::int64_t>(storedChar), block);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportInsertField(reporting, name, "symChar", Reporting::Origin::LegacyMus,
+                static_cast<std::int64_t>(storedChar), block);
+        });
     }
     return true;
 }
@@ -736,21 +740,25 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
             insert.symFont->fontId = construction.assignFontId(fontId);
         }
 
-        const InsertBlock absent;
-        reportInsertField(report, name, "trackingBefore", ValueOrigin::Finale27Default,
-            insert.trackingBefore, absent);
-        reportInsertField(report, name, "trackingAfter", ValueOrigin::Finale27Default,
-            insert.trackingAfter, absent);
-        reportInsertField(report, name, "baselineShiftPerc", ValueOrigin::Finale27Default,
-            insert.baselineShiftPerc, absent);
-        reportInsertField(report, name, "symFont.fontId", ValueOrigin::Finale27Default,
-            fontId, absent);
-        reportInsertField(report, name, "symFont.fontSize", ValueOrigin::Finale27Default,
-            insert.symFont ? insert.symFont->fontSize : 0, absent);
-        reportInsertField(report, name, "symFont.effects", ValueOrigin::Finale27Default,
-            insert.symFont ? insert.symFont->getEnigmaStyles() : 0, absent);
-        reportInsertField(report, name, "symChar", ValueOrigin::Finale27Default,
-            static_cast<std::int64_t>(insert.symChar), absent);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            const InsertBlock absent;
+            reportInsertField(reporting, name, "trackingBefore", Reporting::Origin::Finale27Default,
+                insert.trackingBefore, absent);
+            reportInsertField(reporting, name, "trackingAfter", Reporting::Origin::Finale27Default,
+                insert.trackingAfter, absent);
+            reportInsertField(reporting, name, "baselineShiftPerc",
+                Reporting::Origin::Finale27Default, insert.baselineShiftPerc, absent);
+            reportInsertField(reporting, name, "symFont.fontId", Reporting::Origin::Finale27Default,
+                fontId, absent);
+            reportInsertField(reporting, name, "symFont.fontSize",
+                Reporting::Origin::Finale27Default, insert.symFont ? insert.symFont->fontSize : 0,
+                absent);
+            reportInsertField(reporting, name, "symFont.effects",
+                Reporting::Origin::Finale27Default,
+                insert.symFont ? insert.symFont->getEnigmaStyles() : 0, absent);
+            reportInsertField(reporting, name, "symChar", Reporting::Origin::Finale27Default,
+                static_cast<std::int64_t>(insert.symChar), absent);
+        });
     }
 }
 
@@ -782,7 +790,3 @@ void importTextOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportInsertField
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

@@ -208,18 +208,16 @@ void applyLegacyLineCurveBehavior(const ImportContext& context)
 
     target->enclosureRoundCorners = false;
     target->enclosureCornerRadius = 0;
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<LineCurveOptionsTarget>(), "enclosureRoundCorners",
-        {ValueOrigin::LegacyBehavior, 0, 0, 0});
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<LineCurveOptionsTarget>(), "enclosureCornerRadius",
-        {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<LineCurveOptionsTarget>("enclosureRoundCorners", 0);
+        reporting.template behaviorField<LineCurveOptionsTarget>("enclosureCornerRadius", 0);
+    });
 
     const auto applyLegacyWidth = [&](auto member, const char* name) {
         target.get()->*member = legacyLineCurveWidth;
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<LineCurveOptionsTarget>(), name,
-            {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<LineCurveOptionsTarget>(name, 0);
+        });
     };
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         // The Coda layout predates the three stored width controls and uses one common
@@ -240,9 +238,9 @@ void applyLegacyLineCurveBehavior(const ImportContext& context)
     // Coda stores zero for the original sixteen-step curve resolution; a nonzero word is
     // an explicit resolution and is retained as stored.
     target->bezierStep = 16;
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<LineCurveOptionsTarget>(), "bezierStep",
-        {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<LineCurveOptionsTarget>("bezierStep", 0);
+    });
 }
 
 } // namespace

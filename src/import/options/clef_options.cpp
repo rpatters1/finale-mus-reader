@@ -189,18 +189,59 @@ std::optional<std::size_t> classTupleWords(
     return versions::storesUnicodeCodepoints(version) ? wideTupleWords : narrowTupleWords;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportClefField(ImportReport& report, std::size_t index, const char* member,
-    ValueOrigin origin, std::int64_t rawValue,
-    std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
+template <typename Reporting>
+void reportClefField(Reporting& reporting, std::size_t index, const char* member,
+    typename Reporting::Origin origin, std::int64_t rawValue, std::size_t blockOffset = 0,
+    std::size_t decodedOffset = 0)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<ClefOptionsTarget>(),
+    reporting.report().setField(reporting.template instanceKey<ClefOptionsTarget>(),
         "clefDefs[" + std::to_string(index) + "]." + member,
         {origin, blockOffset, decodedOffset, rawValue});
 }
-#else
-#define reportClefField(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+void reportRecoveredClef(ImportReport& report, std::size_t index, const PhysicalClef& stored)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto block = stored.blockOffset;
+        const auto decoded = stored.decodedOffset;
+        reportClefField(reporting, index, "middleCPos", Reporting::Origin::LegacyMus,
+            stored.middleCPos, block, decoded);
+        reportClefField(reporting, index, "clefChar", Reporting::Origin::LegacyMus,
+            static_cast<std::int64_t>(stored.clefChar), block, decoded);
+        reportClefField(reporting, index, "staffPosition", Reporting::Origin::LegacyMus,
+            stored.staffPosition, block, decoded);
+        reportClefField(reporting, index, "shapeId", Reporting::Origin::LegacyMus, stored.shapeId,
+            block, decoded);
+        reportClefField(
+            reporting, index, "flags", Reporting::Origin::LegacyMus, stored.flags, block, decoded);
+        // The raw stored word, not the assigned Efix. A pre-2001 value is scaled on the way in,
+        // and the report is the only place the original harmonic-level number survives.
+        reportClefField(reporting, index, "baselineAdjust", Reporting::Origin::LegacyMus,
+            stored.baselineDifference, block, decoded);
+        if ((stored.flags & useOwnFontBit) != 0) {
+            reportClefField(reporting, index, "font.fontId", Reporting::Origin::LegacyMus,
+                stored.fontComparator, block, decoded);
+            reportClefField(reporting, index, "font.fontSize", Reporting::Origin::LegacyMus,
+                stored.fontSize, block, decoded);
+            reportClefField(reporting, index, "font.effects", Reporting::Origin::LegacyMus,
+                stored.fontEffects, block, decoded);
+        }
+    });
+}
+
+void reportClefDefaults(ImportReport& report, std::size_t index, const ClefDef& def)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reportClefField(
+            reporting, index, "middleCPos", Reporting::Origin::Finale27Default, def.middleCPos);
+        reportClefField(reporting, index, "clefChar", Reporting::Origin::Finale27Default,
+            static_cast<std::int64_t>(def.clefChar));
+        reportClefField(reporting, index, "staffPosition", Reporting::Origin::Finale27Default,
+            def.staffPosition);
+        reportClefField(
+            reporting, index, "shapeId", Reporting::Origin::Finale27Default, def.shapeId);
+    });
+}
 
 /// @brief Turns one stored clef into a musxdom ClefDef and records where each value came from.
 /// @details Before Finale 2012 the character is a byte in the encoding of the font that draws
@@ -244,30 +285,7 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document,
             text::UnresolvedFontFallback::Symbol);
     target->clefDefs.push_back(std::move(def));
 
-    const auto block = stored.blockOffset;
-    const auto decoded = stored.decodedOffset;
-    reportClefField(report, index, "middleCPos", ValueOrigin::LegacyMus,
-        stored.middleCPos, block, decoded);
-    reportClefField(report, index, "clefChar", ValueOrigin::LegacyMus,
-        static_cast<std::int64_t>(stored.clefChar), block, decoded);
-    reportClefField(report, index, "staffPosition", ValueOrigin::LegacyMus,
-        stored.staffPosition, block, decoded);
-    reportClefField(report, index, "shapeId", ValueOrigin::LegacyMus,
-        stored.shapeId, block, decoded);
-    reportClefField(report, index, "flags", ValueOrigin::LegacyMus,
-        stored.flags, block, decoded);
-    // The raw stored word, not the assigned Efix. A pre-2001 value is scaled on the way in,
-    // and the report is the only place the original harmonic-level number survives.
-    reportClefField(report, index, "baselineAdjust", ValueOrigin::LegacyMus,
-        stored.baselineDifference, block, decoded);
-    if ((stored.flags & useOwnFontBit) != 0) {
-        reportClefField(report, index, "font.fontId", ValueOrigin::LegacyMus,
-            stored.fontComparator, block, decoded);
-        reportClefField(report, index, "font.fontSize", ValueOrigin::LegacyMus,
-            stored.fontSize, block, decoded);
-        reportClefField(report, index, "font.effects", ValueOrigin::LegacyMus,
-            stored.fontEffects, block, decoded);
-    }
+    reportRecoveredClef(report, index, stored);
 }
 
 bool captureFromWordStream(const musx::dom::DocumentPtr& document,
@@ -385,13 +403,12 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
         // the field stays zero until then: a blank clef is honest, a foreign comparator is not.
         def->shapeId = 0;
         if (source->isShape && source->shapeId != 0) {
-            pending.shapes.push_back({source->shapeId,
-                [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                ,
-                instanceKey<ClefOptionsTarget>(),
-                "clefDefs[" + std::to_string(index) + "].shapeId"
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            pending.shapes.push_back(
+                {source->shapeId, [def](musx::dom::Cmper resolved) { def->shapeId = resolved; }});
+            withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                reporting.state(pending.shapes.back().reportField) = {
+                    reporting.template instanceKey<ClefOptionsTarget>(),
+                    "clefDefs[" + std::to_string(index) + "].shapeId"};
             });
         }
         // Neither pinned baseline gives a clef its own font, so there is no baseline font
@@ -401,13 +418,7 @@ void completeFromReference(const musx::dom::DocumentPtr& referenceDocument,
             throw std::logic_error(
                 "Finale 27 ClefOptions baseline unexpectedly carries a clef-specific font");
         }
-        reportClefField(report, index, "middleCPos", ValueOrigin::Finale27Default,
-            def->middleCPos);
-        reportClefField(report, index, "clefChar", ValueOrigin::Finale27Default,
-            static_cast<std::int64_t>(def->clefChar));
-        reportClefField(report, index, "staffPosition", ValueOrigin::Finale27Default,
-            def->staffPosition);
-        reportClefField(report, index, "shapeId", ValueOrigin::Finale27Default, def->shapeId);
+        reportClefDefaults(report, index, *def);
         target->clefDefs.push_back(std::move(def));
     }
 }
@@ -551,9 +562,9 @@ void captureClefOptions(const records::LegacyRecordIndex& index, const SourcePro
     // later locations there would report a font size as a spacing value.
     if (profile.epoch == FormatEpoch::CodaBanner) {
         target->cautionaryClefChanges = true;
-        FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<ClefOptionsTarget>(),
-            "cautionaryClefChanges",
-            {ValueOrigin::LegacyBehavior, 0, 0, 1});
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<ClefOptionsTarget>("cautionaryClefChanges", 1);
+        });
     }
 
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
@@ -637,7 +648,3 @@ void importClefOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportClefField
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

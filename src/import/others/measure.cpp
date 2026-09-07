@@ -290,25 +290,28 @@ inline constexpr std::uint16_t invalidMeasureCmper = 0;
 }
 
 /// @brief One decoded member, with the word it came from and what that word held.
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+template <typename Reporting>
 struct DecodedMeasureField
 {
     const char* member{};
-    ValueOrigin origin = ValueOrigin::LegacyMus;
+    typename Reporting::Origin origin = Reporting::Origin::LegacyMus;
     std::size_t slot{};
     std::int64_t stored{};
     /// @brief The record the value came from, when it is not the measure's own.
     const MeasureRecord* record{};
 };
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+template <typename Reporting>
+using DecodedMeasureFields = std::vector<DecodedMeasureField<Reporting>>;
 
 /// @brief Collects the decoded members of one measure so they can be reported in one pass.
 class MeasureDecoder
 {
 public:
-    MeasureDecoder(const MeasureRecord& record, const MeasureLayout& layout, MeasureTarget& target,
-        const MeasureRecord* displayRecord = nullptr)
-        : m_record(record), m_layout(layout), m_target(target), m_display(displayRecord)
+    MeasureDecoder(ImportReport& report, const MeasureRecord& record, const MeasureLayout& layout,
+        MeasureTarget& target, const MeasureRecord* displayRecord = nullptr)
+        : m_report(report), m_record(record), m_layout(layout), m_target(target),
+          m_display(displayRecord)
     {
     }
 
@@ -357,42 +360,42 @@ public:
     [[nodiscard]] const MeasureRecord& record() const { return m_record; }
     [[nodiscard]] const MeasureLayout& layout() const { return m_layout; }
     [[nodiscard]] MeasureTarget& target() const { return m_target; }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    [[nodiscard]] const std::vector<DecodedMeasureField>& fields() const { return m_fields; }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[nodiscard]] const auto& fields() const { return m_fields; }
 
 private:
     /// @brief Record where a member's value came from. Provenance is carried only in a build that
     /// can report it; the assignments that call these happen in every build.
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     void noteStored(const char* name, std::size_t slot, std::int64_t stored,
         const MeasureRecord* from)
     {
-        m_fields.push_back({name, ValueOrigin::LegacyMus, slot, stored, from});
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.state(m_fields).push_back(
+                {name, Reporting::Origin::LegacyMus, slot, stored, from});
+        });
     }
 
     void noteBehavior(const char* name, std::int64_t value)
     {
-        m_fields.push_back({name, ValueOrigin::LegacyBehavior, 0, value, nullptr});
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.state(m_fields).push_back(
+                {name, Reporting::Origin::LegacyBehavior, 0, value, nullptr});
+        });
     }
 
     void noteUnmapped(const char* name, std::int64_t value)
     {
-        m_fields.push_back({name, ValueOrigin::Unmapped, 0, value, nullptr});
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.state(m_fields).push_back(
+                {name, Reporting::Origin::Unmapped, 0, value, nullptr});
+        });
     }
-#else
-    void noteStored(const char*, std::size_t, std::int64_t, const MeasureRecord*) {}
-    void noteBehavior(const char*, std::int64_t) {}
-    void noteUnmapped(const char*, std::int64_t) {}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
+    ImportReport& m_report;
     const MeasureRecord& m_record;
     const MeasureLayout& m_layout;
     MeasureTarget& m_target;
     const MeasureRecord* m_display{};
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    std::vector<DecodedMeasureField> m_fields;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[no_unique_address]] ReportState<DecodedMeasureFields> m_fields;
 };
 
 /// @brief Decodes the six words every era stores, other than the two flag words.
@@ -632,26 +635,26 @@ void decodeAbsentMembers(MeasureDecoder& decoder)
         target.globalKeySig->hideKeySigShowAccis, false);
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 /// @brief Reports one measure's decoded members, each at the offset its own word came from.
-void reportMeasure(ImportReport& report, const InstanceKey& key, const MeasureRecord& record,
-    const std::vector<DecodedMeasureField>& fields, records::LegacyTag identity)
+template <typename Reporting>
+void reportMeasure(Reporting& reporting, const typename Reporting::InstanceKey& key,
+    const MeasureRecord& record, const ReportState<DecodedMeasureFields>& fields,
+    records::LegacyTag identity)
 {
-    report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-    for (const auto& field : fields) {
+    reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+    for (const auto& field : reporting.state(fields)) {
         // A field may come from a record other than the measure's own, and then it cites that
         // record's offsets and identity rather than the measure record's.
         const auto& from = field.record ? *field.record : record;
-        const bool located = field.origin == ValueOrigin::LegacyMus
-            && field.slot < from.blockOffsets.size();
-        report.setField(key, reportMemberName(field.member),
-            FieldInfo{field.origin, located ? from.blockOffsets[field.slot] : 0,
+        const bool located =
+            field.origin == Reporting::Origin::LegacyMus && field.slot < from.blockOffsets.size();
+        reporting.report().setField(key, reporting.memberName(field.member),
+            typename Reporting::FieldInfo{field.origin, located ? from.blockOffsets[field.slot] : 0,
                 located ? from.decodedOffsets[field.slot] : 0, field.stored,
-                located ? std::optional<std::uint16_t>{
-                    field.record ? displayTimeSigTag : identity} : std::nullopt});
+                located ? std::optional<std::uint16_t>{field.record ? displayTimeSigTag : identity}
+                        : std::nullopt});
     }
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Decodes one score measure into a new pooled object.
 void importOneMeasure(const ImportContext& context, const RecordFamilySource& source,
@@ -669,7 +672,8 @@ void importOneMeasure(const ImportContext& context, const RecordFamilySource& so
 
     const auto record = readMeasureRecord(source, rows, context.profile.byteOrder);
     const auto display = readDisplayTimeSigRecord(context, source, layout, partId, cmper);
-    MeasureDecoder decoder(record, layout, *instance, display ? &*display : nullptr);
+    MeasureDecoder decoder(
+        context.report, record, layout, *instance, display ? &*display : nullptr);
     decodeCommonWords(decoder);
     decodePrimaryFlags(decoder);
     decodeShowModes(decoder);
@@ -681,12 +685,10 @@ void importOneMeasure(const ImportContext& context, const RecordFamilySource& so
     decodeDisplayAndSpacingWords(decoder);
     decodeAbsentMembers(decoder);
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    reportMeasure(context.report, instanceKey<MeasureTarget>(partId, cmper), record,
-        decoder.fields(), source.identity);
-#else
-    static_cast<void>(partId);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper),
+            record, decoder.fields(), source.identity);
+    });
     context.document->getOthers()->add(MeasureTarget::XmlNodeName, std::move(instance));
 }
 
@@ -700,7 +702,7 @@ void importOneCompactPartMeasure(const ImportContext& context, const RecordFamil
     std::uint16_t cmper, MeasureTarget& target)
 {
     const auto record = readMeasureRecord(source, {&row, 1}, context.profile.byteOrder);
-    MeasureDecoder decoder(record, layout, target);
+    MeasureDecoder decoder(context.report, record, layout, target);
     const auto flags = record.word(measureCompactFlagSlot);
     decoder.stored("width", target.width, measureCompactWidthSlot, record.signedWord(measureCompactWidthSlot),
         record.signedWord(measureCompactWidthSlot));
@@ -714,23 +716,20 @@ void importOneCompactPartMeasure(const ImportContext& context, const RecordFamil
         record.signedWord(measureCompactBackSpaceExtraSlot),
         record.signedWord(measureCompactBackSpaceExtraSlot));
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<MeasureTarget>(partId, cmper);
-    // The inherited members are the score measure's values, and they carry the score measure's
-    // provenance with them, offsets included: the part object holds them because the score record
-    // supplied them. Copying the entries rather than re-deriving them is what keeps a part object
-    // from reporting a value as unsourced that the score record plainly stated.
-    const auto scoreKey = instanceKey<MeasureTarget>(musx::dom::SCORE_PARTID, cmper);
-    if (const auto found = context.report.fields.find(scoreKey);
-            found != context.report.fields.end()) {
-        context.report.fields[key] = found->second;
-    }
-    reportMeasure(context.report, key, record, decoder.fields(), source.identity);
-#else
-    static_cast<void>(context);
-    static_cast<void>(partId);
-    static_cast<void>(cmper);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<MeasureTarget>(partId, cmper);
+        // The inherited members are the score measure's values, and they carry the score measure's
+        // provenance with them, offsets included: the part object holds them because the score
+        // record supplied them. Copying the entries rather than re-deriving them is what keeps a
+        // part object from reporting a value as unsourced that the score record plainly stated.
+        const auto scoreKey =
+            reporting.template instanceKey<MeasureTarget>(musx::dom::SCORE_PARTID, cmper);
+        if (const auto found = reporting.report().fields.find(scoreKey);
+            found != reporting.report().fields.end()) {
+            reporting.report().fields[key] = found->second;
+        }
+        reportMeasure(reporting, key, record, decoder.fields(), source.identity);
+    });
 }
 
 /// @brief Decodes one part's record, whichever of the two forms it takes.
@@ -757,7 +756,7 @@ void importOnePartMeasure(const ImportContext& context, const RecordFamilySource
     // decoded exactly as a score measure is.
     const auto record = readMeasureRecord(source, rows, context.profile.byteOrder);
     const auto display = readDisplayTimeSigRecord(context, source, layout, partId, cmper);
-    MeasureDecoder decoder(record, layout, *target, display ? &*display : nullptr);
+    MeasureDecoder decoder(context.report, record, layout, *target, display ? &*display : nullptr);
     decodeCommonWords(decoder);
     decodePrimaryFlags(decoder);
     decodeShowModes(decoder);
@@ -768,12 +767,10 @@ void importOnePartMeasure(const ImportContext& context, const RecordFamilySource
     }
     decodeDisplayAndSpacingWords(decoder);
     decodeAbsentMembers(decoder);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    reportMeasure(context.report, instanceKey<MeasureTarget>(partId, cmper), record,
-        decoder.fields(), source.identity);
-#else
-    static_cast<void>(partId);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper),
+            record, decoder.fields(), source.identity);
+    });
 }
 
 } // namespace

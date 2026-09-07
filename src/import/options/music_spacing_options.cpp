@@ -157,15 +157,15 @@ const MappingTable& classRecordMusicSpacingTable()
 
 void applyAvoidColStemsBehavior(MusicSpacingTarget& target, ImportReport& report)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto origin = target.avoidColStems
-        ? ValueOrigin::LegacyBehavior : ValueOrigin::MusxOnly;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    // Legacy formats predate stem collision avoidance. A true seed must be overridden;
-    // a false seed already represents the MUSX-only setting without an override.
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto origin =
+            target.avoidColStems ? Reporting::Origin::LegacyBehavior : Reporting::Origin::MusxOnly;
+        // Legacy formats predate stem collision avoidance. A true seed must be overridden;
+        // a false seed already represents the MUSX-only setting without an override.
+        reporting.report().setField(reporting.template instanceKey<MusicSpacingTarget>(),
+            "avoidColStems", {origin, 0, 0, 0});
+    });
     target.avoidColStems = false;
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "avoidColStems", {origin, 0, 0, 0});
 }
 
 void applyPreSelector94Behavior(const records::LegacyRecordIndex& index,
@@ -180,15 +180,12 @@ void applyPreSelector94Behavior(const records::LegacyRecordIndex& index,
     target.avoidColUnisons = ColUnisonsChoice::None;
     target.ignoreHidden = true;
     target.minWidth = preFinale2000MinimumWidth;
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "useAllottmentTables", {ValueOrigin::LegacyBehavior, 0, 0, 1});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "avoidColUnisons", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "ignoreHidden", {ValueOrigin::LegacyBehavior, 0, 0, 1});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "minWidth", {ValueOrigin::LegacyBehavior, 0, 0,
-            preFinale2000MinimumWidth});
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<MusicSpacingTarget>("useAllottmentTables", 1);
+        reporting.template behaviorField<MusicSpacingTarget>("avoidColUnisons", 0);
+        reporting.template behaviorField<MusicSpacingTarget>("ignoreHidden", 1);
+        reporting.template behaviorField<MusicSpacingTarget>("minWidth", preFinale2000MinimumWidth);
+    });
 }
 
 void applyFinale2000Through2004Behavior(
@@ -202,17 +199,19 @@ void applyFinale2000Through2004Behavior(
     }
     target.minDistGrace = target.minDistance;
     target.graceNoteSpacing = GraceNoteSpacing::Automatic;
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "minDistGrace", {ValueOrigin::LegacyBehavior, 0, 0, target.minDistGrace});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "graceNoteSpacing", {ValueOrigin::LegacyBehavior, 0, 0,
-            static_cast<std::int64_t>(target.graceNoteSpacing)});
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<MusicSpacingTarget>("minDistGrace", target.minDistGrace);
+        reporting.template behaviorField<MusicSpacingTarget>(
+            "graceNoteSpacing", static_cast<std::int64_t>(target.graceNoteSpacing));
+    });
 }
 
 void reportDefaultAllotment(const MusicSpacingTarget& target, ImportReport& report)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MusicSpacingTarget>(),
-        "defaultAllotment", {ValueOrigin::Finale27Default, 0, 0, target.defaultAllotment});
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template defaultField<MusicSpacingTarget>(
+            "defaultAllotment", target.defaultAllotment);
+    });
 }
 
 } // namespace

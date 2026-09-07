@@ -274,9 +274,9 @@ void importBeamOptions(const ImportContext& context)
 
     const auto applyBehavior = [&](bool& property, const char* member, bool value) {
         property = value;
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<BeamOptionsTarget>(), member,
-            {ValueOrigin::LegacyBehavior, 0, 0, value ? 1 : 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<BeamOptionsTarget>(member, value ? 1 : 0);
+        });
     };
     // The early layout stores some switches separately; others are fixed source behavior.
     applyBehavior(target->oldFinaleRestBeams, "oldFinaleRestBeams", true);

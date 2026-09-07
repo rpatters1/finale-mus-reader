@@ -39,33 +39,6 @@ musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value)
     return legacyPointsToEfix(static_cast<double>(value) / storedUnitsPerPoint);
 }
 
-namespace {
-
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-std::optional<InstanceKey> importedInstanceKey(const musx::dom::EnigmaBase& object)
-{
-    if (const auto* other = dynamic_cast<const musx::dom::OthersBase*>(&object)) {
-        return InstanceKey{typeid(object), other->getSourcePartId(), other->getCmper(),
-            other->getInci(), std::nullopt};
-    }
-    if (const auto* detail = dynamic_cast<const musx::dom::DetailsBase*>(&object)) {
-        return InstanceKey{typeid(object), detail->getSourcePartId(), detail->getCmper1(),
-            detail->getInci(), detail->getCmper2()};
-    }
-    if (const auto* text = dynamic_cast<const musx::dom::TextsBase*>(&object)) {
-        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID,
-            text->getTextNumber(), std::nullopt, std::nullopt};
-    }
-    if (dynamic_cast<const musx::dom::OptionsBase*>(&object)) {
-        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID, std::nullopt,
-            std::nullopt, std::nullopt};
-    }
-    return std::nullopt;
-}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-
-} // namespace
-
 std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context,
     const records::LegacyRowPool& fixedPool, const records::LegacyRowPool& classPool,
     records::LegacyTag fixedTag, records::LegacyTag classId, bool details,
@@ -429,6 +402,73 @@ struct EffectiveField
     const FieldMapping* readable{};
 };
 
+template <typename Reporting>
+struct MappedFieldData
+{
+    typename Reporting::InstanceKey instance;
+    std::string member;
+    typename Reporting::FieldInfo info;
+    bool preserveExisting{};
+};
+
+/// @brief Preserves a field's pre-overlay default and records the source selected by decoding.
+class MappedFieldReport
+{
+public:
+    MappedFieldReport(ImportReport& report, const MappingTable& table, const MappingTarget& target,
+        const EffectiveField& field)
+        : m_report(report)
+    {
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            auto& data = reporting.state(m_data);
+            data.instance = reporting.instanceKey(target.reportClass, target.partId,
+                table.targetKind == TargetKind::OptionsSingleton
+                    ? std::optional<musx::dom::Cmper>{}
+                    : std::optional<musx::dom::Cmper>{target.cmper});
+            data.member = reporting.memberName(field.reporting->fieldName);
+            // A capture pass may already have established this field's provenance. An
+            // unreadable table field must not replace that entry with a seeded default.
+            data.preserveExisting =
+                !field.readable && reporting.report().findField(data.instance, data.member);
+            if (!data.preserveExisting && field.reporting->read) {
+                data.info.rawValue = field.reporting->read(target.instance);
+            }
+        });
+    }
+
+    void recovered(const ResolvedValue& source, bool adjusted, std::uint16_t identity)
+    {
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.state(m_data).info = {
+                adjusted ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus,
+                source.blockOffset, source.decodedOffset, source.value, identity};
+        });
+    }
+
+    void text(std::string_view value)
+    {
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            auto& info = reporting.state(m_data).info;
+            info.origin = Reporting::Origin::LegacyMus;
+            info.rawValue = static_cast<std::int64_t>(value.size());
+        });
+    }
+
+    void finish()
+    {
+        withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
+            auto& data = reporting.state(m_data);
+            if (!data.preserveExisting) {
+                reporting.report().setField(data.instance, std::move(data.member), data.info);
+            }
+        });
+    }
+
+private:
+    ImportReport& m_report;
+    [[no_unique_address]] ReportState<MappedFieldData> m_data;
+};
+
 /// @brief The tables for one destination class, with their fields layered.
 struct EffectiveTable
 {
@@ -487,43 +527,20 @@ std::vector<EffectiveTable> buildEffectiveTables(
     return result;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-std::string reportMember(const FieldMapping& field)
-{
-    return reportMemberName(field.fieldName);
-}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-
 } // namespace
-
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-std::string reportMemberName(const char* memberPath)
-{
-    std::string result;
-    for (const char* at = memberPath; *at != '\0'; ++at) {
-        if (at[0] == '-' && at[1] == '>') {
-            result += '.';
-            ++at;
-            continue;
-        }
-        result += *at;
-    }
-    return result;
-}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    return [&report](const musx::dom::EnigmaBase& object) {
-        if (const auto instance = importedInstanceKey(object)) {
-            report.setInstanceOrigin(*instance, ValueOrigin::Finale27Default);
-        }
-    };
-#else
-    static_cast<void>(report);
-    return {};
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    musx::dom::ImportObjectCallback result;
+    withReporting(report, [&]<typename Reporting>(Reporting&) {
+        result = [&report](const musx::dom::EnigmaBase& object) {
+            Reporting reporting(report);
+            if (const auto instance = reporting.importedInstance(object)) {
+                reporting.report().setInstanceOrigin(*instance, Reporting::Origin::Finale27Default);
+            }
+        };
+    });
+    return result;
 }
 
 std::optional<ResolvedValue> readSourceValue(
@@ -707,11 +724,12 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
             continue;
         }
         request.assign(resolved);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        if (auto* info = report.findField(request.reportInstance, request.reportMember)) {
-            info->rawValue = resolved;
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto& field = reporting.state(request.reportField);
+            if (auto* info = reporting.report().findField(field.instance, field.member)) {
+                info->rawValue = resolved;
+            }
+        });
     }
     if (!pending.shapes.empty()) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
@@ -746,12 +764,13 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
             continue;
         }
         request.assign(resolved);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        if (auto* info = report.findField(request.reportInstance, request.reportMember)) {
-            info->origin = ValueOrigin::Finale27Default;
-            info->rawValue = resolved;
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto& field = reporting.state(request.reportField);
+            if (auto* info = reporting.report().findField(field.instance, field.member)) {
+                info->origin = Reporting::Origin::Finale27Default;
+                info->rawValue = resolved;
+            }
+        });
     }
     if (!pending.customLines.empty()) {
         report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
@@ -844,27 +863,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                     && !field.reporting->targetApplies(target.instance)) {
                     continue;
                 }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                const InstanceKey reportInstance{target.classType, target.partId,
-                    table.targetKind == TargetKind::OptionsSingleton
-                        ? std::optional<musx::dom::Cmper>{}
-                        : std::optional<musx::dom::Cmper>{target.cmper},
-                    std::nullopt, std::nullopt};
-                const auto member = reportMember(*field.reporting);
-                FieldInfo info;
-                // A capture pass runs before the tables and may already have established
-                // this field, most often as era behavior that no record stores. Claiming it
-                // as a synthesized default afterwards would both duplicate the entry and
-                // downgrade what is known about it, so the earlier claim stands.
-                if (!field.readable && report.findField(reportInstance, member)) {
-                    continue;
-                }
-                // A text field has no numeric default to report, and an object created from
-                // records has no seeded value at all, so both leave the raw value at zero.
-                if (field.reporting->read) {
-                    info.rawValue = field.reporting->read(target.instance);
-                }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                MappedFieldReport fieldReport(report, table, target, field);
 
                 if (field.readable) {
                     const auto selector =
@@ -877,13 +876,9 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                             : readText(index, selector, field.readable->source);
                         if (text) {
                             field.readable->applyText(target.instance, *text);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                            info.origin = ValueOrigin::LegacyMus;
-                            info.rawValue = static_cast<std::int64_t>(text->size());
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                            fieldReport.text(*text);
                         }
-                        FINALE_MUS_READER_REPORT_FIELD(
-                            report, reportInstance, member, std::move(info));
+                        fieldReport.finish();
                         continue;
                     }
                     const auto resolved = readSourceValue(index, table.encoding, selector,
@@ -895,18 +890,11 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                             : std::nullopt;
                         field.readable->apply(target.instance,
                             adjusted.value_or(resolved->value));
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                        info.origin = adjusted ? ValueOrigin::LegacyMusAdjusted
-                                               : ValueOrigin::LegacyMus;
-                        info.blockOffset = resolved->blockOffset;
-                        info.decodedOffset = resolved->decodedOffset;
-                        info.rawValue = resolved->value;
-                        info.sourceIdentity = field.readable->source.identity;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                        fieldReport.recovered(
+                            *resolved, adjusted.has_value(), field.readable->source.identity);
                     }
                 }
-                FINALE_MUS_READER_REPORT_FIELD(
-                    report, reportInstance, member, std::move(info));
+                fieldReport.finish();
             }
             if (table.finalizeTarget) {
                 table.finalizeTarget(target.instance, profile, document);

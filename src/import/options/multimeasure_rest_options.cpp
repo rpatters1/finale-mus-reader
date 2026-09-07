@@ -271,15 +271,12 @@ const MappingTable& classMmRestAutoUpdateTable()
 }
 
 /// @brief Records one value the era fixed rather than stored.
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportEraBehavior(ImportReport& report, const char* member, std::int64_t value)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<MmRestTarget>(), member,
-        {ValueOrigin::LegacyBehavior, 0, 0, value});
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<MmRestTarget>(member, value);
+    });
 }
-#else
-#define reportEraBehavior(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Asserts the values a legacy source fixed rather than stored.
 /// @details The two H-bar adjustments and automatic updating arrive with Finale 3.5 and
@@ -389,7 +386,3 @@ void importMultimeasureRestOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportEraBehavior
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

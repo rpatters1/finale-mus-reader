@@ -210,12 +210,12 @@ void importPianoBraceBracketOptions(const ImportContext& context)
     }
     const auto target = std::const_pointer_cast<PianoBraceBracketTarget>(pooled);
 
-    const auto applyBehavior = [&](double& property, [[maybe_unused]] const char* member,
-                                   double value) {
+    const auto applyBehavior = [&](double& property, const char* member, double value) {
         property = value;
-        FINALE_MUS_READER_REPORT_FIELD(
-            context.report, instanceKey<PianoBraceBracketTarget>(), member,
-            {ValueOrigin::LegacyBehavior, 0, 0, static_cast<std::int64_t>(value)});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<PianoBraceBracketTarget>(
+                member, static_cast<std::int64_t>(value));
+        });
     };
 
     if (sourceUsesPreFinale37PianoBraceBehavior(context.profile)) {

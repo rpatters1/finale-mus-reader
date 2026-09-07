@@ -22,45 +22,6 @@ namespace finale_mus_reader {
 namespace options {
 namespace {
 
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-using MusicSymbolOptionsTarget = musx::dom::options::MusicSymbolOptions;
-using MusicSymbolFontType = musx::dom::options::FontOptions::FontType;
-
-struct NarrowMusicSymbolSource
-{
-    std::uint16_t selector;
-    std::size_t word;
-};
-
-enum class NarrowMusicSymbolEra
-{
-    Any,
-    AfterCoda,
-    Finale35AndLater,
-    Finale351AndLater,
-    Finale97AndLater,
-    ZlibOnly,
-};
-
-enum class SharedMusicSymbolEra
-{
-    None,
-    CodaOnly,
-    PreZlib,
-};
-
-struct MusicSymbolOptionsField
-{
-    std::string_view memberName;
-    std::string_view leafName;
-    char32_t MusicSymbolOptionsTarget::*member;
-    MusicSymbolFontType fontType;
-    std::optional<char32_t MusicSymbolOptionsTarget::*> sharedSource;
-    SharedMusicSymbolEra sharedEra = SharedMusicSymbolEra::None;
-    NarrowMusicSymbolSource narrowSource;
-    NarrowMusicSymbolEra narrowEra = NarrowMusicSymbolEra::Any;
-};
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 constexpr std::uint16_t musicSymbolStraightFlagSelector = 75;
 constexpr records::LegacyTag unicodeMusicSymbolsClass =
@@ -209,25 +170,21 @@ void adjustMusicSymbolDefaultMeasureRest(const ImportContext& context,
     // Zero does not identify a rest glyph. Finale renders the document's configured
     // whole-rest glyph instead.
     target.restDefMeas = target.restWhole;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    if (auto* info = context.report.findField(
-            instanceKey<MusicSymbolOptionsTarget>(), "restDefMeas");
-        info && info->origin == ValueOrigin::LegacyMus) {
-        info->origin = ValueOrigin::LegacyMusAdjusted;
-    }
-#else
-    static_cast<void>(context);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        if (auto* info = reporting.report().findField(
+                reporting.template instanceKey<MusicSymbolOptionsTarget>(), "restDefMeas");
+            info && info->origin == Reporting::Origin::LegacyMus) {
+            info->origin = Reporting::Origin::LegacyMusAdjusted;
+        }
+    });
 }
 
 } // namespace
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 std::span<const MusicSymbolOptionsField> musicSymbolOptionsFields()
 {
     return musicSymbolOptionFieldTable;
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void importMusicSymbolOptions(const ImportContext& context)
 {
@@ -239,10 +196,11 @@ void importMusicSymbolOptions(const ImportContext& context)
     bool recoveredDefaultMeasureRest = false;
     for (const auto& field : fields) {
         if (!narrowSourceApplies(field.narrowEra, context.profile)) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report,
-                instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
-                {ValueOrigin::Finale27Default, 0, 0,
-                    static_cast<std::int64_t>(target.get()->*field.member)});
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reporting.template defaultField<MusicSymbolOptionsTarget>(
+                    std::string(field.memberName),
+                    static_cast<std::int64_t>(target.get()->*field.member));
+            });
             continue;
         }
         const auto selector = field.narrowSource.selector;
@@ -256,15 +214,19 @@ void importMusicSymbolOptions(const ImportContext& context)
             if (field.member == &MusicSymbolOptionsTarget::restDefMeas) {
                 recoveredDefaultMeasureRest = true;
             }
-            FINALE_MUS_READER_REPORT_FIELD(context.report,
-                instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
-                {ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset,
-                    stored, source.identity});
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reporting.report().setField(
+                    reporting.template instanceKey<MusicSymbolOptionsTarget>(),
+                    std::string(field.memberName),
+                    {Reporting::Origin::LegacyMus, source.blockOffset, source.decodedOffset, stored,
+                        source.identity});
+            });
         } else {
-            FINALE_MUS_READER_REPORT_FIELD(context.report,
-                instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
-                {ValueOrigin::Finale27Default, 0, 0,
-                    static_cast<std::int64_t>(target.get()->*field.member)});
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reporting.template defaultField<MusicSymbolOptionsTarget>(
+                    std::string(field.memberName),
+                    static_cast<std::int64_t>(target.get()->*field.member));
+            });
         }
     }
 
@@ -293,9 +255,10 @@ void importMusicSymbolOptions(const ImportContext& context)
                 }
             }
         }
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<MusicSymbolOptionsTarget>(), std::string(field.memberName),
-            {ValueOrigin::LegacyBehavior, 0, 0, rawValue});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<MusicSymbolOptionsTarget>(
+                std::string(field.memberName), rawValue);
+        });
     }
 
     if (sourceMatches(context.profile, EpochMask::Zlib)) {
@@ -319,13 +282,15 @@ void importMusicSymbolOptions(const ImportContext& context)
                     if (field.member == &MusicSymbolOptionsTarget::restDefMeas) {
                         recoveredDefaultMeasureRest = true;
                     }
-                    FINALE_MUS_READER_REPORT_FIELD(context.report,
-                        instanceKey<MusicSymbolOptionsTarget>(),
-                        std::string(field.memberName),
-                        {ValueOrigin::LegacyMus, rows.front().blockOffset,
-                            rows.front().decodedOffset + unicodeMusicSymbolsOffset
-                                + index * unicodeCodepointSize,
-                            static_cast<std::int64_t>(value), unicodeMusicSymbolsClass});
+                    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                        reporting.report().setField(
+                            reporting.template instanceKey<MusicSymbolOptionsTarget>(),
+                            std::string(field.memberName),
+                            {Reporting::Origin::LegacyMus, rows.front().blockOffset,
+                                rows.front().decodedOffset + unicodeMusicSymbolsOffset +
+                                    index * unicodeCodepointSize,
+                                static_cast<std::int64_t>(value), unicodeMusicSymbolsClass});
+                    });
                 }
             }
         }

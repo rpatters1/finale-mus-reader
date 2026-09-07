@@ -36,6 +36,46 @@ void populateFretboardStyleFont(const ImportContext& context,
         payload, at + 4, context.profile.byteOrder));
 }
 
+void reportFretboardStyle(ImportReport& report, const FretboardStyleTarget& target,
+    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<FretboardStyleTarget>(partId, cmper);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto report = [&](std::string member, auto value) {
+            reporting.report().setField(key, std::move(member),
+                {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
+        };
+        report("showLastFret", target.showLastFret);
+        report("rotate", target.rotate);
+        report("fingNumWhite", target.fingNumWhite);
+        report("fingStrShapeId", target.fingStrShapeId);
+        report("openStrShapeId", target.openStrShapeId);
+        report("muteStrShapeId", target.muteStrShapeId);
+        report("barreShapeId", target.barreShapeId);
+        report("customShapeId", target.customShapeId);
+        report("defNumFrets", target.defNumFrets);
+        report("stringGap", target.stringGap);
+        report("fretGap", target.fretGap);
+        report("stringWidth", target.stringWidth);
+        report("fretWidth", target.fretWidth);
+        report("nutWidth", target.nutWidth);
+        report("vertTextOff", target.vertTextOff);
+        report("horzTextOff", target.horzTextOff);
+        report("horzHandleOff", target.horzHandleOff);
+        report("vertHandleOff", target.vertHandleOff);
+        report("whiteout", target.whiteout);
+        report("fretNumFont.fontId", target.fretNumFont->fontId);
+        report("fretNumFont.fontSize", target.fretNumFont->fontSize);
+        report("fretNumFont.efx", target.fretNumFont->getEnigmaStyles());
+        report("fingNumFont.fontId", target.fingNumFont->fontId);
+        report("fingNumFont.fontSize", target.fingNumFont->fontSize);
+        report("fingNumFont.efx", target.fingNumFont->getEnigmaStyles());
+        report("horzFingNumOff", target.horzFingNumOff);
+        report("vertFingNumOff", target.vertFingNumOff);
+    });
+}
+
 } // namespace
 
 void importFretboardStyles(const ImportContext& context)
@@ -91,42 +131,7 @@ void importFretboardStyles(const ImportContext& context)
         target->fretNumText = text::toUtf8(payloadString(payload,
             fretboardStyleNumberTextOffset, fretboardStyleNumberTextSize),
             context.profile.platform);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FretboardStyleTarget>(partId, cmper);
-        context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-        const auto report = [&](std::string member, auto value) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),
-                {ValueOrigin::LegacyMus, rows.front().blockOffset,
-                    rows.front().decodedOffset, value});
-        };
-        report("showLastFret", target->showLastFret);
-        report("rotate", target->rotate);
-        report("fingNumWhite", target->fingNumWhite);
-        report("fingStrShapeId", target->fingStrShapeId);
-        report("openStrShapeId", target->openStrShapeId);
-        report("muteStrShapeId", target->muteStrShapeId);
-        report("barreShapeId", target->barreShapeId);
-        report("customShapeId", target->customShapeId);
-        report("defNumFrets", target->defNumFrets);
-        report("stringGap", target->stringGap);
-        report("fretGap", target->fretGap);
-        report("stringWidth", target->stringWidth);
-        report("fretWidth", target->fretWidth);
-        report("nutWidth", target->nutWidth);
-        report("vertTextOff", target->vertTextOff);
-        report("horzTextOff", target->horzTextOff);
-        report("horzHandleOff", target->horzHandleOff);
-        report("vertHandleOff", target->vertHandleOff);
-        report("whiteout", target->whiteout);
-        report("fretNumFont.fontId", target->fretNumFont->fontId);
-        report("fretNumFont.fontSize", target->fretNumFont->fontSize);
-        report("fretNumFont.efx", target->fretNumFont->getEnigmaStyles());
-        report("fingNumFont.fontId", target->fingNumFont->fontId);
-        report("fingNumFont.fontSize", target->fingNumFont->fontSize);
-        report("fingNumFont.efx", target->fingNumFont->getEnigmaStyles());
-        report("horzFingNumOff", target->horzFingNumOff);
-        report("vertFingNumOff", target->vertFingNumOff);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        reportFretboardStyle(context.report, *target, rows.front(), partId, cmper);
         context.document->getOthers()->add(FretboardStyleTarget::XmlNodeName,
             std::move(target));
     }

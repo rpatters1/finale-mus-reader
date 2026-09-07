@@ -38,9 +38,9 @@ void applyAlternateNotationBehavior(AlternateNotationOptionsTarget& target,
     ImportReport& report)
 {
     target.*member = value;
-    FINALE_MUS_READER_REPORT_FIELD(report,
-        instanceKey<AlternateNotationOptionsTarget>(), name,
-        {ValueOrigin::LegacyBehavior, 0, 0, value});
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<AlternateNotationOptionsTarget>(name, value);
+    });
 }
 
 template <typename T>
@@ -49,15 +49,12 @@ void adjustAlternateNotationValue(AlternateNotationOptionsTarget& target,
     ImportReport& report)
 {
     target.*member -= adjustment;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    if (auto* info = report.findField(
-            instanceKey<AlternateNotationOptionsTarget>(), name)) {
-        info->origin = ValueOrigin::LegacyMusAdjusted;
-    }
-#else
-    static_cast<void>(name);
-    static_cast<void>(report);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        if (auto* info = reporting.report().findField(
+                reporting.template instanceKey<AlternateNotationOptionsTarget>(), name)) {
+            info->origin = Reporting::Origin::LegacyMusAdjusted;
+        }
+    });
 }
 
 // Weak: before selector 46, selector 43 marks the layout that stores three slash offsets

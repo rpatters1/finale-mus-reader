@@ -16,15 +16,7 @@
 
 #include "finale_mus_reader/reader.h"
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#define FINALE_MUS_READER_REPORT_FIELD(report, instance, member, ...) \
-    (report).setField((instance), (member), __VA_ARGS__)
-#define FINALE_MUS_READER_REPORT_TEXT_FIELD(report, instance, member, ...) \
-    (report).setTextField((instance), (member), __VA_ARGS__)
-#else
-#define FINALE_MUS_READER_REPORT_FIELD(...) ((void)0)
-#define FINALE_MUS_READER_REPORT_TEXT_FIELD(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+#include "import/support/reporting.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
@@ -642,20 +634,14 @@ struct MappingTarget
     std::uint16_t partId{};
     std::uint16_t cmper{};
     void* instance{};
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    std::type_index classType{typeid(void)};
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[no_unique_address]] ReportClass reportClass;
 };
 
 template <typename T>
 [[nodiscard]] MappingTarget makeMappingTarget(std::uint16_t partId, std::uint16_t cmper,
     T* instance)
 {
-    return {partId, cmper, instance
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        , typeid(T)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    };
+    return {partId, cmper, instance, ReportClass::of<T>()};
 }
 
 /// @brief A mapping table: one musxdom class, one applicability gate, a set of fields.
@@ -780,11 +766,7 @@ struct PendingShapeReference
     musx::dom::Cmper referenceShapeId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    /// @brief The structured report instance and member whose value resolution updates.
-    InstanceKey reportInstance;
-    std::string reportMember;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[no_unique_address]] DeferredFieldReport reportField;
 };
 
 /// @brief A reference-document custom line a target field needs, resolved after all source pools.
@@ -794,11 +776,7 @@ struct PendingCustomLineReference
     musx::dom::Cmper referenceLineId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    /// @brief The structured report instance and member whose value resolution updates.
-    InstanceKey reportInstance;
-    std::string reportMember;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[no_unique_address]] DeferredFieldReport reportField;
 };
 
 /// @brief Work deferred until every source pool is filled, and drained in one phase afterwards.
@@ -861,34 +839,6 @@ struct ImportContext
     /// the discarded one would mint a placeholder definition that nothing references.
     musx::factory::ConstructionContext& construction;
 };
-
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-/// @brief Records a field whose legacy source has not been located in any supported layout.
-/// @details An existing entry always wins, so a recovered value or known fallback cannot be
-/// downgraded by the completeness pass.
-template <typename Class>
-void reportUnmappedField(ImportReport& report, const InstanceKey& instance,
-    std::string member, std::int64_t value)
-{
-    if (!report.findField(instance, member)) {
-        report.setField(instance, std::move(member),
-            {ValueOrigin::Unmapped, 0, 0, value});
-    }
-}
-#else
-template <typename Class, typename... Args>
-void reportUnmappedField(Args&&...)
-{
-}
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-/// @brief The report spelling of a member path.
-/// @details A mapping row and a capture pass both name a destination as the C++ path that
-/// reaches it, so a member inside a contained object arrives spelled with `->`. Every report
-/// target names a document path instead, whose separator is a dot.
-[[nodiscard]] std::string reportMemberName(const char* memberPath);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Reports every object created by a reference-document import as a pinned default.
 musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report);

@@ -114,21 +114,22 @@ void importStaffListArrays(const ImportContext& context, const RecordFamilySourc
                         payloadWord(payload, offset, context.profile.byteOrder));
                     if (value == 0) break;
                     target->values.push_back(value);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                    const auto key = instanceKey<Target>(partId, cmper);
-                    FINALE_MUS_READER_REPORT_FIELD(context.report, key,
-                        "values[" + std::to_string(target->values.size() - 1) + "]",
-                        {ValueOrigin::LegacyMus, row.blockOffset,
-                            row.decodedOffset + offset, value, source.identity});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                        const auto key = reporting.template instanceKey<Target>(partId, cmper);
+                        reporting.report().setField(key,
+                            "values[" + std::to_string(target->values.size() - 1) + "]",
+                            {Reporting::Origin::LegacyMus, row.blockOffset,
+                                row.decodedOffset + offset, value, source.identity});
+                    });
                 }
             }
         }
         if (target->values.empty()) continue;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        context.report.setInstanceOrigin(
-            instanceKey<Target>(partId, cmper), ValueOrigin::LegacyMus);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.report().setInstanceOrigin(
+                reporting.template instanceKey<Target>(partId, cmper),
+                Reporting::Origin::LegacyMus);
+        });
         context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
         onImported(cmper);
     }
@@ -155,10 +156,11 @@ void importStaffListNames(const ImportContext& context, const RecordFamilySource
             context.document, source, rows.front(), cmper);
         auto stored = staffListNameBytes(payload);
         target->name = text::toUtf8(stored, context.profile.platform);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        context.report.setInstanceOrigin(instanceKey<Target>(partId, cmper),
-            ValueOrigin::LegacyMus);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.report().setInstanceOrigin(
+                reporting.template instanceKey<Target>(partId, cmper),
+                Reporting::Origin::LegacyMus);
+        });
         context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
         onImported(cmper);
     }

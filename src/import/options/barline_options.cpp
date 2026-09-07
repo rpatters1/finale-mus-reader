@@ -192,21 +192,23 @@ void importBarlineOptions(const ImportContext& context)
         && !readNumericGlobalWords(context.index, thinWidthSelector).present) {
         // The Coda layout has no stored thin-barline width and renders it at 3.5 EVPUs.
         target->barlineWidth = codaBarlineWidth;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<BarlineTarget>(),
-            "barlineWidth",
-            {ValueOrigin::LegacyBehavior, 0, 0, codaBarlineWidth});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<BarlineTarget>("barlineWidth", codaBarlineWidth);
+        });
     }
 
     if (!sourceHasAutomaticFinalBarlineOption(context.profile)) {
         target->drawFinalBarlineOnLastMeas = false;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<BarlineTarget>(),
-            "drawFinalBarlineOnLastMeas", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<BarlineTarget>("drawFinalBarlineOnLastMeas", 0);
+        });
     }
 
     // Legacy MUS predates the document option for double barlines before key changes.
     target->drawDoubleBarlineBeforeKeyChanges = false;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<BarlineTarget>(),
-        "drawDoubleBarlineBeforeKeyChanges", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<BarlineTarget>("drawDoubleBarlineBeforeKeyChanges", 0);
+    });
 }
 
 } // namespace options

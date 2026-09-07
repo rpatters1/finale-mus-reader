@@ -177,14 +177,16 @@ const MappingTable& storedChordPercentTable()
 
 void reportChordDefault(const ImportContext& context, const char* member)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<ChordOptionsTarget>(), member,
-        {ValueOrigin::Finale27Default, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template defaultField<ChordOptionsTarget>(member, 0);
+    });
 }
 
 void reportChordBehavior(const ImportContext& context, const char* member, std::int64_t rawValue)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<ChordOptionsTarget>(), member,
-        {ValueOrigin::LegacyBehavior, 0, 0, rawValue});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<ChordOptionsTarget>(member, rawValue);
+    });
 }
 
 } // namespace

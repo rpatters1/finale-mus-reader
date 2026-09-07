@@ -3,8 +3,6 @@
 
 #pragma once
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -61,5 +59,3 @@ std::span<const MusicSymbolOptionsField> musicSymbolOptionsFields();
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

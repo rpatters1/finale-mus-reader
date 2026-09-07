@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -18,23 +19,26 @@ namespace finale_mus_reader {
 namespace others {
 namespace {
 
+template <typename Reporting>
+struct CustomKeyMapReportData
+{
+    RecordFamilySource source;
+    std::vector<records::LegacyRow> rows;
+};
+
 template <typename Target>
-void reportCustomKeyValue([[maybe_unused]] const ImportContext &context,
-                          [[maybe_unused]] const Target &target,
-                          [[maybe_unused]] const RecordFamilySource &source,
-                          [[maybe_unused]] const records::LegacyRow &row,
-                          [[maybe_unused]] std::string member,
-                          [[maybe_unused]] std::size_t byteOffset,
-                          [[maybe_unused]] std::int64_t rawValue) {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-  const auto key =
-      instanceKey<Target>(target.getSourcePartId(), target.getCmper());
-  context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-  FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),
-                                 {ValueOrigin::LegacyMus, row.blockOffset,
-                                  row.decodedOffset + byteOffset, rawValue,
-                                  source.identity});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+void reportCustomKeyValue(const ImportContext& context, const Target& target,
+    const RecordFamilySource& source, const records::LegacyRow& row, std::string_view member,
+    std::size_t byteOffset, std::int64_t rawValue)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key =
+            reporting.template instanceKey<Target>(target.getSourcePartId(), target.getCmper());
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        reporting.report().setField(key, std::string(member),
+            {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + byteOffset,
+                rawValue, source.identity});
+    });
 }
 
 template <typename Target>
@@ -42,15 +46,15 @@ void reportCustomKeyArray(const ImportContext &context, const Target &target,
                           const RecordFamilySource &source,
                           std::span<const records::LegacyRow> rows,
                           std::size_t count) {
-  for (std::size_t index = 0; index < count; ++index) {
-    const auto rowIndex =
-        source.classRecords ? 0 : index / records::otherWordCount;
-    const auto byteOffset =
-        source.classRecords ? index * 2 : (index % records::otherWordCount) * 2;
-    reportCustomKeyValue(context, target, source, rows[rowIndex],
-                         "values[" + std::to_string(index) + "]", byteOffset,
-                         target.values[index]);
-  }
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        for (std::size_t index = 0; index < count; ++index) {
+            const auto rowIndex = source.classRecords ? 0 : index / records::otherWordCount;
+            const auto byteOffset =
+                source.classRecords ? index * 2 : (index % records::otherWordCount) * 2;
+            reportCustomKeyValue(context, target, source, rows[rowIndex],
+                "values[" + std::to_string(index) + "]", byteOffset, target.values[index]);
+        }
+    });
 }
 
 template <typename Target, std::size_t Capacity>
@@ -138,12 +142,13 @@ void normalizeClefOctaveFlag(
   if (!hasClefOctaves)
     return;
   target->hasClefOctv = true;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-  const auto key = instanceKey<musx::dom::others::KeyAttributes>(partId, cmper);
-  if (auto *info = context.report.findField(key, "hasClefOctv")) {
-    info->origin = ValueOrigin::LegacyMusAdjusted;
-  }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+  withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+      const auto key =
+          reporting.template instanceKey<musx::dom::others::KeyAttributes>(partId, cmper);
+      if (auto* info = reporting.report().findField(key, "hasClefOctv")) {
+          info->origin = Reporting::Origin::LegacyMusAdjusted;
+      }
+  });
 }
 
 } // namespace
@@ -270,38 +275,42 @@ void importKeyMapArrays(const ImportContext &context) {
       target->steps.push_back(std::move(step));
     }
     context.document->getOthers()->add(Target::XmlNodeName, target);
-    context.pending.checks.push_back(
-        [&context, target, source = *source,
-         rows = std::vector<records::LegacyRow>(rows.begin(), rows.end())] {
-          const auto format =
-              context.document->getOthers()->get<musx::dom::others::KeyFormat>(
-                  target->getSourcePartId(), target->getCmper());
-          if (format && format->semitones < target->steps.size()) {
+    ReportState<CustomKeyMapReportData> reportRows;
+    withReporting(context.report, [&](auto& reporting) {
+        auto& data = reporting.state(reportRows);
+        data.source = *source;
+        data.rows.assign(rows.begin(), rows.end());
+    });
+    context.pending.checks.push_back([&context, target, reportRows = std::move(reportRows)] {
+        const auto format = context.document->getOthers()->get<musx::dom::others::KeyFormat>(
+            target->getSourcePartId(), target->getCmper());
+        if (format && format->semitones < target->steps.size()) {
             target->steps.resize(format->semitones);
-          }
-          for (std::size_t stepIndex = 0; stepIndex < target->steps.size();
-               ++stepIndex) {
-            const auto firstWord = stepIndex * 2;
-            const auto indices =
-                customKeyMapWordIndices(context.profile.byteOrder, firstWord);
-            const auto reportStepWord = [&](std::string member,
-                                            std::size_t wordIndex,
-                                            std::int64_t value) {
-              const auto rowIndex =
-                  source.classRecords ? 0 : wordIndex / records::otherWordCount;
-              const auto byteOffset =
-                  source.classRecords
-                      ? wordIndex * 2
-                      : (wordIndex % records::otherWordCount) * 2;
-              reportCustomKeyValue(context, *target, source, rows[rowIndex],
-                                   std::move(member), byteOffset, value);
-            };
-            reportStepWord("steps[" + std::to_string(stepIndex) + "].hlevel",
-                           indices.hlevel, target->steps[stepIndex]->hlevel);
-            reportStepWord("steps[" + std::to_string(stepIndex) + "].diatonic",
-                           indices.flag, target->steps[stepIndex]->diatonic);
-          }
+        }
+        withReporting(context.report, [&](auto& reporting) {
+            const auto& data = reporting.state(reportRows);
+            const auto& source = data.source;
+            const auto& rows = data.rows;
+            for (std::size_t stepIndex = 0; stepIndex < target->steps.size(); ++stepIndex) {
+                const auto firstWord = stepIndex * 2;
+                const auto indices = customKeyMapWordIndices(context.profile.byteOrder, firstWord);
+                const auto reportStepWord = [&](std::string member, std::size_t wordIndex,
+                                                std::int64_t value) {
+                    const auto rowIndex =
+                        source.classRecords ? 0 : wordIndex / records::otherWordCount;
+                    const auto byteOffset = source.classRecords
+                        ? wordIndex * 2
+                        : (wordIndex % records::otherWordCount) * 2;
+                    reportCustomKeyValue(context, *target, source, rows[rowIndex],
+                        std::move(member), byteOffset, value);
+                };
+                reportStepWord("steps[" + std::to_string(stepIndex) + "].hlevel", indices.hlevel,
+                    target->steps[stepIndex]->hlevel);
+                reportStepWord("steps[" + std::to_string(stepIndex) + "].diatonic", indices.flag,
+                    target->steps[stepIndex]->diatonic);
+            }
         });
+    });
   }
 }
 

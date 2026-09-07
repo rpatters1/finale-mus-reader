@@ -57,26 +57,23 @@ const records::LegacyRow& textBlockRow(const RecordFamilySource& source,
     return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportValue(const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper,
                  const char* field, std::int64_t rawValue, const records::LegacyRow& row)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<Target>(partId, cmper), field,
-        {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, rawValue});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper), field,
+            {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, rawValue});
+    });
 }
 
 void reportBehavior(const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper,
                     const char* field, std::int64_t value)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<Target>(partId, cmper), field,
-        {ValueOrigin::LegacyBehavior, 0, 0, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper), field,
+            {Reporting::Origin::LegacyBehavior, 0, 0, value});
+    });
 }
-#else
-#define reportValue(...) ((void)0)
-#define reportBehavior(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void applyLegacyTextBlockCorners(
     const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper, Target& target)
@@ -87,6 +84,38 @@ void applyLegacyTextBlockCorners(
     target.cornerRadius = 0;
     reportBehavior(context, partId, cmper, "roundCorners", 0);
     reportBehavior(context, partId, cmper, "cornerRadius", 0);
+}
+
+void reportTextBlockFields(const ImportContext& context, const RecordFamilySource& source,
+    std::span<const records::LegacyRow> rows, const std::vector<std::int16_t>& words,
+    std::uint16_t partId, musx::dom::Cmper cmper, std::uint16_t flags,
+    bool hasPercentageLineSpacing, bool upgradesZeroPercentToEvpu)
+{
+    withReporting(context.report, [&](auto&) {
+        constexpr const char* directNames[] = {"textId", "width", "height", "shapeId"};
+        for (std::size_t slot = 0; slot < std::size(directNames); ++slot) {
+            reportValue(context, partId, cmper, directNames[slot], words[slot],
+                textBlockRow(source, rows, slot));
+        }
+        reportValue(context, partId, cmper,
+            hasPercentageLineSpacing ? "lineSpacingPercentage" : "lineSpacingEvpu", words[4],
+            textBlockRow(source, rows, 4));
+        if (upgradesZeroPercentToEvpu) reportBehavior(context, partId, cmper, "lineSpacingEvpu", 0);
+        reportValue(context, partId, cmper, "xAdd", words[5], textBlockRow(source, rows, 5));
+        reportValue(context, partId, cmper, "yAdd", words[6], textBlockRow(source, rows, 6));
+        constexpr const char* flagNames[] = {
+            "justify", "newPos36", "showShape", "noExpandSingleWord", "wordWrap"};
+        const std::int64_t flagValues[] = {flags & 0x0007U, (flags >> 3U) & 1U, (flags >> 9U) & 1U,
+            (flags >> 10U) & 1U, (flags >> 11U) & 1U};
+        for (std::size_t index = 0; index < std::size(flagNames); ++index) {
+            reportValue(context, partId, cmper, flagNames[index], flagValues[index],
+                textBlockRow(source, rows, 7));
+        }
+        reportValue(context, partId, cmper, "inset", highFirstLong(words[8], words[9]),
+            textBlockRow(source, rows, 8));
+        reportValue(context, partId, cmper, "stdLineThickness", highFirstLong(words[10], words[11]),
+            textBlockRow(source, rows, 10));
+    });
 }
 
 void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmper,
@@ -130,8 +159,10 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
     if (words.size() > textTypeWord) {
         if (const auto textType = textTypeFromLegacy(words[textTypeWord])) {
             target->textType = *textType;
-            reportValue(context, partId, cmper, "textType", words[textTypeWord],
-                        textBlockRow(source, rows, textTypeWord));
+            withReporting(context.report, [&](auto&) {
+                reportValue(context, partId, cmper, "textType", words[textTypeWord],
+                    textBlockRow(source, rows, textTypeWord));
+            });
         } else if (words[textTypeWord] != 0) {
             context.report.diagnostics.push_back(
                 {musx::util::Logger::LogLevel::Info,
@@ -141,30 +172,8 @@ void populateStoredTextBlock(const ImportContext& context, musx::dom::Cmper cmpe
         }
     }
 
-    constexpr const char* directNames[] = {"textId", "width", "height", "shapeId"};
-    for (std::size_t slot = 0; slot < std::size(directNames); ++slot) {
-        reportValue(context, partId, cmper, directNames[slot], words[slot],
-                    textBlockRow(source, rows, slot));
-    }
-    reportValue(context, partId, cmper, hasPercentageLineSpacing ? "lineSpacingPercentage"
-                                                                 : "lineSpacingEvpu",
-        words[4], textBlockRow(source, rows, 4));
-    if (upgradesZeroPercentToEvpu)
-        reportBehavior(context, partId, cmper, "lineSpacingEvpu", 0);
-    reportValue(context, partId, cmper, "xAdd", words[5], textBlockRow(source, rows, 5));
-    reportValue(context, partId, cmper, "yAdd", words[6], textBlockRow(source, rows, 6));
-    constexpr const char* flagNames[] = {"justify", "newPos36", "showShape", "noExpandSingleWord",
-                                         "wordWrap"};
-    const std::int64_t flagValues[] = {flags & 0x0007U, (flags >> 3U) & 1U, (flags >> 9U) & 1U,
-                                       (flags >> 10U) & 1U, (flags >> 11U) & 1U};
-    for (std::size_t index = 0; index < std::size(flagNames); ++index) {
-        reportValue(context, partId, cmper, flagNames[index], flagValues[index],
-                    textBlockRow(source, rows, 7));
-    }
-    reportValue(context, partId, cmper, "inset", highFirstLong(words[8], words[9]),
-                textBlockRow(source, rows, 8));
-    reportValue(context, partId, cmper, "stdLineThickness", highFirstLong(words[10], words[11]),
-                textBlockRow(source, rows, 10));
+    reportTextBlockFields(context, source, rows, words, partId, cmper, flags,
+        hasPercentageLineSpacing, upgradesZeroPercentToEvpu);
     context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
 }
 
@@ -231,8 +240,3 @@ void importTextBlocks(const ImportContext& context)
 
 } // namespace others
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportValue
-#undef reportBehavior
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

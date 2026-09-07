@@ -105,16 +105,49 @@ const MappingTable& fixedFlagTable()
     return table;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportCodaFlagField(const ImportContext& context, const char* member,
-    ValueOrigin origin, std::size_t blockOffset, std::size_t decodedOffset,
+template <typename Reporting>
+void reportCodaFlagField(Reporting& reporting, const char* member,
+    typename Reporting::Origin origin, std::size_t blockOffset, std::size_t decodedOffset,
     std::int64_t rawValue)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<FlagOptionsTarget>(), member,
+    reporting.report().setField(reporting.template instanceKey<FlagOptionsTarget>(), member,
         {origin, blockOffset, decodedOffset, rawValue});
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+void reportCodaFlagOptions(const ImportContext& context, const FlagOptionsTarget& target,
+    const GlobalSelectorWords& position)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto reportDefault = [&](const char* member, std::int64_t value) {
+            reportCodaFlagField(reporting, member, Reporting::Origin::Finale27Default, 0, 0, value);
+        };
+        reportDefault("upHAdj", target.upHAdj);
+        reportDefault("upHAdj2", target.upHAdj2);
+        reportDefault("upHAdj16", target.upHAdj16);
+        const auto reportBehavior = [&](const char* member, std::int64_t value) {
+            reportCodaFlagField(reporting, member, Reporting::Origin::LegacyBehavior, 0, 0, value);
+        };
+        reportBehavior("downHAdj", target.downHAdj);
+        reportBehavior("downHAdj2", target.downHAdj2);
+        reportBehavior("downHAdj16", target.downHAdj16);
+        reportBehavior("upVAdj2", target.upVAdj2);
+        reportBehavior("downVAdj2", target.downVAdj2);
+        reportBehavior("stUpHAdj", target.stUpHAdj);
+        reportBehavior("stDownHAdj", target.stDownHAdj);
+        reportBehavior("stUpVAdj", target.stUpVAdj);
+        reportBehavior("stDownVAdj", target.stDownVAdj);
+        reportBehavior("flagSpacing", target.flagSpacing);
+        reportBehavior("secondaryGroupAdj", target.secondaryGroupAdj);
+        for (auto member : {"upVAdj", "upVAdj16"}) {
+            reportCodaFlagField(reporting, member, Reporting::Origin::LegacyMusAdjusted,
+                position.blockOffset, position.decodedOffset, position.words[4]);
+        }
+        for (auto member : {"downVAdj", "downVAdj16"}) {
+            reportCodaFlagField(reporting, member, Reporting::Origin::LegacyMusAdjusted,
+                position.blockOffset, position.decodedOffset, position.words[5]);
+        }
+    });
+}
 
 void importCodaFlagOptions(const ImportContext& context)
 {
@@ -149,37 +182,7 @@ void importCodaFlagOptions(const ImportContext& context)
     target->flagSpacing = codaFlagSpacing;
     target->secondaryGroupAdj = 0;
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto reportDefault = [&](const char* member, std::int64_t value) {
-        reportCodaFlagField(context, member, ValueOrigin::Finale27Default,
-            0, 0, value);
-    };
-    reportDefault("upHAdj", target->upHAdj);
-    reportDefault("upHAdj2", target->upHAdj2);
-    reportDefault("upHAdj16", target->upHAdj16);
-    const auto reportBehavior = [&](const char* member, std::int64_t value) {
-        reportCodaFlagField(context, member, ValueOrigin::LegacyBehavior, 0, 0, value);
-    };
-    reportBehavior("downHAdj", target->downHAdj);
-    reportBehavior("downHAdj2", target->downHAdj2);
-    reportBehavior("downHAdj16", target->downHAdj16);
-    reportBehavior("upVAdj2", target->upVAdj2);
-    reportBehavior("downVAdj2", target->downVAdj2);
-    reportBehavior("stUpHAdj", target->stUpHAdj);
-    reportBehavior("stDownHAdj", target->stDownHAdj);
-    reportBehavior("stUpVAdj", target->stUpVAdj);
-    reportBehavior("stDownVAdj", target->stDownVAdj);
-    reportBehavior("flagSpacing", target->flagSpacing);
-    reportBehavior("secondaryGroupAdj", target->secondaryGroupAdj);
-    for (auto member : {"upVAdj", "upVAdj16"}) {
-        reportCodaFlagField(context, member, ValueOrigin::LegacyMusAdjusted,
-            position.blockOffset, position.decodedOffset, position.words[4]);
-    }
-    for (auto member : {"downVAdj", "downVAdj16"}) {
-        reportCodaFlagField(context, member, ValueOrigin::LegacyMusAdjusted,
-            position.blockOffset, position.decodedOffset, position.words[5]);
-    }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    reportCodaFlagOptions(context, *target, position);
 }
 
 const MappingTable& classFlagTable()
@@ -200,9 +203,10 @@ const MappingTable& classFlagTable()
 void importFlagOptions(const ImportContext& context)
 {
     if (const auto options = context.document->getOptions()->get<FlagOptionsTarget>()) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<FlagOptionsTarget>(), "eighthFlagHoist",
-            {ValueOrigin::Finale27Default, 0, 0, options->eighthFlagHoist});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template defaultField<FlagOptionsTarget>(
+                "eighthFlagHoist", options->eighthFlagHoist);
+        });
     }
     applyMappingTables({&fixedFlagTable(), &classFlagTable()}, context.index,
         context.profile, context.document, context.report);

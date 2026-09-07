@@ -90,45 +90,88 @@ std::int64_t extractStaffNamePositionBits(std::uint16_t value, std::uint8_t firs
     return static_cast<std::int64_t>((value >> firstBit) & mask);
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportStaffNamePositionField(const ImportContext& context, std::string member,
-                                  ValueOrigin origin, std::int64_t rawValue,
-                                  const GlobalSelectorWords* source = nullptr,
-                                  std::uint16_t selector = 0)
+template <typename Reporting>
+void reportStaffNamePositionField(Reporting& reporting, const ImportContext& context,
+    std::string member, typename Reporting::Origin origin, std::int64_t rawValue,
+    const GlobalSelectorWords* source = nullptr, std::uint16_t selector = 0)
 {
-    FieldInfo info{origin, source ? source->blockOffset : 0, source ? source->decodedOffset : 0,
-                   rawValue};
+    typename Reporting::FieldInfo info{
+        origin, source ? source->blockOffset : 0, source ? source->decodedOffset : 0, rawValue};
     if (source)
     {
         info.sourceIdentity = context.profile.epoch == FormatEpoch::ZlibLegacy
                                   ? numericGlobalClass(selector)
                                   : numericGlobalTag(selector);
     }
-    context.report.setField(instanceKey<StaffOptionsTarget>(), std::move(member), std::move(info));
+    reporting.report().setField(
+        reporting.template instanceKey<StaffOptionsTarget>(), std::move(member), std::move(info));
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void reportStaffNamePositionUnavailable(const ImportContext& context,
                                         const StaffNamePositionSource& descriptor,
                                         const StaffNamePositioning& position)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto reportDefault = [&](std::string_view leaf, std::int64_t value)
-    {
-        reportStaffNamePositionField(context,
-                                     std::string(descriptor.member).append(".").append(leaf),
-                                     ValueOrigin::Finale27Default, value);
-    };
-    reportDefault("horzOff", position.horzOff);
-    reportDefault("vertOff", position.vertOff);
-    reportDefault("justify", static_cast<std::int64_t>(position.justify));
-    reportDefault("hAlign", static_cast<std::int64_t>(position.hAlign));
-    reportDefault("expand", position.expand);
-#else
-    static_cast<void>(context);
-    static_cast<void>(descriptor);
-    static_cast<void>(position);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto reportDefault = [&](std::string_view leaf, std::int64_t value) {
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".").append(leaf),
+                Reporting::Origin::Finale27Default, value);
+        };
+        reportDefault("horzOff", position.horzOff);
+        reportDefault("vertOff", position.vertOff);
+        reportDefault("justify", static_cast<std::int64_t>(position.justify));
+        reportDefault("hAlign", static_cast<std::int64_t>(position.hAlign));
+        reportDefault("expand", position.expand);
+    });
+}
+
+void reportRecoveredStaffNamePosition(const ImportContext& context,
+    const StaffNamePositionSource& descriptor, const GlobalSelectorWords& source,
+    const StaffNamePositioning& position, bool earlyStaffLayout, std::int64_t justification,
+    std::int64_t alignment, bool validJustification, bool validAlignment,
+    musx::dom::AlignJustify previousAlignment)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto reportRecovered = [&](std::string_view leaf, std::int64_t value) {
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".").append(leaf),
+                Reporting::Origin::LegacyMus, value, &source, descriptor.selector);
+        };
+        reportRecovered("horzOff", source.words[0]);
+        reportStaffNamePositionField(reporting, context,
+            std::string(descriptor.member).append(".vertOff"),
+            earlyStaffLayout ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus,
+            position.vertOff, &source, descriptor.selector);
+        if (validJustification) {
+            reportRecovered("justify", justification);
+        } else {
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".justify"),
+                Reporting::Origin::Finale27Default, static_cast<std::int64_t>(position.justify));
+        }
+        if (validAlignment) {
+            auto alignmentOrigin = Reporting::Origin::LegacyMus;
+            if (earlyStaffLayout) {
+                alignmentOrigin = previousAlignment == position.hAlign
+                    ? Reporting::Origin::Finale27Default
+                    : Reporting::Origin::LegacyBehavior;
+            }
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".hAlign"), alignmentOrigin, alignment,
+                earlyStaffLayout ? nullptr : &source, earlyStaffLayout ? 0 : descriptor.selector);
+        } else {
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".hAlign"),
+                Reporting::Origin::Finale27Default, static_cast<std::int64_t>(position.hAlign));
+        }
+        if (earlyStaffLayout) {
+            reportStaffNamePositionField(reporting, context,
+                std::string(descriptor.member).append(".expand"),
+                Reporting::Origin::Finale27Default, position.expand);
+        } else {
+            reportRecovered("expand", position.expand);
+        }
+    });
 }
 
 void importStaffNamePosition(const ImportContext& context, StaffOptionsTarget& target,
@@ -153,12 +196,14 @@ void importStaffNamePosition(const ImportContext& context, StaffOptionsTarget& t
         const auto justification =
             extractStaffNamePositionBits(flags, 0, descriptor.justificationBitCount);
         const auto lastAlignJustify = static_cast<std::int64_t>(musx::dom::AlignJustify::Center);
+        const bool validJustification = justification <= lastAlignJustify;
         const auto previousAlignment = position->hAlign;
         const auto alignment = earlyStaffLayout
                                    ? justification
                                    : extractStaffNamePositionBits(flags,
                                          descriptor.alignmentFirstBit,
                                          namePositionAlignmentBitCount);
+        const bool validAlignment = alignment <= lastAlignJustify;
         if (earlyStaffLayout)
         {
             // The earlier record stores a font tuple rather than packed alignment and expand
@@ -171,12 +216,10 @@ void importStaffNamePosition(const ImportContext& context, StaffOptionsTarget& t
         {
             position->vertOff = source.words[1];
         }
-        if (justification <= lastAlignJustify)
-        {
+        if (validJustification) {
             position->justify = static_cast<musx::dom::AlignJustify>(justification);
         }
-        if (alignment <= lastAlignJustify)
-        {
+        if (validAlignment) {
             position->hAlign = static_cast<musx::dom::AlignJustify>(alignment);
         }
         if (!earlyStaffLayout)
@@ -184,70 +227,18 @@ void importStaffNamePosition(const ImportContext& context, StaffOptionsTarget& t
             position->expand = extractStaffNamePositionBits(flags, namePositionExpandBit, 1) != 0;
         }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto reportRecovered = [&](std::string_view leaf, std::int64_t value)
-        {
-            reportStaffNamePositionField(
-                context, std::string(descriptor.member).append(".").append(leaf),
-                ValueOrigin::LegacyMus, value, &source, descriptor.selector);
-        };
-        reportRecovered("horzOff", source.words[0]);
-        reportStaffNamePositionField(context,
-                                     std::string(descriptor.member).append(".vertOff"),
-                                     earlyStaffLayout ? ValueOrigin::LegacyMusAdjusted
-                                                      : ValueOrigin::LegacyMus,
-                                     position->vertOff, &source, descriptor.selector);
-        if (justification <= lastAlignJustify)
-        {
-            reportRecovered("justify", justification);
-        }
-        else
-        {
-            reportStaffNamePositionField(context, std::string(descriptor.member).append(".justify"),
-                                         ValueOrigin::Finale27Default,
-                                         static_cast<std::int64_t>(position->justify));
-        }
-        if (alignment <= lastAlignJustify)
-        {
-            auto alignmentOrigin = ValueOrigin::LegacyMus;
-            if (earlyStaffLayout)
-            {
-                alignmentOrigin = previousAlignment == position->hAlign
-                                      ? ValueOrigin::Finale27Default
-                                      : ValueOrigin::LegacyBehavior;
-            }
-            reportStaffNamePositionField(
-                context, std::string(descriptor.member).append(".hAlign"),
-                alignmentOrigin, alignment, earlyStaffLayout ? nullptr : &source,
-                earlyStaffLayout ? 0 : descriptor.selector);
-        }
-        else
-        {
-            reportStaffNamePositionField(context, std::string(descriptor.member).append(".hAlign"),
-                                         ValueOrigin::Finale27Default,
-                                         static_cast<std::int64_t>(position->hAlign));
-        }
-        if (earlyStaffLayout)
-        {
-            reportStaffNamePositionField(context,
-                                         std::string(descriptor.member).append(".expand"),
-                                         ValueOrigin::Finale27Default, position->expand);
-        }
-        else
-        {
-            reportRecovered("expand", position->expand);
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        reportRecoveredStaffNamePosition(context, descriptor, source, *position, earlyStaffLayout,
+            justification, alignment, validJustification, validAlignment, previousAlignment);
     }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    reportStaffNamePositionField(context,
-                                 std::string(descriptor.member).append(".indivPos"),
-                                 ValueOrigin::Finale27Default, position->indivPos);
-    reportStaffNamePositionField(context,
-                                 std::string(descriptor.member).append(".hidden"),
-                                 ValueOrigin::Finale27Default, position->hidden);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reportStaffNamePositionField(reporting, context,
+            std::string(descriptor.member).append(".indivPos"), Reporting::Origin::Finale27Default,
+            position->indivPos);
+        reportStaffNamePositionField(reporting, context,
+            std::string(descriptor.member).append(".hidden"), Reporting::Origin::Finale27Default,
+            position->hidden);
+    });
 }
 
 void applyCodaStaffNameBehavior(const ImportContext& context, StaffOptionsTarget& target)
@@ -262,19 +253,18 @@ void applyCodaStaffNameBehavior(const ImportContext& context, StaffOptionsTarget
         position->justify = musx::dom::AlignJustify::Left;
         position->hAlign = musx::dom::AlignJustify::Left;
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto prefix = member == &StaffOptionsTarget::namePos ? "namePos." : "namePosAbbrv.";
-        reportStaffNamePositionField(context, std::string(prefix).append("horzOff"),
-                                     ValueOrigin::LegacyBehavior, position->horzOff);
-        reportStaffNamePositionField(context, std::string(prefix).append("vertOff"),
-                                     ValueOrigin::LegacyBehavior, position->vertOff);
-        reportStaffNamePositionField(context, std::string(prefix).append("justify"),
-                                     ValueOrigin::LegacyBehavior,
-                                     static_cast<std::int64_t>(position->justify));
-        reportStaffNamePositionField(context, std::string(prefix).append("hAlign"),
-                                     ValueOrigin::LegacyBehavior,
-                                     static_cast<std::int64_t>(position->hAlign));
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto prefix =
+                member == &StaffOptionsTarget::namePos ? "namePos." : "namePosAbbrv.";
+            reportStaffNamePositionField(reporting, context, std::string(prefix).append("horzOff"),
+                Reporting::Origin::LegacyBehavior, position->horzOff);
+            reportStaffNamePositionField(reporting, context, std::string(prefix).append("vertOff"),
+                Reporting::Origin::LegacyBehavior, position->vertOff);
+            reportStaffNamePositionField(reporting, context, std::string(prefix).append("justify"),
+                Reporting::Origin::LegacyBehavior, static_cast<std::int64_t>(position->justify));
+            reportStaffNamePositionField(reporting, context, std::string(prefix).append("hAlign"),
+                Reporting::Origin::LegacyBehavior, static_cast<std::int64_t>(position->hAlign));
+        });
     }
 }
 
@@ -295,11 +285,10 @@ void importStaffOptions(const ImportContext& context)
     if (!sourceStoresStaffScalars(context.index, context.profile))
     {
         target->staffSeparation = preFinale2008StaffSeparation;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        context.report.setField(instanceKey<StaffOptionsTarget>(), "staffSeparation",
-                                {ValueOrigin::LegacyBehavior, 0, 0,
-                                 preFinale2008StaffSeparation});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<StaffOptionsTarget>(
+                "staffSeparation", preFinale2008StaffSeparation);
+        });
     }
 
     const auto recoverNamePositionSource = context.profile.epoch != FormatEpoch::CodaBanner;

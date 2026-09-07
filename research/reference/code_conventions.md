@@ -35,3 +35,32 @@
   constants when needed. Do not let unity-only fixes change runtime behavior.
 - Project-owned targets enable unity compilation themselves; external dependencies
   retain their own build policy.
+
+## Import reporting
+
+Class importers use the private lazy boundary in
+[`reporting.h`](../../src/import/support/reporting.h). Put substantial reporting passes in
+named `report…` helpers with ordinary decoder or DOM types in their signatures. Small isolated
+reports may use `withReporting` inline. Instrumentation build directives and token-erasing report
+macros belong outside class importers; `scripts/check_reporting_boundary.py` checks this boundary.
+
+A reporting callback is generic: use its writer for instance keys, origins, field metadata, and
+report access. Those names must depend on the callback parameter, because a non-instrumented
+build does not declare the public instrumentation types. Use `defaultField` and `behaviorField`
+for singleton options, `unmappedField` to preserve existing provenance, and `report()` for the
+remaining public report operations. All report-only formatting, allocation, lookups, and loops
+belong inside the callback, including preparation of arguments to subordinate reporting helpers.
+Capture existing objects by reference; capture initializers execute even when the callback does
+not. Callbacks run synchronously and must not perform document mutations, required validation,
+or user diagnostics.
+
+`ReportClass` and `ReportInstance` retain identities across callbacks; `DeferredFieldReport`
+retains a field awaiting reference resolution. Class-specific accumulated metadata uses
+`ReportState<State>`, where `State` is a template with writer-dependent instrumentation types.
+These wrappers have no payload with instrumentation disabled. Do not create parallel origin enums
+or recompute decoding decisions to construct reports; pass the decoder's existing outcomes.
+
+Validate reporting changes with the instrumented suite and a complete non-instrumented library
+build. `FINALE_MUS_READER_BUILD_REPORTING_TESTING=ON` enables the standalone `reporting` test in
+either configuration without requiring the coverage suite or an XML backend. The callback body is
+never executed in disabled builds; removing trivial helper calls remains an optimization concern.

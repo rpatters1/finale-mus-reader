@@ -254,15 +254,17 @@ void applyLayerEraBehavior(const ImportContext& context, const RecordFamilySourc
             if (stored && !(predatesPlayback && isPreFinale2002Setting(field))) continue;
             const auto value = layerBehaviorValue(field, source.classRecords);
             field.apply(const_cast<LayerAttributesTarget*>(instance.get()), value);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const bool baselineSupplies = wasSeeded != seeded.end()
-                && wasSeeded->second[index] == value;
-            FINALE_MUS_READER_REPORT_FIELD(context.report,
-                instanceKey<LayerAttributesTarget>(partId, cmper), field.fieldName,
-                FieldInfo{baselineSupplies ? ValueOrigin::Finale27Default
-                                           : ValueOrigin::LegacyBehavior,
-                    0, 0, value});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const bool baselineSupplies =
+                    wasSeeded != seeded.end() && wasSeeded->second[index] == value;
+                reporting.report().setField(
+                    reporting.template instanceKey<LayerAttributesTarget>(partId, cmper),
+                    field.fieldName,
+                    typename Reporting::FieldInfo{baselineSupplies
+                            ? Reporting::Origin::Finale27Default
+                            : Reporting::Origin::LegacyBehavior,
+                        0, 0, value});
+            });
         }
     }
 }

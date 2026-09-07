@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "import/options/legacy_curve_selectors.h"
@@ -197,35 +198,39 @@ const MappingTable& classTieScalarTable()
     return table;
 }
 
-void reportRecoveredTieField(const ImportContext& context, const std::string& member,
-                             std::int64_t value, std::size_t blockOffset,
-                             std::size_t decodedOffset)
+void reportRecoveredTieField(const ImportContext& context, std::string_view member,
+    std::int64_t value, std::size_t blockOffset, std::size_t decodedOffset)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TieOptionsTarget>(), member,
-                                   {ValueOrigin::LegacyMus, blockOffset, decodedOffset, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<TieOptionsTarget>(),
+            std::string(member), {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, value});
+    });
 }
 
-void reportAdjustedTieField(const ImportContext& context, const std::string& member,
-                            std::int64_t value, std::size_t blockOffset,
-                            std::size_t decodedOffset)
+void reportAdjustedTieField(const ImportContext& context, std::string_view member,
+    std::int64_t value, std::size_t blockOffset, std::size_t decodedOffset)
 {
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<TieOptionsTarget>(), member,
-        {ValueOrigin::LegacyMusAdjusted, blockOffset, decodedOffset, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<TieOptionsTarget>(),
+            std::string(member),
+            {Reporting::Origin::LegacyMusAdjusted, blockOffset, decodedOffset, value});
+    });
 }
 
-void reportTieBehaviorField(const ImportContext& context, const std::string& member,
-                            std::int64_t value)
+void reportTieBehaviorField(
+    const ImportContext& context, std::string_view member, std::int64_t value)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TieOptionsTarget>(), member,
-                                   {ValueOrigin::LegacyBehavior, 0, 0, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<TieOptionsTarget>(std::string(member), value);
+    });
 }
 
-void reportDefaultTieField(const ImportContext& context, const std::string& member,
-                           std::int64_t value)
+void reportDefaultTieField(
+    const ImportContext& context, std::string_view member, std::int64_t value)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TieOptionsTarget>(), member,
-                                   {ValueOrigin::Finale27Default, 0, 0, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template defaultField<TieOptionsTarget>(std::string(member), value);
+    });
 }
 
 void captureTieConnections(const ImportContext& context,
@@ -241,11 +246,13 @@ void captureTieConnections(const ImportContext& context,
         auto style = std::make_shared<TieOptionsTarget::ConnectStyle>();
         style->offsetX = wordAt(family.words, index * 2);
         style->offsetY = wordAt(family.words, index * 2 + 1);
-        const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
-        reportRecoveredTieField(context, prefix + "offsetX", style->offsetX, family.blockOffset,
-                                family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "offsetY", style->offsetY, family.blockOffset,
-                                family.decodedOffset);
+        withReporting(context.report, [&](auto&) {
+            const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
+            reportRecoveredTieField(context, prefix + "offsetX", style->offsetX, family.blockOffset,
+                family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "offsetY", style->offsetY, family.blockOffset,
+                family.decodedOffset);
+        });
         target->tieConnectStyles.emplace(type, std::move(style));
     }
 }
@@ -270,21 +277,23 @@ void captureTieContours(const ImportContext& context,
         style->cp2->insetRatio = wordAt(family.words, first + 4);
         style->cp2->height = wordAt(family.words, first + 5);
         style->cp2->insetFixed = wordAt(family.words, first + 6);
-        const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-        reportRecoveredTieField(context, prefix + "span", style->span, family.blockOffset,
-                                family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp1.insetRatio", style->cp1->insetRatio,
-                                family.blockOffset, family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp1.height", style->cp1->height,
-                                family.blockOffset, family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp1.insetFixed", style->cp1->insetFixed,
-                                family.blockOffset, family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp2.insetRatio", style->cp2->insetRatio,
-                                family.blockOffset, family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp2.height", style->cp2->height,
-                                family.blockOffset, family.decodedOffset);
-        reportRecoveredTieField(context, prefix + "cp2.insetFixed", style->cp2->insetFixed,
-                                family.blockOffset, family.decodedOffset);
+        withReporting(context.report, [&](auto&) {
+            const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
+            reportRecoveredTieField(
+                context, prefix + "span", style->span, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp1.insetRatio", style->cp1->insetRatio,
+                family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp1.height", style->cp1->height,
+                family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp1.insetFixed", style->cp1->insetFixed,
+                family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp2.insetRatio", style->cp2->insetRatio,
+                family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp2.height", style->cp2->height,
+                family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(context, prefix + "cp2.insetFixed", style->cp2->insetFixed,
+                family.blockOffset, family.decodedOffset);
+        });
         target->tieControlStyles.emplace(static_cast<TieOptionsTarget::ControlStyleType>(index),
                                          std::move(style));
     }
@@ -333,11 +342,13 @@ void captureEarlyTieOptions(const ImportContext& context,
             const auto divisor = index == 0 ? 2 : 1;
             found->second->cp1->height = heights[0] / divisor;
             found->second->cp2->height = heights[1] / divisor;
-            const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-            reportAdjustedTieField(context, prefix + "cp1.height", baseHeight,
-                                   contour.blockOffset, contour.decodedOffset);
-            reportAdjustedTieField(context, prefix + "cp2.height", baseHeight,
-                                   contour.blockOffset, contour.decodedOffset);
+            withReporting(context.report, [&](auto&) {
+                const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
+                reportAdjustedTieField(context, prefix + "cp1.height", baseHeight,
+                    contour.blockOffset, contour.decodedOffset);
+                reportAdjustedTieField(context, prefix + "cp2.height", baseHeight,
+                    contour.blockOffset, contour.decodedOffset);
+            });
         }
     }
 
@@ -355,10 +366,12 @@ void captureEarlyTieOptions(const ImportContext& context,
             const auto found = target->tieConnectStyles.find(type);
             if (found == target->tieConnectStyles.end()) continue;
             found->second->offsetX = value;
-            const auto member =
-                "tieConnectStyles[" + std::to_string(static_cast<std::size_t>(type)) + "].offsetX";
-            reportRecoveredTieField(context, member, value, placement.blockOffset,
-                                    placement.decodedOffset);
+            withReporting(context.report, [&](auto&) {
+                const auto member = "tieConnectStyles[" +
+                    std::to_string(static_cast<std::size_t>(type)) + "].offsetX";
+                reportRecoveredTieField(
+                    context, member, value, placement.blockOffset, placement.decodedOffset);
+            });
         }
     };
     recoverHorizontal(earlyTieStartConnectionTypes, wordAt(placement.words, 0));
@@ -380,10 +393,12 @@ void captureEarlyTieOptions(const ImportContext& context,
                 const auto found = target->tieConnectStyles.find(type);
                 if (found == target->tieConnectStyles.end()) continue;
                 found->second->offsetY = value;
-                const auto member = "tieConnectStyles[" +
-                                    std::to_string(static_cast<std::size_t>(type)) + "].offsetY";
-                reportAdjustedTieField(context, member, position, shortTie.blockOffset,
-                                       shortTie.decodedOffset);
+                withReporting(context.report, [&](auto&) {
+                    const auto member = "tieConnectStyles[" +
+                        std::to_string(static_cast<std::size_t>(type)) + "].offsetY";
+                    reportAdjustedTieField(
+                        context, member, position, shortTie.blockOffset, shortTie.decodedOffset);
+                });
             }
         };
         recoverVertical(musx::dom::TieConnectStyleType::OverStartPosInner,
@@ -408,11 +423,13 @@ void captureEarlyTieOptions(const ImportContext& context,
         }
         found->second->cp1->insetFixed = fixedInsets[0];
         found->second->cp2->insetFixed = fixedInsets[1];
-        const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-        reportAdjustedTieField(context, prefix + "cp1.insetFixed", fixedInsets[0],
-                               placement.blockOffset, placement.decodedOffset);
-        reportAdjustedTieField(context, prefix + "cp2.insetFixed", fixedInsets[1],
-                               placement.blockOffset, placement.decodedOffset);
+        withReporting(context.report, [&](auto&) {
+            const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
+            reportAdjustedTieField(context, prefix + "cp1.insetFixed", fixedInsets[0],
+                placement.blockOffset, placement.decodedOffset);
+            reportAdjustedTieField(context, prefix + "cp2.insetFixed", fixedInsets[1],
+                placement.blockOffset, placement.decodedOffset);
+        });
     }
 }
 
@@ -478,62 +495,57 @@ void applyScatteredTieBehavior(const ImportContext& context,
         }
         found->second->cp1->insetRatio = scatteredTieInsetRatio;
         found->second->cp2->insetRatio = scatteredTieInsetRatio;
-        const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-        if (context.profile.epoch == FormatEpoch::UncompressedLegacy && index + 1 < tieContourCount)
-        {
-            found->second->span = 48;
-            reportTieBehaviorField(context, prefix + "span", 48);
-        }
-        reportTieBehaviorField(context, prefix + "cp1.insetRatio", scatteredTieInsetRatio);
-        reportTieBehaviorField(context, prefix + "cp2.insetRatio", scatteredTieInsetRatio);
+        const bool suppliesSpan =
+            context.profile.epoch == FormatEpoch::UncompressedLegacy && index + 1 < tieContourCount;
+        if (suppliesSpan) found->second->span = 48;
+        withReporting(context.report, [&](auto&) {
+            const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
+            if (suppliesSpan) {
+                reportTieBehaviorField(context, prefix + "span", 48);
+            }
+            reportTieBehaviorField(context, prefix + "cp1.insetRatio", scatteredTieInsetRatio);
+            reportTieBehaviorField(context, prefix + "cp2.insetRatio", scatteredTieInsetRatio);
+        });
     }
 }
 
 void reportRemainingTieFields(const ImportContext& context, const TieOptionsTarget& target)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto instance = instanceKey<TieOptionsTarget>();
-    for (std::size_t index = 0; index < tieConnectionCount; ++index)
-    {
-        const auto found =
-            target.tieConnectStyles.find(static_cast<musx::dom::TieConnectStyleType>(index));
-        if (found == target.tieConnectStyles.end()) continue;
-        const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
-        if (!context.report.findField(instance, prefix + "offsetX"))
-        {
-            reportDefaultTieField(context, prefix + "offsetX", found->second->offsetX);
-        }
-        if (!context.report.findField(instance, prefix + "offsetY"))
-        {
-            reportDefaultTieField(context, prefix + "offsetY", found->second->offsetY);
-        }
-    }
-    for (std::size_t index = 0; index < tieContourCount; ++index)
-    {
-        const auto found =
-            target.tieControlStyles.find(static_cast<TieOptionsTarget::ControlStyleType>(index));
-        if (found == target.tieControlStyles.end() || !found->second->cp1 || !found->second->cp2)
-            continue;
-        const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-        const auto reportDefault = [&](const std::string& member, std::int64_t value)
-        {
-            if (!context.report.findField(instance, member))
-            {
-                reportDefaultTieField(context, member, value);
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto instance = reporting.template instanceKey<TieOptionsTarget>();
+        for (std::size_t index = 0; index < tieConnectionCount; ++index) {
+            const auto found =
+                target.tieConnectStyles.find(static_cast<musx::dom::TieConnectStyleType>(index));
+            if (found == target.tieConnectStyles.end()) continue;
+            const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
+            if (!reporting.report().findField(instance, prefix + "offsetX")) {
+                reportDefaultTieField(context, prefix + "offsetX", found->second->offsetX);
             }
-        };
-        reportDefault(prefix + "span", found->second->span);
-        reportDefault(prefix + "cp1.insetRatio", found->second->cp1->insetRatio);
-        reportDefault(prefix + "cp1.height", found->second->cp1->height);
-        reportDefault(prefix + "cp1.insetFixed", found->second->cp1->insetFixed);
-        reportDefault(prefix + "cp2.insetRatio", found->second->cp2->insetRatio);
-        reportDefault(prefix + "cp2.height", found->second->cp2->height);
-        reportDefault(prefix + "cp2.insetFixed", found->second->cp2->insetFixed);
-    }
-#else
-    static_cast<void>(context);
-    static_cast<void>(target);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            if (!reporting.report().findField(instance, prefix + "offsetY")) {
+                reportDefaultTieField(context, prefix + "offsetY", found->second->offsetY);
+            }
+        }
+        for (std::size_t index = 0; index < tieContourCount; ++index) {
+            const auto found = target.tieControlStyles.find(
+                static_cast<TieOptionsTarget::ControlStyleType>(index));
+            if (found == target.tieControlStyles.end() || !found->second->cp1 ||
+                !found->second->cp2)
+                continue;
+            const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
+            const auto reportDefault = [&](std::string_view member, std::int64_t value) {
+                if (!reporting.report().findField(instance, member)) {
+                    reportDefaultTieField(context, member, value);
+                }
+            };
+            reportDefault(prefix + "span", found->second->span);
+            reportDefault(prefix + "cp1.insetRatio", found->second->cp1->insetRatio);
+            reportDefault(prefix + "cp1.height", found->second->cp1->height);
+            reportDefault(prefix + "cp1.insetFixed", found->second->cp1->insetFixed);
+            reportDefault(prefix + "cp2.insetRatio", found->second->cp2->insetRatio);
+            reportDefault(prefix + "cp2.height", found->second->cp2->height);
+            reportDefault(prefix + "cp2.insetFixed", found->second->cp2->insetFixed);
+        }
+    });
 }
 
 } // namespace

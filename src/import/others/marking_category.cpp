@@ -59,17 +59,14 @@ std::shared_ptr<musx::dom::FontInfo> readMarkingCategoryFont(
     return result;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportMarkingCategoryFont(const ImportContext& context,
-    const InstanceKey& key,
-    std::string prefix,
-    const musx::dom::FontInfo& font,
-    const records::LegacyRow& row,
+template <typename Reporting>
+void reportMarkingCategoryFont(Reporting& reporting, const typename Reporting::InstanceKey& key,
+    std::string prefix, const musx::dom::FontInfo& font, const records::LegacyRow& row,
     std::size_t offset)
 {
     const auto report = [&](std::string member, std::size_t memberOffset, std::int64_t value) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, prefix + std::move(member),
-            FieldInfo{ValueOrigin::LegacyMus, row.blockOffset,
+        reporting.report().setField(key, prefix + std::move(member),
+            typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
                 row.decodedOffset + offset + memberOffset, value, markingCategoryClass});
     };
     report("fontId", 0, font.fontId);
@@ -81,48 +78,47 @@ void reportMarkingCategoryFont(const ImportContext& context,
     report("absolute", 4, font.absolute);
     report("hidden", 4, font.hidden);
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
-void reportMarkingCategory([[maybe_unused]] const ImportContext& context,
-    [[maybe_unused]] const CategoryTarget& category,
-    [[maybe_unused]] const records::LegacyRow& row)
+void reportMarkingCategory(
+    const ImportContext& context, const CategoryTarget& category, const records::LegacyRow& row)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<CategoryTarget>(category.getSourcePartId(), category.getCmper());
-    context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-    const auto report = [&](const char* member, std::size_t offset, std::int64_t value) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-            FieldInfo{ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset + offset, value,
-                markingCategoryClass});
-    };
-    report("categoryType", markingCategoryTypeOffset,
-        static_cast<std::int64_t>(category.categoryType));
-    reportMarkingCategoryFont(
-        context, key, "textFont.", *category.textFont, row, markingCategoryFontOffsets[0]);
-    reportMarkingCategoryFont(
-        context, key, "musicFont.", *category.musicFont, row, markingCategoryFontOffsets[1]);
-    reportMarkingCategoryFont(
-        context, key, "numberFont.", *category.numberFont, row, markingCategoryFontOffsets[2]);
-    report("justification", markingCategoryJustificationOffset,
-        static_cast<std::int64_t>(category.justification));
-    report(
-        "horzAlign", markingCategoryHorzAlignOffset, static_cast<std::int64_t>(category.horzAlign));
-    report("horzOffset", markingCategoryHorzOffsetOffset, category.horzOffset);
-    report(
-        "vertAlign", markingCategoryVertAlignOffset, static_cast<std::int64_t>(category.vertAlign));
-    report("vertOffsetEntry", markingCategoryVertOffsetEntryOffset, category.vertOffsetEntry);
-    report(
-        "vertOffsetBaseline", markingCategoryVertOffsetBaselineOffset, category.vertOffsetBaseline);
-    report("usesTextFont", markingCategoryFlagsOffset, category.usesTextFont);
-    report("usesMusicFont", markingCategoryFlagsOffset, category.usesMusicFont);
-    report("usesNumberFont", markingCategoryFlagsOffset, category.usesNumberFont);
-    report("usesPositioning", markingCategoryFlagsOffset, category.usesPositioning);
-    report("usesStaffList", markingCategoryFlagsOffset, category.usesStaffList);
-    report("usesBreakMmRests", markingCategoryFlagsOffset, category.usesBreakMmRests);
-    report("breakMmRest", markingCategoryFlagsOffset, category.breakMmRest);
-    report("userCreated", markingCategoryFlagsOffset, category.userCreated);
-    report("staffList", markingCategoryStaffListOffset, category.staffList);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<CategoryTarget>(
+            category.getSourcePartId(), category.getCmper());
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto report = [&](const char* member, std::size_t offset, std::int64_t value) {
+            reporting.report().setField(key, member,
+                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
+                    row.decodedOffset + offset, value, markingCategoryClass});
+        };
+        report("categoryType", markingCategoryTypeOffset,
+            static_cast<std::int64_t>(category.categoryType));
+        reportMarkingCategoryFont(
+            reporting, key, "textFont.", *category.textFont, row, markingCategoryFontOffsets[0]);
+        reportMarkingCategoryFont(
+            reporting, key, "musicFont.", *category.musicFont, row, markingCategoryFontOffsets[1]);
+        reportMarkingCategoryFont(reporting, key, "numberFont.", *category.numberFont, row,
+            markingCategoryFontOffsets[2]);
+        report("justification", markingCategoryJustificationOffset,
+            static_cast<std::int64_t>(category.justification));
+        report("horzAlign", markingCategoryHorzAlignOffset,
+            static_cast<std::int64_t>(category.horzAlign));
+        report("horzOffset", markingCategoryHorzOffsetOffset, category.horzOffset);
+        report("vertAlign", markingCategoryVertAlignOffset,
+            static_cast<std::int64_t>(category.vertAlign));
+        report("vertOffsetEntry", markingCategoryVertOffsetEntryOffset, category.vertOffsetEntry);
+        report("vertOffsetBaseline", markingCategoryVertOffsetBaselineOffset,
+            category.vertOffsetBaseline);
+        report("usesTextFont", markingCategoryFlagsOffset, category.usesTextFont);
+        report("usesMusicFont", markingCategoryFlagsOffset, category.usesMusicFont);
+        report("usesNumberFont", markingCategoryFlagsOffset, category.usesNumberFont);
+        report("usesPositioning", markingCategoryFlagsOffset, category.usesPositioning);
+        report("usesStaffList", markingCategoryFlagsOffset, category.usesStaffList);
+        report("usesBreakMmRests", markingCategoryFlagsOffset, category.usesBreakMmRests);
+        report("breakMmRest", markingCategoryFlagsOffset, category.breakMmRest);
+        report("userCreated", markingCategoryFlagsOffset, category.userCreated);
+        report("staffList", markingCategoryStaffListOffset, category.staffList);
+    });
 }
 
 void importMarkingCategoryName(const ImportContext& context,
@@ -141,13 +137,14 @@ void importMarkingCategoryName(const ImportContext& context,
         name->name =
             text::toUtf8(payloadString(payload, 0, payload.size()), context.profile.platform);
     }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<NameTarget>(name->getSourcePartId(), cmper);
-    context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-    FINALE_MUS_READER_REPORT_FIELD(context.report, key, "name",
-        FieldInfo{ValueOrigin::LegacyMus, row->blockOffset, row->decodedOffset,
-            static_cast<std::int64_t>(payload.size()), markingCategoryNameClass});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<NameTarget>(name->getSourcePartId(), cmper);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        reporting.report().setField(key, "name",
+            typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row->blockOffset,
+                row->decodedOffset, static_cast<std::int64_t>(payload.size()),
+                markingCategoryNameClass});
+    });
     context.document->getOthers()->add(NameTarget::XmlNodeName, std::move(name));
 }
 

@@ -37,20 +37,21 @@ void importClefOctaveArrays(
                 context.document, *source, rows.front(), cmper1, cmper2);
             if (!target) continue;
             target->values.assign(words.begin(), words.begin() + 7);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto key = instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
-            context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-            for (std::size_t index = 0; index < target->values.size(); ++index) {
-                const auto rowIndex = source->classRecords ? 0 : index / records::detailWordCount;
-                const auto byteOffset =
-                    source->classRecords ? index * 2 : (index % records::detailWordCount) * 2;
-                FINALE_MUS_READER_REPORT_FIELD(context.report, key,
-                    "values[" + std::to_string(index) + "]",
-                    {ValueOrigin::LegacyMus, rows[rowIndex].blockOffset,
-                        rows[rowIndex].decodedOffset + byteOffset, target->values[index],
-                        source->identity});
-            }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key =
+                    reporting.template instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                for (std::size_t index = 0; index < target->values.size(); ++index) {
+                    const auto rowIndex =
+                        source->classRecords ? 0 : index / records::detailWordCount;
+                    const auto byteOffset =
+                        source->classRecords ? index * 2 : (index % records::detailWordCount) * 2;
+                    reporting.report().setField(key, "values[" + std::to_string(index) + "]",
+                        {Reporting::Origin::LegacyMus, rows[rowIndex].blockOffset,
+                            rows[rowIndex].decodedOffset + byteOffset, target->values[index],
+                            source->identity});
+                }
+            });
             context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
         }
     }

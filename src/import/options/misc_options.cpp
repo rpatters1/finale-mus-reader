@@ -99,45 +99,32 @@ void applyLegacyMiscBehavior(const ImportContext &context) {
   // behavior differs from the pinned Finale 27 defaults.
   target->consolidateRestsAcrossLayers = false;
   target->alignMeasureNumbersWithBarlines = false;
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instanceKey<MiscOptionsTarget>(),
-      "consolidateRestsAcrossLayers", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-  FINALE_MUS_READER_REPORT_FIELD(context.report,
-                                 instanceKey<MiscOptionsTarget>(),
-                                 "alignMeasureNumbersWithBarlines",
-                                 {ValueOrigin::LegacyBehavior, 0, 0, 0});
+  withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+      reporting.template behaviorField<MiscOptionsTarget>("consolidateRestsAcrossLayers", 0);
+      reporting.template behaviorField<MiscOptionsTarget>("alignMeasureNumbersWithBarlines", 0);
+  });
 }
 
 void reportRemainingMiscFields(
     const ImportContext &context,
     const std::shared_ptr<const MiscOptionsTarget> &target) {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-  const auto instance = instanceKey<MiscOptionsTarget>();
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "shapeDesignerDashLength",
-      {ValueOrigin::Finale27Default, 0, 0, target->shapeDesignerDashLength});
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "shapeDesignerDashSpace",
-      {ValueOrigin::Finale27Default, 0, 0, target->shapeDesignerDashSpace});
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "restWidthAdjust",
-      {ValueOrigin::Finale27Default, 0, 0, target->restWidthAdjust});
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "dblWholeVertAdjust",
-      {ValueOrigin::Finale27Default, 0, 0, target->dblWholeVertAdjust});
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instance, "keepWrittenOctaveInConcertPitch",
-      {ValueOrigin::Finale27Default, 0, 0,
-       target->keepWrittenOctaveInConcertPitch});
-  if (context.profile.epoch == FormatEpoch::CodaBanner) {
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instance, "showActiveLayerOnly",
-        {ValueOrigin::Finale27Default, 0, 0, target->showActiveLayerOnly});
-  }
-#else
-  static_cast<void>(context);
-  static_cast<void>(target);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto instance = reporting.template instanceKey<MiscOptionsTarget>();
+        reporting.report().setField(instance, "shapeDesignerDashLength",
+            {Reporting::Origin::Finale27Default, 0, 0, target->shapeDesignerDashLength});
+        reporting.report().setField(instance, "shapeDesignerDashSpace",
+            {Reporting::Origin::Finale27Default, 0, 0, target->shapeDesignerDashSpace});
+        reporting.report().setField(instance, "restWidthAdjust",
+            {Reporting::Origin::Finale27Default, 0, 0, target->restWidthAdjust});
+        reporting.report().setField(instance, "dblWholeVertAdjust",
+            {Reporting::Origin::Finale27Default, 0, 0, target->dblWholeVertAdjust});
+        reporting.report().setField(instance, "keepWrittenOctaveInConcertPitch",
+            {Reporting::Origin::Finale27Default, 0, 0, target->keepWrittenOctaveInConcertPitch});
+        if (context.profile.epoch == FormatEpoch::CodaBanner) {
+            reporting.report().setField(instance, "showActiveLayerOnly",
+                {Reporting::Origin::Finale27Default, 0, 0, target->showActiveLayerOnly});
+        }
+    });
 }
 
 } // namespace

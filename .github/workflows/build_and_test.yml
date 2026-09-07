@@ -76,6 +76,9 @@ jobs:
           python scripts/check_doc_budget.py
           python scripts/check_doc_links.py
 
+      - name: Verify reporting boundary
+        run: python scripts/check_reporting_boundary.py
+
       - name: Configure CMake
         if: runner.os != 'Windows'
         run: >-
@@ -101,7 +104,10 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   non-instrumented-build:
-    name: Non-instrumented library / GCC
+    strategy:
+      matrix:
+        buildType: [Debug, Release]
+    name: Non-instrumented library / GCC / ${{ matrix.buildType }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -115,12 +121,16 @@ jobs:
       - name: Configure CMake
         run: >-
           cmake -S . -B build -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_BUILD_TYPE=${{ matrix.buildType }}
           -DCMAKE_C_COMPILER=gcc
           -DCMAKE_CXX_COMPILER=g++
           -DFINALE_MUS_READER_BUILD_TESTING=OFF
+          -DFINALE_MUS_READER_BUILD_REPORTING_TESTING=ON
           -DFINALE_MUS_READER_BUILD_TOOLS=OFF
           -DFINALE_MUS_READER_INSTRUMENTATION=OFF
 
       - name: Build library
-        run: cmake --build build --target finale_mus_reader --parallel 2
+        run: cmake --build build --target finale_mus_reader_reporting_tests --parallel 2
+
+      - name: Test disabled reporting
+        run: ctest --test-dir build -R "^reporting$" --output-on-failure
