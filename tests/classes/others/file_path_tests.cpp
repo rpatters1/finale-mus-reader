@@ -318,7 +318,7 @@ TEST_CASE("Graphic file locators preserve controlled source values", "[file_path
     CHECK(desc->volRefNum == -3);
     CHECK(desc->dirId == 16);
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto& fields = classic.report.fields.at(finale_mus_reader::instanceKey<FileDescription>(0, 1));
+    const auto& fields = classic.report.fields.at(finale_mus_reader::instanceKey<FileDescription>(0, musx::dom::Cmper(1)));
     std::set<std::string> names;
     for (const auto& [name, info] : fields) {
         names.insert(name);
@@ -362,7 +362,7 @@ TEST_CASE("File locator surveyors expose every persisted member", "[file_path][c
     const auto document = session.getDocument();
     const auto add = [&]<typename Target>() {
         auto target = std::make_shared<Target>(document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(1));
         if constexpr (std::is_same_v<Target, FileAlias>) {
             target->aliasHandle = {0, 1, 254, 255};
             target->length = target->aliasHandle.size();
@@ -454,7 +454,7 @@ TEST_CASE("File locators bound opaque lengths and report all fields", "[file_pat
                 ? std::vector<std::uint8_t>{0x34, 0x12, 0x56}
                 : std::vector<std::uint8_t>{0x12, 0x34, 0x78}));
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            CHECK(report.fields.at(finale_mus_reader::instanceKey<FileAlias>(0, 7))
+            CHECK(report.fields.at(finale_mus_reader::instanceKey<FileAlias>(0, musx::dom::Cmper(7)))
                 .at("aliasHandle").origin == ValueOrigin::LegacyMusAdjusted);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             CHECK_FALSE(document->getOthers()->get<FileAlias>(0, 8));
