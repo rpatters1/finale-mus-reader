@@ -29,20 +29,22 @@ void reportFretInstrument(ImportReport& report, const FretInstrumentTarget& targ
         const auto key = reporting.template instanceKey<FretInstrumentTarget>(partId, cmper);
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto report = [&](std::string member, auto value,
-                                typename Reporting::Origin origin = Reporting::Origin::LegacyMus) {
+                                typename Reporting::Origin origin) {
             reporting.report().setField(
                 key, std::move(member), {origin, row.blockOffset, row.decodedOffset, value});
         };
-        report("numFrets", target.numFrets);
-        report("numStrings", target.numStrings);
-        report("speedyClef", target.speedyClef);
+        report("numFrets", target.numFrets, Reporting::Origin::LegacyMus);
+        report("numStrings", target.numStrings, Reporting::Origin::LegacyMus);
+        report("speedyClef", target.speedyClef, Reporting::Origin::LegacyMus);
         for (std::size_t index = 0; index < target.strings.size(); ++index) {
-            report("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch);
+            report("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch,
+                Reporting::Origin::LegacyMus);
             report("strings[" + std::to_string(index) + "].nutOffset",
                 target.strings[index]->nutOffset, Reporting::Origin::LegacyBehavior);
         }
         for (std::size_t index = 0; index < target.fretSteps.size(); ++index) {
-            report("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index]);
+            report("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index],
+                Reporting::Origin::LegacyMus);
         }
     });
 }
