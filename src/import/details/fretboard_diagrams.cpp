@@ -45,6 +45,41 @@ FretboardDiagramTarget::Shape fretboardCellShape(std::uint16_t symbols)
     }
 }
 
+void reportFretboardDiagram(ImportReport& report, const FretboardDiagramTarget& target,
+    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper1, std::uint16_t cmper2)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<FretboardDiagramTarget>(
+            partId, cmper1, musx::dom::Inci{}, cmper2);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto report = [&](std::string member, auto value) {
+            reporting.report().setField(key, std::move(member),
+                {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
+        };
+        report("numFrets", target.numFrets);
+        report("fretboardNum", target.fretboardNum);
+        report("lock", target.lock);
+        report("showNum", target.showNum);
+        report("numFretCells", target.numFretCells);
+        report("numFretBarres", target.numFretBarres);
+        for (std::size_t index = 0; index < target.cells.size(); ++index) {
+            report("cells[" + std::to_string(index) + "].string", target.cells[index]->string);
+            report("cells[" + std::to_string(index) + "].fret", target.cells[index]->fret);
+            report("cells[" + std::to_string(index) + "].shape",
+                static_cast<std::int64_t>(target.cells[index]->shape));
+            report(
+                "cells[" + std::to_string(index) + "].fingerNum", target.cells[index]->fingerNum);
+        }
+        for (std::size_t index = 0; index < target.barres.size(); ++index) {
+            report("barres[" + std::to_string(index) + "].fret", target.barres[index]->fret);
+            report("barres[" + std::to_string(index) + "].startString",
+                target.barres[index]->startString);
+            report(
+                "barres[" + std::to_string(index) + "].endString", target.barres[index]->endString);
+        }
+    });
+}
+
 } // namespace
 
 void importFretboardDiagrams(const ImportContext& context)
@@ -109,37 +144,7 @@ void importFretboardDiagrams(const ImportContext& context)
                 barre->endString = (std::max)(firstString, lastString);
                 target->barres.push_back(std::move(barre));
             }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto key = instanceKey<FretboardDiagramTarget>(
-                partId, cmper1, musx::dom::Inci{}, cmper2);
-            context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-            const auto report = [&](std::string member, auto value) {
-                FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),
-                    {ValueOrigin::LegacyMus, rows.front().blockOffset,
-                        rows.front().decodedOffset, value});
-            };
-            report("numFrets", target->numFrets);
-            report("fretboardNum", target->fretboardNum);
-            report("lock", target->lock);
-            report("showNum", target->showNum);
-            report("numFretCells", target->numFretCells);
-            report("numFretBarres", target->numFretBarres);
-            for (std::size_t index = 0; index < target->cells.size(); ++index) {
-                report("cells[" + std::to_string(index) + "].string", target->cells[index]->string);
-                report("cells[" + std::to_string(index) + "].fret", target->cells[index]->fret);
-                report("cells[" + std::to_string(index) + "].shape",
-                    static_cast<std::int64_t>(target->cells[index]->shape));
-                report("cells[" + std::to_string(index) + "].fingerNum",
-                    target->cells[index]->fingerNum);
-            }
-            for (std::size_t index = 0; index < target->barres.size(); ++index) {
-                report("barres[" + std::to_string(index) + "].fret", target->barres[index]->fret);
-                report("barres[" + std::to_string(index) + "].startString",
-                    target->barres[index]->startString);
-                report("barres[" + std::to_string(index) + "].endString",
-                    target->barres[index]->endString);
-            }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            reportFretboardDiagram(context.report, *target, rows.front(), partId, cmper1, cmper2);
             context.document->getDetails()->add(FretboardDiagramTarget::XmlNodeName,
                 std::move(target));
         }

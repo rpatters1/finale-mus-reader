@@ -244,10 +244,12 @@ bool captureNoteColors(const ImportContext &context,
   // twelve green values, and twelve blue values. Five trailing words are not
   // interpreted.
   target.drawOutline = source.words.front() != 0;
-  FINALE_MUS_READER_REPORT_FIELD(
-      context.report, instanceKey<NoteRestOptionsTarget>(), "drawOutline",
-      {ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset,
-       source.words.front(), numericGlobalClass(noteColorSelector)});
+  withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+      reporting.report().setField(reporting.template instanceKey<NoteRestOptionsTarget>(),
+          "drawOutline",
+          {Reporting::Origin::LegacyMus, source.blockOffset, source.decodedOffset,
+              source.words.front(), numericGlobalClass(noteColorSelector)});
+  });
 
   for (std::size_t channelIndex = 0;
        channelIndex < std::size(noteColorChannels);
@@ -260,13 +262,15 @@ bool captureNoteColors(const ImportContext &context,
       const auto value = static_cast<std::uint16_t>(source.words[wordIndex]);
       const auto &color = target.noteColors[colorIndex];
       color.get()->*channel.member = value;
-      const auto member = std::string("noteColors[") +
-                          std::to_string(colorIndex) + "]." + channel.name;
-      FINALE_MUS_READER_REPORT_FIELD(
-          context.report, instanceKey<NoteRestOptionsTarget>(), member,
-          {ValueOrigin::LegacyMus, source.blockOffset,
-           source.decodedOffset + wordIndex * 2, value,
-           numericGlobalClass(noteColorSelector)});
+      withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+          const auto member =
+              std::string("noteColors[") + std::to_string(colorIndex) + "]." + channel.name;
+          reporting.report().setField(reporting.template instanceKey<NoteRestOptionsTarget>(),
+              member,
+              {Reporting::Origin::LegacyMus, source.blockOffset,
+                  source.decodedOffset + wordIndex * 2, value,
+                  numericGlobalClass(noteColorSelector)});
+      });
     }
   }
   return true;
@@ -275,41 +279,33 @@ bool captureNoteColors(const ImportContext &context,
 void reportDefaultedNoteRestFields(const ImportContext &context,
                                    const NoteRestOptionsTarget &target,
                                    bool recoveredNoteColors) {
-  if (!recoveredNoteColors) {
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<NoteRestOptionsTarget>(), "drawOutline",
-        {ValueOrigin::Finale27Default, 0, 0, target.drawOutline});
-  }
-  if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
-    for (const auto [member, value] : {
-             std::pair{"doShapeNotes",
-                       static_cast<musx::dom::Evpu>(target.doShapeNotes)},
-         }) {
-      FINALE_MUS_READER_REPORT_FIELD(
-          context.report, instanceKey<NoteRestOptionsTarget>(),
-          std::string(member),
-          {ValueOrigin::Finale27Default, 0, 0, value});
-    }
-  }
-  if (recoveredNoteColors) {
-    return;
-  }
-  for (std::size_t index = 0; index < target.noteColors.size(); ++index) {
-    const auto &color = target.noteColors[index];
-    if (!color)
-      continue;
-    const auto prefix =
-        std::string("noteColors[") + std::to_string(index) + "].";
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "red",
-        {ValueOrigin::Finale27Default, 0, 0, color->red});
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "green",
-        {ValueOrigin::Finale27Default, 0, 0, color->green});
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<NoteRestOptionsTarget>(), prefix + "blue",
-        {ValueOrigin::Finale27Default, 0, 0, color->blue});
-  }
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        if (!recoveredNoteColors) {
+
+            reporting.template defaultField<NoteRestOptionsTarget>(
+                "drawOutline", target.drawOutline);
+        }
+        if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
+            for (const auto [member, value] : {
+                     std::pair{"doShapeNotes", static_cast<musx::dom::Evpu>(target.doShapeNotes)},
+                 }) {
+
+                reporting.template defaultField<NoteRestOptionsTarget>(std::string(member), value);
+            }
+        }
+        if (recoveredNoteColors) {
+            return;
+        }
+        for (std::size_t index = 0; index < target.noteColors.size(); ++index) {
+            const auto& color = target.noteColors[index];
+            if (!color) continue;
+            const auto prefix = std::string("noteColors[") + std::to_string(index) + "].";
+
+            reporting.template defaultField<NoteRestOptionsTarget>(prefix + "red", color->red);
+            reporting.template defaultField<NoteRestOptionsTarget>(prefix + "green", color->green);
+            reporting.template defaultField<NoteRestOptionsTarget>(prefix + "blue", color->blue);
+        }
+    });
 }
 
 } // namespace
@@ -334,9 +330,9 @@ void importNoteRestOptions(const ImportContext &context) {
     // preference begins with Finale 3.0, so the whole Coda-banner epoch uses
     // the earlier behavior.
     mutableTarget->scaleManualPositioning = true;
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report, instanceKey<NoteRestOptionsTarget>(),
-        "scaleManualPositioning", {ValueOrigin::LegacyBehavior, 0, 0, 1});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<NoteRestOptionsTarget>("scaleManualPositioning", 1);
+    });
   }
   reportDefaultedNoteRestFields(context, *target, recoveredNoteColors);
 }

@@ -203,38 +203,36 @@ std::optional<ResolvedValue> readEarlyTupleField(const records::LegacyRecordInde
         source, byteOrder);
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportField(ImportReport& report, FontType type, const char* member,
-    ValueOrigin origin, std::int64_t rawValue,
-    std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
+template <typename Reporting>
+void reportField(Reporting& reporting, FontType type, const char* member,
+    typename Reporting::Origin origin, std::int64_t rawValue, std::size_t blockOffset = 0,
+    std::size_t decodedOffset = 0)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<FontOptionsTarget>(),
+    reporting.report().setField(reporting.template instanceKey<FontOptionsTarget>(),
         "fonts[" + std::to_string(static_cast<std::size_t>(type)) + "]." + member,
         {origin, blockOffset, decodedOffset, rawValue});
 }
 
-void reportPhysicalField(ImportReport& report, std::size_t ordinal, const char* member,
+template <typename Reporting>
+void reportPhysicalField(Reporting& reporting, std::size_t ordinal, const char* member,
     const ResolvedValue& source, std::int64_t rawValue)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<FontOptionsTarget>(),
+    reporting.report().setField(reporting.template instanceKey<FontOptionsTarget>(),
         "physical[" + std::to_string(ordinal) + "]." + member,
-        {ValueOrigin::LegacyMus, source.blockOffset, source.decodedOffset, rawValue});
+        {Reporting::Origin::LegacyMus, source.blockOffset, source.decodedOffset, rawValue});
 }
 
-void reportPhysicalTuple(ImportReport& report, std::size_t ordinal,
-    const ResolvedValue& fontId, const ResolvedValue& size, const ResolvedValue& effects)
+template <typename Reporting>
+void reportPhysicalTuple(Reporting& reporting, std::size_t ordinal, const ResolvedValue& fontId,
+    const ResolvedValue& size, const ResolvedValue& effects)
 {
-    reportPhysicalField(report, ordinal, "fontId", fontId,
-        static_cast<std::uint16_t>(fontId.value));
-    reportPhysicalField(report, ordinal, "fontSize", size,
-        static_cast<std::int16_t>(size.value));
-    reportPhysicalField(report, ordinal, "effects", effects,
-        static_cast<std::uint16_t>(effects.value));
+    reportPhysicalField(
+        reporting, ordinal, "fontId", fontId, static_cast<std::uint16_t>(fontId.value));
+    reportPhysicalField(
+        reporting, ordinal, "fontSize", size, static_cast<std::int16_t>(size.value));
+    reportPhysicalField(
+        reporting, ordinal, "effects", effects, static_cast<std::uint16_t>(effects.value));
 }
-#else
-#define reportField(...) ((void)0)
-#define reportPhysicalTuple(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Maps a stored tuple position to the modern FontType it means.
 /// @details Two layouts exist, and which applies is decided by epoch first. The uncompressed
@@ -337,14 +335,9 @@ ResolvedFontTuple resolveRecoveredTuple(const musx::dom::DocumentPtr& document,
 
 void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
-    const std::shared_ptr<FontOptionsTarget>& target, FontType type,
-    const ResolvedValue& fontId, const ResolvedValue& size,
-    const ResolvedValue& effects, ImportReport& report,
-    musx::factory::ConstructionContext& construction
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    , ValueOrigin origin = ValueOrigin::LegacyMus
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    )
+    const std::shared_ptr<FontOptionsTarget>& target, FontType type, const ResolvedValue& fontId,
+    const ResolvedValue& size, const ResolvedValue& effects, ImportReport& report,
+    musx::factory::ConstructionContext& construction, bool inheritedTuple = false)
 {
     const auto resolved = resolveRecoveredTuple(document, referenceDocument, type,
         musx::dom::Cmper(static_cast<std::uint16_t>(fontId.value)),
@@ -356,18 +349,20 @@ void insertRecoveredTuple(const musx::dom::DocumentPtr& document,
     font->setEnigmaStyles(resolved.effects);
     target->fontOptions.insert_or_assign(type, std::move(font));
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto resolvedOrigin = resolved.fromReference ? ValueOrigin::Finale27Default : origin;
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    reportField(report, type, "fontId", resolvedOrigin,
-        resolved.fontId, resolved.fromReference ? 0 : fontId.blockOffset,
-        resolved.fromReference ? 0 : fontId.decodedOffset);
-    reportField(report, type, "fontSize", resolvedOrigin,
-        resolved.fontSize, resolved.fromReference ? 0 : size.blockOffset,
-        resolved.fromReference ? 0 : size.decodedOffset);
-    reportField(report, type, "effects", resolvedOrigin,
-        resolved.effects, resolved.fromReference ? 0 : effects.blockOffset,
-        resolved.fromReference ? 0 : effects.decodedOffset);
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto resolvedOrigin = resolved.fromReference ? Reporting::Origin::Finale27Default
+            : inheritedTuple                               ? Reporting::Origin::LegacyBehavior
+                                                           : Reporting::Origin::LegacyMus;
+        reportField(reporting, type, "fontId", resolvedOrigin, resolved.fontId,
+            resolved.fromReference ? 0 : fontId.blockOffset,
+            resolved.fromReference ? 0 : fontId.decodedOffset);
+        reportField(reporting, type, "fontSize", resolvedOrigin, resolved.fontSize,
+            resolved.fromReference ? 0 : size.blockOffset,
+            resolved.fromReference ? 0 : size.decodedOffset);
+        reportField(reporting, type, "effects", resolvedOrigin, resolved.effects,
+            resolved.fromReference ? 0 : effects.blockOffset,
+            resolved.fromReference ? 0 : effects.decodedOffset);
+    });
 }
 
 /// @brief Resolves a reference font into this document, reporting when it cannot be done.
@@ -401,23 +396,21 @@ musx::dom::Cmper resolveReferenceFont(const musx::dom::DocumentPtr& document,
 /// When the substitution below replaces one, that report becomes untrue, so the existing
 /// entry is rewritten in place rather than appended to: a second entry for the same target
 /// would leave the diagnostics claiming both origins at once.
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void retargetReportedOrigin(ImportReport& report, FontType type,
-    const char* member, std::int64_t rawValue)
+template <typename Reporting>
+void retargetReportedOrigin(
+    Reporting& reporting, FontType type, const char* member, std::int64_t rawValue)
 {
     const auto target = "fonts[" + std::to_string(static_cast<std::size_t>(type))
         + "]." + member;
-    if (auto* info = report.findField(instanceKey<FontOptionsTarget>(), target)) {
-        info->origin = ValueOrigin::Finale27Default;
+    if (auto* info = reporting.report().findField(
+            reporting.template instanceKey<FontOptionsTarget>(), target)) {
+        info->origin = Reporting::Origin::Finale27Default;
         info->rawValue = rawValue;
         // The value no longer comes from anywhere in the source file.
         info->blockOffset = 0;
         info->decodedOffset = 0;
     }
 }
-#else
-#define retargetReportedOrigin(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& document,
     const musx::dom::DocumentPtr& referenceDocument,
@@ -441,9 +434,11 @@ void repairMissingRecoveredFontDefinitionsImpl(const musx::dom::DocumentPtr& doc
 
         // Nothing in this tuple came from the source any more, so the report must stop saying
         // it did: leaving these as LegacyMus would make a substituted value look recovered.
-        retargetReportedOrigin(report, type, "fontId", resolved.fontId);
-        retargetReportedOrigin(report, type, "fontSize", resolved.fontSize);
-        retargetReportedOrigin(report, type, "effects", resolved.effects);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            retargetReportedOrigin(reporting, type, "fontId", resolved.fontId);
+            retargetReportedOrigin(reporting, type, "fontSize", resolved.fontSize);
+            retargetReportedOrigin(reporting, type, "effects", resolved.effects);
+        });
     }
 }
 
@@ -470,10 +465,14 @@ void completeFromReference(const musx::dom::DocumentPtr& document,
         font->setEnigmaStyles(source->getEnigmaStyles());
         target->fontOptions.emplace(type, font);
 
-        reportField(report, type, "fontId", ValueOrigin::Finale27Default, font->fontId);
-        reportField(report, type, "fontSize", ValueOrigin::Finale27Default, font->fontSize);
-        reportField(report, type, "effects", ValueOrigin::Finale27Default,
-            font->getEnigmaStyles());
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportField(
+                reporting, type, "fontId", Reporting::Origin::Finale27Default, font->fontId);
+            reportField(
+                reporting, type, "fontSize", Reporting::Origin::Finale27Default, font->fontSize);
+            reportField(reporting, type, "effects", Reporting::Origin::Finale27Default,
+                font->getEnigmaStyles());
+        });
     }
 }
 
@@ -513,11 +512,7 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
                 if (tuple.type == FontType::StaffNames) {
                     for (const auto companion : codaNameCompanionTypes) {
                         insertRecoveredTuple(document, referenceDocument, target, companion,
-                            *fontId, *size, *effects, report, construction
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                            , ValueOrigin::LegacyBehavior
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                        );
+                            *fontId, *size, *effects, report, construction, true);
                     }
                 }
             }
@@ -539,13 +534,17 @@ void captureFontOptions(const records::LegacyRecordIndex& index, const SourcePro
 
             if (isStructuralTupleFill(count, physicalOrdinal,
                     *fontId, *size, *effects)) {
-                reportPhysicalTuple(report, physicalOrdinal, *fontId, *size, *effects);
+                withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportPhysicalTuple(reporting, physicalOrdinal, *fontId, *size, *effects);
+                });
             } else if (const auto type = semanticType(profile, physicalOrdinal)) {
                 insertRecoveredTuple(
                     document, referenceDocument, target, *type,
                     *fontId, *size, *effects, report, construction);
             } else {
-                reportPhysicalTuple(report, physicalOrdinal, *fontId, *size, *effects);
+                withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportPhysicalTuple(reporting, physicalOrdinal, *fontId, *size, *effects);
+                });
                 if (!isZeroTuple(*fontId, *size, *effects) && profile.epoch == FormatEpoch::ZlibLegacy) {
                     report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,"Captured nonzero legacy font-options tuple "
                         + std::to_string(physicalOrdinal)
@@ -570,9 +569,3 @@ void importFontOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportField
-#undef reportPhysicalTuple
-#undef retargetReportedOrigin
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

@@ -36,24 +36,22 @@ void importChordSuffixPlayback(const ImportContext& context)
             context.document, *source, rows.front(), cmper);
         if (!target) continue;
         target->values = std::move(values);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<ChordSuffixPlaybackTarget>(partId, cmper);
-        context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-        for (std::size_t index = 0; index < target->values.size(); ++index) {
-            const auto rowIndex = source->classRecords
-                ? std::size_t{0}
-                : index / records::otherWordCount;
-            const auto wordIndex = source->classRecords
-                ? index
-                : index % records::otherWordCount;
-            const auto& row = rows[rowIndex];
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key,
-                "values[" + std::to_string(index) + "]",
-                {ValueOrigin::LegacyMus, row.blockOffset,
-                    row.decodedOffset + wordIndex * 2, target->values[index],
-                    source->identity});
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto key =
+                reporting.template instanceKey<ChordSuffixPlaybackTarget>(partId, cmper);
+            reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+            for (std::size_t index = 0; index < target->values.size(); ++index) {
+                const auto rowIndex =
+                    source->classRecords ? std::size_t{0} : index / records::otherWordCount;
+                const auto wordIndex =
+                    source->classRecords ? index : index % records::otherWordCount;
+                const auto& row = rows[rowIndex];
+                reporting.report().setField(key, "values[" + std::to_string(index) + "]",
+                    {Reporting::Origin::LegacyMus, row.blockOffset,
+                        row.decodedOffset + wordIndex * 2, target->values[index],
+                        source->identity});
+            }
+        });
         context.document->getOthers()->add(
             ChordSuffixPlaybackTarget::XmlNodeName, std::move(target));
     }

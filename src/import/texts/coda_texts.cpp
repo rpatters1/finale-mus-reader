@@ -161,12 +161,12 @@ void addCodaText(const ImportContext& context, const text::EnigmaTextSource& sou
     instance->text = std::move(converted.text);
     context.document->getTexts()->add(Target::XmlNodeName, std::move(instance));
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<Target>(musx::dom::SCORE_PARTID, number);
-    recordTextFieldInfo(context.report, key, "text", converted);
-    FINALE_MUS_READER_REPORT_FIELD(context.report, key, "text", {ValueOrigin::LegacyMus, 0, 0,
-        static_cast<std::int64_t>(converted.text.size())});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<Target>(musx::dom::SCORE_PARTID, number);
+        reporting.textField(key, "text", converted);
+        reporting.report().setField(key, "text",
+            {Reporting::Origin::LegacyMus, 0, 0, static_cast<std::int64_t>(converted.text.size())});
+    });
 }
 
 void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSource& source)

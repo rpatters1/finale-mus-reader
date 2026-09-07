@@ -74,23 +74,56 @@ void applyScoreBehavior(const ImportContext& context, PartDefinitionTarget& targ
     target.partOrder = 0;
     target.copies = 1;
     target.printPart = true;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<PartDefinitionTarget>(
-        musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
-    context.report.setInstanceOrigin(key, ValueOrigin::LegacyBehavior);
-    for (const auto& [member, value] : {std::pair<const char*, std::int64_t>{"nameId", 0},
-             {"partOrder", 0}, {"copies", 1}, {"printPart", 1}, {"extractPart", 0},
-             {"applyFormat", 0}, {"needsRecalc", 0}, {"useAsSmpInst", 0}, {"smartMusicInst", 0},
-             {"defaultNameStaff", 0}, {"defaultNameGroup", 0}}) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-            FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, value});
-    }
-#else
-    static_cast<void>(context);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<PartDefinitionTarget>(
+            musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyBehavior);
+        for (const auto& [member, value] : {std::pair<const char*, std::int64_t>{"nameId", 0},
+                 {"partOrder", 0}, {"copies", 1}, {"printPart", 1}, {"extractPart", 0},
+                 {"applyFormat", 0}, {"needsRecalc", 0}, {"useAsSmpInst", 0}, {"smartMusicInst", 0},
+                 {"defaultNameStaff", 0}, {"defaultNameGroup", 0}}) {
+            reporting.report().setField(key, member,
+                typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, value});
+        }
+    });
 }
 
 /// @brief Decodes one stored part definition.
+void reportPartDefinition(ImportReport& report, const PartDefinitionTarget& target,
+    const records::LegacyRow& row, records::LegacyTag identity, std::uint16_t partId,
+    musx::dom::Cmper cmper, std::int64_t defaultName, bool storesInstrument)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<PartDefinitionTarget>(partId, cmper);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto reportField = [&](const char* member, std::size_t offset, std::int64_t stored) {
+            reporting.report().setField(key, member,
+                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
+                    row.decodedOffset + offset, stored, identity});
+        };
+        reportField("nameId", nameIdOffset, target.nameId);
+        reportField("partOrder", partOrderOffset, target.partOrder);
+        reportField("copies", copiesOffset, target.copies);
+        reportField("printPart", flagsOffset, target.printPart);
+        reportField("extractPart", flagsOffset, target.extractPart);
+        reportField("applyFormat", flagsOffset, target.applyFormat);
+        reportField("defaultNameStaff", defaultNameOffset, defaultName);
+        reportField("defaultNameGroup", defaultNameOffset, defaultName);
+        for (const auto* member : {"needsRecalc", "useAsSmpInst"}) {
+            reporting.report().setField(key, member,
+                typename Reporting::FieldInfo{
+                    Reporting::Origin::LegacyBehavior, 0, 0, !target.isScore()});
+        }
+        if (storesInstrument) {
+            reportField("smartMusicInst", smartMusicInstOffset, target.smartMusicInst);
+        } else {
+            reporting.report().setField(key, "smartMusicInst",
+                typename Reporting::FieldInfo{
+                    Reporting::Origin::LegacyBehavior, 0, 0, target.smartMusicInst});
+        }
+    });
+}
+
 void importOnePartDefinition(const ImportContext& context, const RecordFamilySource& source,
     const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
 {
@@ -133,49 +166,21 @@ void importOnePartDefinition(const ImportContext& context, const RecordFamilySou
     target->defaultNameStaff = defaultNameStaffOf(defaultName);
     target->defaultNameGroup = defaultNameGroupOf(defaultName);
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<PartDefinitionTarget>(partId, cmper);
-    context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-    const auto reportField = [&](const char* member, std::size_t offset, std::int64_t stored) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-            FieldInfo{ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset + offset,
-                stored, source.identity});
-    };
-    reportField("nameId", nameIdOffset, target->nameId);
-    reportField("partOrder", partOrderOffset, target->partOrder);
-    reportField("copies", copiesOffset, target->copies);
-    reportField("printPart", flagsOffset, target->printPart);
-    reportField("extractPart", flagsOffset, target->extractPart);
-    reportField("applyFormat", flagsOffset, target->applyFormat);
-    reportField("defaultNameStaff", defaultNameOffset, defaultName);
-    reportField("defaultNameGroup", defaultNameOffset, defaultName);
-    for (const auto* member : {"needsRecalc", "useAsSmpInst"}) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-            FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, !target->isScore()});
-    }
-    if (storesInstrument) {
-        reportField("smartMusicInst", smartMusicInstOffset, target->smartMusicInst);
-    } else {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, "smartMusicInst",
-            FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, target->smartMusicInst});
-    }
-#else
-    static_cast<void>(partId);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    reportPartDefinition(context.report, *target, row, source.identity, partId, cmper, defaultName,
+        storesInstrument);
     context.document->getOthers()->add(PartDefinitionTarget::XmlNodeName, std::move(instance));
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 /// @brief The one member no known record supplies.
 /// @details The record does not carry `unlinkInsts`: no bit of its twelve bytes distinguishes a
 /// part that has it set from one that does not. Some other record may, which is what
 /// @ref ValueOrigin::Unmapped says and why the member is not synthesized here.
-void reportUnmappedMembers(ImportReport& report, const InstanceKey& key,
+template <typename Reporting>
+void reportUnmappedMembers(Reporting& reporting, const typename Reporting::InstanceKey& key,
     const PartDefinitionTarget& target)
 {
-    reportUnmappedField<PartDefinitionTarget>(report, key, "unlinkInsts", target.unlinkInsts);
+    reporting.unmappedField(key, "unlinkInsts", target.unlinkInsts);
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace
 
@@ -211,14 +216,15 @@ void importPartDefinitions(const ImportContext& context)
             std::move(instance));
     }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    for (const auto& instance :
-             context.document->getOthers()->getAllSources<PartDefinitionTarget>()) {
-        reportUnmappedMembers(context.report,
-            instanceKey<PartDefinitionTarget>(instance->getSourcePartId(), instance->getCmper()),
-            *instance);
-    }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        for (const auto& instance :
+            context.document->getOthers()->getAllSources<PartDefinitionTarget>()) {
+            reportUnmappedMembers(reporting,
+                reporting.template instanceKey<PartDefinitionTarget>(
+                    instance->getSourcePartId(), instance->getCmper()),
+                *instance);
+        }
+    });
 }
 
 } // namespace others

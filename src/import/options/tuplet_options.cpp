@@ -349,9 +349,12 @@ void applyAutoBracketStyle(const ImportContext& context)
     const auto pooled = context.document->getOptions()->get<TupletOptionsTarget>();
     if (!pooled) return;
     std::const_pointer_cast<TupletOptionsTarget>(pooled)->autoBracketStyle = style;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TupletOptionsTarget>(),
-        "autoBracketStyle", {ValueOrigin::LegacyMus, words.blockOffset,
-            words.decodedOffset + primaryFlagsWord * sizeof(std::int16_t), readAs(style)});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<TupletOptionsTarget>(),
+            "autoBracketStyle",
+            {Reporting::Origin::LegacyMus, words.blockOffset,
+                words.decodedOffset + primaryFlagsWord * sizeof(std::int16_t), readAs(style)});
+    });
 }
 
 void applyUnstoredTupletBehavior(const ImportContext& context)
@@ -361,8 +364,9 @@ void applyUnstoredTupletBehavior(const ImportContext& context)
     const auto target = std::const_pointer_cast<TupletOptionsTarget>(pooled);
     const auto reportBehavior = [&](const char* member, auto& destination, auto value) {
         destination = value;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<TupletOptionsTarget>(), member,
-            {ValueOrigin::LegacyBehavior, 0, 0, readAs(value)});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<TupletOptionsTarget>(member, readAs(value));
+        });
     };
 
     if (sourcePredatesFinale2005TupletPreferences(context.profile)) {
@@ -394,49 +398,48 @@ void applyUnstoredTupletBehavior(const ImportContext& context)
     }
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportUnmappedTupletFields(const ImportContext& context)
 {
-    const auto target = context.document->getOptions()->get<TupletOptionsTarget>();
-    if (!target) return;
-    const auto key = instanceKey<TupletOptionsTarget>();
-#define FINALE_MUS_READER_UNMAPPED_TUPLET(member) \
-    reportUnmappedField<TupletOptionsTarget>( \
-        context.report, key, #member, readAs(target->member))
-    FINALE_MUS_READER_UNMAPPED_TUPLET(displayNumber);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(displayDuration);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(referenceNumber);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(referenceDuration);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(alwaysFlat);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(fullDura);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(metricCenter);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(avoidStaff);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(autoBracketStyle);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupOffX);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupOffY);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(brackOffX);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(brackOffY);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(numStyle);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(posStyle);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(allowHorz);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(ignoreHorzNumOffset);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(breakBracket);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(matchHooks);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(useBottomNote);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(brackStyle);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(smartTuplet);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(leftHookLen);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(leftHookExt);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(rightHookLen);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(rightHookExt);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(manualSlopeAdj);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupMaxSlope);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupLineWidth);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupNUpstemOffset);
-    FINALE_MUS_READER_UNMAPPED_TUPLET(tupNDownstemOffset);
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto target = context.document->getOptions()->get<TupletOptionsTarget>();
+        if (!target) return;
+        const auto key = reporting.template instanceKey<TupletOptionsTarget>();
+#define FINALE_MUS_READER_UNMAPPED_TUPLET(member)                                                  \
+    reporting.unmappedField(key, #member, readAs(target->member))
+        FINALE_MUS_READER_UNMAPPED_TUPLET(displayNumber);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(displayDuration);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(referenceNumber);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(referenceDuration);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(alwaysFlat);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(fullDura);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(metricCenter);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(avoidStaff);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(autoBracketStyle);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupOffX);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupOffY);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(brackOffX);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(brackOffY);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(numStyle);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(posStyle);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(allowHorz);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(ignoreHorzNumOffset);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(breakBracket);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(matchHooks);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(useBottomNote);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(brackStyle);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(smartTuplet);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(leftHookLen);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(leftHookExt);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(rightHookLen);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(rightHookExt);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(manualSlopeAdj);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupMaxSlope);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupLineWidth);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupNUpstemOffset);
+        FINALE_MUS_READER_UNMAPPED_TUPLET(tupNDownstemOffset);
 #undef FINALE_MUS_READER_UNMAPPED_TUPLET
+    });
 }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 } // namespace
 
@@ -451,9 +454,7 @@ void importTupletOptions(const ImportContext& context)
         context.index, context.profile, context.document, context.report);
     applyAutoBracketStyle(context);
     applyUnstoredTupletBehavior(context);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     reportUnmappedTupletFields(context);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 }
 
 } // namespace options

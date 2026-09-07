@@ -459,16 +459,14 @@ const MappingTable& classSmartLyricTable()
     return table;
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-void reportLyricField(ImportReport& report, const std::string& member, ValueOrigin origin,
-    std::int64_t rawValue, std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
+template <typename Reporting>
+void reportLyricField(Reporting& reporting, const std::string& member,
+    typename Reporting::Origin origin, std::int64_t rawValue, std::size_t blockOffset = 0,
+    std::size_t decodedOffset = 0)
 {
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<LyricTarget>(), member,
+    reporting.report().setField(reporting.template instanceKey<LyricTarget>(), member,
         {origin, blockOffset, decodedOffset, rawValue});
 }
-#else
-#define reportLyricField(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief The seeded style for one syllable position, created if the baseline lacked it.
 std::shared_ptr<LyricSyllableStyle> syllableStyleFor(
@@ -515,34 +513,43 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     for (std::size_t position = 0; position < std::size(syllablePositionOrder); ++position) {
         const auto type = syllablePositionOrder[position];
         const auto style = syllableStyleFor(target, type);
-        const std::string name =
-            std::string("syllablePosStyles[") + syllablePositionNames[position] + ']';
+        const auto name = [&] {
+            return std::string("syllablePosStyles[") + syllablePositionNames[position] + ']';
+        };
         if (syllable.present) {
             const auto first = position * syllablePositionWords;
             if (const auto align = lyricAlignment(wordAt(syllable.words, first))) {
                 style->align = *align;
-                reportLyricField(report, name + ".align",
-                    ValueOrigin::LegacyMus, wordAt(syllable.words, first),
-                    syllable.blockOffset, syllable.decodedOffset);
+                withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportLyricField(reporting, name() + ".align", Reporting::Origin::LegacyMus,
+                        wordAt(syllable.words, first), syllable.blockOffset,
+                        syllable.decodedOffset);
+                });
             }
             if (const auto justify = lyricAlignment(wordAt(syllable.words, first + 1))) {
                 style->justify = *justify;
-                reportLyricField(report, name + ".justify",
-                    ValueOrigin::LegacyMus, wordAt(syllable.words, first + 1),
-                    syllable.blockOffset, syllable.decodedOffset);
+                withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportLyricField(reporting, name() + ".justify", Reporting::Origin::LegacyMus,
+                        wordAt(syllable.words, first + 1), syllable.blockOffset,
+                        syllable.decodedOffset);
+                });
             }
             const auto flags =
                 static_cast<std::uint16_t>(wordAt(syllable.words, first + 2));
             style->on = (flags & (1U << syllablePositionOnBit)) != 0;
-            reportLyricField(report, name + ".on", ValueOrigin::LegacyMus, style->on ? 1 : 0,
-                syllable.blockOffset, syllable.decodedOffset);
+            withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                reportLyricField(reporting, name() + ".on", Reporting::Origin::LegacyMus,
+                    style->on ? 1 : 0, syllable.blockOffset, syllable.decodedOffset);
+            });
         } else if (type != LyricSyllableType::Default) {
             // Before the selector exists the three optional positions are simply not applied,
             // and the pinned baseline says the opposite: it switches all three on. Leaving them
             // to the baseline would claim positioning the source never asked for. The
             // alignments are left alone, the baseline already carrying what the era did.
             style->on = false;
-            reportLyricField(report, name + ".on", ValueOrigin::LegacyBehavior, 0);
+            withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                reportLyricField(reporting, name() + ".on", Reporting::Origin::LegacyBehavior, 0);
+            });
         }
     }
 
@@ -565,22 +572,28 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
             const auto type = wordExtConnectOrder[element];
             const auto style = connectStyleFor(target, type);
             const auto first = element * wordExtConnectWords;
-            const std::string name =
-                std::string("wordExtConnectStyles[") + wordExtConnectNames[element] + ']';
+            const auto name = [&] {
+                return std::string("wordExtConnectStyles[") + wordExtConnectNames[element] + ']';
+            };
             const auto stored = wordAt(connect.words, first);
             const auto ordinal = stored - firstLegacyConnectIndex;
             if (ordinal >= 0
                 && static_cast<std::size_t>(ordinal) < std::size(legacyConnectIndexOrder)) {
                 style->connectIndex = legacyConnectIndexOrder[ordinal];
-                reportLyricField(report, name + ".connectIndex", ValueOrigin::LegacyMus,
-                    stored, connect.blockOffset, connect.decodedOffset);
+                withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportLyricField(reporting, name() + ".connectIndex",
+                        Reporting::Origin::LegacyMus, stored, connect.blockOffset,
+                        connect.decodedOffset);
+                });
             }
             style->xOffset = wordAt(connect.words, first + 1);
             style->yOffset = wordAt(connect.words, first + 2);
-            reportLyricField(report, name + ".xOffset", ValueOrigin::LegacyMus, style->xOffset,
-                connect.blockOffset, connect.decodedOffset);
-            reportLyricField(report, name + ".yOffset", ValueOrigin::LegacyMus, style->yOffset,
-                connect.blockOffset, connect.decodedOffset);
+            withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+                reportLyricField(reporting, name() + ".xOffset", Reporting::Origin::LegacyMus,
+                    style->xOffset, connect.blockOffset, connect.decodedOffset);
+                reportLyricField(reporting, name() + ".yOffset", Reporting::Origin::LegacyMus,
+                    style->yOffset, connect.blockOffset, connect.decodedOffset);
+            });
         }
 
     }
@@ -591,14 +604,18 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     const auto lift = readGlobalWords(index, profile, wordExtLiftSelector);
     if (lift.present) {
         target->wordExtVertOffset = wordAt(lift.words, wordExtOffsetSlot);
-        reportLyricField(report, "wordExtVertOffset", ValueOrigin::LegacyMus,
-            target->wordExtVertOffset, lift.blockOffset, lift.decodedOffset);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(reporting, "wordExtVertOffset", Reporting::Origin::LegacyMus,
+                target->wordExtVertOffset, lift.blockOffset, lift.decodedOffset);
+        });
     }
     const auto push = readGlobalWords(index, profile, wordExtPushSelector);
     if (push.present) {
         target->wordExtHorzOffset = wordAt(push.words, wordExtOffsetSlot);
-        reportLyricField(report, "wordExtHorzOffset", ValueOrigin::LegacyMus,
-            target->wordExtHorzOffset, push.blockOffset, push.decodedOffset);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(reporting, "wordExtHorzOffset", Reporting::Origin::LegacyMus,
+                target->wordExtHorzOffset, push.blockOffset, push.decodedOffset);
+        });
     }
 
     // musxdom keeps the same two numbers twice: as the class-level pair above and again as the
@@ -619,8 +636,10 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // asserted rather than left.
     if (!storesWordExtLineWidth(index, profile)) {
         target->wordExtLineWidth = unstatedWordExtLineWidth;
-        reportLyricField(report, "wordExtLineWidth", ValueOrigin::LegacyBehavior,
-            unstatedWordExtLineWidth);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(reporting, "wordExtLineWidth", Reporting::Origin::LegacyBehavior,
+                unstatedWordExtLineWidth);
+        });
     }
 
     // Syllable edge punctuation is ignored by default in a Finale 27 document and was not
@@ -628,7 +647,10 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // See @ref storesEdgePunctuationSetting for the boundary.
     if (!storesEdgePunctuationSetting(index, profile)) {
         target->lyricUseEdgePunctuation = true;
-        reportLyricField(report, "lyricUseEdgePunctuation", ValueOrigin::LegacyBehavior, 1);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "lyricUseEdgePunctuation", Reporting::Origin::LegacyBehavior, 1);
+        });
     }
 
     // The list of punctuation to ignore is stored as a variable-length tail on selector 57
@@ -695,9 +717,11 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         // The reported value is the number of code units or bytes the tail supplied, because
         // the field is text and the report carries numbers. Zero says the document kept the
         // stock list.
-        reportLyricField(report, "lyricPunctuationToIgnore",
-            ignored.empty() ? ValueOrigin::Finale27Default : ValueOrigin::LegacyMus,
-            static_cast<std::int64_t>(units), lyric.blockOffset, lyric.decodedOffset);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(reporting, "lyricPunctuationToIgnore",
+                ignored.empty() ? Reporting::Origin::Finale27Default : Reporting::Origin::LegacyMus,
+                static_cast<std::int64_t>(units), lyric.blockOffset, lyric.decodedOffset);
+        });
     }
 
     // Smart hyphens, smart word extensions and the underscore requirement all arrive together
@@ -720,11 +744,19 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // rather than inherited.
     if (!storesSmartLyricOptions(index, profile)) {
         target->useSmartHyphens = false;
-        reportLyricField(report, "useSmartHyphens", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(reporting, "useSmartHyphens", Reporting::Origin::LegacyBehavior, 0);
+        });
         target->useSmartWordExtensions = false;
-        reportLyricField(report, "useSmartWordExtensions", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "useSmartWordExtensions", Reporting::Origin::LegacyBehavior, 0);
+        });
         target->wordExtNeedUnderscore = false;
-        reportLyricField(report, "wordExtNeedUnderscore", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "wordExtNeedUnderscore", Reporting::Origin::LegacyBehavior, 0);
+        });
     }
 
     // Automatic lyric numbering arrives with Finale 2011, so a document whose selector 58 is
@@ -734,11 +766,20 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // the numbering type of a document that displays no numbers means nothing.
     if (!storesAutoNumbering(index, profile)) {
         target->showAutoNumbersOnVerses = false;
-        reportLyricField(report, "showAutoNumbersOnVerses", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "showAutoNumbersOnVerses", Reporting::Origin::LegacyBehavior, 0);
+        });
         target->showAutoNumbersOnChoruses = false;
-        reportLyricField(report, "showAutoNumbersOnChoruses", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "showAutoNumbersOnChoruses", Reporting::Origin::LegacyBehavior, 0);
+        });
         target->showAutoNumbersOnSections = false;
-        reportLyricField(report, "showAutoNumbersOnSections", ValueOrigin::LegacyBehavior, 0);
+        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+            reportLyricField(
+                reporting, "showAutoNumbersOnSections", Reporting::Origin::LegacyBehavior, 0);
+        });
     }
 
     // The alternate hyphen font postdates Finale 2012, the last release this library opens, so
@@ -754,17 +795,19 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // a fact about the formats, and that is what makes the value known rather than
     // synthesized.
     target->useAltHyphenFont = false;
-    reportLyricField(report, "useAltHyphenFont", ValueOrigin::LegacyBehavior, 0);
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reportLyricField(reporting, "useAltHyphenFont", Reporting::Origin::LegacyBehavior, 0);
+    });
 
     // These members postdate every supported legacy layout. Their seeded values remain untouched;
     // musxdom creates the FontInfo placeholder after import.
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    reportLyricField(report, "hyphenChar", ValueOrigin::MusxOnly,
-        static_cast<std::int64_t>(target->hyphenChar));
-    reportLyricField(report, "altHyphenFont.fontId", ValueOrigin::MusxOnly, 0);
-    reportLyricField(report, "altHyphenFont.fontSize", ValueOrigin::MusxOnly, 0);
-    reportLyricField(report, "altHyphenFont.effects", ValueOrigin::MusxOnly, 0);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        reportLyricField(reporting, "hyphenChar", Reporting::Origin::MusxOnly,
+            static_cast<std::int64_t>(target->hyphenChar));
+        reportLyricField(reporting, "altHyphenFont.fontId", Reporting::Origin::MusxOnly, 0);
+        reportLyricField(reporting, "altHyphenFont.fontSize", Reporting::Origin::MusxOnly, 0);
+        reportLyricField(reporting, "altHyphenFont.effects", Reporting::Origin::MusxOnly, 0);
+    });
 }
 
 } // namespace
@@ -784,7 +827,3 @@ void importLyricOptions(const ImportContext& context)
 
 } // namespace options
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportLyricField
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

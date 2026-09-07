@@ -43,44 +43,40 @@ ChordSuffixElementTarget::Prefix chordSuffixPrefix(std::uint16_t flags)
     return Prefix::None;
 }
 
-void reportChordSuffixElement(
-    [[maybe_unused]] const ImportContext& context,
-    [[maybe_unused]] const ChordSuffixElementTarget& target,
-    [[maybe_unused]] const RecordFamilySource& source,
-    [[maybe_unused]] const records::LegacyRow& row,
-    [[maybe_unused]] std::size_t tupleOffset,
-    [[maybe_unused]] bool wide)
+void reportChordSuffixElement(const ImportContext& context, const ChordSuffixElementTarget& target,
+    const RecordFamilySource& source, const records::LegacyRow& row, std::size_t tupleOffset,
+    bool wide)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto key = instanceKey<ChordSuffixElementTarget>(
-        target.getSourcePartId(), target.getCmper(), target.getInci());
-    context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-    const auto report = [&](const char* member, std::size_t fieldOffset, auto value) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-            {ValueOrigin::LegacyMus, row.blockOffset,
-                row.decodedOffset + tupleOffset + fieldOffset, value, source.identity});
-    };
-    const auto symbolOffset = std::size_t{0};
-    const auto xOffset = wide ? std::size_t{4} : std::size_t{2};
-    const auto yOffset = wide ? std::size_t{6} : std::size_t{4};
-    const auto fontIdOffset = wide ? std::size_t{8} : std::size_t{6};
-    const auto fontSizeOffset = wide ? std::size_t{10} : std::size_t{6};
-    const auto effectsOffset = wide ? std::size_t{12} : std::size_t{8};
-    const auto flagsOffset = wide ? std::size_t{14} : std::size_t{10};
-    report("symbol", symbolOffset, static_cast<std::uint32_t>(target.symbol));
-    report("xdisp", xOffset, target.xdisp);
-    report("ydisp", yOffset, target.ydisp);
-    report("font.fontId", fontIdOffset, target.font->fontId);
-    report("font.fontSize", fontSizeOffset, target.font->fontSize);
-    report("font.bold", effectsOffset, target.font->bold);
-    report("font.italic", effectsOffset, target.font->italic);
-    report("font.underline", effectsOffset, target.font->underline);
-    report("font.strikeout", effectsOffset, target.font->strikeout);
-    report("font.absolute", effectsOffset, target.font->absolute);
-    report("font.hidden", effectsOffset, target.font->hidden);
-    report("isNumber", flagsOffset, target.isNumber);
-    report("prefix", flagsOffset, static_cast<std::int64_t>(target.prefix));
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<ChordSuffixElementTarget>(
+            target.getSourcePartId(), target.getCmper(), target.getInci());
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto report = [&](const char* member, std::size_t fieldOffset, auto value) {
+            reporting.report().setField(key, member,
+                {Reporting::Origin::LegacyMus, row.blockOffset,
+                    row.decodedOffset + tupleOffset + fieldOffset, value, source.identity});
+        };
+        const auto symbolOffset = std::size_t{0};
+        const auto xOffset = wide ? std::size_t{4} : std::size_t{2};
+        const auto yOffset = wide ? std::size_t{6} : std::size_t{4};
+        const auto fontIdOffset = wide ? std::size_t{8} : std::size_t{6};
+        const auto fontSizeOffset = wide ? std::size_t{10} : std::size_t{6};
+        const auto effectsOffset = wide ? std::size_t{12} : std::size_t{8};
+        const auto flagsOffset = wide ? std::size_t{14} : std::size_t{10};
+        report("symbol", symbolOffset, static_cast<std::uint32_t>(target.symbol));
+        report("xdisp", xOffset, target.xdisp);
+        report("ydisp", yOffset, target.ydisp);
+        report("font.fontId", fontIdOffset, target.font->fontId);
+        report("font.fontSize", fontSizeOffset, target.font->fontSize);
+        report("font.bold", effectsOffset, target.font->bold);
+        report("font.italic", effectsOffset, target.font->italic);
+        report("font.underline", effectsOffset, target.font->underline);
+        report("font.strikeout", effectsOffset, target.font->strikeout);
+        report("font.absolute", effectsOffset, target.font->absolute);
+        report("font.hidden", effectsOffset, target.font->hidden);
+        report("isNumber", flagsOffset, target.isNumber);
+        report("prefix", flagsOffset, static_cast<std::int64_t>(target.prefix));
+    });
 }
 
 } // namespace

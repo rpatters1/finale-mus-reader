@@ -847,9 +847,9 @@ void applyPageFormatBehavior(const ImportContext& context,
     PageFormatOptionsTarget& target)
 {
     const auto reportBehavior = [&](const char* member, std::int64_t value) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<PageFormatOptionsTarget>(), member,
-            {ValueOrigin::LegacyBehavior, 0, 0, value});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<PageFormatOptionsTarget>(member, value);
+        });
     };
 
     if (context.profile.epoch == FormatEpoch::CodaBanner
@@ -967,19 +967,16 @@ void applyPageFormatBehavior(const ImportContext& context,
 void reportRemainingPageFormatFields(const ImportContext& context,
     const PageFormatOptionsTarget& target)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto instance = instanceKey<PageFormatOptionsTarget>();
-    context.report.setField(instance, "adjustPageScope",
-        {ValueOrigin::Finale27Default, 0, 0,
-            static_cast<std::int64_t>(target.adjustPageScope)});
-    if (!context.report.findField(instance, "avoidSystemMarginCollisions")) {
-        reportUnmappedField<PageFormatOptionsTarget>(context.report, instance,
-            "avoidSystemMarginCollisions", target.avoidSystemMarginCollisions);
-    }
-#else
-    static_cast<void>(context);
-    static_cast<void>(target);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto instance = reporting.template instanceKey<PageFormatOptionsTarget>();
+        reporting.report().setField(instance, "adjustPageScope",
+            {Reporting::Origin::Finale27Default, 0, 0,
+                static_cast<std::int64_t>(target.adjustPageScope)});
+        if (!reporting.report().findField(instance, "avoidSystemMarginCollisions")) {
+            reporting.unmappedField(
+                instance, "avoidSystemMarginCollisions", target.avoidSystemMarginCollisions);
+        }
+    });
 }
 
 } // namespace

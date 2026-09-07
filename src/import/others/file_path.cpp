@@ -23,16 +23,18 @@ void importFileRecords(const ImportContext& context, records::LegacyTag tag,
         const auto payload = collectRecordPayload(*source, rows);
         auto target = createOthersRecordTarget<Target>(context.document, *source, rows.front(), cmper);
         if (!target) continue;
-        const auto report = [&]([[maybe_unused]] const char* member,
-                                [[maybe_unused]] std::int64_t raw, std::size_t offset
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                                , ValueOrigin origin = ValueOrigin::LegacyMus
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                                ) {
-            [[maybe_unused]] const auto& row = rows[source->classRecords ? 0
-                : offset / (records::otherWordCount * sizeof(std::int16_t))];
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<Target>(partId, cmper),
-                member, {origin, row.blockOffset, row.decodedOffset, raw, source->identity});
+        const auto report = [&](const char* member, std::int64_t raw, std::size_t offset,
+                                bool adjusted = false, bool mapped = true) {
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto origin = !mapped ? Reporting::Origin::Unmapped
+                    : adjusted              ? Reporting::Origin::LegacyMusAdjusted
+                                            : Reporting::Origin::LegacyMus;
+                const auto& row = rows[source->classRecords
+                        ? 0
+                        : offset / (records::otherWordCount * sizeof(std::int16_t))];
+                reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper),
+                    member, {origin, row.blockOffset, row.decodedOffset, raw, source->identity});
+            });
         };
         if (populate(*target, std::span<const std::uint8_t>(payload), report)) {
             context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
@@ -60,11 +62,7 @@ void importFileAliases(const ImportContext& context)
             for (std::size_t i = 0; i + 1 < target.aliasHandle.size(); i += 2)
                 std::swap(target.aliasHandle[i], target.aliasHandle[i + 1]);
             report("length", length, 0);
-            report("aliasHandle", length, 4
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                , ValueOrigin::LegacyMusAdjusted
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            );
+            report("aliasHandle", length, 4, true);
             return true;
         });
 }
@@ -93,11 +91,7 @@ void importFileDescriptions(const ImportContext& context)
             else context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
                 "Unmapped file locator type " + std::to_string(type) + "."});
             report("version", target.version, 0);
-            report("pathType", type, 2
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                , type >= 1 && type <= 3 ? ValueOrigin::LegacyMus : ValueOrigin::Unmapped
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            );
+            report("pathType", type, 2, false, type >= 1 && type <= 3);
             report("pathId", target.pathId, 4);
             report("volRefNum", target.volRefNum, 6);
             report("dirId", target.dirId, 8);

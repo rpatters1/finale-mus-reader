@@ -98,13 +98,16 @@ void importAugmentationDotOptions(const ImportContext& context)
 
     if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
         target->adjMultipleVoices = false;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<AugmentationDotTarget>(),
-            "adjMultipleVoices", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<AugmentationDotTarget>("adjMultipleVoices", 0);
+        });
     }
 
     target->useLegacyFlippedStemPositioning = false;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<AugmentationDotTarget>(),
-        "useLegacyFlippedStemPositioning", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<AugmentationDotTarget>(
+            "useLegacyFlippedStemPositioning", 0);
+    });
 }
 
 } // namespace options

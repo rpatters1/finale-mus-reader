@@ -98,9 +98,9 @@ void applyPreFinale2004CrossLayerBehavior(const ImportContext& context)
     if (!pooled) return;
     const auto target = std::const_pointer_cast<AccidentalOptionsTarget>(pooled);
     target->crossLayerPositioning = false;
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<AccidentalOptionsTarget>(), "crossLayerPositioning",
-        {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<AccidentalOptionsTarget>("crossLayerPositioning", 0);
+    });
 }
 
 void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
@@ -122,15 +122,15 @@ void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
     target->acciNoteSpace = 8;
     target->acciAcciSpace = 8;
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    for (const auto* member : {"acciNoteSpace", "acciAcciSpace"}) {
-        if (auto* info = context.report.findField(
-                instanceKey<AccidentalOptionsTarget>(), member)) {
-            info->origin = ValueOrigin::LegacyBehavior;
-            info->rawValue = 0;
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        for (const auto* member : {"acciNoteSpace", "acciAcciSpace"}) {
+            if (auto* info = reporting.report().findField(
+                    reporting.template instanceKey<AccidentalOptionsTarget>(), member)) {
+                info->origin = Reporting::Origin::LegacyBehavior;
+                info->rawValue = 0;
+            }
         }
-    }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    });
 }
 
 } // namespace

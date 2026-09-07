@@ -23,19 +23,43 @@ constexpr std::size_t measureGraphicAssignWordCount =
     ((graphicAssignmentWordCount + records::detailWordCount - 1)
         / records::detailWordCount) * records::detailWordCount;
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 void reportMeasureGraphicValue(const ImportContext& context, musx::dom::Cmper staffId,
-    musx::dom::Cmper meas, musx::dom::Inci inci, std::uint16_t partId,
-    std::string name, std::int64_t value, const records::LegacyRow& row)
+    musx::dom::Cmper meas, musx::dom::Inci inci, std::uint16_t partId, const char* name,
+    std::int64_t value, const records::LegacyRow& row)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas),
-        std::move(name), {ValueOrigin::LegacyMus,
-        row.blockOffset, row.decodedOffset, value});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(
+            reporting.template instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas), name,
+            {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
+    });
 }
-#else
-#define reportMeasureGraphicValue(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+void reportMeasureGraphicTuple(const ImportContext& context, const RecordFamilySource& source,
+    std::span<const records::LegacyRow> rows, std::span<const std::int16_t> tuple, std::size_t at,
+    std::uint16_t partId, musx::dom::Cmper staffId, musx::dom::Cmper meas, musx::dom::Inci inci)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        constexpr std::size_t slots[] = {0, 1, 2, 3, 4, 5, 7, 11, 12, 13, 17};
+        constexpr const char* names[] = {"version", "left", "bottom", "width", "height", "fDescId",
+            "hidden", "savedRecord", "origWidth", "origHeight", "graphicCmper"};
+        for (std::size_t index = 0; index < std::size(slots); ++index) {
+            const auto slot = slots[index];
+            const auto& sourceRow =
+                rows[source.classRecords ? 0 : (at + slot) / records::detailWordCount];
+            reportMeasureGraphicValue(
+                context, staffId, meas, inci, partId, names[index], tuple[slot], sourceRow);
+        }
+        const auto reportInstance =
+            reporting.template instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas);
+        reporting.report().setInstanceOrigin(reportInstance, Reporting::Origin::LegacyMus);
+        const auto& positionRow =
+            rows[source.classRecords ? 0 : (at + 8) / records::detailWordCount];
+        for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
+            reportMeasureGraphicValue(
+                context, staffId, meas, inci, partId, member, tuple[8], positionRow);
+        }
+    });
+}
 
 void importMeasureGraphicFamily(const ImportContext& context,
     const RecordFamilySource& source)
@@ -62,28 +86,8 @@ void importMeasureGraphicFamily(const ImportContext& context,
                 populateGraphicAssignmentCommon(*target, tuple);
                 populateGraphicAssignmentPosition<true>(
                     *target, static_cast<std::uint16_t>(tuple[8]));
-                constexpr std::size_t slots[] = {0, 1, 2, 3, 4, 5, 7, 11, 12, 13, 17};
-                constexpr const char* names[] = {"version", "left", "bottom", "width",
-                    "height", "fDescId", "hidden", "savedRecord", "origWidth",
-                    "origHeight", "graphicCmper"};
-                for (std::size_t index = 0; index < std::size(slots); ++index) {
-                    const auto slot = slots[index];
-                    const auto& sourceRow = rows[source.classRecords ? 0
-                        : (at + slot) / records::detailWordCount];
-                    reportMeasureGraphicValue(context, staffId, meas, inci, partId,
-                        names[index], tuple[slot], sourceRow);
-                }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-                const auto reportInstance = instanceKey<MeasureGraphicTarget>(
-                    partId, staffId, inci, meas);
-                context.report.setInstanceOrigin(reportInstance, ValueOrigin::LegacyMus);
-                const auto& positionRow = rows[source.classRecords ? 0
-                    : (at + 8) / records::detailWordCount];
-                for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
-                    reportMeasureGraphicValue(context, staffId, meas, inci, partId,
-                        member, tuple[8], positionRow);
-                }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+                reportMeasureGraphicTuple(
+                    context, source, rows, tuple, at, partId, staffId, meas, inci);
                 context.document->getDetails()->add(
                     MeasureGraphicTarget::XmlNodeName, std::move(target));
             }
@@ -104,7 +108,3 @@ void importMeasureGraphicAssignments(const ImportContext& context)
 
 } // namespace details
 } // namespace finale_mus_reader
-
-#if !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-#undef reportMeasureGraphicValue
-#endif // !defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)

@@ -31,21 +31,19 @@ const records::LegacyRow& sourceRow(const RecordFamilySource& source,
     return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
 }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-template <typename Target>
-void reportAssignmentValue(const ImportContext& context, musx::dom::Cmper cmper,
-    musx::dom::Inci inci, std::uint16_t partId, std::string member,
-    std::int64_t value, const records::LegacyRow& row)
+template <typename Target, typename Reporting>
+void reportAssignmentValue(Reporting& reporting, musx::dom::Cmper cmper, musx::dom::Inci inci,
+    std::uint16_t partId, std::string member, std::int64_t value, const records::LegacyRow& row)
 {
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<Target>(partId, cmper, inci), std::move(member),
-        {ValueOrigin::LegacyMus, row.blockOffset, row.decodedOffset, value});
+    reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper, inci),
+        std::move(member),
+        {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
 }
 
-template <typename Target>
-void reportPositionValues(const ImportContext& context, musx::dom::Cmper cmper,
-    musx::dom::Inci inci, std::uint16_t partId, std::string_view prefix,
-    std::int64_t value, const records::LegacyRow& row, bool hasPositionFrom)
+template <typename Target, typename Reporting>
+void reportPositionValues(Reporting& reporting, musx::dom::Cmper cmper, musx::dom::Inci inci,
+    std::uint16_t partId, std::string_view prefix, std::int64_t value,
+    const records::LegacyRow& row, bool hasPositionFrom)
 {
     const auto memberName = [prefix](std::string_view suffix) {
         if (!prefix.empty()) return std::string(prefix) + std::string(suffix);
@@ -53,23 +51,15 @@ void reportPositionValues(const ImportContext& context, musx::dom::Cmper cmper,
         result.front() = static_cast<char>(result.front() - 'A' + 'a');
         return result;
     };
-    reportAssignmentValue<Target>(context, cmper, inci, partId,
-        memberName("HAlign"), value, row);
-    reportAssignmentValue<Target>(context, cmper, inci, partId,
-        memberName("VAlign"), value, row);
+    reportAssignmentValue<Target>(reporting, cmper, inci, partId, memberName("HAlign"), value, row);
+    reportAssignmentValue<Target>(reporting, cmper, inci, partId, memberName("VAlign"), value, row);
     if (hasPositionFrom) {
-        reportAssignmentValue<Target>(context, cmper, inci, partId,
-            memberName("PosFrom"), value, row);
+        reportAssignmentValue<Target>(
+            reporting, cmper, inci, partId, memberName("PosFrom"), value, row);
     }
-    reportAssignmentValue<Target>(context, cmper, inci, partId,
-        memberName("FixedPerc"), value, row);
+    reportAssignmentValue<Target>(
+        reporting, cmper, inci, partId, memberName("FixedPerc"), value, row);
 }
-#define REPORT_ASSIGNMENT_VALUE(Target, ...) reportAssignmentValue<Target>(__VA_ARGS__)
-#define REPORT_POSITION_VALUES(Target, ...) reportPositionValues<Target>(__VA_ARGS__)
-#else
-#define REPORT_ASSIGNMENT_VALUE(...) ((void)0)
-#define REPORT_POSITION_VALUES(...) ((void)0)
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 void populatePagePosition(PageTarget& target, std::uint16_t packed, bool right)
 {
@@ -144,19 +134,22 @@ void importPageFamily(const ImportContext& context)
                 nullptr, "graphicCmper"};
             for (std::size_t slot = 0; slot < graphicAssignmentWordCount; ++slot) {
                 if (!names[slot]) continue;
-                REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, partId,
-                    names[slot], tuple[slot], sourceRow(*source, rows, at + slot));
+                withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, names[slot],
+                        tuple[slot], sourceRow(*source, rows, at + slot));
+                });
             }
-            REPORT_ASSIGNMENT_VALUE(PageTarget, context, cmper, inci, partId, "hidden", tuple[7],
-                sourceRow(*source, rows, at + 7));
-            REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, partId, "", tuple[8],
-                sourceRow(*source, rows, at + 8), true);
-            REPORT_POSITION_VALUES(PageTarget, context, cmper, inci, partId, "rightPg", tuple[16],
-                sourceRow(*source, rows, at + 16), true);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            context.report.setInstanceOrigin(
-                instanceKey<PageTarget>(partId, cmper, inci), ValueOrigin::LegacyMus);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, "hidden",
+                    tuple[7], sourceRow(*source, rows, at + 7));
+                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "", tuple[8],
+                    sourceRow(*source, rows, at + 8), true);
+                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "rightPg",
+                    tuple[16], sourceRow(*source, rows, at + 16), true);
+                reporting.report().setInstanceOrigin(
+                    reporting.template instanceKey<PageTarget>(partId, cmper, inci),
+                    Reporting::Origin::LegacyMus);
+            });
             context.document->getOthers()->add(PageTarget::XmlNodeName, std::move(target));
         }
     }
@@ -191,15 +184,18 @@ void importShapeFamily(const ImportContext& context)
                 "fDescId", "hidden", "savedRecord", "origWidth", "origHeight", "graphicCmper"};
             for (std::size_t index = 0; index < std::size(importedSlots); ++index) {
                 const auto slot = importedSlots[index];
-                REPORT_ASSIGNMENT_VALUE(ShapeTarget, context, cmper, inci, partId,
-                    names[index], tuple[slot], sourceRow(*source, rows, at + slot));
+                withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                    reportAssignmentValue<ShapeTarget>(reporting, cmper, inci, partId, names[index],
+                        tuple[slot], sourceRow(*source, rows, at + slot));
+                });
             }
-            REPORT_POSITION_VALUES(ShapeTarget, context, cmper, inci, partId, "", tuple[8],
-                sourceRow(*source, rows, at + 8), false);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            context.report.setInstanceOrigin(
-                instanceKey<ShapeTarget>(partId, cmper, inci), ValueOrigin::LegacyMus);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reportPositionValues<ShapeTarget>(reporting, cmper, inci, partId, "", tuple[8],
+                    sourceRow(*source, rows, at + 8), false);
+                reporting.report().setInstanceOrigin(
+                    reporting.template instanceKey<ShapeTarget>(partId, cmper, inci),
+                    Reporting::Origin::LegacyMus);
+            });
             context.document->getOthers()->add(ShapeTarget::XmlNodeName, std::move(target));
         }
     }
@@ -219,6 +215,3 @@ void importShapeGraphicAssignments(const ImportContext& context)
 
 } // namespace others
 } // namespace finale_mus_reader
-
-#undef REPORT_ASSIGNMENT_VALUE
-#undef REPORT_POSITION_VALUES

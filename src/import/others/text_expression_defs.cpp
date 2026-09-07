@@ -158,21 +158,22 @@ void synthesizeExpressionText(const ImportContext& context,
     block->showShape = true;
     block->wordWrap = true;
     target->textIdKey = *blockNumber;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto rawKey = instanceKey<RawText>(musx::dom::SCORE_PARTID, *textNumber);
-    const auto blockKey = instanceKey<Block>(target->getSourcePartId(), *blockNumber);
-    context.report.setInstanceOrigin(rawKey, ValueOrigin::LegacyMus);
-    context.report.setInstanceOrigin(blockKey, ValueOrigin::LegacyBehavior);
-    FINALE_MUS_READER_REPORT_FIELD(context.report, rawKey, "text",
-                                   FieldInfo{ValueOrigin::LegacyMus, row.blockOffset,
-                                             row.decodedOffset, 0, textExpressionTag});
-    FINALE_MUS_READER_REPORT_FIELD(
-        context.report,
-        instanceKey<TextExpressionTarget>(target->getSourcePartId(), target->getCmper()),
-        "textIdKey",
-        FieldInfo{ValueOrigin::LegacyBehavior, row.blockOffset, row.decodedOffset, *blockNumber,
-                  textExpressionTag});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto rawKey =
+            reporting.template instanceKey<RawText>(musx::dom::SCORE_PARTID, *textNumber);
+        const auto blockKey =
+            reporting.template instanceKey<Block>(target->getSourcePartId(), *blockNumber);
+        reporting.report().setInstanceOrigin(rawKey, Reporting::Origin::LegacyMus);
+        reporting.report().setInstanceOrigin(blockKey, Reporting::Origin::LegacyBehavior);
+        reporting.report().setField(rawKey, "text",
+            typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
+                row.decodedOffset, 0, textExpressionTag});
+        reporting.report().setField(reporting.template instanceKey<TextExpressionTarget>(
+                                        target->getSourcePartId(), target->getCmper()),
+            "textIdKey",
+            typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, row.blockOffset,
+                row.decodedOffset, *blockNumber, textExpressionTag});
+    });
     context.document->getTexts()->add(RawText::XmlNodeName, std::move(raw));
     context.document->getOthers()->add(Block::XmlNodeName, std::move(block));
 }
@@ -259,6 +260,32 @@ constexpr const char* textExpressionFields[] = {"textIdKey",
                                                 "useCategoryPos",
                                                 "description"};
 
+void reportAbsentTextExpressionFields(ImportReport& report, const ReportInstance& reportInstance,
+    bool prime, bool hasCategory, bool hasRehearsalStyle)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        if (!prime) {
+            for (const auto* member :
+                {"description", "createdByHp", "horzMeasExprAlign", "vertMeasExprAlign"}) {
+                reporting.report().setField(reporting.instanceKey(reportInstance), member,
+                    typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, 0});
+            }
+        }
+        if (!hasCategory) {
+            for (const auto* member : {"useCategoryFonts", "useCategoryPos"}) {
+                reporting.report().setField(reporting.instanceKey(reportInstance), member,
+                    typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, 0});
+            }
+        }
+        if (!hasRehearsalStyle) {
+            for (const auto* member : {"rehearsalMarkStyle", "hideMeasureNum", "matchPlayback"}) {
+                reporting.report().setField(reporting.instanceKey(reportInstance), member,
+                    typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, 0});
+            }
+        }
+    });
+}
+
 } // namespace
 
 void importTextExpressionDefs(const ImportContext& context)
@@ -286,28 +313,28 @@ void importTextExpressionDefs(const ImportContext& context)
         auto target = createOthersRecordTarget<TextExpressionTarget>(context.document, *source,
                                                                      rows.front(), cmper);
         if (!target) continue;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<TextExpressionTarget>(partId, cmper);
-        context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-        for (const auto* field : textExpressionFields) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, field,
-                                           FieldInfo{ValueOrigin::Unmapped, 0, 0, 0});
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto assign = [&](auto member, [[maybe_unused]] const char* name, auto value,
-                                [[maybe_unused]] std::size_t slot,
-                                [[maybe_unused]] bool adjusted = false) {
+        const auto reportInstance = ReportInstance::of<TextExpressionTarget>(partId, cmper);
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.report().setInstanceOrigin(
+                reporting.instanceKey(reportInstance), Reporting::Origin::LegacyMus);
+            for (const auto* field : textExpressionFields) {
+                reporting.report().setField(reporting.instanceKey(reportInstance), field,
+                    typename Reporting::FieldInfo{Reporting::Origin::Unmapped, 0, 0, 0});
+            }
+        });
+        const auto assign = [&](auto member, const char* name, auto value, std::size_t slot,
+                                bool adjusted = false) {
             target.get()->*member = value;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto& row = rows[source->classRecords ? 0 : slot / records::otherWordCount];
-            const auto offset =
-                source->classRecords ? slot * 2 : (slot % records::otherWordCount) * 2;
-            FINALE_MUS_READER_REPORT_FIELD(
-                context.report, key, name,
-                FieldInfo{adjusted ? ValueOrigin::LegacyMusAdjusted : ValueOrigin::LegacyMus,
-                          row.blockOffset, row.decodedOffset + offset, words[slot],
-                          source->identity});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto& row = rows[source->classRecords ? 0 : slot / records::otherWordCount];
+                const auto offset =
+                    source->classRecords ? slot * 2 : (slot % records::otherWordCount) * 2;
+                reporting.report().setField(reporting.instanceKey(reportInstance), name,
+                    typename Reporting::FieldInfo{adjusted ? Reporting::Origin::LegacyMusAdjusted
+                                                           : Reporting::Origin::LegacyMus,
+                        row.blockOffset, row.decodedOffset + offset, words[slot],
+                        source->identity});
+            });
         };
         const auto flags = static_cast<std::uint16_t>(words[5]);
         const bool smartMusic = (flags & 0xffU) == 0x0fU;
@@ -321,27 +348,8 @@ void importTextExpressionDefs(const ImportContext& context)
             target->horzMeasExprAlign = musx::dom::others::HorizontalMeasExprAlign::Manual;
             target->vertMeasExprAlign = musx::dom::others::VerticalMeasExprAlign::Manual;
         }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        if (!prime) {
-            for (const auto* member :
-                 {"description", "createdByHp", "horzMeasExprAlign", "vertMeasExprAlign"}) {
-                FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-                                               FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, 0});
-            }
-        }
-        if (!hasCategory) {
-            for (const auto* member : {"useCategoryFonts", "useCategoryPos"}) {
-                FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-                                               FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, 0});
-            }
-        }
-        if (!hasRehearsalStyle) {
-            for (const auto* member : {"rehearsalMarkStyle", "hideMeasureNum", "matchPlayback"}) {
-                FINALE_MUS_READER_REPORT_FIELD(context.report, key, member,
-                                               FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, 0});
-            }
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        reportAbsentTextExpressionFields(
+            context.report, reportInstance, prime, hasCategory, hasRehearsalStyle);
         if (hasRehearsalStyle) {
             assign(&TextExpressionTarget::hideMeasureNum, "hideMeasureNum", bool(flags & 0x8000U),
                    5);
@@ -406,18 +414,17 @@ void importTextExpressionDefs(const ImportContext& context)
                     ? text::utf16ToUtf8(payloadWords(trailer, context.profile.byteOrder))
                     : text::toUtf8(payloadString(trailer, 0, trailer.size()),
                                    context.profile.platform);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto& descriptionRow =
-                rows[source->classRecords || trailer.empty()
-                         ? 0
-                         : primeExpressionHeaderSize / (2 * records::otherWordCount)];
-            FINALE_MUS_READER_REPORT_FIELD(
-                context.report, key, "description",
-                FieldInfo{ValueOrigin::LegacyMus, descriptionRow.blockOffset,
-                          descriptionRow.decodedOffset +
-                              (source->classRecords ? primeExpressionHeaderSize : 0),
-                          static_cast<std::int64_t>(trailer.size()), source->identity});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto& descriptionRow = rows[source->classRecords || trailer.empty()
+                        ? 0
+                        : primeExpressionHeaderSize / (2 * records::otherWordCount)];
+                reporting.report().setField(reporting.instanceKey(reportInstance), "description",
+                    typename Reporting::FieldInfo{Reporting::Origin::LegacyMus,
+                        descriptionRow.blockOffset,
+                        descriptionRow.decodedOffset +
+                            (source->classRecords ? primeExpressionHeaderSize : 0),
+                        static_cast<std::int64_t>(trailer.size()), source->identity});
+            });
         } else {
             context.pending.checks.push_back([&context, target, row = rows.front(), payload] {
                 synthesizeExpressionText(context, target, row, payload);
@@ -430,12 +437,14 @@ void importTextExpressionDefs(const ImportContext& context)
                      context.document->getOthers()->getArray<Category>(musx::dom::SCORE_PARTID)) {
                     if (category->categoryType != Category::CategoryType::Misc) continue;
                     target->categoryId = category->getCmper();
-                    FINALE_MUS_READER_REPORT_FIELD(
-                        context.report,
-                        instanceKey<TextExpressionTarget>(target->getSourcePartId(),
-                                                          target->getCmper()),
-                        "categoryId",
-                        FieldInfo{ValueOrigin::LegacyBehavior, 0, 0, target->categoryId});
+                    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                        reporting.report().setField(
+                            reporting.template instanceKey<TextExpressionTarget>(
+                                target->getSourcePartId(), target->getCmper()),
+                            "categoryId",
+                            typename Reporting::FieldInfo{
+                                Reporting::Origin::LegacyBehavior, 0, 0, target->categoryId});
+                    });
                     break;
                 }
             });

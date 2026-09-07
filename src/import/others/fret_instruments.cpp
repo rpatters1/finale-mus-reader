@@ -22,6 +22,31 @@ constexpr std::size_t fretInstrumentNameSize = 48;
 constexpr std::size_t fretInstrumentStringsOffset =
     fretInstrumentHeaderSize + fretInstrumentNameSize;
 
+void reportFretInstrument(ImportReport& report, const FretInstrumentTarget& target,
+    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
+{
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<FretInstrumentTarget>(partId, cmper);
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+        const auto report = [&](std::string member, auto value,
+                                typename Reporting::Origin origin = Reporting::Origin::LegacyMus) {
+            reporting.report().setField(
+                key, std::move(member), {origin, row.blockOffset, row.decodedOffset, value});
+        };
+        report("numFrets", target.numFrets);
+        report("numStrings", target.numStrings);
+        report("speedyClef", target.speedyClef);
+        for (std::size_t index = 0; index < target.strings.size(); ++index) {
+            report("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch);
+            report("strings[" + std::to_string(index) + "].nutOffset",
+                target.strings[index]->nutOffset, Reporting::Origin::LegacyBehavior);
+        }
+        for (std::size_t index = 0; index < target.fretSteps.size(); ++index) {
+            report("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index]);
+        }
+    });
+}
+
 } // namespace
 
 void importFretInstruments(const ImportContext& context)
@@ -60,27 +85,7 @@ void importFretInstruments(const ImportContext& context)
                 target->fretSteps.push_back(static_cast<int>(bit + 1));
             }
         }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FretInstrumentTarget>(partId, cmper);
-        context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-        const auto report = [&](std::string member, auto value,
-                                ValueOrigin origin = ValueOrigin::LegacyMus) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, std::move(member),
-                {origin, rows.front().blockOffset, rows.front().decodedOffset, value});
-        };
-        report("numFrets", target->numFrets);
-        report("numStrings", target->numStrings);
-        report("speedyClef", target->speedyClef);
-        for (std::size_t index = 0; index < target->strings.size(); ++index) {
-            report("strings[" + std::to_string(index) + "].pitch",
-                target->strings[index]->pitch);
-            report("strings[" + std::to_string(index) + "].nutOffset",
-                target->strings[index]->nutOffset, ValueOrigin::LegacyBehavior);
-        }
-        for (std::size_t index = 0; index < target->fretSteps.size(); ++index) {
-            report("fretSteps[" + std::to_string(index) + "]", target->fretSteps[index]);
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        reportFretInstrument(context.report, *target, rows.front(), partId, cmper);
         context.document->getOthers()->add(FretInstrumentTarget::XmlNodeName,
             std::move(target));
     }

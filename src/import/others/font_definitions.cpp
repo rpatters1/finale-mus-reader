@@ -54,16 +54,16 @@ void applyConfiguredSymbolFonts(const ImportContext& context)
         const auto adjusted = symbolCharsetForBank(font->charsetBank);
         if (font->charsetVal == adjusted) continue;
         const auto mutableFont = std::const_pointer_cast<FontDefinitionTarget>(font);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FontDefinitionTarget>(
-            musx::dom::SCORE_PARTID, font->getCmper());
-        if (auto* info = context.report.findField(key, "charsetVal")) {
-            info->origin = ValueOrigin::LegacyMusAdjusted;
-        } else {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, "charsetVal",
-                {ValueOrigin::LegacyMusAdjusted, 0, 0, font->charsetVal});
-        }
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto key = reporting.template instanceKey<FontDefinitionTarget>(
+                musx::dom::SCORE_PARTID, font->getCmper());
+            if (auto* info = reporting.report().findField(key, "charsetVal")) {
+                info->origin = Reporting::Origin::LegacyMusAdjusted;
+            } else {
+                reporting.report().setField(key, "charsetVal",
+                    {Reporting::Origin::LegacyMusAdjusted, 0, 0, font->charsetVal});
+            }
+        });
         mutableFont->charsetVal = adjusted;
     }
 }

@@ -24,6 +24,9 @@ if(MSVC)
 endif()
 
 option(FINALE_MUS_READER_BUILD_TESTING "Build Legacy Finale MUS Reader tests" ON)
+option(FINALE_MUS_READER_BUILD_REPORTING_TESTING
+    "Build the standalone reporting test in either instrumentation mode"
+    ${FINALE_MUS_READER_BUILD_TESTING})
 option(FINALE_MUS_READER_BUILD_TOOLS
     "Build on-demand corpus probe tools in tools/" OFF)
 option(FINALE_MUS_READER_USE_SYSTEM_ZLIB
@@ -219,6 +222,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/text_expression_defs.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp
+    src/import/support/reporting.cpp
     src/import/support/legacy_mapping.cpp
     src/import/support/text_encoding.cpp
     src/import/texts/coda_texts.cpp
@@ -302,8 +306,19 @@ if(FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_TOOLS)
     endif()
 endif()
 
-if(FINALE_MUS_READER_BUILD_TESTING)
+if(FINALE_MUS_READER_BUILD_TESTING OR FINALE_MUS_READER_BUILD_REPORTING_TESTING)
     enable_testing()
+endif()
+
+if(FINALE_MUS_READER_BUILD_REPORTING_TESTING)
+    add_executable(finale_mus_reader_reporting_tests tests/reporting_tests.cpp)
+    finale_mus_reader_enable_unity(finale_mus_reader_reporting_tests)
+    target_include_directories(finale_mus_reader_reporting_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_link_libraries(finale_mus_reader_reporting_tests PRIVATE finale_mus_reader::finale_mus_reader)
+    add_test(NAME reporting COMMAND finale_mus_reader_reporting_tests)
+endif()
+
+if(FINALE_MUS_READER_BUILD_TESTING)
     add_subdirectory(tests)
 endif()
 

@@ -64,13 +64,14 @@ void importKeySymbolListElements(const ImportContext& context)
                 context.document, *source, rows.front(), cmper1, cmper2);
             if (!target) continue;
             const auto stored = payloadString(payload, 0, storedStringSize);
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            const auto key = instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
-            context.report.setInstanceOrigin(key, ValueOrigin::LegacyMus);
-            FINALE_MUS_READER_REPORT_FIELD(context.report, key, "accidentalString",
-                {ValueOrigin::LegacyMus, rows.front().blockOffset, rows.front().decodedOffset, 0,
-                    source->identity});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key =
+                    reporting.template instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reporting.report().setField(key, "accidentalString",
+                    {Reporting::Origin::LegacyMus, rows.front().blockOffset,
+                        rows.front().decodedOffset, 0, source->identity});
+            });
             context.document->getDetails()->add(Target::XmlNodeName, target);
             context.pending.checks.push_back([&context, target, stored] {
                 target->accidentalString = text::toUtf8(stored, context.document,

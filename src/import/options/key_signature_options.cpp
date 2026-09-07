@@ -138,23 +138,24 @@ void applyKeySignatureLegacyBehavior(const ImportContext& context)
     const auto target = std::const_pointer_cast<KeySignatureOptionsTarget>(pooled);
 
     target->doKeyCancelBetweenSharpsFlats = true;
-    FINALE_MUS_READER_REPORT_FIELD(context.report,
-        instanceKey<KeySignatureOptionsTarget>(), "doKeyCancelBetweenSharpsFlats",
-        {ValueOrigin::LegacyBehavior, 0, 0, 1});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<KeySignatureOptionsTarget>(
+            "doKeyCancelBetweenSharpsFlats", 1);
+    });
 
     if (context.profile.epoch == FormatEpoch::CodaBanner
         || context.profile.epoch == FormatEpoch::UncompressedLegacy) {
         target->simplifyKeyHoldOctave = false;
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<KeySignatureOptionsTarget>(), "simplifyKeyHoldOctave",
-            {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<KeySignatureOptionsTarget>("simplifyKeyHoldOctave", 0);
+        });
     }
 
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         target->cautionaryKeyChanges = true;
-        FINALE_MUS_READER_REPORT_FIELD(context.report,
-            instanceKey<KeySignatureOptionsTarget>(), "cautionaryKeyChanges",
-            {ValueOrigin::LegacyBehavior, 0, 0, 1});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<KeySignatureOptionsTarget>("cautionaryKeyChanges", 1);
+        });
     }
 }
 

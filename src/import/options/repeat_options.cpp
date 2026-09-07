@@ -187,25 +187,24 @@ void importRepeatOptions(const ImportContext& context)
         target->upperDotVPos = 0;
         target->lowerDotVPos = 0;
         target->bracketLineWidth = 224;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "addPeriod", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "thinLineWidth", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "upperDotVPos", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "lowerDotVPos", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "bracketLineWidth", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<RepeatTarget>("addPeriod", 0);
+            reporting.template behaviorField<RepeatTarget>("thinLineWidth", 0);
+            reporting.template behaviorField<RepeatTarget>("upperDotVPos", 0);
+            reporting.template behaviorField<RepeatTarget>("lowerDotVPos", 0);
+            reporting.template behaviorField<RepeatTarget>("bracketLineWidth", 0);
+        });
         target->bracketEndAnchorThinLine = false;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-            "bracketEndAnchorThinLine", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0);
+        });
         return;
     }
     // Files that carry the legacy RepeatOptions family use the older anchor behavior.
     target->bracketEndAnchorThinLine = false;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<RepeatTarget>(),
-        "bracketEndAnchorThinLine", {ValueOrigin::LegacyBehavior, 0, 0, 0});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0);
+    });
 }
 
 } // namespace options

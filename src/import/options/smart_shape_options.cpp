@@ -519,21 +519,18 @@ void reportControlStyle(ImportReport& report, std::size_t index,
     const SmartShapeTarget::ControlStyle& style, std::size_t blockOffset,
     std::size_t decodedOffset)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto prefix = "slurControlStyles[" + std::to_string(index) + "].";
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<SmartShapeTarget>(),
-        prefix + "span", {ValueOrigin::LegacyMus, blockOffset, decodedOffset, style.span});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<SmartShapeTarget>(),
-        prefix + "inset", {ValueOrigin::LegacyMus, blockOffset, decodedOffset, style.inset});
-    FINALE_MUS_READER_REPORT_FIELD(report, instanceKey<SmartShapeTarget>(),
-        prefix + "height", {ValueOrigin::LegacyMus, blockOffset, decodedOffset, style.height});
-#else
-    static_cast<void>(report);
-    static_cast<void>(index);
-    static_cast<void>(style);
-    static_cast<void>(blockOffset);
-    static_cast<void>(decodedOffset);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto prefix = "slurControlStyles[" + std::to_string(index) + "].";
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            prefix + "span",
+            {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, style.span});
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            prefix + "inset",
+            {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, style.inset});
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            prefix + "height",
+            {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, style.height});
+    });
 }
 
 void captureDirection(const ImportContext& context,
@@ -565,11 +562,10 @@ void captureDirection(const ImportContext& context,
         return;
     }
 
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "direction", {ValueOrigin::LegacyMus, family.blockOffset,
-                         family.decodedOffset, stored});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(), "direction",
+            {Reporting::Origin::LegacyMus, family.blockOffset, family.decodedOffset, stored});
+    });
 }
 
 void captureControlStyles(const ImportContext& context,
@@ -611,20 +607,19 @@ void captureControlStyles(const ImportContext& context,
             SmartShapeTarget::SlurControlStyleType::ExtraLongSpan);
         extraLongStyle->inset = longStyle->inset;
         extraLongStyle->height = longStyle->height;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto sourceFirst = (storedStyleCount - 1) * controlStyleWords;
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-            "slurControlStyles[3].span",
-            {ValueOrigin::Finale27Default, 0, 0, extraLongStyle->span});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-            "slurControlStyles[3].inset",
-            {ValueOrigin::LegacyBehavior, family.blockOffset, family.decodedOffset,
-                wordAt(family.words, sourceFirst + 1)});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-            "slurControlStyles[3].height",
-            {ValueOrigin::LegacyBehavior, family.blockOffset, family.decodedOffset,
-                wordAt(family.words, sourceFirst + 2)});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto sourceFirst = (storedStyleCount - 1) * controlStyleWords;
+            reporting.template defaultField<SmartShapeTarget>(
+                "slurControlStyles[3].span", extraLongStyle->span);
+            reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+                "slurControlStyles[3].inset",
+                {Reporting::Origin::LegacyBehavior, family.blockOffset, family.decodedOffset,
+                    wordAt(family.words, sourceFirst + 1)});
+            reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+                "slurControlStyles[3].height",
+                {Reporting::Origin::LegacyBehavior, family.blockOffset, family.decodedOffset,
+                    wordAt(family.words, sourceFirst + 2)});
+        });
     }
 }
 
@@ -642,19 +637,19 @@ void captureSlurAvoidStaffLinesAmount(const ImportContext& context,
         // amount, so it does not override the seeded default.
         if (stored != 0) {
             target->slurAvoidStaffLinesAmt = stored - 1;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-                "slurAvoidStaffLinesAmt",
-                {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset, stored});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+                    "slurAvoidStaffLinesAmt",
+                    {Reporting::Origin::LegacyMus, family.blockOffset, family.decodedOffset,
+                        stored});
+            });
             return;
         }
     }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "slurAvoidStaffLinesAmt",
-        {ValueOrigin::Finale27Default, 0, 0, target->slurAvoidStaffLinesAmt});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template defaultField<SmartShapeTarget>(
+            "slurAvoidStaffLinesAmt", target->slurAvoidStaffLinesAmt);
+    });
 }
 
 void applyPreFinale37FigureBehavior(const ImportContext& context,
@@ -672,17 +667,17 @@ void applyPreFinale37FigureBehavior(const ImportContext& context,
         throw std::logic_error("SmartShapeOptions reference document is incomplete");
     }
     target->hookLength = reference->hookLength;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto* source = context.report.findField<SmartShapeTarget>("smartLineWidth");
-    const auto blockOffset = source ? source->blockOffset : 0;
-    const auto decodedOffset = source ? source->decodedOffset : 0;
-    const auto rawValue = source ? source->rawValue : target->smartLineWidth;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "crescLineWidth",
-        {ValueOrigin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "hookLength", {ValueOrigin::Finale27Default, 0, 0, target->hookLength});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto* source =
+            reporting.report().template findField<SmartShapeTarget>("smartLineWidth");
+        const auto blockOffset = source ? source->blockOffset : 0;
+        const auto decodedOffset = source ? source->decodedOffset : 0;
+        const auto rawValue = source ? source->rawValue : target->smartLineWidth;
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            "crescLineWidth",
+            {Reporting::Origin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
+        reporting.template defaultField<SmartShapeTarget>("hookLength", target->hookLength);
+    });
 }
 
 void applyLegacyHairpinOpeningBehavior(const ImportContext& context,
@@ -691,15 +686,15 @@ void applyLegacyHairpinOpeningBehavior(const ImportContext& context,
     // Legacy formats have one hairpin opening. The separate short opening postdates MUS,
     // so both modern fields receive that one behavior even where its source remains unlocated.
     target->shortHairpinOpeningWidth = target->crescHeight;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto* source = context.report.findField<SmartShapeTarget>("crescHeight");
-    const auto blockOffset = source ? source->blockOffset : 0;
-    const auto decodedOffset = source ? source->decodedOffset : 0;
-    const auto rawValue = source ? source->rawValue : target->crescHeight;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "shortHairpinOpeningWidth",
-        {ValueOrigin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto* source = reporting.report().template findField<SmartShapeTarget>("crescHeight");
+        const auto blockOffset = source ? source->blockOffset : 0;
+        const auto decodedOffset = source ? source->decodedOffset : 0;
+        const auto rawValue = source ? source->rawValue : target->crescHeight;
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            "shortHairpinOpeningWidth",
+            {Reporting::Origin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
+    });
 }
 
 void applySingleIncidenceSlurAdjustmentBehavior(const ImportContext& context,
@@ -716,17 +711,18 @@ void applySingleIncidenceSlurAdjustmentBehavior(const ImportContext& context,
     }
     target->slurAcciPadding = target->slurPadding;
     target->slurDoStretchFirst = false;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto* paddingSource = context.report.findField<SmartShapeTarget>("slurPadding");
-    const auto blockOffset = paddingSource ? paddingSource->blockOffset : family.blockOffset;
-    const auto decodedOffset = paddingSource ? paddingSource->decodedOffset : family.decodedOffset;
-    const auto rawValue = paddingSource ? paddingSource->rawValue : target->slurPadding;
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "slurAcciPadding",
-        {ValueOrigin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "slurDoStretchFirst", {ValueOrigin::LegacyBehavior, 0, 0, 0});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto* paddingSource =
+            reporting.report().template findField<SmartShapeTarget>("slurPadding");
+        const auto blockOffset = paddingSource ? paddingSource->blockOffset : family.blockOffset;
+        const auto decodedOffset =
+            paddingSource ? paddingSource->decodedOffset : family.decodedOffset;
+        const auto rawValue = paddingSource ? paddingSource->rawValue : target->slurPadding;
+        reporting.report().setField(reporting.template instanceKey<SmartShapeTarget>(),
+            "slurAcciPadding",
+            {Reporting::Origin::LegacyBehavior, blockOffset, decodedOffset, rawValue});
+        reporting.template behaviorField<SmartShapeTarget>("slurDoStretchFirst", 0);
+    });
 }
 
 void applyFinale26HookBehavior(const ImportContext& context,
@@ -738,10 +734,9 @@ void applyFinale26HookBehavior(const ImportContext& context,
         return;
     }
     target->hookLength = finale26HookLength;
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-        "hookLength", {ValueOrigin::LegacyBehavior, 0, 0, finale26HookLength});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.template behaviorField<SmartShapeTarget>("hookLength", finale26HookLength);
+    });
 }
 
 template <typename Map>
@@ -776,23 +771,20 @@ void captureSmartShapeConnectionStyles(const ImportContext& context,
         style->yOffset = wordAt(family.words, first + 2);
         styles.insert_or_assign(
             static_cast<typename Map::key_type>(index), std::move(style));
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
-        const auto& recovered = *styles.at(static_cast<typename Map::key_type>(index));
-        const auto instance = instanceKey<SmartShapeTarget>();
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-            prefix + "connectIndex",
-            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
-                storedConnection});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-            prefix + "xOffset",
-            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
-                recovered.xOffset});
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-            prefix + "yOffset",
-            {ValueOrigin::LegacyMus, family.blockOffset, family.decodedOffset,
-                recovered.yOffset});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
+            const auto& recovered = *styles.at(static_cast<typename Map::key_type>(index));
+            const auto instance = reporting.template instanceKey<SmartShapeTarget>();
+            reporting.report().setField(instance, prefix + "connectIndex",
+                {Reporting::Origin::LegacyMus, family.blockOffset, family.decodedOffset,
+                    storedConnection});
+            reporting.report().setField(instance, prefix + "xOffset",
+                {Reporting::Origin::LegacyMus, family.blockOffset, family.decodedOffset,
+                    recovered.xOffset});
+            reporting.report().setField(instance, prefix + "yOffset",
+                {Reporting::Origin::LegacyMus, family.blockOffset, family.decodedOffset,
+                    recovered.yOffset});
+        });
     }
 }
 
@@ -800,58 +792,45 @@ template <typename Map>
 void reportSmartShapeConnectionStyleDefaults(const ImportContext& context,
     std::string_view collection, const Map& styles)
 {
-    std::vector<std::pair<typename Map::key_type, typename Map::mapped_type>> ordered(
-        styles.begin(), styles.end());
-    std::ranges::sort(ordered, {}, [](const auto& item) { return item.first; });
-    for (std::size_t index = 0; index < ordered.size(); ++index) {
-        const auto& style = *ordered[index].second;
-        const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto instance = instanceKey<SmartShapeTarget>();
-        if (!context.report.findField(instance, prefix + "connectIndex")) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-                prefix + "connectIndex",
-                {ValueOrigin::Finale27Default, 0, 0,
-                    static_cast<std::int64_t>(style.connectIndex)});
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        std::vector<std::pair<typename Map::key_type, typename Map::mapped_type>> ordered(
+            styles.begin(), styles.end());
+        std::ranges::sort(ordered, {}, [](const auto& item) { return item.first; });
+        for (std::size_t index = 0; index < ordered.size(); ++index) {
+            const auto& style = *ordered[index].second;
+            const auto prefix = std::string(collection) + "[" + std::to_string(index) + "].";
+            const auto instance = reporting.template instanceKey<SmartShapeTarget>();
+            if (!reporting.report().findField(instance, prefix + "connectIndex")) {
+                reporting.report().setField(instance, prefix + "connectIndex",
+                    {Reporting::Origin::Finale27Default, 0, 0,
+                        static_cast<std::int64_t>(style.connectIndex)});
+            }
+            if (!reporting.report().findField(instance, prefix + "xOffset")) {
+                reporting.report().setField(instance, prefix + "xOffset",
+                    {Reporting::Origin::Finale27Default, 0, 0, style.xOffset});
+            }
+            if (!reporting.report().findField(instance, prefix + "yOffset")) {
+                reporting.report().setField(instance, prefix + "yOffset",
+                    {Reporting::Origin::Finale27Default, 0, 0, style.yOffset});
+            }
         }
-        if (!context.report.findField(instance, prefix + "xOffset")) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-                prefix + "xOffset",
-                {ValueOrigin::Finale27Default, 0, 0, style.xOffset});
-        }
-        if (!context.report.findField(instance, prefix + "yOffset")) {
-            FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-                prefix + "yOffset",
-                {ValueOrigin::Finale27Default, 0, 0, style.yOffset});
-        }
-#else
-        static_cast<void>(context);
-        static_cast<void>(prefix);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    }
+    });
 }
 
 void reportRemainingSmartShapeFields(const ImportContext& context,
     const std::shared_ptr<SmartShapeTarget>& target)
 {
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-    const auto instance = instanceKey<SmartShapeTarget>();
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-        "maximumShortHairpinLength",
-        {ValueOrigin::MusxOnly, 0, 0, target->maximumShortHairpinLength});
-    if (!context.report.findField<SmartShapeTarget>("direction")) {
-        FINALE_MUS_READER_REPORT_FIELD(context.report, instanceKey<SmartShapeTarget>(),
-            "direction",
-            {ValueOrigin::Finale27Default, 0, 0,
-                static_cast<std::int64_t>(target->direction)});
-    }
-    FINALE_MUS_READER_REPORT_FIELD(context.report, instance,
-        "articAvoidSlurAmt",
-        {ValueOrigin::MusxOnly, 0, 0, target->articAvoidSlurAmt});
-#else
-    static_cast<void>(context);
-    static_cast<void>(target);
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto instance = reporting.template instanceKey<SmartShapeTarget>();
+        reporting.report().setField(instance, "maximumShortHairpinLength",
+            {Reporting::Origin::MusxOnly, 0, 0, target->maximumShortHairpinLength});
+        if (!reporting.report().template findField<SmartShapeTarget>("direction")) {
+            reporting.template defaultField<SmartShapeTarget>(
+                "direction", static_cast<std::int64_t>(target->direction));
+        }
+        reporting.report().setField(instance, "articAvoidSlurAmt",
+            {Reporting::Origin::MusxOnly, 0, 0, target->articAvoidSlurAmt});
+    });
     reportSmartShapeConnectionStyleDefaults(context, "slurConnectStyles",
         target->slurConnectStyles);
     reportSmartShapeConnectionStyleDefaults(context, "tabSlideConnectStyles",
@@ -895,14 +874,13 @@ void requestUnavailableToolLineDefaults(const ImportContext& context,
                 "SmartShapeOptions reference document names a missing default custom line");
         }
         target.get()->*request->member = 0;
-        context.pending.customLines.push_back({referenceId,
-            [target, member = request->member](musx::dom::Cmper resolved) {
-                target.get()->*member = resolved;
-            }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            ,
-            instanceKey<SmartShapeTarget>(), request->reportMember
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        context.pending.customLines.push_back(
+            {referenceId, [target, member = request->member](musx::dom::Cmper resolved) {
+                 target.get()->*member = resolved;
+             }});
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            reporting.state(context.pending.customLines.back().reportField) = {
+                reporting.template instanceKey<SmartShapeTarget>(), request->reportMember};
         });
     }
 }

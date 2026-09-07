@@ -134,15 +134,15 @@ void importHeaderFileInfoTexts(const ImportContext& context)
                 std::move(instance->text), *defaultFont, &fontWasSynthesized,
                 &sizeWasSynthesized, &effectsWereSynthesized);
         }
-#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-        const auto key = instanceKey<FileInfoTarget>(musx::dom::SCORE_PARTID,
-            static_cast<musx::dom::Cmper>(field.type));
-        recordTextFieldInfo(context.report, key, "text", fontWasSynthesized,
-            sizeWasSynthesized, effectsWereSynthesized);
-        FINALE_MUS_READER_REPORT_FIELD(context.report, key, "text",
-            {ValueOrigin::LegacyMus, 0, field.offset,
-            static_cast<std::int64_t>(instance->text.size())});
-#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto key = reporting.template instanceKey<FileInfoTarget>(
+                musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(field.type));
+            reporting.textField(
+                key, "text", fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized);
+            reporting.report().setField(key, "text",
+                {Reporting::Origin::LegacyMus, 0, field.offset,
+                    static_cast<std::int64_t>(instance->text.size())});
+        });
         context.document->getTexts()->add(FileInfoTarget::XmlNodeName, std::move(instance));
     }
 }
