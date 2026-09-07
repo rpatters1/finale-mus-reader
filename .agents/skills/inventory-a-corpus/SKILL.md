@@ -42,10 +42,10 @@ hypothesis, or repeated analysis of a probe snapshot.
   configuration and invocation.
 - Print complete-import failures with their private names and paths only to the local console.
   Never copy those diagnostics into tracked output.
-- Do not regenerate `tracked-evidence` after each new fixture. Batch fixture additions and
-  regenerate only if at least one fixture is new, as the final prerequisite immediately before
-  the tracked probe/report cycle that will consume them. Reuse the current inventory when no
-  fixture changed, and do not regenerate if no tracked cycle will run.
+- Batch controlled-fixture membership changes, including moves between public and private
+  corpora, then refresh affected inventories immediately before their next development report.
+  Reuse inventories when membership is unchanged. The development report selection is defined
+  in `../analyze-recovery-coverage/SKILL.md`; a corpus move refreshes both sides.
 
 ## Workflow
 

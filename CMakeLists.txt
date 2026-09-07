@@ -201,6 +201,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/chord_suffix_elements.cpp
     src/import/others/chord_suffix_playback.cpp
     src/import/others/custom_keys.cpp
+    src/import/others/file_path.cpp
     src/import/others/font_definitions.cpp
     src/import/others/fret_instruments.cpp
     src/import/others/fretboard_groups.cpp

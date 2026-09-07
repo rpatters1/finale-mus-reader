@@ -340,6 +340,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         if (!excludedClasses.contains(name)) classes.insert(name);
     for (const auto& [name, unused] : companion)
         if (!excludedClasses.contains(name)) classes.insert(name);
+    Leaves sourceDocumentLeaves;
+    for (const auto& [name, value] : source)
+        collectLeaves(value, name, {}, true, false, sourceDocumentLeaves, nullptr);
+    Leaves companionDocumentLeaves;
+    for (const auto& [name, value] : companion)
+        collectLeaves(value, name, {}, false, false, companionDocumentLeaves, nullptr);
     for (const auto& className : classes) {
         const auto sourceClass = source.find(className);
         const auto companionClass = companion.find(className);
@@ -479,7 +485,8 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const DifferenceContext differenceContext{
                 path,         category,        origin,      sourceValue,     companionValue,
                 sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
-                sourceReport, relatedDifference, companionFontIdentity};
+                sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
+                &companionDocumentLeaves};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;

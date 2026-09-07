@@ -49,6 +49,7 @@ enum class DifferenceClassification
     FinaleTextBlockRenumbering,
     FinaleUpgradeLoss,
     FinaleUpgradeNormalization,
+    FinaleUpgradeSynthesis,
     FontMetricApproximation,
     TextEncodingError,
     LegacyPageParityText,
@@ -146,6 +147,8 @@ struct DifferenceContext
     const ImportReport& sourceReport;
     RelatedDifference relatedDifference{};
     std::string_view companionFontIdentity{};
+    const ComparisonLeaves* sourceDocumentLeaves{}; ///< Cross-class source referents, when available.
+    const ComparisonLeaves* companionDocumentLeaves{}; ///< Cross-class companion referents, when available.
 };
 
 using DifferenceClassifierFn =

@@ -18,8 +18,9 @@ class Value
 {
 public:
     using Array = std::vector<Value>;
+    using Blob = std::vector<std::uint8_t>; ///< Opaque bytes compared as one leaf, not an array of leaves.
     using Object = std::map<std::string, Value, std::less<>>;
-    using Storage = std::variant<std::nullptr_t, bool, std::int64_t, double, std::string, Array, Object>;
+    using Storage = std::variant<std::nullptr_t, bool, std::int64_t, double, std::string, Array, Object, Blob>;
 
     Value() : storage_(nullptr) {}
     Value(bool value) : storage_(value) {}
@@ -31,6 +32,7 @@ public:
     Value(const char* value) : storage_(std::string(value)) {}
     Value(Array value) : storage_(std::move(value)) {}
     Value(Object value) : storage_(std::move(value)) {}
+    Value(Blob value) : storage_(std::move(value)) {}
 
     [[nodiscard]] std::string toJson() const;
 
@@ -42,6 +44,7 @@ public:
     [[nodiscard]] bool isString() const { return std::holds_alternative<std::string>(storage_); }
     [[nodiscard]] bool isArray() const { return std::holds_alternative<Array>(storage_); }
     [[nodiscard]] bool isObject() const { return std::holds_alternative<Object>(storage_); }
+    [[nodiscard]] bool isBlob() const { return std::holds_alternative<Blob>(storage_); }
 
     [[nodiscard]] bool asBool() const { return std::get<bool>(storage_); }
     [[nodiscard]] std::int64_t asInteger() const { return std::get<std::int64_t>(storage_); }
@@ -51,6 +54,7 @@ public:
     [[nodiscard]] Array& asArray() { return std::get<Array>(storage_); }
     [[nodiscard]] const Object& asObject() const { return std::get<Object>(storage_); }
     [[nodiscard]] Object& asObject() { return std::get<Object>(storage_); }
+    [[nodiscard]] const Blob& asBlob() const { return std::get<Blob>(storage_); }
 
     [[nodiscard]] const Value* find(std::string_view key) const;
     [[nodiscard]] Value* find(std::string_view key);

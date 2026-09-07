@@ -25,15 +25,19 @@ Authorization to run an all-corpus capture permits exactly one capture. Any subs
 classification change makes that snapshot stale but does not authorize another capture. Report the
 stale state and wait for fresh, explicit user approval before rerunning.
 
-Treat any probe over private corpora, multiple registered surveys, an all-corpus manifest, every
-registered survey, or any cohort other than the controlled `tracked-evidence` survey as a
-full-corpus capture. Implementing a class, invoking this skill, asking for corpus validation, or
+The development report target **tracked evidence** includes both registered controlled corpora:
+`tracked-evidence` (public) and `rpatters1-private-evidence` (private). Select both generated corpus
+TSVs through a manifest and retain separate per-survey counts. If either is unavailable, report
+the incomplete selection explicitly; do not silently substitute public-only evidence.
+
+Treat any probe extending beyond that development cohort, including unrelated private corpora or
+an all-corpus manifest, as a full-corpus capture. Implementing a class, invoking this skill, asking for corpus validation, or
 authorization for an earlier capture does not authorize a new one. Ask immediately before every
 full-corpus capture and wait for approval. Authorization covers the requested probe and its
 immediate analysis, not a later refresh after a surveyor, schema, field-name, metadata,
 classification, or other code change.
 
-Iterating the probe and report over `tracked-evidence` is permitted without separate authorization;
+Iterating the probe and report over the two-corpus tracked-evidence cohort is permitted without separate authorization;
 use it as the reproducible development cohort. Rendering an existing JSONL snapshot does not create
 a new capture and remains part of the rendering loop below.
 
@@ -51,7 +55,7 @@ evidence, to discover whether surveyor names match.
 
 Require current `private/generated/<survey_id>/corpus_locations.csv`, the public manifest, and the
 generated `private/generated/corpus-<survey_id>.tsv` for every selected survey. For
-`tracked-evidence`, regenerate these artifacts only if fixtures were added since the previous
+either controlled corpus, regenerate these artifacts only if fixture membership changed since the previous
 inventory: batch every addition, then use `inventory-a-corpus` once as the final prerequisite
 immediately before this probe/report cycle. If no fixture changed, reuse the current inventory.
 For any other selected survey whose artifacts are absent or stale, stop and use
@@ -87,14 +91,15 @@ Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifes
 Always build and run the coverage probe from the instrumented Release
 tree, normally `build-release`; the Debug probe is never appropriate for coverage captures. Coverage
 and timing use the same instrumentation. Inspect `--help`, and write every capture stream to
-`private/reports/`. A normal one-corpus capture is:
+`private/reports/`. For the development capture, create `/tmp/tracked-evidence-corpora.txt`
+with one absolute generated corpus-TSV path per line for the two surveys named above:
 
 ```bash
 mkdir -p private/reports
 cmake --build build-release --target recovery_coverage_probe
 build-release/tools/coverage/recovery_coverage_probe --progress \
   --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
-  private/generated/corpus-tracked-evidence.tsv \
+  /tmp/tracked-evidence-corpora.txt \
   private/reports/tracked-evidence.recovery_coverage.jsonl \
   > private/reports/tracked-evidence.probe.stdout.txt \
   2> private/reports/tracked-evidence.probe.stderr.txt

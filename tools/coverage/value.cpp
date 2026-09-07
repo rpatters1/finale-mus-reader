@@ -15,14 +15,18 @@ std::string Value::toJson() const
     if (std::holds_alternative<double>(storage_)) return std::to_string(std::get<double>(storage_));
     if (isString()) return jsonString(asString());
     std::string result;
-    if (isArray()) {
+    if (isArray() || isBlob()) {
         result = '[';
         bool first = true;
-        for (const auto& item : asArray()) {
+        const auto append = [&](const std::string& item) {
             if (!first) result += ',';
             first = false;
-            result += item.toJson();
-        }
+            result += item;
+        };
+        if (isBlob())
+            for (const auto byte : asBlob()) append(std::to_string(byte));
+        else
+            for (const auto& item : asArray()) append(item.toJson());
         return result + ']';
     }
     result = '{';

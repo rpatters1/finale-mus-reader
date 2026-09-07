@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **75 done, 3 partial, 112 to do, 190 registered musxdom classes** (verified against the registry
+- **79 done, 3 partial, 108 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-05). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and
@@ -15,6 +15,7 @@ Compact working state. Every line links to its detail; none of the analysis live
   definitions, part globals, marking categories, the custom-key cluster, and the text pool classes.
 - Measures are recovered in every epoch, score and unlinked part alike, and are the first score
   content the reader builds. Staves, entries, and their details are **not** imported.
+- Graphic file locators are complete within their [legacy scope](format/others/file_path.md#remaining-scope).
 
 ## Current priorities
 

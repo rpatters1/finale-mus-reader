@@ -1,0 +1,10 @@
+# Corpus Inventory
+
+This table includes every legacy data-fork candidate examined, whether it was found by its `.mus` suffix or, where the survey enabled content sniffing, by its header alone — classic Mac Finale kept the file type in the resource fork, so its documents commonly carry no extension. Saving product comes from the file banner, in any of its three spellings, which are tabulated in [format/container/header.md](../../format/container/header.md#the-three-banner-spellings). `unknown` means no banner was recognized in any of them. SHA-256 hashes cover complete files. An em dash means no exact adjacent Finale 27 export was found. The public table shows content-derived IDs only. Filenames and paths are local evidence and are never published, because a filename can name a work, a client, or a person; resolve an ID through the ignored `private/generated/<survey_id>/corpus_locations.csv` file described in the README.
+
+Version confidence is high when the banner is explicit and low for pre-banner path-based classification. ETF likelihood is an eligibility estimate, not a verified open/export result. `Created app` is the creator tuple preserved by Finale 27 and helps identify upgraded documents. `Parts` is based on converted `partDef` records; conversion may expand sharing.
+
+| # | Corpus ID | Bytes | Source SHA-256 | Save product / era | Created app | ETF | Parts / notable converted features | Export match | Export SHA-256 |
+|---:|---|---:|---|---|---|---|---|---|---|
+| 1 | `mus-1402a29f106e2832` | 2738 | `1402a29f106e2832b764f2cf76ee7bb64cb22883c935a2de5bea9f3b47c813c7` | 2001 / high-entropy legacy (high) | 6.0.2.2 | likely | parts=1; measures=1; staves=2; entries=4; expr=0; artic=0 | adjacent-exact | `6419ac738620f9eb74c555e6131340e848bcf0754667ee6db905a553d0302b53` |
+| 2 | `mus-c53758b97dfa5f7e` | 3956 | `c53758b97dfa5f7e1f79911fe1a76066371ece4e8157acffcdbee5aa56cf44c3` | 2012 / typed-zlib stable (high) | 17.0.3.13 | no | parts=1; measures=1; staves=2; entries=4; expr=0; artic=0; wrapper=little | adjacent-exact | `fed92caafe8af16e1ecb0dac658f43a72b281aa8b2f4b263f7c7170ac17e95d1` |

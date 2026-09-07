@@ -39,6 +39,7 @@ reading the file.
 Class-by-class implementation status: [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 
 Text expression definitions and synthesis: [`format/others/text_expression_defs.md`](format/others/text_expression_defs.md).
+Graphic file locators: [`format/others/file_path.md`](format/others/file_path.md); selector evidence and conversion differences: [`investigations/file_path.md`](investigations/file_path.md).
 Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning migration](format/others/text_expression_defs.md#attachment-modes-and-positioning-migration).
 
 ## Current work — `state/`
@@ -77,6 +78,7 @@ Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning mi
 | [`history/EXPERIMENT_LOG_INDEX.md`](history/EXPERIMENT_LOG_INDEX.md) | Every entry in date order with its new home | Date-ordered archaeology |
 | [`history/FEASIBILITY_ASSESSMENT.md`](history/FEASIBILITY_ASSESSMENT.md) | The original recommendation and risk assessment | Historical context for why the project is shaped as it is |
 | [`corpora/<survey_id>/`](corpora/) | Per-corpus inventories, record catalogs, archive surveys | You need to know what evidence exists — these are large; open one file, not the directory |
+| [`corpora/rpatters1-private-evidence/CORPUS_INVENTORY.md`](corpora/rpatters1-private-evidence/CORPUS_INVENTORY.md) | Sanitized private controlled-evidence inventory | Reviewing evidence excluded from public fixtures |
 | [`data/surveys.csv`](data/surveys.csv) | The survey registry, one row per corpus | Choosing a corpus; surveys are not interchangeable |
 | [`README.md`](README.md) | Public study identity, corpora summary, provenance policy, citations | Writing something a public reader will see |
 
