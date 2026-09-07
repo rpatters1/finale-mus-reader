@@ -177,6 +177,9 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     const auto modified = decodeVersion(data + 0x092, report.byteOrder);
     const auto created = decodeVersion(data + 0x06c, report.byteOrder);
     const auto& selected = modified.major != 0 ? modified : created;
+    if (created.major != 0 && created.major <= maximumFinaleMajorVersion) {
+        report.creatorVersion = created;
+    }
     if (selected.major <= maximumFinaleMajorVersion) {
         report.sourceVersion = selected;
     } else {

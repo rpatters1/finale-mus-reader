@@ -32,9 +32,10 @@ Part sharing is stated by the physical record form rather than by a separate hea
 
 Each class importer supplies its compact layouts as score/part payload-size pairs. Multiple pairs
 may describe one class if its representation changed during the zlib epoch; matching remains
-structural rather than version-gated. The first strong example is others class `0x00b0`
-(`measSpec`): 26 bytes per score tuple and 8 bytes per compact part tuple. This remains test-only
-until the Measure importer owns the table. Other observed standalone layouts include `pageSpec`
+structural rather than version-gated. The first and so far only user is others class `0x00b0`
+(`measSpec`): 26 bytes per score tuple and 8 bytes per compact part tuple. The Measure importer
+owns that table, and what the compact tuple holds is in
+[`../others/measure.md`](../others/measure.md). Other observed standalone layouts include `pageSpec`
 (`0x00bb`, 24 bytes) and `staffSystemSpec` (`0x00df`, 36 bytes); both correspond to
 `shared="false"`. Continued `pageTextAssign` (`0x00c2`) and `smartShape` (`0x00d9`) part records
 correspond to `shared="true"`.

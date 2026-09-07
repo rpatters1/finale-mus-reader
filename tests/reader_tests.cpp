@@ -413,8 +413,18 @@ void expectCompleteOptionsPool(const ImportResult& result)
 void expectNoScoreContent(const ImportResult& result)
 {
     using namespace musx::dom;
-    expect(result.document->getOthers()->getArray<others::Measure>(SCORE_PARTID).empty(),
-        "Output contains fallback measures");
+    // Measures are recovered, so their presence is not fallback content. What would be is a
+    // measure the baseline supplied, and the baseline supplies none: its others allowlist admits
+    // layer attributes and nothing else. Every measure in an imported document therefore has to
+    // have been built from a source record, which is what its instance origin states.
+    for (const auto& measure :
+             result.document->getOthers()->getArray<others::Measure>(SCORE_PARTID)) {
+        const auto* origin = result.report.findInstanceOrigin(
+            finale_mus_reader::instanceKey<others::Measure>(
+                measure->getSourcePartId(), measure->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
+            "Output contains a measure no source record built");
+    }
     expect(result.document->getOthers()->getArray<others::Staff>(SCORE_PARTID).empty(),
         "Output contains fallback staves");
     expect(result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID).empty(),

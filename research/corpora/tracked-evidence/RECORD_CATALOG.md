@@ -134,6 +134,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0079` | unknown | unknown/options | open | 2012 | 60 | `mus-4ffcb6b07d802e7c` (0:0x1838) |
 | `0x007a` | beatChart | others | weak | 2012 | 48, 84, 108, 144 | `mus-aaff1568ec2bb9ef` (0:0x1852) |
 | `0x007b` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1852) |
+| `0x007d` | unknown | unknown/options | open | 2012 | 48 | `mus-ae4031bd3fffb218` (0:0x1838) |
 | `0x0086` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
 | `0x0089` | unknown | unknown/options | open | 2012 | 396, 408, 420, 432 | `mus-80f8c631de435726` (0:0x1852) |
 | `0x008a` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x225a) |
@@ -148,7 +149,7 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00a3` | layerAtts | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x18fe) |
 | `0x00a4` | unknown | unknown/options | open | 2012 | 360 | `mus-f95d2ea21b99022e` (0:0x2220) |
 | `0x00a5` | unknown | unknown/options | open | 2012 | 12 | `mus-4ffcb6b07d802e7c` (0:0x1e98) |
-| `0x00a6` | metaKeySig | others | weak | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1d54) |
+| `0x00a6` | metaChord | others | weak | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1d54) |
 | `0x00a7` | metaClef | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1966) |
 | `0x00a8` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x2c3e) |
 | `0x00a9` | metaKeySig | others | weak | 2012 | 12 | `mus-f99c887dff9cdaa1` (0:0x204a) |
@@ -204,4 +205,5 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0414` | gfhold | details | strong | 2008, 2011, 2012 | 20 | `mus-23a91fcc4d98768c` (1:0x1aa) |
 | `0x041d` | unknown | unknown/options | open | 2012 | 40 | `mus-80f8c631de435726` (1:0x336) |
 | `0x0426` | unknown | unknown/options | open | 2012 | 10, 410 | `mus-f361e13d1cc39a3e` (1:0x1ce) |
+| `0x0450` | unknown | unknown/options | open | 2012 | 30 | `mus-ae4031bd3fffb218` (1:0x1ce) |
 | `0x0455` | activeLyric | details | weak | 2011, 2012 | 10 | `mus-eb742704c65232a2` (1:0x1ce) |

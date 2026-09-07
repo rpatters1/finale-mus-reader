@@ -294,6 +294,17 @@ classifyPageFormatOptionsDifference(const DifferenceContext& context)
     return std::nullopt;
 }
 
+namespace {
+
+/// @brief Deferred-recovery rules classify by default; `--strict-deferred` turns them off.
+bool deferredRecoveryEnabled = true;
+
+} // namespace
+
+void setDeferredRecoveryClassified(bool enabled) { deferredRecoveryEnabled = enabled; }
+
+bool deferredRecoveryClassified() { return deferredRecoveryEnabled; }
+
 std::optional<DifferenceClassification>
 classifyPartDefinitionDifference(const DifferenceContext& context)
 {

@@ -56,6 +56,9 @@ void importKeyMapArrays(const ImportContext& context);
 /// era's own behavior for the layers it does not.
 void importLayerAttributes(const ImportContext& context);
 
+/// @brief Recovers every measure the source stores, score and unlinked part alike.
+void importMeasures(const ImportContext& context);
+
 /// @brief Recovers marking categories and their names, supplying the canned categories only
 /// when the source predates Finale 2009.
 void importMarkingCategories(const ImportContext& context);

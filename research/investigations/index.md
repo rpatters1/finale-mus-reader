@@ -25,6 +25,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Text expression epochs, synthesis, and companion IDs | [`text_expression_defs.md`](text_expression_defs.md) |
 | Chord suffix element identities, layouts, and flags | [`chord_suffix_elements.md`](chord_suffix_elements.md) |
 | Chord suffix playback identity and zero fill | [`chord_suffix_playback.md`](chord_suffix_playback.md) |
+| Measure layouts, flag-word readings, and the compact part record | [`measure.md`](measure.md) |
 | Custom-key others records and map ordering | [`custom_keys.md`](custom_keys.md) |
 | Custom-key clef octave arrays | [`custom_key_octaves.md`](custom_key_octaves.md) |
 | Custom-key accidental symbol lists | [`key_symbol_list.md`](key_symbol_list.md) |

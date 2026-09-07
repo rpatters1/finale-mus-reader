@@ -61,6 +61,7 @@ add_executable(finale_mus_reader_tests
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/marking_category_tests.cpp
+    classes/others/measure_tests.cpp
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp
     classes/others/shape_definitions_tests.cpp
@@ -74,6 +75,7 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/registry.cpp
     ../tools/coverage/value.cpp
     ../tools/coverage/common/font_info.cpp
+    ../tools/coverage/surveyors/others/measure.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

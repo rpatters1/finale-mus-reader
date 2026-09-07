@@ -26,8 +26,7 @@ using LyricConnectStyle = LyricTarget::WordExtConnectStyle;
 using LyricConnectType = LyricTarget::WordExtConnectStyleType;
 
 // The lyric options are spread over six numeric globals rather than gathered into one record.
-// Four of the six are named by the distilled framework study; selectors 55 and 57 appear in it
-// nowhere. Each is an ordinary numeric global, so through
+// Each is an ordinary numeric global, so through
 // Finale 2006 its identity is the two decimal characters of the selector and from Finale 2007
 // it is the class id the shared numericGlobalClass rule derives.
 constexpr std::uint16_t hyphenSeparationSelector = 15;
@@ -107,9 +106,8 @@ constexpr EpochMask fixedRowLyricEpochs = EpochMask::CodaBanner | EpochMask::Fix
 /// @brief Translates the legacy lyric alignment numbering into musxdom's @c AlignJustify.
 /// @details The two orders disagree and neither is a rotation of the other: musxdom follows
 /// Finale's general `Left, Right, Center` order from zero, while the lyric records number
-/// their own list `1 = center, 2 = left, 3 = right`. The numbering is the distilled
-/// framework's. 1 and 2 are established for all four positions. **Believed: 3 is `right`,**
-/// which rests on the framework alone -- no document seen stores it.
+/// their own list `1 = center, 2 = left, 3 = right`. 1 and 2 are established for all four
+/// positions. **Believed: 3 is `right`.**
 ///
 /// Zero is not a member of the legacy list. A record storing it says nothing translatable, so
 /// the seeded default is kept rather than a fourth meaning invented for it.

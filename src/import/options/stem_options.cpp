@@ -141,7 +141,7 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
 // constant rather than through a 12 written here.
 constexpr int evpuPerStaffPosition = musx::dom::EVPU_PER_STAFF_POSITION;
 
-// Finale 3.5 and later, and the DCL epoch entire. Every location is the framework's.
+// Finale 3.5 and later, and the DCL epoch entire.
 const FieldMapping stemScalarFields[] = {
     MUS_WORD(StemOptionsTarget, "03", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, halfStemLength),
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, stemLength),

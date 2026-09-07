@@ -115,13 +115,10 @@ bool storesMmRestAutoUpdate(
     return readNumericGlobalWords(index, mmRestUpdateSelector).present;
 }
 
-// Finale 3.5 through Finale 2006, in both fixed-row epochs. Every location is the distilled
-// framework's. The record is two rows: the first carries the measure width, the second the
-// symbol spacing and the flag.
+// Finale 3.5 through Finale 2006, in both fixed-row epochs. The record is two rows: the first
+// carries the measure width, the second the symbol spacing and the flag.
 //
-// Slot 1 of the first row and slot 4 of the second are the two words the framework leaves
-// unnamed. Both are zero everywhere in this layout, so nothing states what they are; they are
-// **open** and deliberately unmapped.
+// Slot 1 of the first row and slot 4 of the second are **open** and deliberately unmapped.
 const FieldMapping mmRestFields[] = {
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, measWidth),
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, numAdjY),

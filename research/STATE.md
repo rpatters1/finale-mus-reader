@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **74 done, 3 partial, 113 to do, 190 registered musxdom classes** (verified against the registry
+- **75 done, 3 partial, 112 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-05). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and
@@ -13,7 +13,8 @@ Compact working state. Every line links to its detail; none of the analysis live
 - Others/details/texts recovered so far: font definitions, shape definitions, fret records,
   graphic assignments, custom smart-shape lines, category and repeat staff lists, text blocks, part
   definitions, part globals, marking categories, the custom-key cluster, and the text pool classes.
-- Score content — measures, staves, entries, and their details — is **not** imported.
+- Measures are recovered in every epoch, score and unlinked part alike, and are the first score
+  content the reader builds. Staves, entries, and their details are **not** imported.
 
 ## Current priorities
 
@@ -22,7 +23,7 @@ status and date:
 
 - **P0.2 Remaining seeded option font ids are not reconciled** — blocker.
 - **P1.1 Option coverage is a thin slice** — gap.
-- **P1.2 No score content is imported** — gap; the largest single piece of remaining work.
+- **P1.2 Score content is barely imported** — gap; the largest single piece of remaining work.
 - **P1.3 The zlib era decodes only supported record classes** — gap.
 - **P1.5 Legacy text encoding is not converted** — gap.
 

@@ -207,17 +207,18 @@ compared file in every era where the reader reads them. Detail is in
 which is what keeps this a gap rather than a correctness problem. Promotion of
 further mappings should stay evidence-led and version-aware.
 
-### P1.2 No score content is imported
+### P1.2 Score content is barely imported
 
-**Status:** gap. **Confidence:** confirmed.
+**Status:** gap, narrowed 2026-09-06. **Confidence:** confirmed.
 
-No measures, staves, entries, text, page or system layout, parts, or
-instruments. The reader currently produces a fallback-heavy document whose `FontOptions`
-is structurally complete but may synthesize many categories when their source representation
-is not identified. It also contains a recovered header. This is the
-honest current scope and is asserted by
-`expectNoScoreContent`, but "MUS reader" will be read by users as meaning score
-content.
+Measures are now recovered in every epoch, score and unlinked part alike; see
+[`../format/others/measure.md`](../format/others/measure.md). Nothing else is: no staves,
+entries, text, page or system layout, or instruments. The reader still produces a
+fallback-heavy document whose `FontOptions` is structurally complete but may synthesize many
+categories when their source representation is not identified. It also contains a recovered
+header. This is the honest current scope, and `expectNoScoreContent` now asserts the narrower
+claim that every measure present was built from a source record rather than that none exists.
+
 
 ### P1.3 The zlib era decodes only supported record classes
 

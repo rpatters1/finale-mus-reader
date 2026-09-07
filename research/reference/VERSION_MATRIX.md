@@ -72,6 +72,14 @@ The exact meaning of all tuple members (Enigma version, application version, fil
 | 15-8 | development status code |
 | 7-0 | build |
 
+**Confirmed for two of the status codes**, by pairing a back-saved file's numeric creator tuple
+with the `<created>` block its Finale 27 companion preserves verbatim, which names the status in
+words: **2 is `beta`, 0 is `dev`**. `4` is the remaining common value and is presumably `release`,
+unconfirmed. The specimen is in
+[`../investigations/measure.md`](../investigations/measure.md#2026-09-06--the-key-signature-switch-a-beta-back-save-carries).
+The same specimen shows the build field saturating: its companion reports build 5545 where the
+eight-bit field reads `0xff`, so a dev build above 255 is not recoverable from the tuple.
+
 Three such values sit in each file-info block: the Enigma version at the tuple start, the application version at tuple+12, and the file version at tuple+16, with the application and platform strings between them.
 
 The decoding reproduces this document's own aggregate creator-version figures exactly. Finale 97 stores application version `0x03820401`, which decodes to 3.8.2 build 1, matching the reported `3.8.2.1`; Finale 2000 stores `0x05020401` for `5.0.2.1`; a Finale 2012 file stores `0x0d040311` little-endian for `17.0.3.13`. The same packing places the minor version at bits 23-20 as the running application reports it to plug-ins, so a file version and a runtime version are directly comparable.

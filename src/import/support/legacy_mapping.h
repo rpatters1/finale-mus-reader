@@ -29,6 +29,7 @@
 #include "musx/dom/Document.h"
 #include "musx/dom/Fundamentals.h"
 #include "musx/factory/ConstructionContext.h"
+#include "musx/factory/PoolFactory.h"
 #include "records/legacy_record_index.h"
 #include "support/finale_version.h"
 
@@ -54,8 +55,7 @@ enum class ValueWidth : std::uint8_t
 [[nodiscard]] musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value);
 
 /// @brief Which of a four-byte value's two payload words comes first.
-/// @details The distilled framework mapping names these `MACFOURBYTE` and `WINFOURBYTE`.
-/// This is independent of container byte order, which the record index has already
+/// @details Independent of container byte order, which the record index has already
 /// applied when reading each individual word.
 enum class LongWordOrder : std::uint8_t
 {
@@ -132,6 +132,12 @@ recordKeys(const RecordFamilySource& source);
                                                                const records::LegacyRow& row);
 
 /// @brief Creates an others instance with identity and sharing taken from its source row.
+/// @details A partially linked part instance is initialized from the score instance of the same
+/// identity before it is returned, because that is what partial sharing means: the part record
+/// states only what the part changed, and everything else is the score's. musxdom owns that
+/// operation, so it is called rather than reproduced. A part record whose score instance has not
+/// been created is left uninitialized instead; the record enumeration hands out score records
+/// first, so that case is a source whose score record is missing rather than an ordering mistake.
 template <typename T>
 [[nodiscard]] std::shared_ptr<T>
 createOthersRecordTarget(const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
@@ -140,12 +146,23 @@ createOthersRecordTarget(const musx::dom::DocumentPtr& document, const RecordFam
 {
     const auto shareMode = recordShareMode(source, row);
     std::shared_ptr<T> target;
+    // A class without an incidence is looked up with none, not with incidence zero: the pool
+    // distinguishes the two, and asking for zero finds nothing where the objects have no
+    // incidence at all.
+    std::optional<musx::dom::Inci> lookupInci;
     if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t,
                                           musx::dom::EnigmaBase::ShareMode, musx::dom::Cmper,
                                           musx::dom::Inci>) {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper, inci);
+        lookupInci = inci;
     } else {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper);
+    }
+    if (target && shareMode == musx::dom::EnigmaBase::ShareMode::Partial) {
+        if (const auto score = document->getOthers()->template get<T>(
+                musx::dom::SCORE_PARTID, cmper, lookupInci)) {
+            musx::factory::PartSharingFactory::initializePartial(target, score);
+        }
     }
     return target;
 }
@@ -863,6 +880,14 @@ template <typename Class, typename... Args>
 void reportUnmappedField(Args&&...)
 {
 }
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+/// @brief The report spelling of a member path.
+/// @details A mapping row and a capture pass both name a destination as the C++ path that
+/// reaches it, so a member inside a contained object arrives spelled with `->`. Every report
+/// target names a document path instead, whose separator is a dot.
+[[nodiscard]] std::string reportMemberName(const char* memberPath);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief Reports every object created by a reference-document import as a pinned default.
