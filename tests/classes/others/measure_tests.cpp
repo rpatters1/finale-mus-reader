@@ -76,7 +76,8 @@ TEST_CASE("Six-word measure records recover the words every era stores")
         "The six-word measure did not recover its key signature");
     expect(measure->compositeNumerator && !measure->compositeDenominator,
         "The composite numerator bit was not recovered");
-    expect(measure->showTime == ShowTimeSigMode::Never && measure->showKey == ShowKeySigMode::IfNeeded,
+    expect(measure->showTime == ShowTimeSigMode::Never
+            && measure->showKey == ShowKeySigMode::IfNeeded,
         "The never-show-time bit did not select the show mode");
     expect(measure->positioningMode == PositioningType::TimeSigPlusPositioning,
         "Legacy positioning code 4 did not translate to the musxdom value");
@@ -367,8 +368,9 @@ TEST_CASE("A compact part record overlays the score measure it is linked to")
         expect(partField(report, 1, 1, "width").decodedOffset
                 != partField(report, 0, 1, "width").decodedOffset,
             "An overlaid member did not report the part record's own offset");
-        expect(report.fields.at(finale_mus_reader::instanceKey<Measure>(1, 1)).size()
-                == measureFieldManifestSize,
+        const auto partKey = finale_mus_reader::instanceKey<Measure>(
+            musx::dom::Cmper(1), musx::dom::Cmper(1));
+        expect(report.fields.at(partKey).size() == measureFieldManifestSize,
             "The part report does not exhaust the Measure field manifest");
     }
 }
@@ -471,8 +473,9 @@ TEST_CASE("A truncated measure record decodes the words it has")
         "The short measure invented values for words it does not have");
     expect(truncated->leftBarlineType == BarlineType::None,
         "The short measure read a left barline past the end of its payload");
-    expect(report.fields.at(finale_mus_reader::instanceKey<Measure>(0, 2)).size()
-            == measureFieldManifestSize,
+    const auto truncatedKey = finale_mus_reader::instanceKey<Measure>(
+        musx::dom::Cmper(0), musx::dom::Cmper(2));
+    expect(report.fields.at(truncatedKey).size() == measureFieldManifestSize,
         "The short measure's report does not exhaust the Measure field manifest");
 }
 
