@@ -36,6 +36,7 @@ enum class DifferenceClassification
 {
     Unexpected,
     AccidentalInsert17Byte,
+    AwaitsDependentRecovery,
     CharsetEquivalence,
     CharsetPitchDifference,
     FontPlatformShift,
@@ -87,6 +88,7 @@ enum class ComparisonTransformation
     EquivalentTextBlockReferent,
     FinaleAddedChordSuffixFiller,
     FinaleAddedStartObjectWrapper,
+    FinaleMaterializedPartMeasure,
     FinaleDroppedTimeInsert,
     FinaleReformattedPartName,
     SemanticallyPairedCodaBlockText
@@ -149,6 +151,18 @@ struct DifferenceContext
 using DifferenceClassifierFn =
     std::optional<DifferenceClassification> (*)(const DifferenceContext& context);
 using DifferenceEquivalenceFn = bool (*)(const DifferenceContext& context);
+
+/// @brief Whether deferred-recovery rules classify their differences at all.
+/// @details A deferred-recovery difference is one that a musxdom class the reader does not yet
+/// recover would settle: the companion states a value the source cannot yet be asked for. Such a
+/// difference is expected only in the sense that it is understood, and every one of them is work
+/// still owed, so the whole set can be switched back to @ref DifferenceClassification::Unexpected
+/// to see what is actually outstanding. `--strict-deferred` on the probe does exactly that.
+///
+/// Process-wide because a classifier is a plain function pointer with no configuration of its own,
+/// and the probe surveys one document at a time in one thread.
+void setDeferredRecoveryClassified(bool enabled);
+[[nodiscard]] bool deferredRecoveryClassified();
 
 bool comparisonPathStartsWith(std::string_view path, std::string_view prefix);
 bool comparisonPathEndsWith(std::string_view path, std::string_view suffix);

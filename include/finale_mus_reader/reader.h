@@ -124,7 +124,8 @@ struct SourceVersion
     std::uint8_t major{};
     std::uint8_t minor{};
     std::uint8_t maint{};
-    /// @brief Development-status code. Its values are not yet mapped to musxdom's names.
+    /// @brief Development-status code: 2 is musxdom's `beta` and 0 its `dev`. The remaining
+    /// values, `4` among them, are not yet mapped.
     std::uint8_t devStatus{};
     std::uint8_t build{};
 };
@@ -254,6 +255,12 @@ struct ImportReport
     /// falls outside Finale's 0-27 range, which means the header layout was not what was
     /// expected. A source gate that needs a version fails when this is absent.
     std::optional<SourceVersion> sourceVersion;
+    /// @brief The Enigma version recorded by the application that originally authored the file.
+    /// @details Distinct from #sourceVersion, which names the release that last wrote the file and
+    /// therefore the layout on disk. The two differ on a back-save: a later Finale can write a
+    /// document out in an earlier format, and only this field says which release actually made it.
+    /// Absent under the same conditions as #sourceVersion.
+    std::optional<SourceVersion> creatorVersion;
     std::size_t sourceSize{};
     std::string banner;
     std::string savingProduct;

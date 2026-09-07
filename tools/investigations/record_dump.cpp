@@ -6,7 +6,10 @@
 // writing a new probe each time.
 //
 // Optional filters narrow the dump: --tag=cf (two characters), --class=0x0032,
-// --cmper=65534, --pool=others|details|class.
+// --cmper=65534, --part=1, --pool=others|details|class.
+//
+// Every source part a tag carries is dumped, score first, because a part-scoped
+// row is exactly what a question about unlinked values is asking after.
 //
 // Reads one file path on argv[1]. Works at the record layer rather than through
 // the reader, so it observes what is stored rather than what the importer makes
@@ -31,6 +34,7 @@ struct Filters
 {
     std::optional<std::uint16_t> identity;
     std::optional<std::uint16_t> cmper;
+    std::optional<std::uint16_t> partId;
     std::string pool;
 };
 
@@ -49,14 +53,17 @@ void dumpPool(const char* name, const records::LegacyRowPool& pool, const Filter
     for (std::uint32_t identity = 0; identity <= 0xffffU; ++identity) {
         const auto tag = static_cast<records::LegacyTag>(identity);
         if (filters.identity && tag != *filters.identity) continue;
-        for (const auto cmper : pool.cmpersForTag(tag)) {
+        for (const auto partId : pool.partIdsForTag(tag)) {
+            if (filters.partId && partId != *filters.partId) continue;
+            for (const auto cmper : pool.cmpersForTag(tag, partId)) {
             if (filters.cmper && cmper != *filters.cmper) continue;
-            for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper)) {
-                const auto rows = pool.getArray(tag, cmper, cmper2);
+            for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper, partId)) {
+                const auto rows = pool.getArray(tag, cmper, cmper2, partId);
                 for (const auto& row : rows) {
                     if (!identityMatches(filters, row)) continue;
-                    std::printf("%-4s 0x%04x cmper=%-6u cmper2=%-6u inci=%-4u words=[",
-                        records::tagText(tag).c_str(), tag, row.cmper1, row.cmper2, row.inci);
+                    std::printf("%-4s 0x%04x part=%-4u cmper=%-6u cmper2=%-6u inci=%-4u words=[",
+                        records::tagText(tag).c_str(), tag, row.partId, row.cmper1, row.cmper2,
+                        row.inci);
                     for (std::uint8_t i = 0; i < row.wordCount; ++i) {
                         std::printf("%s%6d", i ? " " : "", row.words[i]);
                     }
@@ -65,6 +72,7 @@ void dumpPool(const char* name, const records::LegacyRowPool& pool, const Filter
                     for (const auto byte : bytes) std::printf("%02x", byte);
                     std::printf(" block=0x%zx decoded=0x%zx\n", row.blockOffset, row.decodedOffset);
                 }
+            }
             }
         }
     }
@@ -76,7 +84,8 @@ int main(int argc, char** argv)
 {
     if (argc < 2) {
         std::fprintf(stderr,
-            "usage: record_dump <file> [--tag=XX|--class=0xNNNN] [--cmper=N] [--pool=others|details|class]\n");
+            "usage: record_dump <file> [--tag=XX|--class=0xNNNN] [--cmper=N] [--part=N]"
+            " [--pool=others|details|class]\n");
         return 2;
     }
 
@@ -89,6 +98,8 @@ int main(int argc, char** argv)
             filters.identity = static_cast<std::uint16_t>(std::strtoul(arg.c_str() + 8, nullptr, 0));
         } else if (arg.rfind("--cmper=", 0) == 0) {
             filters.cmper = static_cast<std::uint16_t>(std::strtoul(arg.c_str() + 8, nullptr, 0));
+        } else if (arg.rfind("--part=", 0) == 0) {
+            filters.partId = static_cast<std::uint16_t>(std::strtoul(arg.c_str() + 7, nullptr, 0));
         } else if (arg.rfind("--pool=", 0) == 0) {
             filters.pool = arg.substr(7);
         } else {

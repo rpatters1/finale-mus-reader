@@ -37,6 +37,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "default-shape-id";
     case DifferentDefaults:
         return "different_defaults";
+    case AwaitsDependentRecovery:
+        return "awaits-dependent-recovery";
     case EnigmaTextDifference:
         return "enigma-text-difference";
     case FinaleTextBlockRenumbering:
@@ -121,6 +123,8 @@ std::string_view transformationName(ComparisonTransformation transformation)
         return "Equivalent TextBlock raw-text referent";
     case FinaleAddedChordSuffixFiller:
         return "Finale-added chord-suffix filler";
+    case FinaleMaterializedPartMeasure:
+        return "finale-materialized-part-measure";
     case FinaleAddedStartObjectWrapper:
         return "Finale-added StartObject wrapper";
     case FinaleDroppedTimeInsert:

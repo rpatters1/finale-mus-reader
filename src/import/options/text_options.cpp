@@ -64,19 +64,19 @@ bool storesTextLayoutOptions(
     return readNumericGlobalWords(index, layoutSelector).present;
 }
 
-// Selectors 5 and 13, which every epoch carries, at the distilled framework's locations. The
-// words are the same in the earliest era as in the latest.
+// Selectors 5 and 13, which every epoch carries. The words are the same in the earliest era as
+// in the latest.
 //
-// `dateFormat` needs no translation: the framework's DATEFORMAT_SHORT, _LONG and _MACLONG are
-// 0, 1 and 2, and musxdom's DateFormat has the same three in the same order.
+// `dateFormat` needs no translation: the legacy short, long and Mac-long codes are 0, 1 and 2,
+// and musxdom's DateFormat has the same three in the same order.
 const FieldMapping textStampFields[] = {
     MUS_WORD(TextTarget, "05", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, showTimeSeconds),
     MUS_WORD(TextTarget, "05", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, dateFormat),
     MUS_WORD(TextTarget, "13", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, tabSpaces),
 };
 
-// Selector 81, three 32-bit values in the framework's MACFOURBYTE order: two 16-bit words with
-// the high word first, each word in the container's byte order. That is one rule for both byte
+// Selector 81, three 32-bit values as two 16-bit words with the high word first, each word in
+// the container's byte order. That is one rule for both byte
 // orders: -6 is stored as the word pair (-1, -6) and 42 as (0, 42), whichever order the
 // container uses.
 const FieldMapping textMetricsFields[] = {
@@ -531,7 +531,7 @@ InsertBlock readInsertBlock(
 }
 
 /// @brief Reads a 32-bit field stored as two 16-bit words, high word first.
-/// @details This is the framework's MACFOURBYTE order, and it is one rule for both byte
+/// @details One rule for both byte
 /// orders: a big-endian Finale 2005 file stores 1000 as 00 00 03 e8 and a little-endian Finale
 /// 2012 file stores it as 00 00 e8 03. The early layout is a plain little-endian long instead,
 /// which reads the same way once its bytes have been reassembled.

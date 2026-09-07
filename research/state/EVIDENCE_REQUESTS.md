@@ -299,6 +299,34 @@ era's defaults, because enabling one checkbox produced a flag word with only tha
 Still wanted for the same class: a controlled Coda-era pair, since no document of that era
 carrying the row has been seen and Finale 2.6.3 has two layers to store.
 
+### C12 — Partly settled — the full-names bit between Finale 2000 and 2010
+
+Two controlled saves, either from Finale 97 or Finale 98, each a new document differing from a
+baseline sibling in one measure attribute only.
+
+A document of any release from Finale 2000 through Finale 2010 whose auxiliary flag word sets
+`0x0800` on some measure. "Show Full Staff & Group Names" arrives in Finale 2011 and the reader
+gates the bit on that release, because Finale 3.5 sets it where no full names appear. What the bit
+means in the releases between is unknown, and no specimen of one setting it has been examined. If
+it turns out to be the same setting earlier than 2011, the gate should move; if it is something
+else, that is worth naming.
+
+The display time-signature half of this request is **settled** by
+`tests/evidence/F97/F97-disptime.mus`; see
+[`../format/others/measure.md`](../format/others/measure.md#the-display-time-signature-record).
+
+### C13 — Supplied/Analyzed — the word-extension break at a repeat or section barline
+
+Supplied as `tests/evidence/F2002/F2002-breakwexts.*` and `tests/evidence/F2005/F2005-breakwexts.*`,
+a matched pair on either side of the release that introduced the setting. Together they show that
+Finale's musx conversion writes the flag from the barline only where the source cannot express it,
+and that the reader's own reading of the bit is right in both directions. No rendering of a legacy
+original was needed after all. The difference is classified rather than reproduced; see
+[`../format/others/measure.md`](../format/others/measure.md).
+
+Still unexplained, and not pursued: a post-2004 document with a backwards repeat and the bit clear
+whose companion sets the flag anyway.
+
 ### S1 — Supplied/Analyzed — settles the pre-Finale-3.5 stem lengths
 
 Two controlled Finale 1.0.0 saves are now tracked as `tests/evidence/F100/F100-stemopts-changed.*`

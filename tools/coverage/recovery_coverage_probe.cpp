@@ -80,6 +80,9 @@ struct Options
     LogLevel minDiagnosticLevel = LogLevel::Verbose;
     bool showProgress = false;
     bool includeTimings = false;
+    // Deferred-recovery differences are classified unless this is set, which is the default
+    // because they are understood. Setting it is how the outstanding work is counted.
+    bool strictDeferred = false;
 };
 
 // Printed every this many documents rather than a multiple of five or ten, so the printed
@@ -199,7 +202,7 @@ void printUsage()
     std::fprintf(stderr,
         "usage: recovery_coverage_probe [-h|--help] "
         "[--min-diagnostic-level=verbose|info|warning|error] "
-        "[--mac-symbol-fonts=path] "
+        "[--mac-symbol-fonts=path] [--strict-deferred] "
         "[--include-timings] [--progress] "
         "<corpus-tsv> <output-jsonl>\n");
 }
@@ -238,6 +241,11 @@ void printHelp()
         "  --min-diagnostic-level=verbose|info|warning|error\n"
         "                  Drop reader diagnostics below this level on stderr instead\n"
         "                  of printing them. Default: verbose (nothing is dropped).\n"
+        "  --strict-deferred\n"
+        "                  Report deferred-recovery differences as unexpected instead of\n"
+        "                  classifying them. A deferred-recovery difference is one a musxdom\n"
+        "                  class the reader does not yet recover would settle, so the count is\n"
+        "                  the recovery work still owed rather than a property of the format.\n"
         "  --mac-symbol-fonts=path\n"
         "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
         "                  contents to the reader for symbol-glyph decoding.\n"
@@ -267,6 +275,8 @@ std::optional<Options> parseOptions(int argc, char** argv)
         constexpr std::string_view symbolFontsFlag = "--mac-symbol-fonts=";
         if (arg == "--progress") {
             options.showProgress = true;
+        } else if (arg == "--strict-deferred") {
+            options.strictDeferred = true;
         } else if (arg == "--include-timings") {
             options.includeTimings = true;
         } else if (arg.substr(0, levelFlag.size()) == levelFlag) {
@@ -640,10 +650,14 @@ int main(int argc, char** argv)
     using namespace finale_mus_reader;
     using namespace finale_mus_reader::coverage;
 
+    setDeferredRecoveryClassified(!options->strictDeferred);
+
     std::cout << "Options:\n"
         << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
         << "  include timings: " << (options->includeTimings ? "yes" : "no") << '\n'
         << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
+        << "  deferred recovery: "
+        << (options->strictDeferred ? "reported as unexpected" : "classified") << '\n'
         << "  MacSymbolFonts: ";
     if (options->macSymbolFontsPath.empty()) {
         std::cout << "not supplied";

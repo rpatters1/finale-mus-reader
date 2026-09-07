@@ -203,8 +203,7 @@ public:
 
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
-    /// stream is what lets a four-byte value straddle an incidence boundary, which the
-    /// distilled framework mapping requires.
+    /// stream is what lets a four-byte value straddle an incidence boundary.
     [[nodiscard]] std::optional<RecordWord> word(
         LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const;
 

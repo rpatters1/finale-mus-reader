@@ -26,7 +26,9 @@ from xml.etree import ElementTree as ET
 from musx_semantics import child, decode_score_dat, local_name, text
 
 
-ROW = re.compile(r"cmper=(\d+)\s+cmper2=(\d+)\s+inci=(\d+)\s+"
+# record_dump prints every source part a tag carries. This study is about score
+# definitions, so a part-scoped row is skipped rather than merged into the score's.
+ROW = re.compile(r"part=(\d+)\s+cmper=(\d+)\s+cmper2=(\d+)\s+inci=(\d+)\s+"
                  r"words=\[([^]]*)\] bytes=([0-9a-f]*)")
 AXES = {"x": (6, 9, "horzMeasExprAlign", range(8), range(7)),
         "y": (12, 14, "vertMeasExprAlign", range(4), range(9))}
@@ -43,19 +45,21 @@ def records(dump: str) -> dict[int, list[int]]:
         match = ROW.search(line)
         if not match:
             continue
-        cmper, second, incidence = map(int, match.group(1, 2, 3))
+        part, cmper, second, incidence = map(int, match.group(1, 2, 3, 4))
+        if part:
+            continue
         if second:
             raise ValueError("unexpected second comparator")
         if incidence in rows[cmper]:
             raise ValueError("duplicate incidence")
         if variable:
-            payload = bytes.fromhex(match[5])
+            payload = bytes.fromhex(match[6])
             if len(payload) < 36:
                 raise ValueError("short variable expression header")
             words = list(struct.unpack((">" if header[2] == "big" else "<")
                                        + "18h", payload[:36]))
         else:
-            words = list(map(int, match[4].split()))
+            words = list(map(int, match[5].split()))
         rows[cmper][incidence] = words
     result = {}
     for cmper, incidences in rows.items():

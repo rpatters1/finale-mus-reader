@@ -67,6 +67,7 @@ enum class Phase : std::size_t
     ImportNoteRestOptions,
     ImportPageFormatOptions,
     ImportPageGraphicAssignments,
+    ImportMeasures,
     ImportPartDefinitions,
     ImportPartGlobals,
     ImportPianoBraceBracketOptions,

@@ -253,6 +253,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportKeyMapArrays, &others::importKeyMapArrays),
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportMarkingCategories, &others::importMarkingCategories),
+        FINALE_MUS_READER_IMPORTER(ImportMeasures, &others::importMeasures),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportPartGlobals, &others::importPartGlobals),
@@ -313,8 +314,8 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
     std::int64_t value = 0;
     if (width == 4) {
         // Not a plain four-byte read: the zlib serialization kept the two payload words the
-        // fixed rows carried, so their order is the mapping's own and the same
-        // MACFOURBYTE/WINFOURBYTE rule decides it. On a little-endian file the two differ,
+        // fixed rows carried, so their order is the mapping's own and the same long-word
+        // order rule decides it. On a little-endian file the two differ,
         // and the stem offset is the field that shows it.
         const auto first = readWord(source.wordSlot);
         const auto second = readWord(source.wordSlot + 2);
@@ -378,7 +379,7 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
             : (static_cast<std::uint32_t>(secondWord) << 16U) | firstWord;
         value = static_cast<std::int32_t>(combined);
     } else if (source.width == ValueWidth::Byte) {
-        // The framework selects one-byte fields through a 16-bit slot and then narrows.
+        // A one-byte field is selected through a 16-bit slot and then narrowed.
         // **Unverified: which half it keeps.** No one-byte mapping is promoted until a
         // document settles it.
         value = static_cast<std::int8_t>(static_cast<std::uint16_t>(first->value) & 0xffU);
@@ -485,14 +486,20 @@ std::vector<EffectiveTable> buildEffectiveTables(
     return result;
 }
 
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 std::string reportMember(const FieldMapping& field)
 {
+    return reportMemberName(field.fieldName);
+}
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+} // namespace
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+std::string reportMemberName(const char* memberPath)
+{
     std::string result;
-    // A row names its destination once, as the C++ path that reaches it, so a field inside a
-    // contained object arrives here spelled with `->`. Every report target names a document
-    // path instead, whose separator is a dot, which is also how the capture passes spell the
-    // nested targets they build by hand.
-    for (const char* at = field.fieldName; *at != '\0'; ++at) {
+    for (const char* at = memberPath; *at != '\0'; ++at) {
         if (at[0] == '-' && at[1] == '>') {
             result += '.';
             ++at;
@@ -502,8 +509,7 @@ std::string reportMember(const FieldMapping& field)
     }
     return result;
 }
-
-} // namespace
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
 {
