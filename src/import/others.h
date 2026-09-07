@@ -31,6 +31,9 @@ void importChordSuffixElements(const ImportContext& context);
 /// @brief Recovers chord-suffix playback intervals.
 void importChordSuffixPlayback(const ImportContext& context);
 
+/// @brief Imports graphic file locator records.
+void importFilePath(const ImportContext& context);
+
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
 

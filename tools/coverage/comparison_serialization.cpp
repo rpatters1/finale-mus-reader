@@ -47,6 +47,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "finale-upgrade-loss";
     case FinaleUpgradeNormalization:
         return "finale-upgrade-normalization";
+    case FinaleUpgradeSynthesis:
+        return "finale-upgrade-synthesis";
     case FontMetricApproximation:
         return "font-metric-approximation";
     case TextEncodingError:

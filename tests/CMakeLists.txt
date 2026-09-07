@@ -58,6 +58,7 @@ add_executable(finale_mus_reader_tests
     classes/options/tuplet_options_tests.cpp
     classes/others/chord_suffix_tests.cpp
     classes/others/custom_keys_tests.cpp
+    classes/others/file_path_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/marking_category_tests.cpp
@@ -76,6 +77,7 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/value.cpp
     ../tools/coverage/common/font_info.cpp
     ../tools/coverage/surveyors/others/measure.cpp
+    ../tools/coverage/surveyors/others/file_path.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

@@ -245,6 +245,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAcciOrderSharps, &others::importAcciOrderSharps),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
+        FINALE_MUS_READER_IMPORTER(ImportFilePath, &others::importFilePath),
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
