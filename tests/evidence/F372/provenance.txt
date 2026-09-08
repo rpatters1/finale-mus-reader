@@ -161,15 +161,15 @@ F372-bookmarks.musx
     bounds their arrival from above and says nothing more: no earlier release is
     available to test.
 
-    This era keeps a bookmark's text in the `BK` others family, one family per
-    bookmark at comparators from 0x8000 up, in the same shape the Coda-banner era
-    uses for block text: the string occupies the first four incidences as 48 bytes
-    ending at the first NUL, and two numeric incidences follow it. The text pool of
-    this document holds no bookmark at all. The text is 8-bit -- `9f` is the
-    u-umlaut under Mac Roman -- and its ETF export prints the same rows.
+    This era keeps a bookmark in the `BK` others family, one family per bookmark at
+    comparators from 0x8000 up: the name occupies the first four incidences as 48
+    bytes ending at the first NUL, and two numeric incidences of view state follow
+    it. The text pool of this document holds no bookmark at all. The text is 8-bit
+    -- `9f` is the u-umlaut under Mac Roman -- and its ETF export prints the same
+    rows, which is what establishes the whole 36-word layout.
 
-    Reading `BK` is deferred until the bookmark class itself is imported, so this
-    fixture's role for now is the assertion that nothing is synthesized from it.
+    The reader recovers the name as a `texts::BookmarkText`; musxdom has no class
+    for the bookmark object, so the view state is documented rather than imported.
 
 F372-altnot-offsets.mus
     sha256 2c2ed9bc7d45065c194d813c379d1c35afe7d32bee16b3a97cabb6dbe2965010

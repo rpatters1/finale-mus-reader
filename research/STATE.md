@@ -60,7 +60,7 @@ P0.1, P0.3, and P1.4 are recorded as done or resolved.
 - Two companion differences are recorded rather than suppressed; the instrument errors behind them
   are worth reading before trusting a comparison script's field lookup.
   ([`investigations/regression_open_questions.md`](investigations/regression_open_questions.md))
-- `BookmarkText` recovers in pooled eras only. Text expression recovery is partial;
+- Text expression recovery is partial;
   [remaining fields and upgrade questions](format/others/text_expression_defs.md).
 
 ## Wanted evidence

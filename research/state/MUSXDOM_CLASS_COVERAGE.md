@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**79 done, 3 partial, 108 to do, 190 total.** Verified class for class against the registry on
+**80 done, 2 partial, 108 to do, 190 total.** Verified class for class against the registry on
 2026-09-05: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -212,10 +212,10 @@ Explanation added here has to be removed again.
 
     [ ] Entry
 
-## texts  (6 done, 2 partial, 0 to do, 8 total)
+## texts  (7 done, 1 partial, 0 to do, 8 total)
 
     [x] BlockText                               text_pool.cpp, coda_texts.cpp
-    [~] BookmarkText                            text_pool.cpp                   pooled eras only
+    [x] BookmarkText                            text_pool.cpp, bookmark.cpp
     [~] ExpressionText                          text_pool.cpp, text_expression_defs.cpp   early + pooled
     [x] FileInfoText                            text_pool.cpp,
                                                 file_info_text.cpp

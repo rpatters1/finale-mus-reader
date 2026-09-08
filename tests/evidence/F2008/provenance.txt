@@ -95,3 +95,21 @@ F2008-defss-under.musx
     Over, and `-1` for Under; no other word in the class record changes. The
     Finale 27 companions preserve all three meanings. Values outside this enum
     are not direction values and retain the reader's seeded default.
+F2008-bookmarks.mus
+    sha256 27b6066b11927cc8f15c506b3f8f1e31639ec5b6ff81add62dc66fc810b888d6
+F2008-bookmarks.musx
+    sha256 4a13fac05dc9906571b8e11f12fdab7c8b2476eebc95bc876394b62c3ef408c0
+    Six bookmarks, built to separate fields that every earlier specimen held
+    equal. This era keeps the whole 36-word bookmark record as class `0x007b`
+    of the zlib pool, name and all, so it is the specimen that shows the record
+    surviving the move off the tagged others pool unchanged.
+
+    Each of the six isolates one thing. `Horz Only` stores a horizontal page
+    position with flags `1` and no vertical; `Vert Only` stores a vertical one
+    with flags `2` and no horizontal, which is what assigns each flag bit to
+    its own word rather than inferring the pair from a bookmark that sets both.
+    `Page Böth` gives the two positions distinct values, 40 and 200, so words
+    31 and 32 separate. `Percent 150` sets word 26 and its companion is the
+    only one carrying `changePercent`. `Percent 75 off` leaves word 26 clear
+    with 75 still in word 25, and its companion keeps `viewPerc` 75, which is
+    what shows the percent is stored as written whether or not it applies.

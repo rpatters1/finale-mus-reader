@@ -39,6 +39,26 @@ musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value)
     return legacyPointsToEfix(static_cast<double>(value) / storedUnitsPerPoint);
 }
 
+std::string readRowText(const records::LegacyRowPool& pool,
+    std::span<const records::LegacyRow> family, std::uint32_t firstIncidence,
+    std::uint32_t incidenceCount)
+{
+    std::string result;
+    for (const auto& row : family) {
+        if (row.inci < firstIncidence || row.inci - firstIncidence >= incidenceCount) {
+            continue;
+        }
+        const auto bytes = pool.effectivePayloadOf(row);
+        const auto terminator = std::find(bytes.begin(), bytes.end(), std::uint8_t{0});
+        result.append(reinterpret_cast<const char*>(bytes.data()),
+            static_cast<std::size_t>(terminator - bytes.begin()));
+        if (terminator != bytes.end()) {
+            break;
+        }
+    }
+    return result;
+}
+
 std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context,
     const records::LegacyRowPool& fixedPool, const records::LegacyRowPool& classPool,
     records::LegacyTag fixedTag, records::LegacyTag classId, bool details,
@@ -216,6 +236,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAcciAmountSharps, &others::importAcciAmountSharps),
         FINALE_MUS_READER_IMPORTER(ImportAcciOrderFlats, &others::importAcciOrderFlats),
         FINALE_MUS_READER_IMPORTER(ImportAcciOrderSharps, &others::importAcciOrderSharps),
+        FINALE_MUS_READER_IMPORTER(ImportBookmarks, &others::importBookmarks),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
         FINALE_MUS_READER_IMPORTER(ImportFilePath, &others::importFilePath),
@@ -365,31 +386,16 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         first->decodedOffset};
 }
 
-// Character payloads are not byte-order sensitive, so text is assembled from the raw bytes
-// rather than from the decoded words. A little-endian file stores a font name as plain text,
-// and reading it through the words would transpose every character pair.
 std::optional<std::string> readText(const records::LegacyRecordIndex& index,
     std::uint16_t cmper, const SourceLocation& source)
 {
     const auto family = index.getOthers().getArray(source.identity, cmper);
-    std::string text;
-    bool found = false;
-    for (const auto& row : family) {
-        if (row.inci < source.incidence) {
-            continue;
-        }
-        found = true;
-        const auto bytes = index.getOthers().effectivePayloadOf(row);
-        text.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-    }
-    if (!found) {
+    const auto present = std::any_of(family.begin(), family.end(),
+        [&](const records::LegacyRow& row) { return row.inci >= source.incidence; });
+    if (!present) {
         return std::nullopt;
     }
-    // Rows are fixed width, so the last one is padded. The name ends at the first NUL.
-    if (const auto end = text.find('\0'); end != std::string::npos) {
-        text.resize(end);
-    }
-    return text;
+    return readRowText(index.getOthers(), family, source.incidence);
 }
 
 /// @brief One destination field: what to report, and where to read it if this file can.

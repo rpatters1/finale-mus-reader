@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <functional>
 #include <span>
@@ -45,6 +46,20 @@ enum class ValueWidth : std::uint8_t
 
 /// @brief Converts a legacy point measurement stored in ten-thousandths into Efix units.
 [[nodiscard]] musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value);
+
+/// @brief Reads a legacy string that occupies a run of consecutive record rows.
+/// @details Rows are fixed width, so a string longer than one row continues into the next and
+/// the last one is padded: the string ends at the first NUL. Character payloads are not
+/// byte-order sensitive, so the bytes are read directly rather than through the decoded words.
+/// A little-endian file stores a name as plain text, and reading it through the words would
+/// transpose every character pair.
+/// @param family The rows of one record family, as @ref records::LegacyRowPool::getArray returns them.
+/// @param firstIncidence The incidence the string starts at.
+/// @param incidenceCount How many incidences the string may occupy, for a record that keeps
+/// something other than the string in the rows that follow it.
+[[nodiscard]] std::string readRowText(const records::LegacyRowPool& pool,
+    std::span<const records::LegacyRow> family, std::uint32_t firstIncidence = 0,
+    std::uint32_t incidenceCount = std::numeric_limits<std::uint32_t>::max());
 
 /// @brief Which of a four-byte value's two payload words comes first.
 /// @details Independent of container byte order, which the record index has already

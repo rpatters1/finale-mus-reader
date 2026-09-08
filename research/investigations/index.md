@@ -29,7 +29,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Custom-key others records and map ordering | [`custom_keys.md`](custom_keys.md) |
 | Custom-key clef octave arrays | [`custom_key_octaves.md`](custom_key_octaves.md) |
 | Custom-key accidental symbol lists | [`key_symbol_list.md`](key_symbol_list.md) |
-| Bookmarks | [`bookmark_text.md`](bookmark_text.md) |
+| Bookmarks | [`bookmark.md`](bookmark.md) for the record and its recovery, [`bookmark_text.md`](bookmark_text.md) for where the text is stored |
 | Graphic assignment layout | [`graphic_assignments.md`](graphic_assignments.md) |
 | Graphic file locator selectors and conversion differences | [`file_path.md`](file_path.md) |
 | Fret record identities and layouts | [`fret_records.md`](fret_records.md) |

@@ -49,7 +49,10 @@ struct TextKeyword
         Cmper number, std::string&& text);
     std::string_view nodeName;
     [[no_unique_address]] ReportClass reportClass;
-    TextFontType defaultFontType;
+    /// @brief The class default that completes a record's initial formatting state.
+    /// @details Absent for a class whose text carries no font at all, which also leaves its
+    /// literal bytes to the source platform's encoding rather than to a font's charset.
+    std::optional<TextFontType> defaultFontType;
     /// @brief Optional test on the record's number, for a class that constrains it.
     /// @details `texts::FileInfoText` throws on a number outside its own enumeration, so a
     /// malformed chunk would abort the import rather than being skipped. Nothing else in the
@@ -68,7 +71,7 @@ void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& po
 }
 
 template <typename Target>
-TextKeyword textKeyword(std::string_view keyword, TextFontType defaultFontType,
+TextKeyword textKeyword(std::string_view keyword, std::optional<TextFontType> defaultFontType,
     bool (*accepts)(Cmper) = nullptr)
 {
     return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, ReportClass::of<Target>(),
@@ -97,9 +100,15 @@ const TextKeyword textKeywords[] = {
     textKeyword<musx::dom::texts::SmartShapeText>("smartshape", TextFontType::TextBlock),
     // A bookmark's text carries no style commands of its own, and musxdom documents any Enigma
     // insert appearing in one as meaningless. It is read through the same converter regardless:
-    // the record still needs its bytes decoded through a code page, and a caret still has to
-    // survive as an escaped one.
-    textKeyword<musx::dom::texts::BookmarkText>("bookmark", TextFontType::TextBlock),
+    // a caret still has to survive as an escaped one.
+    //
+    // **It is the one class given no default font**, so nothing is prepended and the record is
+    // stored as its characters alone. Finale 27 writes a bookmark's text the same way, and the
+    // source states no font either -- a `^bookmark` chunk holds nothing between its header and
+    // its `^end` -- so a synthesized `^font`/`^size`/`^nfx` prefix would be this reader's
+    // invention rather than anything the document says. A bookmark name is a label rather than
+    // engraved text, which is the same reason musxdom calls its inserts meaningless.
+    textKeyword<musx::dom::texts::BookmarkText>("bookmark", std::nullopt),
     textKeyword<musx::dom::texts::ExpressionText>("expression", TextFontType::Expression),
     // File Info starts out in the header and becomes ordinary pool records in a later era.
     // Where in between the move happens does not matter here: the header pass fills in only
@@ -365,8 +374,10 @@ void importLaterTextPool(const ImportContext& context)
         const auto keywordIndex = static_cast<std::size_t>(found - std::begin(textKeywords));
         if (!initialFontsCached[keywordIndex]) {
             FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheMisses, 1);
-            initialFonts[keywordIndex] = musx::dom::options::FontOptions::getFontInfoOrNull(
-                context.document, found->defaultFontType);
+            initialFonts[keywordIndex] = found->defaultFontType
+                ? musx::dom::options::FontOptions::getFontInfoOrNull(
+                    context.document, *found->defaultFontType)
+                : nullptr;
             initialFontsCached[keywordIndex] = true;
         } else {
             FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheHits, 1);

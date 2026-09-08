@@ -133,19 +133,19 @@ This reference table records two-character tags identified from the publicly acc
 | `0x0071` | unknown | unknown/options | open | 2008, 2011, 2012 | 84 | `mus-ed8096788fa377bf` (0:0x158a) |
 | `0x0079` | unknown | unknown/options | open | 2012 | 60 | `mus-4ffcb6b07d802e7c` (0:0x1838) |
 | `0x007a` | beatChart | others | weak | 2012 | 48, 84, 108, 144 | `mus-aaff1568ec2bb9ef` (0:0x1852) |
-| `0x007b` | unknown | unknown/options | open | 2012 | 24 | `mus-f99c887dff9cdaa1` (0:0x1852) |
+| `0x007b` | unknown | unknown/options | open | 2008, 2012 | 24, 72 | `mus-27b6066b11927cc8` (0:0x15ec) |
 | `0x007d` | unknown | unknown/options | open | 2012 | 48 | `mus-ae4031bd3fffb218` (0:0x1838) |
-| `0x0086` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
+| `0x0086` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
 | `0x0089` | unknown | unknown/options | open | 2012 | 396, 408, 420, 432 | `mus-80f8c631de435726` (0:0x1852) |
 | `0x008a` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x225a) |
 | `0x008b` | unknown | unknown/options | open | 2012 | 24 | `mus-80f8c631de435726` (0:0x22f6) |
 | `0x008d` | layerAtts | others | weak | 2007, 2008, 2011, 2012 | 12, 36 | `mus-86fafceb1ef2ebe2` (0:0x1550) |
 | `0x0090` | fontName | others | weak | 2007, 2008, 2011, 2012 | 24, 36 | `mus-86fafceb1ef2ebe2` (0:0x15d0) |
 | `0x0092` | frameSpec | others | strong | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1732) |
-| `0x0095` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x179a) |
-| `0x0097` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 156 | `mus-86fafceb1ef2ebe2` (0:0x17f0) |
+| `0x0095` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 72 | `mus-86fafceb1ef2ebe2` (0:0x179a) |
+| `0x0097` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 156 | `mus-86fafceb1ef2ebe2` (0:0x17f0) |
 | `0x009e` | hpOptions | others | weak | 2012 | 36 | `mus-f99c887dff9cdaa1` (0:0x1c30) |
-| `0x009f` | shapeList | others | weak | 2007, 2008, 2011, 2012 | 24, 48 | `mus-86fafceb1ef2ebe2` (0:0x189a) |
+| `0x009f` | shapeList | others | weak | 2007, 2008, 2011, 2012 | 24, 48, 72, 96 | `mus-86fafceb1ef2ebe2` (0:0x189a) |
 | `0x00a3` | layerAtts | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x18fe) |
 | `0x00a4` | unknown | unknown/options | open | 2012 | 360 | `mus-f95d2ea21b99022e` (0:0x2220) |
 | `0x00a5` | unknown | unknown/options | open | 2012 | 12 | `mus-4ffcb6b07d802e7c` (0:0x1e98) |
@@ -156,11 +156,11 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00b0` | measSpec | others | strong | 2007, 2008, 2011, 2012 | 8, 26 | `mus-86fafceb1ef2ebe2` (0:0x1b3a) |
 | `0x00b1` | unknown | unknown/options | open | 2012 | 24 | `mus-80f8c631de435726` (0:0x2e10) |
 | `0x00b7` | textBlock | others | strong | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x1b8a) |
-| `0x00b9` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x1bbc) |
-| `0x00ba` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 24, 36, 48 | `mus-86fafceb1ef2ebe2` (0:0x1bd6) |
-| `0x00bb` | partGlobals | others | strong | 2007, 2008, 2011, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0x1bfc) |
+| `0x00b9` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x1bbc) |
+| `0x00ba` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 24, 36, 48 | `mus-86fafceb1ef2ebe2` (0:0x1bd6) |
+| `0x00bb` | pageSpec | others | strong | 2007, 2008, 2011, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0x1bfc) |
 | `0x00bc` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x2ee6) |
-| `0x00be` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0x1c22) |
+| `0x00be` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 24 | `mus-86fafceb1ef2ebe2` (0:0x1c22) |
 | `0x00bf` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x2f3e) |
 | `0x00c0` | textExprDef | others | weak | 2011, 2012 | 12 | `mus-b15ea3ab2ee278d7` (0:0x1d8e) |
 | `0x00c2` | unknown | unknown/options | open | 2008 | 144 | `mus-ed8096788fa377bf` (0:0x1db4) |
@@ -177,8 +177,8 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00e2` | unknown | unknown/options | open | 2012 | 12 | `mus-42c6d5caf1e3b6ff` (0:0x259e) |
 | `0x00e4` | unknown | unknown/options | open | 2012 | 12 | `mus-42c6d5caf1e3b6ff` (0:0x25ec) |
 | `0x00e5` | unknown | unknown/options | open | 2012 | 12 | `mus-42c6d5caf1e3b6ff` (0:0x263a) |
-| `0x00e6` | staffPlayData | others | weak | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x2276) |
-| `0x00e7` | staffSpec | others | weak | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |
+| `0x00e6` | staffPlayData | others | strong | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x2276) |
+| `0x00e7` | staffSpec | others | strong | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |
 | `0x00e8` | staffStyle | others | weak | 2012 | 300 | `mus-f99c887dff9cdaa1` (0:0x289e) |
 | `0x00eb` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x37be) |
 | `0x00f1` | textExprDef | others | weak | 2011, 2012 | 36, 48, 60 | `mus-b15ea3ab2ee278d7` (0:0x23bc) |
