@@ -59,7 +59,7 @@ enum class ValueWidth : std::uint8_t
 /// something other than the string in the rows that follow it.
 [[nodiscard]] std::string readRowText(const records::LegacyRowPool& pool,
     std::span<const records::LegacyRow> family, std::uint32_t firstIncidence = 0,
-    std::uint32_t incidenceCount = std::numeric_limits<std::uint32_t>::max());
+    std::uint32_t incidenceCount = (std::numeric_limits<std::uint32_t>::max)());
 
 /// @brief Which of a four-byte value's two payload words comes first.
 /// @details Independent of container byte order, which the record index has already
