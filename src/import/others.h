@@ -25,6 +25,11 @@ void importAcciOrderFlats(const ImportContext& context);
 /// @brief Recovers sharp accidental ordering for custom key signatures.
 void importAcciOrderSharps(const ImportContext& context);
 
+/// @brief Recovers the text of the document's bookmarks.
+/// @details musxdom has no class for the bookmark object itself, so only its name is recovered,
+/// as a `texts::BookmarkText`. The eras that pool that text are read by the text-pool importer.
+void importBookmarks(const ImportContext& context);
+
 /// @brief Recovers the positioned elements that form chord suffix definitions.
 void importChordSuffixElements(const ImportContext& context);
 

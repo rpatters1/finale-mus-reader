@@ -15,12 +15,14 @@
   punctuation code page the same way, as `c7 c8` in Mac Roman.
 - **Before that it is the `BK` others family**, comparators from 0x8000 up, in the same shape the Coda era uses
   for block text: 48 bytes of string across four incidences, then two numeric incidences. The text pool of such a
-  document holds no bookmark at all.
+  document holds no bookmark at all. **Superseded on 2026-09-07 as to the numeric half**, which is the bookmark's
+  view state rather than opaque padding: [`bookmark.md`](bookmark.md).
 - **Two deferrals, both asserted rather than assumed.** `BK` is not read until the bookmark class is imported, and
   the `DT` expression text of the fixed-row eras is not read until `TextExpressionDef` is. In both cases the text
   without the class behind it would claim more coverage than it has. The synthesis that existed for `DT` was
   removed rather than switched off, and tests assert that both eras produce nothing, so reinstating either is a
-  deliberate act.
+  deliberate act. **The `BK` deferral was lifted on 2026-09-07**, deliberately and without the bookmark class:
+  musxdom has none, and a bookmark whose name is recoverable was judged worth more than the symmetry.
 - **Unverified: that the move into the pool belongs to the Unicode project.** It fits, but the boundary has not
   been tested inside Finale 2012, and a point release may have changed it. Nothing turns on it while the reader
   takes whichever form the document presents — a missing answer is possible, a wrong one is not.

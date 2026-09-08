@@ -585,20 +585,67 @@ void testBookmarkText()
 
     // Finale 2012 pools it, `^end`-terminated like every other record of that era, and the
     // text is UTF-8: the guillemets and the u-umlaut are two bytes each in the source.
+    //
+    // The recovered text is the characters and nothing else. A `^bookmark` chunk carries no
+    // font commands -- the `^block` chunk beside it in this fixture's pool carries three -- and
+    // neither does the Finale 27 companion, so no initial formatting state is synthesized for
+    // this class where every other text class gets one.
     const auto pooled = readTextFixture("evidence/F2012/F2012-bookmarks.mus");
-    expectText(textOf<BookmarkText>(pooled, 2)
-                == "^font(Times)^size(12)^nfx(0)Page \u00fcber"
-            && textOf<BookmarkText>(pooled, 3)
-                == "^font(Times)^size(12)^nfx(0)Scroll \u00ab\u00bb Bookmark",
+    expectText(textOf<BookmarkText>(pooled, 2) == "Page \u00fcber"
+            && textOf<BookmarkText>(pooled, 3) == "Scroll \u00ab\u00bb Bookmark",
         "A pooled bookmark was not recovered: " + textOf<BookmarkText>(pooled, 2));
     expectText(countOf<BookmarkText>(pooled) == 2,
         "The two bookmarks of the fixture were not both recovered");
 
     // The same two bookmarks in the release they were authored in, where the text pool holds
-    // none of them. Asserting the absence keeps reinstating the `BK` reading a deliberate act.
+    // none of them and the names come from the `BK` others family instead.
     const auto earlier = readTextFixture("evidence/F372/F372-bookmarks.mus");
-    expectText(countOf<BookmarkText>(earlier) == 0,
-        "Bookmark text was synthesized from a record rather than read from the text pool");
+    expectText(countOf<BookmarkText>(earlier) == 2,
+        "The two bookmarks of the earlier fixture were not both synthesized from BK: "
+            + std::to_string(countOf<BookmarkText>(earlier)));
+    // The 8-bit name goes through the source platform's code page, so the same two characters
+    // that are two bytes each in the Finale 2012 pool are one byte each here: `9f` is the
+    // u-umlaut under Mac Roman and `c7 c8` the guillemet pair. Recovering the identical strings
+    // from the two eras is what measures the conversion.
+    expectText(textOf<BookmarkText>(earlier, 1) == "Scroll \u00ab\u00bb Bookmark"
+            && textOf<BookmarkText>(earlier, 2) == "Page \u00fcber",
+        "A BK bookmark name was not recovered: [" + textOf<BookmarkText>(earlier, 1) + "] ["
+            + textOf<BookmarkText>(earlier, 2) + "]");
+
+    // Finale 2008 keeps the same 36-word record as class 0x007b of the zlib pool, name and all,
+    // so the era between the two is recovered from the record rather than from the pool. Six
+    // bookmarks, whose names are what distinguishes them here.
+    const auto zlibNamed = readTextFixture("evidence/F2008/F2008-bookmarks.mus");
+    expectText(countOf<BookmarkText>(zlibNamed) == 6,
+        "The six bookmarks of the Finale 2008 fixture were not all recovered: "
+            + std::to_string(countOf<BookmarkText>(zlibNamed)));
+    expectText(textOf<BookmarkText>(zlibNamed, 2) == "Page B\u00f6th"
+            && textOf<BookmarkText>(zlibNamed, 5) == "Percent 150"
+            && textOf<BookmarkText>(zlibNamed, 6) == "Percent 75 off",
+        "A Finale 2008 bookmark name was not recovered: " + textOf<BookmarkText>(zlibNamed, 2));
+
+    // Finale 2001 on Windows, so the same characters are Windows-1252 rather than Mac Roman:
+    // `ab bb` is the guillemet pair and `e5` the a-ring. **The companion disagrees on purpose.**
+    // Finale 27 running on macOS re-read these bytes as Mac Roman, so its bookmark text is
+    // mojibake -- `Scroll \u00b4\u00aa 9, 3` and `P\u00c2ge Bookmark` -- and the reader is right
+    // where the companion is wrong. Nothing here is gated on that; the source states its own
+    // platform and the conversion follows it.
+    const auto windows = readTextFixture("evidence/F2001/F2001Win-bookmarks.mus");
+    expectText(windows.report.formatEpoch == FormatEpoch::DclLegacy,
+        "The Windows bookmark fixture was not classified as a DCL-era file");
+    expectText(textOf<BookmarkText>(windows, 1) == "Scroll \u00ab\u00bb 9, 3"
+            && textOf<BookmarkText>(windows, 2) == "P\u00e5ge Bookmark",
+        "A Windows-1252 bookmark name was not converted: [" + textOf<BookmarkText>(windows, 1)
+            + "] [" + textOf<BookmarkText>(windows, 2) + "]");
+
+    // The comparators are the text pool's own, allocated in record order, and they are what the
+    // Finale 27 companion of this fixture names in each bookmark's `nameRawTextID`: `BK` 32768
+    // is text 1 and 32769 is text 2. The upgrade does not preserve them across releases -- the
+    // same two bookmarks are 3 and 2 in the Finale 2012 companion -- so the numbering agrees
+    // with the companion of its own source rather than with a fixed rule.
+    expectText(textOf<BookmarkText>(earlier, 1) == textOf<BookmarkText>(pooled, 3)
+            && textOf<BookmarkText>(earlier, 2) == textOf<BookmarkText>(pooled, 2),
+        "The two eras did not recover the same bookmark names");
 }
 
 // The Coda-banner epoch keeps block text in the `HT` and `HS` others families and lyric text in

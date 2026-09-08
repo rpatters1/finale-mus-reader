@@ -71,27 +71,6 @@ constexpr std::uint16_t codaInsertSelectorMask = 0x3;
 
 constexpr std::string_view codaInsertCommands[] = {"page", "date", "time"};
 
-/// @brief The characters of one block, ending at the first terminator.
-std::string readCodaBlockText(const records::LegacyRowPool& pool,
-    std::span<const LegacyRow> family, std::uint32_t first)
-{
-    std::string result;
-    for (std::uint32_t offset = 0; offset < codaTextIncidences; ++offset) {
-        const auto row = std::find_if(family.begin(), family.end(),
-            [&](const LegacyRow& candidate) { return candidate.inci == first + offset; });
-        if (row == family.end()) {
-            break;
-        }
-        for (const auto byte : pool.effectivePayloadOf(*row)) {
-            if (byte == 0) {
-                return result;
-            }
-            result.push_back(static_cast<char>(byte));
-        }
-    }
-    return result;
-}
-
 /// @brief Restates one block as an Enigma string, which is the form musxdom reads.
 /// @details The style commands are synthesized because the era states them in a record rather
 /// than in the text, and only what `HS` carries is written. A document whose page offset is
@@ -191,7 +170,8 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
             ++number;
             bool unknownInsert = false;
             auto spelled = spellCodaBlock(*style,
-                readCodaBlockText(pool, characters, record * codaTextIncidences), unknownInsert);
+                readRowText(pool, characters, record * codaTextIncidences, codaTextIncidences),
+                unknownInsert);
             if (unknownInsert) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
                     "A legacy text block carries an insert this reader has no command for; the "

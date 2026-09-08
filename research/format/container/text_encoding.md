@@ -38,6 +38,13 @@ font-definition difference is conversion loss rather than a character-decoding d
 Legacy line breaks are carriage returns and become line feeds: Finale 27 writes `\n` where
 `F97-fileinfo-short.mus` has `\r`, and emits no `&#xD;` anywhere.
 
+**A trailing line break is kept, and Finale 27 discards it.** A Finale 2008 document of the
+reference corpus has a bookmark whose stored name ends in a carriage return; the reader converts
+it and keeps it, while the companion's `bookmarkText` ends at the last character. The reader is
+not Finale and does not have Finale's licence to tidy: a break the source stores is content, and
+dropping it needs a reason better than the upgrade doing so. The comparison reports it under its
+generic `whitespace` classification, which is where such a difference should stay visible.
+
 ## Project rules for legacy text encoding
 
 Moved from `AGENTS.md`; these are binding rules, not observations.

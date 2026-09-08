@@ -57,3 +57,23 @@ F2001Win-tclef-baseline.mus / .ETF / .musx
     sha256 95fa694160f3ae4d59faa3459d0b05be15d7484d4c8e69bb79c23cc85c80ad51 (.musx)
     From the baseline, with the treble-clef baseline set to -0.25 inch. Selector 95
     tuple word 3 stores -4608 Efix, and the Finale 27 companion preserves -4608.
+F2001Win-bookmarks.mus
+    sha256 1f36cbe6c26b50a3b7b46c1f8d027929eb93a0afbce8cf1a28d8ff91b92cc184
+F2001Win-bookmarks.ETF
+    sha256 9f37e8a18a520de60d76870cf1cc4b046d04e9e5b3264e8f45896f21d081dcf9
+F2001Win-bookmarks.musx
+    sha256 cd712eab876f175f18f6a2307b232afa16d7f057504f85cd7cbfb8a7e86fd656
+    Two bookmarks in the DCL era, which no document in any survey previously
+    defined, and the only Windows bookmark specimen. Its page-view bookmark
+    gives the horizontal and vertical positions distinct values, -40 and -200,
+    and its scroll-view bookmark sets the staff comparator with flags `1`,
+    whose companion carries `changeInst`.
+
+    **Its companion is wrong about the text, on purpose.** The names hold
+    `ab bb` and `e5`, which are the guillemet pair and the a-ring in
+    Windows-1252. Finale 27 running on macOS re-read those bytes as Mac Roman
+    and wrote `Scroll ´ª 9, 3` and `PÂge Bookmark`. The reader converts through
+    the platform the source states and recovers `Scroll «» 9, 3` and
+    `Påge Bookmark`, so this fixture is a measurement of the conversion and a
+    standing reminder that a companion is a semantic reference rather than an
+    oracle.

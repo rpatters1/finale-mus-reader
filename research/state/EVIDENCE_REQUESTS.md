@@ -521,13 +521,28 @@ The cost of being wrong is small but silent in the wrong direction: an unrecogni
 so the *right* spelling would announce itself the first time such a document is read. That makes this a cheap
 request rather than an urgent one.
 
-### X2 — Partly closed — the pre-Finale-2012 bookmark object
+### X2 — Closed — the bookmark record
 
-The Finale 3.5 addendum confirms that bookmarks were introduced in that release. Controlled Finale
-3.7.2 and 2012 saves locate the earlier text in the `BK` others family and the later UTF-8 text in
-the `bookmark` text-pool record. Text recovery from `BK` remains deliberately deferred until the
-bookmark class itself is imported; a Finale 3.5 specimen would establish whether its object and
-text representation already match Finale 3.7.2.
+The Finale 3.5 addendum confirms that bookmarks were introduced in that release. Four controlled
+fixtures now establish the record field by field across every epoch that has one, and the layout,
+its three forms, and the reader's treatment are in
+[`format/others/bookmark.md`](../format/others/bookmark.md).
+
+`F2008-bookmarks.mus` and `F2001Win-bookmarks.mus` were commissioned for this and closed everything
+the earlier pair left open: each flag bit alone, the two page-position words separately, the view
+percent and its enable, the DCL epoch that no survey previously had a bookmarked document for, and
+the Finale 2007-2011 window, whose bookmark class turned out to be `0x007b` carrying its name
+inline. The Windows fixture also became the reader's standing case of a companion being wrong,
+its Windows-1252 names having been re-read as Mac Roman by Finale 27 on macOS.
+
+A second all-corpus capture confirmed the result across all four surveys: every bookmark in every
+one of the nine bookmarked documents now recovers, with no companion-only leaf and no unexpected
+difference.
+
+**One thing remains wanted, and it does not block anything.** A Finale 3.5 or 3.6 specimen would
+show whether the representation at introduction already matches Finale 3.7.2, which is the
+earliest release available here. Bookmarks are a Finale 3.5 enhancement, so the two releases
+between their arrival and the earliest specimen are the only unobserved part of their history.
 
 ### X3 — Proposed — where expression text moved into the text pool
 

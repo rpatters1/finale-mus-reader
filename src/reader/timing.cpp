@@ -33,6 +33,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportAugmentationDotOptions: return "augmentation_dot_options";
     case Phase::ImportBarlineOptions: return "barline_options";
     case Phase::ImportBeamOptions: return "beam_options";
+    case Phase::ImportBookmarks: return "bookmarks";
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportChordSuffixElements: return "chord_suffix_elements";
     case Phase::ImportChordSuffixPlayback: return "chord_suffix_playback";
