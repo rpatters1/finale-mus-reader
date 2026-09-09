@@ -121,9 +121,9 @@ percussionMapTargets(const SurveySnapshot &source, const SurveySnapshot &compani
     const auto companionMaps = staffMaps(companion);
     std::map<PercussionMapKey, std::set<std::int64_t>> result;
     for (const auto &[staff, sourceMap] : sourceMaps) {
-        const auto companion = companionMaps.find(staff);
-        if (companion != companionMaps.end())
-            result[{staff.first, sourceMap}].insert(companion->second);
+        const auto companionMap = companionMaps.find(staff);
+        if (companionMap != companionMaps.end())
+            result[{staff.first, sourceMap}].insert(companionMap->second);
     }
     return result;
 }

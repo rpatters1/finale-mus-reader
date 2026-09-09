@@ -250,11 +250,12 @@ void collectLeaves(const Value& value, std::string path, std::string origin, boo
             if (includeOrigins) {
                 const auto camelOrigin = "origin_" + snakeToCamel(key);
                 const auto suffixOrigin = key + "_origin";
-                if (const auto* found = value.find(camelOrigin); found && found->isString()) {
-                    childOrigin = found->asString();
-                } else if (const auto* found = value.find(suffixOrigin);
-                           found && found->isString()) {
-                    childOrigin = found->asString();
+                if (const auto* camelFound = value.find(camelOrigin);
+                    camelFound && camelFound->isString()) {
+                    childOrigin = camelFound->asString();
+                } else if (const auto* suffixFound = value.find(suffixOrigin);
+                           suffixFound && suffixFound->isString()) {
+                    childOrigin = suffixFound->asString();
                 }
             }
             collectLeaves(child, childPath, childOrigin, includeOrigins, partObject, result,
