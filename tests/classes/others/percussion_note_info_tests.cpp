@@ -94,7 +94,7 @@ TEST_CASE("Finale 2012 percussion-note collections use wide codepoints and paddi
         const auto document = makePercussionNoteInfoDocument();
         const auto report =
             importPercussionNoteInfo(makeClassContainer(0x0139,
-                                                        {38, 5, static_cast<std::int16_t>(0xf642),
+                                                        {38, 5, std::int16_t(0xf642),
                                                          1, 0x00fa, 0, 0x00db, 0, 0x00c0, 0, 0, 0},
                                                         byteOrder, 4),
                                      profile, document);
@@ -134,7 +134,7 @@ TEST_CASE("Fixed-row percussion maps use DS selection in both storage epochs", "
             const auto report = importPercussionNoteInfo(parsed, profile, document);
 
             const auto notes = document->getOthers()->getArray<PercussionNoteInfoTestTarget>(
-                musx::dom::SCORE_PARTID, 1);
+                musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
             REQUIRE(notes.size() == 4);
             CHECK(notes[0]->percNoteType == 32);
             CHECK(notes[0]->staffPosition == 7);
@@ -167,27 +167,28 @@ TEST_CASE("Finale 2008 retains DF rows and DS selection as zlib classes", "[clas
     const auto unassigned =
         readFixture("evidence/F2008/F2008-percussion-staff.mus", fixtureLegacySymbolFonts);
     CHECK(unassigned.document->getOthers()
-              ->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID, 1)
+              ->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID,
+                                                       musx::dom::Cmper(1))
               .empty());
 
     const auto assigned =
         readFixture("evidence/F2008/F2008-percussion-staff-edit.mus", fixtureLegacySymbolFonts);
     const auto notes = assigned.document->getOthers()->getArray<PercussionNoteInfoTestTarget>(
-        musx::dom::SCORE_PARTID, 1);
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(notes.size() == 1);
     CHECK(notes.front()->percNoteType == 32);
     CHECK(notes.front()->staffPosition == 6);
-    CHECK(static_cast<std::uint32_t>(notes.front()->closedNotehead) == 208);
-    CHECK(static_cast<std::uint32_t>(notes.front()->halfNotehead) == 194);
-    CHECK(static_cast<std::uint32_t>(notes.front()->wholeNotehead) == 194);
-    CHECK(static_cast<std::uint32_t>(notes.front()->dwholeNotehead) == 194);
+    CHECK(std::uint32_t(notes.front()->closedNotehead) == 208);
+    CHECK(std::uint32_t(notes.front()->halfNotehead) == 194);
+    CHECK(std::uint32_t(notes.front()->wholeNotehead) == 194);
+    CHECK(std::uint32_t(notes.front()->dwholeNotehead) == 194);
 }
 
 TEST_CASE("An unreferenced DCL DF map is not constructed", "[class]") {
     const auto result =
         readFixture("evidence/F2006/F2006-linked-tiff.mus", fixtureLegacySymbolFonts);
     const auto notes = result.document->getOthers()->getArray<PercussionNoteInfoTestTarget>(
-        musx::dom::SCORE_PARTID, 1);
+        musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     CHECK(notes.empty());
 }
 
@@ -390,7 +391,8 @@ TEST_CASE("Percussion-note collections diagnose malformed element tails", "[clas
             profile, document);
 
         CHECK(document->getOthers()
-                  ->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID, 9)
+                  ->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID,
+                                                           musx::dom::Cmper(9))
                   .size() == 1);
         REQUIRE(report.diagnostics.size() == 1);
         CHECK(report.diagnostics.front().message.find("incomplete trailing element") !=
