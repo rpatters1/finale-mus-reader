@@ -97,8 +97,19 @@ with one absolute generated corpus-TSV path per line for the two surveys named a
 ```bash
 mkdir -p private/reports
 cmake --build build-release --target recovery_coverage_probe
+percussion_mapping_dir="../musxdom/research/private/finale-assets/System Application Support/Finale 27/MIDI Device Annotation"
+percussion_mapping_args=()
+while IFS= read -r percussion_mapping_path; do
+  percussion_mapping_args+=("--percussion-mapping-xml=${percussion_mapping_path}")
+done < <(find "${percussion_mapping_dir}" -maxdepth 1 -type f -name '*.xml' \
+  ! -name 'General MIDI.xml' -print | LC_ALL=C sort)
+if ((${#percussion_mapping_args[@]} == 0)); then
+  echo "No non-General-MIDI percussion mapping XML files found" >&2
+  exit 1
+fi
 build-release/tools/coverage/recovery_coverage_probe --progress \
   --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
+  "${percussion_mapping_args[@]}" \
   /tmp/tracked-evidence-corpora.txt \
   private/reports/tracked-evidence.recovery_coverage.jsonl \
   > private/reports/tracked-evidence.probe.stdout.txt \
@@ -113,6 +124,15 @@ stop and report the missing prerequisite rather than producing a coverage snapsh
 list, legacy symbol-font bytes can be decoded through the wrong text encoding and create spurious
 source/companion differences. Record the supplied file's path privately with the capture metadata,
 never in public aggregate results.
+
+**Every probe capture must also supply every installed MIDI Device Annotation XML file except
+`General MIDI.xml`, using the repeatable `--percussion-mapping-xml` option.** Read them from the
+private Finale-assets area of the sibling musxdom checkout, in alphabetic path order. The General
+MIDI table is deliberately omitted because the reader owns that fallback. Confirm that the probe
+startup summary lists every selected mapping path. If the directory is unavailable or no
+non-General-MIDI XML files are found, stop and report the missing prerequisite rather than
+producing a coverage snapshot. These caller-supplied files remain private inputs and must never be
+copied into the repository or named in public aggregate results.
 
 There is no canonical or archival recovery-coverage snapshot. A subsequent probe of the same target
 may overwrite its JSONL and stream captures. Every failed occurrence must still be available in the

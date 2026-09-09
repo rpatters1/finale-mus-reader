@@ -28,6 +28,10 @@
 
 namespace finale_mus_reader {
 
+namespace percussion {
+class MappingTables;
+} // namespace percussion
+
 struct ImportContext;
 
 /// @brief Width of a mapped value in the source record.
@@ -405,6 +409,7 @@ struct SourceProfile
     ByteOrder byteOrder = ByteOrder::Unknown;
     SourcePlatform platform = SourcePlatform::Unknown;
     const text::SymbolFontNames* symbolFontNames{};
+    const percussion::MappingTables* percussionMappings{};
 };
 
 /// @brief Whether a source belongs to any of the requested format epochs.

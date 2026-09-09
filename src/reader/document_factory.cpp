@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "reader/document_factory.h"
+#include "reader/resources.h"
 #include "reader/timing.h"
 
 #include <memory>
@@ -65,7 +66,7 @@ musx::dom::DocumentPtr createDocument(
     const std::uint8_t* data,
     std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
-    const ReaderOptions& options,
+    const detail::ReaderResources& resources,
     XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report)
 {
@@ -98,15 +99,12 @@ musx::dom::DocumentPtr createDocument(
         document->getHeader() = header::recover(data, size, report);
     }
 
-    const auto macSymbolFonts = [&] {
-        FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::MacSymbolFonts);
-        return text::parseMacSymbolFonts(options.macSymbolFonts);
-    }();
     SourceProfile profile(report.formatEpoch);
     profile.version = report.sourceVersion;
     profile.byteOrder = report.byteOrder;
     profile.platform = report.sourcePlatform;
-    profile.symbolFontNames = &macSymbolFonts;
+    profile.symbolFontNames = &resources.symbolFontNames;
+    profile.percussionMappings = &resources.percussionMappings;
     const auto recordIndex = [&] {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::RecordIndex);
         return records::LegacyRecordIndex::build(parsed);

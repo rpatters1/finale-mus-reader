@@ -14,6 +14,10 @@
 
 namespace finale_mus_reader {
 
+namespace detail {
+struct ReaderResources;
+} // namespace detail
+
 /// @brief Reports whether the input begins with the legacy ENIGMA banner.
 [[nodiscard]] bool hasBanner(const std::uint8_t* data, std::size_t size);
 
@@ -32,7 +36,7 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     const std::uint8_t* data,
     std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath,
-    const ReaderOptions& options,
+    const detail::ReaderResources& resources,
     XmlParser parseXml, DocumentParser parseDocument,
     ImportReport& report);
 

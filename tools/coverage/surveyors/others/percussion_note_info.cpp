@@ -23,15 +23,6 @@ using namespace finale_mus_reader::coverage;
 using PercussionMapKey = std::pair<std::int64_t, std::int64_t>;
 using PercussionRowKey = std::tuple<std::int64_t, std::int64_t, std::int64_t>;
 
-std::optional<DifferenceClassification>
-classifyPercussionNoteInfoDifference(const DifferenceContext &context) {
-    if (context.category == DifferenceCategory::Differs &&
-        context.path.ends_with(".perc_note_type") && context.origin == "legacy-behavior") {
-        return DifferenceClassification::LegacyPercussionGeneralMidiFallback;
-    }
-    return std::nullopt;
-}
-
 std::optional<std::int64_t> percussionIntegerMember(const Value &value, std::string_view member) {
     if (!value.isObject())
         return std::nullopt;
@@ -270,7 +261,6 @@ Value observePercussionNoteInfo(const SurveyContext &ctx) {
 }
 
 COVERAGE_CLASS_WITH_PREPARATION("others", "percussion_note_info", observePercussionNoteInfo,
-                                classifyPercussionNoteInfoDifference,
-                                preparePercussionNoteInfoComparison);
+                                nullptr, preparePercussionNoteInfoComparison);
 
 } // namespace

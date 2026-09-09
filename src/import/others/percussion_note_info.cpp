@@ -14,6 +14,7 @@
 #include <string>
 #include <utility>
 
+#include "import/support/percussion_mappings.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -29,6 +30,8 @@ constexpr auto legacyDrumStaffTag = records::packTag("DS");
 constexpr records::LegacyTag legacyDrumStaffClass = 0x0084;
 constexpr auto legacyPercussionMapTag = records::packTag("DF");
 constexpr records::LegacyTag legacyPercussionMapClass = 0x040e;
+constexpr auto legacyPercussionMapNameTag = records::packTag("DL");
+constexpr records::LegacyTag legacyPercussionMapNameClass = 0x0083;
 constexpr std::size_t percussionNoteInfoNarrowStride = 12;
 constexpr std::size_t percussionNoteInfoWideDataSize = 20;
 constexpr std::size_t percussionNoteInfoWideStride = 24;
@@ -58,7 +61,8 @@ void reportPercussionNoteInfo(const ImportContext &context, const PercussionNote
 void reportLegacyPercussionNoteInfo(const ImportContext &context,
                                     const PercussionNoteInfoTarget &target,
                                     const RecordFamilySource &source,
-                                    const records::LegacyRow &row) {
+                                    const records::LegacyRow &row,
+                                    std::uint16_t storedMidiNote) {
     withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
         using Origin = Reporting::Origin;
         const auto key = reporting.template instanceKey<PercussionNoteInfoTarget>(
@@ -70,7 +74,7 @@ void reportLegacyPercussionNoteInfo(const ImportContext &context,
                 key, member,
                 {origin, row.blockOffset, row.decodedOffset + fieldOffset, value, source.identity});
         };
-        report("percNoteType", Origin::LegacyBehavior, 0, target.percNoteType);
+        report("percNoteType", Origin::LegacyBehavior, 0, storedMidiNote);
         report("staffPosition", Origin::LegacyMus, 2, target.staffPosition);
         report("closedNotehead", Origin::LegacyMus, 4,
                static_cast<std::uint32_t>(target.closedNotehead));
@@ -95,8 +99,8 @@ std::optional<musx::dom::PercussionNoteTypeId> noteTypeForGeneralMidi(std::uint1
         return std::nullopt;
     static const auto noteTypes = [] {
         std::array<musx::dom::PercussionNoteTypeId, midiNoteCount> result{};
-        constexpr auto baseTypeLimit =
-            (std::numeric_limits<musx::dom::PercussionNoteTypeId>::max)() >> 4U;
+        constexpr std::uint32_t firstReservedCustomType = 3968;
+        constexpr auto baseTypeLimit = firstReservedCustomType - 1U;
         for (std::uint32_t id = 1; id <= baseTypeLimit; ++id) {
             const auto &type = musx::dom::percussion::getPercussionNoteTypeFromId(
                 static_cast<musx::dom::PercussionNoteTypeId>(id));
@@ -111,6 +115,27 @@ std::optional<musx::dom::PercussionNoteTypeId> noteTypeForGeneralMidi(std::uint1
     if (noteTypes[midiNote] == 0)
         return std::nullopt;
     return noteTypes[midiNote];
+}
+
+std::map<musx::dom::Cmper, std::string>
+legacyPercussionMapNames(const ImportContext &context) {
+    const auto selected = selectRecordFamilySource(
+        context, context.index.getOthers(), context.index.getClassOthers(),
+        legacyPercussionMapNameTag, legacyPercussionMapNameClass);
+    std::map<musx::dom::Cmper, std::string> result;
+    if (!selected)
+        return result;
+    const auto &source = *selected;
+    for (const auto [partId, mapId] : recordKeys(source)) {
+        if (partId != musx::dom::SCORE_PARTID)
+            continue;
+        const auto rows = source.pool->getArray(source.identity, mapId, 0, partId);
+        if (rows.empty())
+            continue;
+        result.try_emplace(mapId, text::toUtf8(readRowText(*source.pool, rows),
+                                               context.profile.platform));
+    }
+    return result;
 }
 
 std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>>
@@ -155,6 +180,7 @@ void importLegacyPercussionNoteInfo(const ImportContext &context) {
     const auto percussionFont = musx::dom::options::FontOptions::getFontInfoOrNull(
         context.document, PercussionFontType::Percussion);
     const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::Cmper{};
+    const auto mapNames = legacyPercussionMapNames(context);
     for (const auto &[mapId, selectedRows] : selectedLegacyPercussionRows(context)) {
         std::map<musx::dom::PercussionNoteTypeId, std::uint16_t> typeOrders;
         musx::dom::Inci inci = 0;
@@ -167,7 +193,15 @@ void importLegacyPercussionNoteInfo(const ImportContext &context) {
             if (payload.size() < records::detailWordCount * 2U)
                 continue;
             const auto midiNote = payloadWord(payload, 0, context.profile.byteOrder);
-            const auto noteType = noteTypeForGeneralMidi(midiNote);
+            auto noteType = std::optional<musx::dom::PercussionNoteTypeId>{};
+            if (context.profile.percussionMappings) {
+                if (const auto name = mapNames.find(mapId); name != mapNames.end()) {
+                    noteType = context.profile.percussionMappings->find(name->second, midiNote);
+                }
+            }
+            const auto mapSpecificType = noteType.has_value();
+            if (!noteType)
+                noteType = noteTypeForGeneralMidi(midiNote);
             if (!noteType)
                 continue;
 
@@ -175,9 +209,13 @@ void importLegacyPercussionNoteInfo(const ImportContext &context) {
                 context.document, source, rows.front(), mapId, inci++);
             if (!target)
                 continue;
-            const auto order = typeOrders[*noteType]++;
-            target->percNoteType =
-                static_cast<musx::dom::PercussionNoteTypeId>(*noteType | ((order & 0xfU) << 12U));
+            if (mapSpecificType) {
+                target->percNoteType = *noteType;
+            } else {
+                const auto order = typeOrders[*noteType]++;
+                target->percNoteType = musx::dom::PercussionNoteTypeId(
+                    *noteType | ((order & 0xfU) << 12U));
+            }
             target->staffPosition =
                 static_cast<std::int16_t>(payloadWord(payload, 2, context.profile.byteOrder));
             target->closedNotehead = percussionNotehead(
@@ -185,7 +223,7 @@ void importLegacyPercussionNoteInfo(const ImportContext &context) {
             target->halfNotehead = target->wholeNotehead = target->dwholeNotehead =
                 percussionNotehead(payloadWord(payload, 6, context.profile.byteOrder),
                                    context.document, fontId);
-            reportLegacyPercussionNoteInfo(context, *target, source, rows.front());
+            reportLegacyPercussionNoteInfo(context, *target, source, rows.front(), midiNote);
             context.document->getOthers()->add(PercussionNoteInfoTarget::XmlNodeName,
                                                std::move(target));
         }

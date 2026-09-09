@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "musx/dom/Document.h"
@@ -22,6 +23,10 @@
 #include "musx/xml/XmlInterface.h"
 
 namespace finale_mus_reader {
+
+namespace detail {
+struct ReaderResources;
+} // namespace detail
 
 /// @brief Parses an EnigmaXML fragment with the XML backend selected by the caller.
 /// @details The reader owns document construction and only needs the caller's backend
@@ -358,55 +363,79 @@ struct ImportResult
     ImportReport report;
 };
 
-/// @brief Optional resources supplied by the application for one import.
+/// @brief Optional resources supplied by the application when a reader is created.
 struct ReaderOptions
 {
     /// @brief Contents of Finale's `MacSymbolFonts.txt`, if available.
-    /// @details The reader parses the bytes during the call and does not retain the span.
+    /// @details The reader parses the bytes during creation and does not retain the span.
     /// Each nonblank line names a font whose stored character values are glyph numbers.
     /// A matching font definition retains its charset bank and receives that bank's symbol
     /// charset in the returned document.
-    std::span<const std::uint8_t> macSymbolFonts;
+    std::span<const std::uint8_t> macSymbolFonts{};
+
+    /// @brief Finale MIDI Device Annotation XML documents used for legacy percussion maps.
+    /// @details The reader parses every buffer during creation and does not retain the spans.
+    /// Documents may contain one or more named `NoteNameList` tables. The first supplied table
+    /// with each name is retained; later tables with the same normalized name are ignored.
+    std::vector<std::span<const std::uint8_t>> percussionMappingXml{};
 };
 
 class Reader
 {
 public:
+    /// @brief Creates a reusable reader with the caller's XML backend and optional resources.
+    /// @details Optional resources are parsed once during this call and reused by every
+    /// subsequent import through the returned instance.
+    template <typename XmlDocumentType>
+    [[nodiscard]] static Reader create(const ReaderOptions& options = {})
+    {
+        return createWithParser(
+            options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+    }
+
+    [[nodiscard]] musx::dom::DocumentPtr read(const std::filesystem::path& path) const;
+    [[nodiscard]] musx::dom::DocumentPtr read(std::span<const std::uint8_t> data) const;
+
     template <typename XmlDocumentType>
     [[nodiscard]] static musx::dom::DocumentPtr read(const std::filesystem::path& path,
         const ReaderOptions& options = {})
     {
-        return readWithParser(
-            path, options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>).document;
+        return create<XmlDocumentType>(options).read(path);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static musx::dom::DocumentPtr read(std::span<const std::uint8_t> data,
         const ReaderOptions& options = {})
     {
-        return readWithParser(data, options,
-            &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>).document;
+        return create<XmlDocumentType>(options).read(data);
     }
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    [[nodiscard]] ImportResult readWithReport(const std::filesystem::path& path) const;
+    [[nodiscard]] ImportResult readWithReport(std::span<const std::uint8_t> data) const;
+
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult readWithReport(const std::filesystem::path& path,
         const ReaderOptions& options = {})
     {
-        return readWithParser(
-            path, options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+        return create<XmlDocumentType>(options).readWithReport(path);
     }
 
     template <typename XmlDocumentType>
     [[nodiscard]] static ImportResult readWithReport(std::span<const std::uint8_t> data,
         const ReaderOptions& options = {})
     {
-        return readWithParser(data, options,
-            &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+        return create<XmlDocumentType>(options).readWithReport(data);
     }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 private:
+    Reader(std::shared_ptr<const detail::ReaderResources> resources,
+        XmlParser parseXml, DocumentParser parseDocument)
+        : m_resources(std::move(resources)), m_parseXml(parseXml), m_parseDocument(parseDocument)
+    {
+    }
+
     template <typename XmlDocumentType>
     static std::unique_ptr<musx::xml::IXmlDocument> parseXml(const char* data, std::size_t size)
     {
@@ -424,12 +453,14 @@ private:
         return musx::factory::DocumentFactory::create<XmlDocumentType>(data, size);
     }
 
-    static ImportResult readWithParser(const std::filesystem::path& path,
-        const ReaderOptions& options,
-        XmlParser parseXml, DocumentParser parseDocument);
-    static ImportResult readWithParser(std::span<const std::uint8_t> data,
-        const ReaderOptions& options,
-        XmlParser parseXml, DocumentParser parseDocument);
+    static Reader createWithParser(
+        const ReaderOptions& options, XmlParser parseXml, DocumentParser parseDocument);
+    ImportResult readPrepared(const std::filesystem::path& path) const;
+    ImportResult readPrepared(std::span<const std::uint8_t> data) const;
+
+    std::shared_ptr<const detail::ReaderResources> m_resources;
+    XmlParser m_parseXml;
+    DocumentParser m_parseDocument;
 };
 
 } // namespace finale_mus_reader

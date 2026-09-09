@@ -57,8 +57,6 @@ std::string_view differenceName(DifferenceClassification classification)
         return "text-encoding-error";
     case LegacyPageParityText:
         return "legacy-page-parity-text";
-    case LegacyPercussionGeneralMidiFallback:
-        return "legacy-percussion-general-midi-fallback";
     case MissingAccidentalInsertDefault:
         return "missing-accidental-insert-default";
     case MissingSelector:
