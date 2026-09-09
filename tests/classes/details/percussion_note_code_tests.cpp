@@ -49,9 +49,9 @@ TEST_CASE("Finale 2010 percussion-note codes use five-word elements", "[class]")
 
         constexpr musx::dom::EntryNumber entryNumber = 0x12345678;
         const auto first = document->getDetails()->get<PercussionNoteCodeTestTarget>(
-            musx::dom::SCORE_PARTID, entryNumber, 0);
+            musx::dom::SCORE_PARTID, entryNumber, musx::dom::Inci(0));
         const auto second = document->getDetails()->get<PercussionNoteCodeTestTarget>(
-            musx::dom::SCORE_PARTID, entryNumber, 1);
+            musx::dom::SCORE_PARTID, entryNumber, musx::dom::Inci(1));
         REQUIRE(first);
         CHECK(first->noteId == 1);
         CHECK(first->noteCode == 14);
@@ -60,9 +60,11 @@ TEST_CASE("Finale 2010 percussion-note codes use five-word elements", "[class]")
         CHECK(second->noteCode == 16);
         CHECK(reportedFieldCount(report) == 4);
         const auto firstKey = finale_mus_reader::instanceKey<PercussionNoteCodeTestTarget>(
-            musx::dom::SCORE_PARTID, 0x1234, musx::dom::Inci(0), 0x5678);
+            musx::dom::SCORE_PARTID, musx::dom::Cmper(0x1234), musx::dom::Inci(0),
+            musx::dom::Cmper(0x5678));
         const auto secondKey = finale_mus_reader::instanceKey<PercussionNoteCodeTestTarget>(
-            musx::dom::SCORE_PARTID, 0x1234, musx::dom::Inci(1), 0x5678);
+            musx::dom::SCORE_PARTID, musx::dom::Cmper(0x1234), musx::dom::Inci(1),
+            musx::dom::Cmper(0x5678));
         REQUIRE(report.findField(firstKey, "noteId"));
         REQUIRE(report.findField(secondKey, "noteCode"));
         CHECK(report.findField(firstKey, "noteId")->rawValue == 1);
@@ -85,8 +87,8 @@ TEST_CASE("Percussion-note code rejects incomplete and diagnoses nonzero tails",
     const auto tailReport = importPercussionNoteCodes(
         makeDetailClassContainer(0, 43, 0, {1, 14, 0, 7, 0}, ByteOrder::LittleEndian, 0x0451),
         profile, tailDocument);
-    CHECK(tailDocument->getDetails()->get<PercussionNoteCodeTestTarget>(musx::dom::SCORE_PARTID, 43,
-                                                                        0));
+    CHECK(tailDocument->getDetails()->get<PercussionNoteCodeTestTarget>(
+        musx::dom::SCORE_PARTID, musx::dom::EntryNumber(43), musx::dom::Inci(0)));
     CHECK(tailReport.diagnostics.size() == 1);
 }
 
