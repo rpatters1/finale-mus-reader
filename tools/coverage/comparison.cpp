@@ -33,12 +33,6 @@ ClassComparison& classComparison(ComparisonResult& result, std::string_view clas
     return result.classes[std::string(surveyorPool(className))][std::string(className)];
 }
 
-std::string_view surveyorClass(std::string_view path)
-{
-    const auto separator = path.find_first_of(".[");
-    return path.substr(0, separator);
-}
-
 using Leaves = ComparisonLeaves;
 constexpr std::size_t maximumExamplesPerRow = 20;
 
@@ -136,6 +130,18 @@ std::optional<std::pair<std::string, std::string>> ordinaryListKey(
         return value && value->isInteger() ? value : nullptr;
     };
     const auto partPrefix = listPartPrefix(item);
+    if (integer("entry_number") && integer("note_id")) {
+        return std::pair{"identity",
+                         partPrefix + "entry_number=" +
+                             std::to_string(integer("entry_number")->asInteger()) +
+                             ",note_id=" + std::to_string(integer("note_id")->asInteger())};
+    }
+    if (integer("entry_number") && integer("inci")) {
+        return std::pair{"identity",
+                         partPrefix + "entry_number=" +
+                             std::to_string(integer("entry_number")->asInteger()) +
+                             ",inci=" + std::to_string(integer("inci")->asInteger())};
+    }
     if (integer("cmper1") && integer("cmper2") && integer("inci")) {
         return std::pair{"identity",
                          partPrefix + "cmper1=" +
@@ -244,11 +250,12 @@ void collectLeaves(const Value& value, std::string path, std::string origin, boo
             if (includeOrigins) {
                 const auto camelOrigin = "origin_" + snakeToCamel(key);
                 const auto suffixOrigin = key + "_origin";
-                if (const auto* found = value.find(camelOrigin); found && found->isString()) {
-                    childOrigin = found->asString();
-                } else if (const auto* found = value.find(suffixOrigin);
-                           found && found->isString()) {
-                    childOrigin = found->asString();
+                if (const auto* camelFound = value.find(camelOrigin);
+                    camelFound && camelFound->isString()) {
+                    childOrigin = camelFound->asString();
+                } else if (const auto* suffixFound = value.find(suffixOrigin);
+                           suffixFound && suffixFound->isString()) {
+                    childOrigin = suffixFound->asString();
                 }
             }
             collectLeaves(child, childPath, childOrigin, includeOrigins, partObject, result,
@@ -270,13 +277,6 @@ std::string objectPrefix(std::string_view path)
 {
     const auto end = path.find(']');
     return end == std::string_view::npos ? std::string{} : std::string(path.substr(0, end + 1));
-}
-
-std::optional<std::int64_t> integerLeaf(const Leaves& leaves, const std::string& path)
-{
-    const auto found = leaves.find(path);
-    if (found == leaves.end() || !found->second.first.isInteger()) return std::nullopt;
-    return found->second.first.asInteger();
 }
 
 bool equalSurrounding(const Leaves& source, const Leaves& companion, std::string_view prefix,
@@ -494,10 +494,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             }
             const auto classifier = differenceClassifier(className);
             const auto classExpected = classifier ? classifier(differenceContext) : std::nullopt;
-            if (classExpected) {
-                ++stats.expected;
-                ++result.expected[*classExpected];
-            } else if (category == DifferenceCategory::Differs) {
+            const auto recordUnexpected = [&] {
                 ++stats.unexpected;
                 if (result.unexpectedExamples.size() < maximumExamplesPerRow) {
                     result.unexpectedExamples.push_back({path,
@@ -507,6 +504,14 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                                          {},
                                                          origin});
                 }
+            };
+            if (classExpected == DifferenceClassification::Unexpected) {
+                recordUnexpected();
+            } else if (classExpected) {
+                ++stats.expected;
+                ++result.expected[*classExpected];
+            } else if (category == DifferenceCategory::Differs) {
+                recordUnexpected();
             } else if (category == DifferenceCategory::ReaderOnly) {
                 if (sourcePartLeaves.contains(path)) {
                     ++stats.sourceOnlyPart;

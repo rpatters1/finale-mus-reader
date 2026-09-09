@@ -89,6 +89,12 @@ Value observe(const Object& object, const SurveyContext& context, const Fields&.
         instance.partId = object.getSourcePartId();
         instance.cmper1 = object.getCmper();
         instance.inci = object.getInci();
+    } else if constexpr (std::is_base_of_v<musx::dom::EntryDetailsBase, Object>) {
+        const auto entryNumber = object.getEntryNumber();
+        instance.partId = object.getSourcePartId();
+        instance.cmper1 = static_cast<musx::dom::Cmper>(entryNumber >> 16U);
+        instance.cmper2 = static_cast<musx::dom::Cmper>(entryNumber);
+        instance.inci = object.getInci();
     } else if constexpr (std::is_base_of_v<musx::dom::DetailsBase, Object>) {
         instance.partId = object.getSourcePartId();
         instance.cmper1 = object.getCmper1();
@@ -149,6 +155,12 @@ std::string fieldOrigin(const SurveyContext& context, std::string_view member, c
         return fieldOrigin<Class>(
             context, member,
             instanceKey<Class>(value.getSourcePartId(), value.getCmper(), value.getInci()));
+    } else if constexpr (std::is_base_of_v<musx::dom::EntryDetailsBase, Class>) {
+        const auto entryNumber = value.getEntryNumber();
+        return fieldOrigin<Class>(context, member,
+            instanceKey<Class>(value.getSourcePartId(),
+                static_cast<musx::dom::Cmper>(entryNumber >> 16U), value.getInci(),
+                static_cast<musx::dom::Cmper>(entryNumber)));
     } else {
         static_assert(std::is_base_of_v<musx::dom::DetailsBase, Class>);
         return fieldOrigin<Class>(context, member,

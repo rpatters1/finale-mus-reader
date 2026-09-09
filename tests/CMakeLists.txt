@@ -29,6 +29,7 @@ add_executable(finale_mus_reader_tests
     classes/common/legacy_record_tests.cpp
     classes/common/mapping_framework_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
+    classes/details/percussion_note_code_tests.cpp
     classes/options/accidental_options_tests.cpp
     classes/options/alternate_notation_options_tests.cpp
     classes/options/augmentation_dot_options_tests.cpp
@@ -58,6 +59,7 @@ add_executable(finale_mus_reader_tests
     classes/options/tuplet_options_tests.cpp
     classes/others/chord_suffix_tests.cpp
     classes/others/custom_keys_tests.cpp
+    classes/others/drum_staff_tests.cpp
     classes/others/file_path_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
@@ -65,6 +67,7 @@ add_executable(finale_mus_reader_tests
     classes/others/measure_tests.cpp
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp
+    classes/others/percussion_note_info_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/others/staff_list_tests.cpp
@@ -72,12 +75,16 @@ add_executable(finale_mus_reader_tests
     classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
     coverage_schema_tests.cpp
+    ../tools/coverage/comparison.cpp
     ../tools/coverage/comparison_text.cpp
     ../tools/coverage/registry.cpp
     ../tools/coverage/value.cpp
     ../tools/coverage/common/font_info.cpp
-    ../tools/coverage/surveyors/others/measure.cpp
+    ../tools/coverage/surveyors/details/percussion_note_code.cpp
+    ../tools/coverage/surveyors/others/drum_staff.cpp
     ../tools/coverage/surveyors/others/file_path.cpp
+    ../tools/coverage/surveyors/others/measure.cpp
+    ../tools/coverage/surveyors/others/percussion_note_info.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

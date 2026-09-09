@@ -337,12 +337,11 @@ inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
     push16(meas);
     push16(partId);
     const auto length = static_cast<std::uint32_t>(words.size() * 2);
-    if (byteOrder == ByteOrder::BigEndian) {
-        push16(static_cast<std::uint16_t>(length));
-    } else {
-        for (int shift = 0; shift <= 24; shift += 8)
-            block.data.push_back(static_cast<std::uint8_t>(length >> shift));
-    }
+    if (byteOrder == ByteOrder::BigEndian)
+        push16(static_cast<std::uint16_t>(length >> 16U));
+    push16(static_cast<std::uint16_t>(length));
+    if (byteOrder == ByteOrder::LittleEndian)
+        push16(static_cast<std::uint16_t>(length >> 16U));
     for (const auto word : words) push16(static_cast<std::uint16_t>(word));
     if (hasContinuation) {
         if (byteOrder == ByteOrder::BigEndian) {
@@ -401,11 +400,12 @@ struct ExpectedReportField
 {
     std::string member;
     std::optional<musx::dom::Cmper> cmper;
+    std::optional<musx::dom::Inci> inci;
 };
 
 inline ExpectedReportField expectedReportField(std::string_view target)
 {
-    ExpectedReportField result{std::string(target), std::nullopt};
+    ExpectedReportField result{std::string(target), std::nullopt, std::nullopt};
     if (target.starts_with("options.fontOptions[")) {
         result.member = "fonts["
             + std::string(target.substr(std::string_view("options.fontOptions[").size()));
@@ -419,8 +419,18 @@ inline ExpectedReportField expectedReportField(std::string_view target)
         const auto close = target.find(']', open);
         const auto dot = close == std::string_view::npos ? close : target.find('.', close);
         if (close != std::string_view::npos && dot != std::string_view::npos) {
-            result.cmper = static_cast<musx::dom::Cmper>(std::stoul(
-                std::string(target.substr(open + 1, close - open - 1))));
+            const auto comma = target.find(',', open);
+            const auto cmperEnd = comma == std::string_view::npos || comma > close ? close : comma;
+            result.cmper = musx::dom::Cmper(
+                std::stoul(std::string(target.substr(open + 1, cmperEnd - open - 1))));
+            if (comma != std::string_view::npos && comma < close) {
+                const auto nextComma = target.find(',', comma + 1);
+                const auto inciEnd = nextComma == std::string_view::npos || nextComma > close
+                    ? close
+                    : nextComma;
+                result.inci = musx::dom::Inci(
+                    std::stol(std::string(target.substr(comma + 1, inciEnd - comma - 1))));
+            }
             result.member = target.substr(dot + 1);
         }
     }
@@ -432,6 +442,7 @@ inline const finale_mus_reader::FieldInfo& field(const ImportReport& report, std
     const auto expected = expectedReportField(target);
     for (const auto& [instance, fields] : report.fields) {
         if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        if (expected.inci && instance.inci != expected.inci) continue;
         for (const auto& [member, info] : fields) {
             if (member == expected.member) return info;
         }
@@ -462,6 +473,7 @@ inline const finale_mus_reader::FieldInfo& fieldFor(
     for (const auto& [instance, fields] : report.fields) {
         if (instance.classType != std::type_index(typeid(Target))) continue;
         if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        if (expected.inci && instance.inci != expected.inci) continue;
         for (const auto& [member, info] : fields) {
             if (member == expected.member) return info;
         }

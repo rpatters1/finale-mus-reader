@@ -73,6 +73,24 @@ F2008-notehead-colors.musx
     `0x0071` retains the same 42-word shape as F2008-empty: word 0 changes from
     1 to 0 and all 36 planar channel words carry the companion's exact unsigned
     16-bit values. No ETF exists because Finale 2008 no longer exports ETF.
+F2008-percussion-staff-edit.mus
+    sha256 be8c0d397598ddd0c7ccafbf3a721a06ff1d8ff74132ee1b5e04d7eaee081aaa
+F2008-percussion-staff-edit.musx
+    sha256 57b858bfae2cbd219aebb8ece3f5bf45cb87b2b2b778387b7995e320ea2268f3
+F2008-percussion-staff.mus
+    sha256 22d9db4c88775a5cdb8fa163c376a5548ed0a14bee8972e111e3a741d576c2bb
+F2008-percussion-staff.musx
+    sha256 6567ff1e76ede22787691b70405c03681edf1cd013f23c8a2dcc194c10520f32
+    A controlled big-endian pair made from F2008-empty. Both contain a custom
+    `Percussion Map 1`; the edited document changes input MIDI 60 from staff
+    position 0, closed notehead 207, and open notehead 250 to position 6,
+    closed 208, and open 194, then assigns that row to staff 1. Finale 27
+    companions were saved for both.
+
+    Class-detail `0x040e` retains 128 five-word `DF` records. The MIDI-60
+    payload changes exactly as entered. Class-other `0x0084` payload word 4
+    changes from zero to `0x1000`, selecting MIDI 60. The edited companion
+    upgrades precisely that row; the unassigned companion omits the custom map.
 F2008-timesig-plusparts.mus
     sha256 23a91fcc4d98768cb94a5903836e43181362a6fc6ce85aa2e40cef9c27616100
 F2008-timesig-plusparts.musx

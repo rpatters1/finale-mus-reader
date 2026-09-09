@@ -239,6 +239,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportBookmarks, &others::importBookmarks),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
+        FINALE_MUS_READER_IMPORTER(ImportDrumStaff, &others::importDrumStaff),
         FINALE_MUS_READER_IMPORTER(ImportFilePath, &others::importFilePath),
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
@@ -252,6 +253,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportPartGlobals, &others::importPartGlobals),
+        FINALE_MUS_READER_IMPORTER(ImportPercussionNoteInfo, &others::importPercussionNoteInfo),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
@@ -266,6 +268,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
         FINALE_MUS_READER_IMPORTER(ImportKeySymbolListElements, &details::importKeySymbolListElements),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
+        FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),
         // entries (none recovered yet)
         // texts
         FINALE_MUS_READER_IMPORTER(ImportTexts, &texts::importTexts),

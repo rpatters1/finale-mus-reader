@@ -46,6 +46,7 @@ enum class DifferenceClassification
     DefaultShapeId,
     DifferentDefaults,
     EnigmaTextDifference,
+    FinaleReplacedLegacyPercussionMap,
     FinaleTextBlockRenumbering,
     FinaleUpgradeLoss,
     FinaleUpgradeNormalization,
@@ -53,6 +54,7 @@ enum class DifferenceClassification
     FontMetricApproximation,
     TextEncodingError,
     LegacyPageParityText,
+    LegacyPercussionGeneralMidiFallback,
     MissingAccidentalInsertDefault,
     MissingSelector,
     PossiblyUnrecoverable,
@@ -89,9 +91,10 @@ enum class ComparisonTransformation
     EquivalentTextBlockReferent,
     FinaleAddedChordSuffixFiller,
     FinaleAddedStartObjectWrapper,
-    FinaleMaterializedPartMeasure,
     FinaleDroppedTimeInsert,
+    FinaleMaterializedPartMeasure,
     FinaleReformattedPartName,
+    FinaleSynthesizedPercussionMapNote,
     SemanticallyPairedCodaBlockText
 };
 

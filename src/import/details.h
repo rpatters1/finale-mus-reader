@@ -23,5 +23,8 @@ void importKeySymbolListElements(const ImportContext& context);
 /// @brief Recovers graphics anchored to a staff and measure.
 void importMeasureGraphicAssignments(const ImportContext& context);
 
+/// @brief Recovers percussion-note type assignments for individual notes.
+void importPercussionNoteCodes(const ImportContext& context);
+
 } // namespace details
 } // namespace finale_mus_reader

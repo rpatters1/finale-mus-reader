@@ -135,6 +135,8 @@ This reference table records two-character tags identified from the publicly acc
 | `0x007a` | beatChart | others | weak | 2012 | 48, 84, 108, 144 | `mus-aaff1568ec2bb9ef` (0:0x1852) |
 | `0x007b` | unknown | unknown/options | open | 2008, 2012 | 24, 72 | `mus-27b6066b11927cc8` (0:0x15ec) |
 | `0x007d` | unknown | unknown/options | open | 2012 | 48 | `mus-ae4031bd3fffb218` (0:0x1838) |
+| `0x0083` | unknown | unknown/options | open | 2008 | 24 | `mus-be8c0d397598ddd0` (0:0x15ec) |
+| `0x0084` | unknown | unknown/options | open | 2008 | 24 | `mus-be8c0d397598ddd0` (0:0x1612) |
 | `0x0086` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 12 | `mus-86fafceb1ef2ebe2` (0:0x1536) |
 | `0x0089` | unknown | unknown/options | open | 2012 | 396, 408, 420, 432 | `mus-80f8c631de435726` (0:0x1852) |
 | `0x008a` | unknown | unknown/options | open | 2012 | 12 | `mus-80f8c631de435726` (0:0x225a) |
@@ -155,6 +157,8 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00a9` | metaKeySig | others | weak | 2012 | 12 | `mus-f99c887dff9cdaa1` (0:0x204a) |
 | `0x00b0` | measSpec | others | strong | 2007, 2008, 2011, 2012 | 8, 26 | `mus-86fafceb1ef2ebe2` (0:0x1b3a) |
 | `0x00b1` | unknown | unknown/options | open | 2012 | 24 | `mus-80f8c631de435726` (0:0x2e10) |
+| `0x00b3` | unknown | unknown/options | open | 2008 | 12 | `mus-be8c0d397598ddd0` (0:0x1c16) |
+| `0x00b5` | unknown | unknown/options | open | 2008 | 12 | `mus-be8c0d397598ddd0` (0:0x1c30) |
 | `0x00b7` | textBlock | others | strong | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x1b8a) |
 | `0x00b9` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x1bbc) |
 | `0x00ba` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 24, 36, 48 | `mus-86fafceb1ef2ebe2` (0:0x1bd6) |
