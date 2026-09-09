@@ -35,15 +35,15 @@ why some visibly customized rows are omitted: the selection bitmap, rather than 
 determines membership. The record layout is documented with its own class in
 [`drum_staff.md`](drum_staff.md).
 
-For observed General MIDI-compatible maps, the playback MIDI note selects the base musxdom
-percussion note type with that `generalMidi` value. This is only a fallback for legacy maps whose
-map-specific MIDI-to-type table is unknown. The Basic Orch Percussion Finale Edition map is a
-confirmed counterexample: its input keys do not denote General MIDI instruments. The reader still
-uses the fallback so its synthesized note assignments reach the correct recovered row, but the
-resulting `percNoteType` does not identify the original instrument. Repeated selected rows with the
-same fallback type receive successive order IDs in the high nibble. Closed and staff values carry
-over, while the old open notehead supplies half, whole, and double-whole noteheads. Characters use
-the document's Percussion font.
+Selector `DL` supplies the legacy map name under the same numeric map identity used by `DS` and
+`DF`. When a caller supplies Finale MIDI Device Annotation XML while creating the reader, the
+reader normalizes that name and maps each selected row's playback MIDI note through the named
+`NoteNameList`. The first supplied table with a normalized name wins. A missing table or MIDI row
+falls back to the base musxdom percussion note type with that `generalMidi` value. Reserved custom
+types are excluded from this inference. Repeated selected rows with the same fallback type receive
+successive order IDs in the high nibble. Closed and staff values carry over, while the old open
+notehead supplies half, whole, and double-whole noteheads. Characters use the document's
+Percussion font.
 
 Finale's note-level assignment is documented with its detail class in
 [`percussion_note_code.md`](../details/percussion_note_code.md).
@@ -84,9 +84,9 @@ percussion-map notes. A zlib source-only
 `DrumStaff` reference does not retain a companion map because `DS` can name a dormant map there;
 any active precursor rows are already present in the recovered source map.
 
-The corrected all-corpus capture compared 16,346 occurrences representing 7,309 distinct sources.
-It produced 1,780,638 equal `PercussionNoteInfo` leaves, 26 expected map-specific type differences,
-zero unexpected differences, 5,568 reader-only score leaves, and 1,032 companion-only leaves.
+The externally mapped all-corpus capture compared 16,346 occurrences representing 7,309 distinct
+sources. It produced 1,780,432 equal `PercussionNoteInfo` leaves, zero expected or unexpected
+differences, 5,352 reader-only score leaves, and 1,264 companion-only leaves.
 **Strong.** Observed across `rpatters1-installs`, `rpatters1-main`,
 `rpatters1-private-evidence`, and `tracked-evidence`.
 
@@ -110,11 +110,9 @@ census are documented in
 A Finale 27 upgrade does not preserve a legacy map's numeric `cmper`: it may renumber the map or
 split one map shared by several staves into several modern maps. **Strong.** Companion comparison
 must associate maps through each staff's `DrumStaff` record. When one source map and target map
-contain the same number of rows, their incidence order preserves the row correspondence even when
-Finale assigns map-specific percussion types. Those differences are classified as the deliberate
-legacy General MIDI fallback rather than as pending recovery. Unequal and split maps remain less
-certain. The
-coverage preparer applies this association only to its comparison view; it does not change the
-imported map or row identities. The map-specific type translation and note-entry attachment remain
+contain the same number of rows, their incidence order preserves the row correspondence. Unequal
+and split maps remain less certain. The coverage preparer applies this association only to its
+comparison view; it does not change the imported map or row identities. Map-specific type
+translation depends on caller-supplied tables, and legacy note-entry attachment remains
 unrecovered, so the class stays partial. The aggregate evidence is documented in
 [`percussion_note_info.md`](../../investigations/percussion_note_info.md).

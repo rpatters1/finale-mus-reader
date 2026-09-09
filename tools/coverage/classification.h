@@ -54,7 +54,6 @@ enum class DifferenceClassification
     FontMetricApproximation,
     TextEncodingError,
     LegacyPageParityText,
-    LegacyPercussionGeneralMidiFallback,
     MissingAccidentalInsertDefault,
     MissingSelector,
     PossiblyUnrecoverable,

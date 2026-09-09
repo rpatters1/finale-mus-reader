@@ -13,6 +13,7 @@
 
 #include "container/mus_container.h"
 #include "reader/document_factory.h"
+#include "reader/resources.h"
 #include "reader/timing.h"
 #include "musx/util/Logger.h"
 
@@ -22,7 +23,7 @@ namespace {
 ImportResult readImpl(std::span<const std::uint8_t> data,
     const container::ParsedContainer& parsed,
     const std::optional<std::filesystem::path>& sourcePath,
-    const ReaderOptions& options,
+    const detail::ReaderResources& resources,
     XmlParser parseXml, DocumentParser parseDocument)
 {
     ImportResult result(parsed.formatEpoch);
@@ -43,7 +44,7 @@ ImportResult readImpl(std::span<const std::uint8_t> data,
     }
 
     result.document = createDocument(
-        parsed, data.data(), data.size(), sourcePath, options, parseXml, parseDocument,
+        parsed, data.data(), data.size(), sourcePath, resources, parseXml, parseDocument,
         result.report);
 
     // Each diagnostic goes out at its own level. Forwarding them all as warnings was what
@@ -94,10 +95,37 @@ ImportResult runGuarded(FormatEpoch epoch, Body&& body)
 
 } // namespace
 
-ImportResult Reader::readWithParser(
-    const std::filesystem::path& path,
-    const ReaderOptions& options,
-    XmlParser parseXml, DocumentParser parseDocument)
+Reader Reader::createWithParser(
+    const ReaderOptions& options, XmlParser parseXml, DocumentParser parseDocument)
+{
+    return Reader(std::make_shared<detail::ReaderResources>(
+                      detail::prepareReaderResources(options, parseXml)),
+        parseXml, parseDocument);
+}
+
+musx::dom::DocumentPtr Reader::read(const std::filesystem::path& path) const
+{
+    return readPrepared(path).document;
+}
+
+musx::dom::DocumentPtr Reader::read(std::span<const std::uint8_t> data) const
+{
+    return readPrepared(data).document;
+}
+
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+ImportResult Reader::readWithReport(const std::filesystem::path& path) const
+{
+    return readPrepared(path);
+}
+
+ImportResult Reader::readWithReport(std::span<const std::uint8_t> data) const
+{
+    return readPrepared(data);
+}
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+
+ImportResult Reader::readPrepared(const std::filesystem::path& path) const
 {
     auto data = [&] {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::FileIo);
@@ -129,12 +157,10 @@ ImportResult Reader::readWithParser(
         return container::parse(data.data(), data.size());
     }();
     return runGuarded(parsed.formatEpoch,
-        [&] { return readImpl(data, parsed, path, options, parseXml, parseDocument); });
+        [&] { return readImpl(data, parsed, path, *m_resources, m_parseXml, m_parseDocument); });
 }
 
-ImportResult Reader::readWithParser(
-    std::span<const std::uint8_t> data, const ReaderOptions& options,
-    XmlParser parseXml, DocumentParser parseDocument)
+ImportResult Reader::readPrepared(std::span<const std::uint8_t> data) const
 {
     if (data.empty()) {
         throw std::invalid_argument("MUS input is empty");
@@ -144,7 +170,7 @@ ImportResult Reader::readWithParser(
         return container::parse(data.data(), data.size());
     }();
     return runGuarded(parsed.formatEpoch, [&] {
-        return readImpl(data, parsed, std::nullopt, options, parseXml, parseDocument);
+        return readImpl(data, parsed, std::nullopt, *m_resources, m_parseXml, m_parseDocument);
     });
 }
 

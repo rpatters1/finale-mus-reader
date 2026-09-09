@@ -97,7 +97,7 @@ Explanation added here has to be removed again.
     [x] PartDefinition                          part_definitions.cpp
     [x] PartGlobals                             part_globals.cpp
     [ ] PartVoicing
-    [~] PercussionNoteInfo                      percussion_note_info.cpp        legacy map-specific types unresolved
+    [~] PercussionNoteInfo                      percussion_note_info.cpp        external tables optional; legacy entry attachment unresolved
     [ ] PlaybackRoute
     [ ] PlaybackRouteName
     [ ] RepeatBack

@@ -141,9 +141,10 @@ so a parent that fetches both projects builds zlib only once.
 The library does not select, fetch, link, or enable an XML implementation.
 `Reader::read` is templated on a concrete implementation of
 `musx::xml::IXmlDocument`, in parallel with musxdom's `DocumentFactory`. The
-template supplies only a parser for the pinned default EnigmaXML fragments; the
-reader's own document factory performs construction. Only the tests fetch
-pugixml and instantiate the reader with its musxdom adapter.
+template supplies the parser for pinned default EnigmaXML fragments and optional
+caller-provided percussion mapping XML; the reader's own document factory
+performs construction. Only the tests fetch pugixml and instantiate the reader
+with its musxdom adapter.
 
 Set `FINALE_MUS_READER_BUILD_TESTING=OFF` when consuming the library without
 its tests.
@@ -165,6 +166,13 @@ successfully decoded blocks were retained or discarded.
 
 // XmlDocument must derive from musx::xml::IXmlDocument.
 auto document = finale_mus_reader::Reader::read<XmlDocument>("legacy_score.mus");
+
+// Parse optional resources once when importing multiple files.
+finale_mus_reader::ReaderOptions options;
+options.macSymbolFonts = macSymbolFontsBytes;
+options.percussionMappingXml = percussionMappingXmlBuffers;
+auto reader = finale_mus_reader::Reader::create<XmlDocument>(options);
+auto anotherDocument = reader.read("another_legacy_score.mus");
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 auto result = finale_mus_reader::Reader::readWithReport<XmlDocument>("legacy_score.mus");

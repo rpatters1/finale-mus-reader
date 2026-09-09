@@ -184,6 +184,40 @@ TEST_CASE("Finale 2008 retains DF rows and DS selection as zlib classes", "[clas
     CHECK(std::uint32_t(notes.front()->dwholeNotehead) == 194);
 }
 
+TEST_CASE("Reusable readers apply the first supplied named percussion table", "[class][reader]") {
+    const auto reader = [] {
+        const std::string first = R"xml(
+            <FinaleNameDocument><MasterDeviceNames>
+            <NoteNameList Name="Percussion Map 1">
+            <Note Number="60" PercNoteType="236" />
+            </NoteNameList></MasterDeviceNames></FinaleNameDocument>)xml";
+        const std::string duplicate = R"xml(
+            <FinaleNameDocument><MasterDeviceNames>
+            <NoteNameList Name="Percussion Map 1">
+            <Note Number="60" PercNoteType="5" />
+            </NoteNameList></MasterDeviceNames></FinaleNameDocument>)xml";
+        const auto bytes = [](const std::string &value) {
+            return std::span<const std::uint8_t>(
+                reinterpret_cast<const std::uint8_t *>(value.data()), value.size());
+        };
+        const std::string symbolFontContents(fixtureLegacySymbolFonts);
+        const finale_mus_reader::ReaderOptions options{
+            bytes(symbolFontContents), {bytes(first), bytes(duplicate)}};
+        return finale_mus_reader::Reader::create<TestXmlDocument>(options);
+    }();
+
+    for (int readCount = 0; readCount < 2; ++readCount) {
+        const auto result = reader.readWithReport(
+            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) /
+            "evidence/F2008/F2008-percussion-staff-edit.mus");
+        const auto notes = result.document->getOthers()->getArray<PercussionNoteInfoTestTarget>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        REQUIRE(notes.size() == 1);
+        CHECK(notes.front()->percNoteType == 236);
+        CHECK(field(result.report, "others.percussionNoteInfo[1,0].percNoteType").rawValue == 60);
+    }
+}
+
 TEST_CASE("An unreferenced DCL DF map is not constructed", "[class]") {
     const auto result =
         readFixture("evidence/F2006/F2006-linked-tiff.mus", fixtureLegacySymbolFonts);
@@ -335,8 +369,8 @@ TEST_CASE("Coverage aligns upgraded legacy percussion maps through their staffs"
                                    mapNote(5, 0, 1, 9, false)}}});
         const auto &noteStats = comparison.classes.at("others").at("percussion_note_info");
         CHECK(noteStats.same == 12);
-        CHECK(noteStats.expected == 2);
-        CHECK(noteStats.unexpected == 0);
+        CHECK(noteStats.expected == 0);
+        CHECK(noteStats.unexpected == 2);
         CHECK(noteStats.sourceOnly == 0);
         CHECK(noteStats.companionOnly == 0);
         const auto &staffStats = comparison.classes.at("others").at("drum_staff");
@@ -345,8 +379,6 @@ TEST_CASE("Coverage aligns upgraded legacy percussion maps through their staffs"
         CHECK(staffStats.unexpected == 0);
         CHECK(comparison.expected.at(DifferenceClassification::FinaleReplacedLegacyPercussionMap) ==
               1);
-        CHECK(comparison.expected.at(
-                  DifferenceClassification::LegacyPercussionGeneralMidiFallback) == 2);
         CHECK(comparison.transformations.at(
                   ComparisonTransformation::FinaleSynthesizedPercussionMapNote) == 1);
     }

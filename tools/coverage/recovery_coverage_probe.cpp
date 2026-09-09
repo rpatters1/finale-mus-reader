@@ -41,8 +41,10 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <optional>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -75,6 +77,7 @@ struct Options
     std::string corpusListPath;
     std::string outputPath;
     std::string macSymbolFontsPath;
+    std::vector<std::string> percussionMappingPaths;
     // Verbose is the most permissive threshold, matching today's unfiltered default: no
     // flag means every diagnostic still prints, exactly as before this option existed.
     LogLevel minDiagnosticLevel = LogLevel::Verbose;
@@ -202,7 +205,7 @@ void printUsage()
     std::fprintf(stderr,
         "usage: recovery_coverage_probe [-h|--help] "
         "[--min-diagnostic-level=verbose|info|warning|error] "
-        "[--mac-symbol-fonts=path] [--strict-deferred] "
+        "[--mac-symbol-fonts=path] [--percussion-mapping-xml=path] [--strict-deferred] "
         "[--include-timings] [--progress] "
         "<corpus-tsv> <output-jsonl>\n");
 }
@@ -249,6 +252,9 @@ void printHelp()
         "  --mac-symbol-fonts=path\n"
         "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
         "                  contents to the reader for symbol-glyph decoding.\n"
+        "  --percussion-mapping-xml=path\n"
+        "                  Read a Finale MIDI Device Annotation XML file and supply its\n"
+        "                  named percussion tables to the reader. Repeatable.\n"
         "  --include-timings\n"
         "                  Include detailed reader, container, and surveyor timings in\n"
         "                  each JSON row. They are omitted by default.\n"
@@ -272,6 +278,7 @@ std::optional<Options> parseOptions(int argc, char** argv)
     for (int i = 1; i < argc; ++i) {
         const std::string_view arg = argv[i];
         constexpr std::string_view levelFlag = "--min-diagnostic-level=";
+        constexpr std::string_view percussionMappingFlag = "--percussion-mapping-xml=";
         constexpr std::string_view symbolFontsFlag = "--mac-symbol-fonts=";
         if (arg == "--progress") {
             options.showProgress = true;
@@ -296,6 +303,13 @@ std::optional<Options> parseOptions(int argc, char** argv)
                 std::fprintf(stderr, "--mac-symbol-fonts requires a path\n");
                 return std::nullopt;
             }
+        } else if (arg.substr(0, percussionMappingFlag.size()) == percussionMappingFlag) {
+            const auto path = arg.substr(percussionMappingFlag.size());
+            if (path.empty()) {
+                std::fprintf(stderr, "--percussion-mapping-xml requires a path\n");
+                return std::nullopt;
+            }
+            options.percussionMappingPaths.emplace_back(path);
         } else {
             positional.emplace_back(arg);
         }
@@ -307,6 +321,33 @@ std::optional<Options> parseOptions(int argc, char** argv)
     options.corpusListPath = positional[0];
     options.outputPath = positional[1];
     return options;
+}
+
+std::optional<std::vector<std::uint8_t>> readResourceFile(
+    const std::string& path, std::string_view description)
+{
+    std::ifstream input(path, std::ios::binary | std::ios::ate);
+    if (!input) {
+        std::fprintf(stderr, "cannot open %.*s file: %s\n",
+            int(description.size()), description.data(), path.c_str());
+        return std::nullopt;
+    }
+    const auto end = input.tellg();
+    if (end < 0 || std::uintmax_t(end)
+            > std::uintmax_t((std::numeric_limits<std::streamsize>::max)())) {
+        std::fprintf(stderr, "%.*s file is too large: %s\n",
+            int(description.size()), description.data(), path.c_str());
+        return std::nullopt;
+    }
+    std::vector<std::uint8_t> result(std::size_t(end), std::uint8_t{});
+    input.seekg(0);
+    input.read(reinterpret_cast<char*>(result.data()), std::streamsize(result.size()));
+    if (!input && !result.empty()) {
+        std::fprintf(stderr, "cannot read %.*s file: %s\n",
+            int(description.size()), description.data(), path.c_str());
+        return std::nullopt;
+    }
+    return result;
 }
 
 struct CorpusRow
@@ -602,30 +643,24 @@ int main(int argc, char** argv)
 
     std::vector<std::uint8_t> macSymbolFonts;
     if (!options->macSymbolFontsPath.empty()) {
-        std::ifstream input(options->macSymbolFontsPath, std::ios::binary | std::ios::ate);
-        if (!input) {
-            std::fprintf(stderr, "cannot open MacSymbolFonts file: %s\n",
-                options->macSymbolFontsPath.c_str());
-            return 2;
-        }
-        const auto end = input.tellg();
-        if (end < 0 || static_cast<std::uintmax_t>(end)
-                > static_cast<std::uintmax_t>((std::numeric_limits<std::streamsize>::max)())) {
-            std::fprintf(stderr, "MacSymbolFonts file is too large: %s\n",
-                options->macSymbolFontsPath.c_str());
-            return 2;
-        }
-        macSymbolFonts.resize(static_cast<std::size_t>(end));
-        input.seekg(0);
-        input.read(reinterpret_cast<char*>(macSymbolFonts.data()),
-            static_cast<std::streamsize>(macSymbolFonts.size()));
-        if (!input && !macSymbolFonts.empty()) {
-            std::fprintf(stderr, "cannot read MacSymbolFonts file: %s\n",
-                options->macSymbolFontsPath.c_str());
-            return 2;
-        }
+        const auto contents = readResourceFile(options->macSymbolFontsPath, "MacSymbolFonts");
+        if (!contents) return 2;
+        macSymbolFonts = *contents;
     }
-    const finale_mus_reader::ReaderOptions readerOptions{macSymbolFonts};
+    std::vector<std::vector<std::uint8_t>> percussionMappingContents;
+    percussionMappingContents.reserve(options->percussionMappingPaths.size());
+    for (const auto& path : options->percussionMappingPaths) {
+        const auto contents = readResourceFile(path, "percussion mapping XML");
+        if (!contents) return 2;
+        percussionMappingContents.push_back(*contents);
+    }
+    std::vector<std::span<const std::uint8_t>> percussionMappingBuffers;
+    percussionMappingBuffers.reserve(percussionMappingContents.size());
+    for (const auto& contents : percussionMappingContents) {
+        percussionMappingBuffers.emplace_back(contents);
+    }
+    const finale_mus_reader::ReaderOptions readerOptions{
+        macSymbolFonts, percussionMappingBuffers};
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
     std::map<std::string, std::vector<CompanionConvention>> corpusCompanions;
@@ -651,6 +686,15 @@ int main(int argc, char** argv)
     using namespace finale_mus_reader::coverage;
 
     setDeferredRecoveryClassified(!options->strictDeferred);
+    const auto reader = [&]() -> std::optional<Reader> {
+        try {
+            return Reader::create<musx::xml::pugi::Document>(readerOptions);
+        } catch (const std::exception& error) {
+            std::fprintf(stderr, "cannot parse reader resources: %s\n", error.what());
+            return std::nullopt;
+        }
+    }();
+    if (!reader) return 2;
 
     std::cout << "Options:\n"
         << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
@@ -664,7 +708,16 @@ int main(int argc, char** argv)
     } else {
         std::cout << std::quoted(options->macSymbolFontsPath);
     }
-    std::cout << '\n';
+    std::cout << '\n'
+        << "  percussion mapping XML:";
+    if (options->percussionMappingPaths.empty()) {
+        std::cout << " not supplied\n";
+    } else {
+        std::cout << '\n';
+        for (const auto& path : options->percussionMappingPaths) {
+            std::cout << "    " << std::quoted(path) << '\n';
+        }
+    }
 
     const auto total = rows.size();
     const auto segments = segmentByCorpus(rows, corpusRoots, corpusCompanions);
@@ -763,8 +816,7 @@ int main(int argc, char** argv)
         try {
             const auto readerStarted = std::chrono::steady_clock::now();
             timing::Session readerTimingSession;
-            const auto result = Reader::readWithReport<musx::xml::pugi::Document>(
-                std::filesystem::path(path), readerOptions);
+            const auto result = reader->readWithReport(std::filesystem::path(path));
             const std::chrono::duration<double, std::milli> readerElapsed =
                 std::chrono::steady_clock::now() - readerStarted;
             readerDurationMs = readerElapsed.count();

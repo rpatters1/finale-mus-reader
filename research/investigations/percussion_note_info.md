@@ -272,15 +272,30 @@ the legacy and companion map names yields that table name. The same normalizatio
 collisions among the 38 examined lists.
 
 Selector `DL` supplies the legacy map name and shares the numeric map identity used by `DS` and
-`DF`. It is not yet decoded. A caller-supplied annotation document or resolver could therefore
-translate each selected `DF` playback MIDI value after resolving the normalized `DL` name. A
-missing name or note would retain the current General MIDI fallback. The installed annotation
-files remain external inputs; their tables must not be copied into the MIT-licensed repository.
+`DF`. A caller-supplied annotation document can therefore translate each selected `DF` playback
+MIDI value after resolving the normalized `DL` name. A missing name or note retains the General
+MIDI fallback. The installed annotation files remain external inputs; their tables must not be
+copied into the MIT-licensed repository.
 
 The installed `General MIDI` table has 66 rows over 65 MIDI numbers. The reader's inferred mapping
 agrees with the first XML row for 61 of those numbers. It disagrees at MIDI 27, 89, 90, and 92,
-and it cannot reproduce the second MIDI 38 row, which maps to Snare Roll type 277. The inference
-currently admits reserved custom types 3968 through 4095; their `generalMidi` fields enumerate
-custom slots and cause spurious mappings for every MIDI value from 0 through 127. Those types must
-be excluded from the inferred fallback. An externally supplied General MIDI annotation table can
-also retain Finale's nonstandard extension rows and duplicate-key ordering.
+and it cannot reproduce the second MIDI 38 row, which maps to Snare Roll type 277. Before this
+change, the inference admitted reserved custom types 3968 through 4095; their `generalMidi` fields
+enumerate custom slots and caused spurious mappings for every MIDI value from 0 through 127. The
+fallback now excludes those types. An externally supplied General MIDI annotation table can also
+retain Finale's nonstandard extension rows; when MIDI numbers repeat, the first XML row wins.
+
+**Implementation and validation.** The reusable reader accepts any number of annotation XML byte
+buffers together with `MacSymbolFonts.txt`, parses both resources once through the caller's
+`IXmlDocument` implementation, and retains the first table for each normalized name. Invalid note
+types are skipped, and the first row wins when a table repeats a MIDI number because the legacy
+row has no further discriminator. The probe exposes the XML inputs as a repeatable option.
+
+The established 85-document orchestral cohort had 83 readable sources and 78 successful companion
+comparisons. It produced 63,416 equal `PercussionNoteInfo` leaves and no expected or unexpected
+differences. The subsequent full capture contained 16,346 occurrences representing 7,309 distinct
+sources: 16,257 source reads succeeded, the 89 failures were known invalid or LIB inputs, and all
+4,848 companions succeeded. `PercussionNoteInfo` produced 1,780,432 equal leaves, zero expected or
+unexpected differences, 5,352 reader-only score leaves, and 1,264 companion-only leaves. Every
+comparison pool had zero unexpected differences. **Strong.** Observed across
+`rpatters1-installs`, `rpatters1-main`, `rpatters1-private-evidence`, and `tracked-evidence`.
