@@ -184,7 +184,11 @@ createDetailsRecordTarget(const musx::dom::DocumentPtr& document, const RecordFa
 {
     const auto shareMode = recordShareMode(source, row);
     std::shared_ptr<T> target;
-    if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t,
+    if constexpr (std::is_base_of_v<musx::dom::EntryDetailsBase, T>) {
+        const auto entryNumber =
+            (static_cast<musx::dom::EntryNumber>(cmper1) << 16U) | cmper2;
+        target = std::make_shared<T>(document, row.partId, shareMode, entryNumber, inci);
+    } else if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t,
                                           musx::dom::EnigmaBase::ShareMode, musx::dom::Cmper,
                                           musx::dom::Cmper, musx::dom::Inci>) {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper1, cmper2, inci);

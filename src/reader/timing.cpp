@@ -40,6 +40,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportClefOctaveFlats: return "clef_octave_flats";
     case Phase::ImportClefOctaveSharps: return "clef_octave_sharps";
     case Phase::ImportClefOptions: return "clef_options";
+    case Phase::ImportDrumStaff: return "drum_staff";
     case Phase::ImportFilePath: return "file_path";
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportFontDefinitions: return "font_definitions";
@@ -69,6 +70,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportPartDefinitions: return "part_defs";
     case Phase::ImportPartGlobals: return "part_globals";
+    case Phase::ImportPercussionNoteCodes: return "percussion_note_codes";
+    case Phase::ImportPercussionNoteInfo: return "percussion_note_info";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatOptions: return "repeat_options";
     case Phase::ImportShapeDefinitions: return "shape_definitions";

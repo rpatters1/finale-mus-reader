@@ -337,12 +337,11 @@ inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
     push16(meas);
     push16(partId);
     const auto length = static_cast<std::uint32_t>(words.size() * 2);
-    if (byteOrder == ByteOrder::BigEndian) {
-        push16(static_cast<std::uint16_t>(length));
-    } else {
-        for (int shift = 0; shift <= 24; shift += 8)
-            block.data.push_back(static_cast<std::uint8_t>(length >> shift));
-    }
+    if (byteOrder == ByteOrder::BigEndian)
+        push16(static_cast<std::uint16_t>(length >> 16U));
+    push16(static_cast<std::uint16_t>(length));
+    if (byteOrder == ByteOrder::LittleEndian)
+        push16(static_cast<std::uint16_t>(length >> 16U));
     for (const auto word : words) push16(static_cast<std::uint16_t>(word));
     if (hasContinuation) {
         if (byteOrder == ByteOrder::BigEndian) {

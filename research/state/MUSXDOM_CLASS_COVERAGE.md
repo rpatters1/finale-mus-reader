@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**80 done, 2 partial, 108 to do, 190 total.** Verified class for class against the registry on
+**80 done, 5 partial, 105 to do, 190 total.** Verified class for class against the registry on
 2026-09-05: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (40 done, 1 partial, 52 to do, 93 total)
+## others  (40 done, 3 partial, 50 to do, 93 total)
 
     [x] AcciAmountFlats                         custom_keys.cpp
     [x] AcciAmountSharps                        custom_keys.cpp
@@ -60,7 +60,7 @@ Explanation added here has to be removed again.
     [x] ChordSuffixElement                      chord_suffix_elements.cpp
     [x] ChordSuffixPlayback                     chord_suffix_playback.cpp
     [ ] ClefList
-    [ ] DrumStaff
+    [~] DrumStaff                               drum_staff.cpp                  modern trailing words unmapped
     [ ] DrumStaffStyle                                                          L2 satellite
     [x] FileAlias                               file_path.cpp
     [x] FileDescription                         file_path.cpp
@@ -97,7 +97,7 @@ Explanation added here has to be removed again.
     [x] PartDefinition                          part_definitions.cpp
     [x] PartGlobals                             part_globals.cpp
     [ ] PartVoicing
-    [ ] PercussionNoteInfo                                                      L1 library item
+    [~] PercussionNoteInfo                      percussion_note_info.cpp        legacy map-specific types unresolved
     [ ] PlaybackRoute
     [ ] PlaybackRouteName
     [ ] RepeatBack
@@ -145,7 +145,7 @@ Explanation added here has to be removed again.
     [x] TonalCenterFlats                        custom_keys.cpp
     [x] TonalCenterSharps                       custom_keys.cpp
 
-## details  (5 done, 0 partial, 55 to do, 60 total)
+## details  (5 done, 1 partial, 54 to do, 60 total)
 
     [ ] AccidentalAlterations
     [ ] ArticulationAssign
@@ -192,7 +192,7 @@ Explanation added here has to be removed again.
     [ ] MeasureOssiaAssign
     [ ] MeasureTextAssign
     [ ] NoteAlterations
-    [ ] PercussionNoteCode
+    [~] PercussionNoteCode                      percussion_note_code.cpp        pre-2010 assignments await entries
     [ ] SecondaryBeamAlterationsDownStem
     [ ] SecondaryBeamAlterationsUpStem
     [ ] SecondaryBeamBreak

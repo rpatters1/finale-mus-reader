@@ -172,6 +172,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/fretboard_diagrams.cpp
     src/import/details/key_symbol_list.cpp
     src/import/details/measure_graphic_assign.cpp
+    src/import/details/percussion_note_code.cpp
     src/import/header/header.cpp
     src/import/options/accidental_options.cpp
     src/import/options/alternate_notation_options.cpp
@@ -205,6 +206,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/chord_suffix_elements.cpp
     src/import/others/chord_suffix_playback.cpp
     src/import/others/custom_keys.cpp
+    src/import/others/drum_staff.cpp
     src/import/others/file_path.cpp
     src/import/others/font_definitions.cpp
     src/import/others/fret_instruments.cpp
@@ -216,6 +218,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/measure.cpp
     src/import/others/part_definitions.cpp
     src/import/others/part_globals.cpp
+    src/import/others/percussion_note_info.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
     src/import/others/staff_list.cpp

@@ -36,6 +36,9 @@ void importChordSuffixElements(const ImportContext& context);
 /// @brief Recovers chord-suffix playback intervals.
 void importChordSuffixPlayback(const ImportContext& context);
 
+/// @brief Recovers the percussion-map association for each percussion staff.
+void importDrumStaff(const ImportContext& context);
+
 /// @brief Imports graphic file locator records.
 void importFilePath(const ImportContext& context);
 
@@ -79,6 +82,9 @@ void importPartDefinitions(const ImportContext& context);
 
 /// @brief Recovers the score- and part-specific global view settings.
 void importPartGlobals(const ImportContext& context);
+
+/// @brief Recovers percussion-map note identities, staff positions, and noteheads.
+void importPercussionNoteInfo(const ImportContext& context);
 
 /// @brief Recovers ShapeDef objects and their owned instruction and data lists.
 void importShapeDefinitions(const ImportContext& context);

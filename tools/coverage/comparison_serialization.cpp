@@ -41,6 +41,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "awaits-dependent-recovery";
     case EnigmaTextDifference:
         return "enigma-text-difference";
+    case FinaleReplacedLegacyPercussionMap:
+        return "finale-replaced-legacy-percussion-map";
     case FinaleTextBlockRenumbering:
         return "finale-text-block-renumbering";
     case FinaleUpgradeLoss:
@@ -55,6 +57,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "text-encoding-error";
     case LegacyPageParityText:
         return "legacy-page-parity-text";
+    case LegacyPercussionGeneralMidiFallback:
+        return "legacy-percussion-general-midi-fallback";
     case MissingAccidentalInsertDefault:
         return "missing-accidental-insert-default";
     case MissingSelector:
@@ -125,14 +129,16 @@ std::string_view transformationName(ComparisonTransformation transformation)
         return "Equivalent TextBlock raw-text referent";
     case FinaleAddedChordSuffixFiller:
         return "Finale-added chord-suffix filler";
-    case FinaleMaterializedPartMeasure:
-        return "finale-materialized-part-measure";
     case FinaleAddedStartObjectWrapper:
         return "Finale-added StartObject wrapper";
     case FinaleDroppedTimeInsert:
         return "Finale-dropped ^time insert";
+    case FinaleMaterializedPartMeasure:
+        return "finale-materialized-part-measure";
     case FinaleReformattedPartName:
         return "Finale-reformatted part-name text";
+    case FinaleSynthesizedPercussionMapNote:
+        return "Finale-synthesized percussion-map note";
     case SemanticallyPairedCodaBlockText:
         return "Semantically paired Coda block text";
     }

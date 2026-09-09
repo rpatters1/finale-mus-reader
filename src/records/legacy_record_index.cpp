@@ -176,7 +176,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
     constexpr std::uint16_t otherRecordBlockType = 0x001a;
     constexpr std::uint16_t detailRecordBlockType = 0x001b;
     constexpr std::size_t otherHeaderSize = 10;
-    constexpr std::size_t littleEndianDetailHeaderSize = 12;
+    constexpr std::size_t detailHeaderSize = 12;
     constexpr std::size_t trailerSize = 4;
 
     std::vector<LegacyRow> result;
@@ -185,25 +185,15 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
         if (block.info.type != (details ? detailRecordBlockType : otherRecordBlockType)) {
             continue;
         }
-        // The transition-era detail stream spells its length as the fifth 16-bit field in
-        // big-endian files. Little-endian files widen that same location to a 32-bit value,
-        // making the header two bytes longer. Complete-member consumption establishes both
-        // geometries independently of the saving version.
-        const auto headerSize = isDetail
-            ? (parsed.byteOrder == ByteOrder::BigEndian
-                    ? otherHeaderSize : littleEndianDetailHeaderSize)
-            : otherHeaderSize;
+        // Detail headers retain both comparators and the part id before their 32-bit length,
+        // making them one word wider than other headers in either byte order.
+        const auto headerSize = isDetail ? detailHeaderSize : otherHeaderSize;
         std::size_t offset = 0;
         while (offset + headerSize <= block.data.size()) {
             const auto* header = block.data.data() + offset;
             const auto classId = static_cast<std::uint16_t>(readWord(header, parsed.byteOrder));
-            // The length is a 32-bit value, so its word order flips with the file's byte
-            // order too. Composing it from two 16-bit reads in a fixed order yields an
-            // enormous length on a big-endian file and aborts the walk at the first record,
-            // which is what most Finale 2007 documents are.
-            const auto length = isDetail && parsed.byteOrder == ByteOrder::BigEndian
-                ? static_cast<std::uint32_t>(readCmper(header + 8, parsed.byteOrder))
-                : readLong(header + (isDetail ? 8U : 6U), parsed.byteOrder);
+            const auto length =
+                readLong(header + (isDetail ? 8U : 6U), parsed.byteOrder);
             if (classId == 0 || length > block.data.size() - offset - headerSize) {
                 break;
             }

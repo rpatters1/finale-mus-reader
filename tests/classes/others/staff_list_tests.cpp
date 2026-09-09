@@ -8,10 +8,10 @@ namespace {
 
 using namespace classes;
 
-using CategoryName = musx::dom::others::StaffListCategoryName;
 using CategoryParts = musx::dom::others::StaffListCategoryParts;
 using CategoryScore = musx::dom::others::StaffListCategoryScore;
 using RepeatName = musx::dom::others::StaffListRepeatName;
+using StaffListCategoryName = musx::dom::others::StaffListCategoryName;
 using RepeatParts = musx::dom::others::StaffListRepeatParts;
 using RepeatPartsForced = musx::dom::others::StaffListRepeatPartsForced;
 using RepeatScore = musx::dom::others::StaffListRepeatScore;
@@ -87,7 +87,8 @@ TEST_CASE("Finale 2009 category staff lists and platform names recover", "[class
         const auto document = emptyDocument();
         const auto report = importStaffLists(parsed, profile, document);
 
-        const auto name = document->getOthers()->get<CategoryName>(musx::dom::SCORE_PARTID, 3);
+        const auto name =
+            document->getOthers()->get<StaffListCategoryName>(musx::dom::SCORE_PARTID, 3);
         const auto score = document->getOthers()->get<CategoryScore>(musx::dom::SCORE_PARTID, 3);
         const auto parts = document->getOthers()->get<CategoryParts>(musx::dom::SCORE_PARTID, 3);
         REQUIRE(name);
@@ -98,7 +99,7 @@ TEST_CASE("Finale 2009 category staff lists and platform names recover", "[class
         CHECK(parts->values == std::vector<musx::dom::StaffCmper>{-1, 2, 7});
         CHECK(reportedFieldCount(report) == 5);
         const auto* nameOrigin = report.findInstanceOrigin(
-            finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID,
+            finale_mus_reader::instanceKey<StaffListCategoryName>(musx::dom::SCORE_PARTID,
                 musx::dom::Cmper(3)));
         REQUIRE(nameOrigin);
         CHECK(*nameOrigin == ValueOrigin::LegacyMus);
@@ -115,7 +116,8 @@ TEST_CASE("Finale 2012 category names remain one-byte platform text", "[class]")
     const auto report = importStaffLists(
         makeClassContainer(0x012f, {0x4180, 0, 0, 0, 0, 0}, ByteOrder::LittleEndian, 4), profile,
         document, categoryBaseline());
-    const auto name = document->getOthers()->get<CategoryName>(musx::dom::SCORE_PARTID, 4);
+    const auto name =
+        document->getOthers()->get<StaffListCategoryName>(musx::dom::SCORE_PARTID, 4);
     REQUIRE(name);
     CHECK(name->name == "€A");
     CHECK_FALSE(document->getOthers()->get<CategoryParts>(musx::dom::SCORE_PARTID, 4));
@@ -123,7 +125,7 @@ TEST_CASE("Finale 2012 category names remain one-byte platform text", "[class]")
     CHECK(document->getOthers()->get<CategoryParts>(musx::dom::SCORE_PARTID, 3));
     CHECK(document->getOthers()->get<CategoryScore>(musx::dom::SCORE_PARTID, 5));
     CHECK(report.findInstanceOrigin(
-              finale_mus_reader::instanceKey<CategoryName>(musx::dom::SCORE_PARTID,
+              finale_mus_reader::instanceKey<StaffListCategoryName>(musx::dom::SCORE_PARTID,
                   musx::dom::Cmper(4))) != nullptr);
 }
 
@@ -134,7 +136,9 @@ TEST_CASE("Pre-Finale 2009 files receive the pinned category staff lists", "[cla
         result.document->getOthers()->getArray<CategoryParts>(musx::dom::SCORE_PARTID);
     const auto score =
         result.document->getOthers()->getArray<CategoryScore>(musx::dom::SCORE_PARTID);
-    CHECK(result.document->getOthers()->getArray<CategoryName>(musx::dom::SCORE_PARTID).empty());
+    CHECK(result.document->getOthers()
+              ->getArray<StaffListCategoryName>(musx::dom::SCORE_PARTID)
+              .empty());
     REQUIRE(parts.size() == 8);
     REQUIRE(score.size() == 8);
     for (std::size_t index = 0; index < 8; ++index) {
@@ -171,7 +175,7 @@ TEST_CASE("Finale 2009 category lists are filled from four through eight", "[cla
     }
     const auto report = importStaffLists(makeClassContainer(rows, ByteOrder::LittleEndian),
                                          profile, document, categoryBaseline());
-    CHECK(document->getOthers()->getAllSources<CategoryName>().empty());
+    CHECK(document->getOthers()->getAllSources<StaffListCategoryName>().empty());
     const auto parts = document->getOthers()->getArray<CategoryParts>(musx::dom::SCORE_PARTID);
     const auto score = document->getOthers()->getArray<CategoryScore>(musx::dom::SCORE_PARTID);
     REQUIRE(parts.size() == 8);
@@ -207,7 +211,7 @@ TEST_CASE("Category staff-list overrides are reported and ignored", "[class]")
                                       },
                                       ByteOrder::LittleEndian),
                                   profile, document);
-    CHECK(document->getOthers()->getAllSources<CategoryName>().empty());
+    CHECK(document->getOthers()->getAllSources<StaffListCategoryName>().empty());
     CHECK(document->getOthers()->getAllSources<CategoryParts>().empty());
     CHECK(document->getOthers()->getAllSources<CategoryScore>().empty());
     REQUIRE(report.diagnostics.size() == 2);
