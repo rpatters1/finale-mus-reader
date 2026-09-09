@@ -94,7 +94,7 @@ TEST_CASE("Finale 2012 percussion-note collections use wide codepoints and paddi
         const auto document = makePercussionNoteInfoDocument();
         const auto report =
             importPercussionNoteInfo(makeClassContainer(0x0139,
-                                                        {38, 5, std::int16_t(0xf642),
+                                                        {38, 5, std::int16_t(-2494),
                                                          1, 0x00fa, 0, 0x00db, 0, 0x00c0, 0, 0, 0},
                                                         byteOrder, 4),
                                      profile, document);

@@ -34,7 +34,7 @@ TEST_CASE("Fixed-row drum staffs read their map association before the "
     for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
             const auto parsed =
-                makeContainer({{7, "DS", {3, 0, 0, 0, 0x4000, std::int16_t(0xf762)}},
+                makeContainer({{7, "DS", {3, 0, 0, 0, 0x4000, std::int16_t(-2206)}},
                                {7, "DS", {15, 0, 0, 0, 0, 0}}},
                               epoch, byteOrder);
             const auto document = emptyDrumStaffDocument();
