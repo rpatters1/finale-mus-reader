@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 #include "import/support/field_manifest.h"
 
 #include <algorithm>
@@ -524,6 +525,109 @@ TEST_CASE("A zero default measure rest uses the stored whole-rest glyph", "[clas
     REQUIRE(info->origin == ValueOrigin::LegacyMusAdjusted);
     REQUIRE(info->rawValue == 0);
     REQUIRE(info->sourceIdentity == finale_mus_reader::numericGlobalTag(9));
+}
+
+TEST_CASE("Finale conversion loses the legacy double-whole slash glyph", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value legacyGlyph(218);
+    const Value filledNoteheadSlash(213);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    DifferenceContext context{"music_symbol_options.dbl_whole_slash", DifferenceCategory::Differs,
+        "finale27-default", legacyGlyph, filledNoteheadSlash, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+
+    REQUIRE(classifyDoubleWholeSlashConversionLoss(context) ==
+            DifferenceClassification::FinaleUpgradeLoss);
+
+    context.origin = "legacy-mus";
+    REQUIRE_FALSE(classifyDoubleWholeSlashConversionLoss(context));
+    context.origin = "finale27-default";
+    context.path = "music_symbol_options.slash_bar";
+    REQUIRE_FALSE(classifyDoubleWholeSlashConversionLoss(context));
+
+    const DifferenceContext reverseContext{"music_symbol_options.dbl_whole_slash",
+        DifferenceCategory::Differs, "finale27-default", filledNoteheadSlash, legacyGlyph, leaves,
+        leaves, finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyDoubleWholeSlashConversionLoss(reverseContext));
+}
+
+TEST_CASE("Coda slash defaults permit early font layout shifts", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value companionGlyph(124);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    for (const auto& [path, sourceGlyph] : {
+             std::pair{std::string_view("music_symbol_options.half_slash"), Value(250)},
+             std::pair{std::string_view("music_symbol_options.whole_slash"), Value(119)},
+         }) {
+        const DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus",
+            sourceGlyph, companionGlyph, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+        REQUIRE(classifyVersionlessCodaSlashDefault(context) ==
+                DifferenceClassification::DifferentDefaults);
+    }
+
+    const Value sourceGlyph(250);
+    const finale_mus_reader::SourceVersion version{.raw = 1, .major = 3};
+    const DifferenceContext versioned{"music_symbol_options.half_slash",
+        DifferenceCategory::Differs, "finale27-default", sourceGlyph, companionGlyph, leaves,
+        leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+        finale_mus_reader::ByteOrder::LittleEndian, &version, report};
+    REQUIRE_FALSE(classifyVersionlessCodaSlashDefault(versioned));
+
+    const finale_mus_reader::SourceVersion productVersion{.major = 2, .minor = 6};
+    const DifferenceContext productVersioned{"music_symbol_options.half_slash",
+        DifferenceCategory::Differs, "legacy-mus", sourceGlyph, companionGlyph, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::LittleEndian,
+        &productVersion, report};
+    REQUIRE(classifyVersionlessCodaSlashDefault(productVersioned) ==
+            DifferenceClassification::DifferentDefaults);
+
+    for (const auto path : {
+             std::string_view("music_symbol_options.quarter_slash"),
+             std::string_view("music_symbol_options.slash_bar"),
+         }) {
+        const DifferenceContext codaDefault{path, DifferenceCategory::Differs, "finale27-default",
+            sourceGlyph, companionGlyph, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::LittleEndian, &version, report};
+        REQUIRE(classifyVersionlessCodaSlashDefault(codaDefault) ==
+                DifferenceClassification::DifferentDefaults);
+    }
+
+    const DifferenceContext versionedDoubleWhole{"music_symbol_options.dbl_whole_slash",
+        DifferenceCategory::Differs, "finale27-default", sourceGlyph, companionGlyph, leaves,
+        leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+        finale_mus_reader::ByteOrder::LittleEndian, &version, report};
+    REQUIRE_FALSE(classifyVersionlessCodaSlashDefault(versionedDoubleWhole));
+
+    const DifferenceContext wrongEpoch{"music_symbol_options.half_slash",
+        DifferenceCategory::Differs, "legacy-mus", sourceGlyph, companionGlyph, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+    REQUIRE_FALSE(classifyVersionlessCodaSlashDefault(wrongEpoch));
+
+    for (const auto path : {
+             std::string_view("music_symbol_options.dbl_whole_slash"),
+             std::string_view("music_symbol_options.quarter_slash"),
+             std::string_view("music_symbol_options.slash_bar"),
+         }) {
+        const DifferenceContext retainedDefault{path, DifferenceCategory::Differs,
+            "finale27-default", sourceGlyph, companionGlyph, leaves, leaves,
+            finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::LittleEndian,
+            nullptr, report};
+        REQUIRE(classifyVersionlessCodaSlashDefault(retainedDefault) ==
+                DifferenceClassification::DifferentDefaults);
+
+        const DifferenceContext recovered{path, DifferenceCategory::Differs, "legacy-mus",
+            sourceGlyph, companionGlyph, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+        REQUIRE_FALSE(classifyVersionlessCodaSlashDefault(recovered));
+    }
 }
 
 } // namespace

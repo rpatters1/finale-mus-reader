@@ -425,8 +425,14 @@ void expectNoScoreContent(const ImportResult& result)
         expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
             "Output contains a measure no source record built");
     }
-    expect(result.document->getOthers()->getArray<others::Staff>(SCORE_PARTID).empty(),
-        "Output contains fallback staves");
+    for (const auto& staff :
+             result.document->getOthers()->getArray<others::Staff>(SCORE_PARTID)) {
+        const auto* origin = result.report.findInstanceOrigin(
+            finale_mus_reader::instanceKey<others::Staff>(
+                staff->getSourcePartId(), staff->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
+            "Output contains a staff no source record built");
+    }
     expect(result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID).empty(),
         "Output contains fallback systems");
     expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(),

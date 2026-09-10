@@ -9,6 +9,15 @@ F2006-empty.etf
     sha256 224657cc0839265e1d5458d29d0f9b65ee5502dc5390c380d2938239b836a519
 F2006-empty.musx
     sha256 52e2bcd30d47c2f79aa9ec3d4d99e52e8cbe58668e4555da2ffb58d384a68e4b
+
+F2006-staff-nonoteitems.mus / .etf / .musx
+    sha256 ec491857237b238008531bcb810f985e2b4cbc4ee9699708a3c0aa0ffef83ba2 (.mus)
+    sha256 4ba3d1b45cac7c52607bcc1fb51ed3f3f014903f2b3740b298770caa00ab9213 (.etf)
+    sha256 d98f9a09190f47acad6d341ec6abde400dc20c6c764bba2fed1950cfc71dac3c (.musx)
+    From F2006-empty, with the single Staff setting “Show Note-attached Items” unchecked.
+    Ordinary Staff 1 changes word 2 from 0x6700 to 0x6600 and word 4 from 0x0000 to 0x1800;
+    the cmper 32767 Staff remains byte-identical. The ETF repeats the changed words, and the
+    Finale 27 companion sets the same six hide properties as the Finale 2000 fixture.
 F2006-timesig-plus.mus
     sha256 4157232d1f98661a45ee8da11dfa0a873fee1aac18c361e3e6e96f31d0c8612f
 F2006-timesig-plus.etf

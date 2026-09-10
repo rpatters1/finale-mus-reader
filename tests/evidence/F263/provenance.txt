@@ -241,3 +241,25 @@ F263-noavoid-margincoll.mus / .etf / .musx
     (`fi`) comparator 65534 incidence 51 word 5 changes from 1 to 0, and the ETF
     repeats that value. The Finale 27 companion omits `<avoidSystemMarginCollisions/>`.
     The unrelated `KL(0)` tail also changes as save noise.
+
+F263-staffopts.mus / .etf / .musx
+    sha256 f89922f35bca3087b1fbced2247cd79d6e4352fa5d2c46ee208c97939594b445 (.mus)
+    sha256 1fc00a9c50ec4586d00d503a5ccfe752d9128fa85919bc4a5309a71bcc819669 (.etf)
+    sha256 f4bd0f0e070e95e3f878b2c17756227e1fbda68697280ebc2c6054384106b864 (.musx)
+    Exercises the expanded Staff controls available in Finale 2.6.3. The ETF records
+    `IS(1)` as `1 0 4 1024 0 17` and adds `IA(1)` as
+    `0 769 1 33 3330 576`. Word 1 is `0x0301`: the entered vertical
+    tablature-number offset of 3 is its signed high byte and becomes the companion's Efix
+    value 768, while the entered Base Key value 1 is its low byte. The latter row also
+    supplies the custom-layout marker,
+    notehead font 33 at 13 points in italic, tablature notation, and the enabled notehead
+    font; word 5's high byte supplies the companion's fret-instrument ID 2. Together its
+    marker and `IS` word 2 describe custom staff line 13. The full name
+    `Horn Blown` remains in uppercase `IN(1)` rows, while the newly available
+    abbreviation `H.B.` appears in parallel lowercase `in(1)` rows. The Finale 27
+    companion also supplies line spacing, rest offsets, stem reversal, and repeat-dot
+    offsets that have no location in either six-word source row.
+    Its converted Staff shows clefs on every system and hides rests, augmentation dots,
+    stems, and tuplets; the other modern tablature visibility switches remain clear.
+    Its -48/48 barline extents are the legacy behavior of the recovered one-line custom
+    Staff rather than values stored in either six-word source row.

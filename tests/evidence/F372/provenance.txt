@@ -185,6 +185,18 @@ F372-altnot-offsets.etf
     results -24, -24, -24, 7, -7, 3, and 25 in musxdom field order. Save noise
     outside these option families is not used as evidence for the mapping.
 
+F372-notehead-font.mus
+    sha256 b6180df846b6cdf2186510c7d5a7647b7aded155721ae6e5992646d697d8a82c
+F372-notehead-font.etf
+    sha256 8eef666fd55aa0a9518b8269a13990f8c9cf368e86b2ff0e05db872a32061ce3
+-finale27/F372-notehead-font.musx
+    sha256 6694066ea87af635fcddc77142c8653a2c8accc0332d3b1cd6387f00beac50ea
+    Created from F372-baseline by enabling an independent notehead font and
+    selecting Apple Chancery at 23 points with no effects. Staff words 3, 4, and
+    5 become 6, 0x1700, and 0x0020, the same representation used by later
+    versions. The Finale 27 companion preserves all three values. Additional
+    changed records are not needed to establish the Staff mapping.
+
 F372-flagopts.mus
     sha256 f2d5e88b48f7dec06f7af0d29958260a2ba0dbb7cd79a42feb29ae56d6d70bfa
 F372-flagopts.etf

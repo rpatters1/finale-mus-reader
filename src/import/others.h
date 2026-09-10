@@ -95,6 +95,9 @@ void importShapeGraphicAssignments(const ImportContext& context);
 /// @brief Recovers SmartShapeCustomLine objects.
 void importSmartShapeCustomLines(const ImportContext& context);
 
+/// @brief Recovers source Staff objects and the parallel names used by Coda-banner staves.
+void importStaff(const ImportContext& context);
+
 /// @brief Recovers category and repeat staff lists, supplying absent canned
 /// category lists.
 void importStaffLists(const ImportContext& context);

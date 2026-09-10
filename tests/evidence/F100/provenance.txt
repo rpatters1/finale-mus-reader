@@ -477,3 +477,14 @@ F100-chordsuffs.mus / .etf / .musx
     Selector IK stores suffix 1 playback as 3, 7, 10, 0, 0, 0. The ETF repeats each
     IV and IK word, and the Finale 27 companion preserves four suffix elements and all
     six playback values.
+
+F100-staffprops.mus / .etf / .musx
+    sha256 b3d997e77effc5f3ba9b4643902ce0da7843006ab6e7f9f5c263bb895097656d (.mus)
+    sha256 f6ae7e3cf112da2300fdd4876ad3331197bd9710d0ed66acfa8da9ef8b60654b (.etf)
+    sha256 645cd6dd71c06b1fc99c8564f4e4de9a3dfd306dad13eb987741ce255210fa49 (.musx)
+    Exercises the Staff controls available in Finale 1.0.0. `IS(1)` changes from
+    `0 0 4 1024 0 0` to `2 0 4 1024 323 2050`; the ETF repeats that row. The first
+    word selects clef 2, and word 4 packs key-signature transposition interval 5 with
+    adjustment 3. The full name is stored separately as two 12-byte `IN(1)` rows,
+    containing `Blown Horn` followed by a NUL-padded row. This release exposes neither
+    custom staff lines nor an abbreviated staff name.

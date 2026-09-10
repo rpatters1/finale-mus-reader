@@ -473,6 +473,37 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
     return result;
 }
 
+std::optional<bool> compareStaffNameReferents(
+    std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
+    const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument)
+{
+    const bool nameField = path.starts_with("staff[") &&
+                           (path.ends_with(".full_name_text_id") ||
+                            path.ends_with(".abbrv_name_text_id"));
+    if (!nameField || sourceTextBlockId == 0 || companionTextBlockId == 0) return std::nullopt;
+
+    const auto referencedText = [](const musx::dom::DocumentPtr& document,
+                                   std::int64_t textBlockId) -> std::optional<std::string> {
+        using TextBlock = musx::dom::others::TextBlock;
+        const auto block = document->getOthers()->get<TextBlock>(
+            musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(textBlockId));
+        if (!block || block->textType != TextBlock::TextType::Block || block->textId == 0)
+            return std::nullopt;
+        const auto text = document->getTexts()->get<musx::dom::texts::BlockText>(block->textId);
+        return text ? std::optional(text->text) : std::nullopt;
+    };
+    const auto sourceText = referencedText(sourceDocument, sourceTextBlockId);
+    const auto companionText = referencedText(companionDocument, companionTextBlockId);
+    if (!sourceText || !companionText) return false;
+    const auto comparison = compareText("block_texts", std::string(path), *sourceText,
+                                        *companionText, sourceDocument, companionDocument,
+                                        false, false);
+    return !comparison.differences.contains(TextDifferenceClassification::Other) &&
+           !comparison.differences.contains(TextDifferenceClassification::MissingRun) &&
+           !comparison.differences.contains(TextDifferenceClassification::UnresolvedFont);
+}
+
 /// @brief The text ids a document's part definitions name, or empty when they
 /// name none.
 std::set<std::int64_t> partNameTextIds(const SurveySnapshot& snapshot)

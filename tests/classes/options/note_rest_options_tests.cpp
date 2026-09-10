@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -437,6 +438,37 @@ TEST_CASE(
   REQUIRE(shapeNotes->origin == ValueOrigin::LegacyMus);
   REQUIRE(shapeNotes->sourceIdentity ==
           finale_mus_reader::records::packTag("CS"));
+}
+
+TEST_CASE("Seeded rest-drop differences are different defaults", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(-24);
+    const Value companionValue(0);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+
+    for (const auto leaf : {noteRestDrop8thLeaf, noteRestDrop16thLeaf, noteRestDrop32ndLeaf,
+             noteRestDrop64thLeaf, noteRestDrop128thLeaf}) {
+        const auto path = std::string("note_rest_options.") + std::string(leaf);
+        DifferenceContext context{path, DifferenceCategory::Differs, "finale27-default",
+            sourceValue, companionValue, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+        REQUIRE(classifyNoteRestOptionsDifference(context) ==
+                DifferenceClassification::DifferentDefaults);
+
+        context.origin = "legacy-mus";
+        REQUIRE_FALSE(classifyNoteRestOptionsDifference(context));
+        context.origin = "finale27-default";
+        context.category = DifferenceCategory::ReaderOnly;
+        REQUIRE_FALSE(classifyNoteRestOptionsDifference(context));
+    }
+
+    const DifferenceContext unrelated{"note_rest_options.draw_outline", DifferenceCategory::Differs,
+        "finale27-default", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyNoteRestOptionsDifference(unrelated));
 }
 
 } // namespace

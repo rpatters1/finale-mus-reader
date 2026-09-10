@@ -64,6 +64,23 @@ F2012-baseline.mus
     sha256 aa95324d39ef94f1340133d637b52206eeddaf1c7442fb0ac1a81c3e444639f3
     The unedited control for the Finale 2012 text saves below.
 
+F2012-hidestafflines.mus
+    sha256 fc124ac5f2bd9094acf3b720bce80a90e6eaff61132f7d413176f17eb8551c75
+-finale27/F2012-hidestafflines.musx
+    sha256 123e62bcc8e2a365e695e60e3162f3832532aa14d34820fdd5cf24626c74cc15
+    From F2012-baseline, enabled hiding of the first staff's lines. Staff word 11 changes from
+    0 to 4. Opening the Staff dialog also normalizes the first staff's font-size word from 0 to
+    0x1800 and creates unrelated records; those changes are not used as evidence. The Finale 27
+    companion corroborates the setting with `<hideStaffLines/>` on staff 1.
+
+F2012-staff-autonum.mus
+    sha256 7366a917e9cce0bacb2c9e2c582a27f5b853ab69ad597b14c222bbaea1ebd814
+-finale27/F2012-staff-autonum.musx
+    sha256 98f2d22d3c151175913201d57854bb5f3730a0dd5a8cb3a95634870776ff2594
+    From F2012-baseline, enabled automatic staff-name numbering with the ordinal-prefix style.
+    Staff word 37 is the only raw word that changes, from 0 to 0x8002. The Finale 27 companion
+    corroborates both the enabled state and style.
+
 F2012-staffopts-scalars.mus
     sha256 8a522b61ca3db452529be8c20c741d4917b62a35e183e415e169e0688acf990d
 -finale27/F2012-staffopts-scalars.musx

@@ -137,3 +137,17 @@ F2011-text-inserts.musx
     same thing and musxdom reads it only from there. And Finale 27 renames
     `EngraverTextT`, which is what this document stores, to `Engraver Text T`; the
     reader reports the name the document carries.
+
+F2011-staffstyle.mus
+    sha256 5103e8575c79030c10609b865eedc9be0734d66ff2c6014c4694120ecde0a7b4
+-finale27/F2011-staffstyle.musx
+    sha256 b222a081b1d1c04572a2a12988d3ab967999aa2749c215aa71c27f5fc0d55b85
+    Derived from F2011-baseline by defining one Staff Style without assigning it. The Staff record
+    remains byte-identical and the Finale 27 companion does not write `hasStyles`.
+
+F2011-staffstyle-assigned.mus
+    sha256 c262459df71082f58ed34a58422f0efb3919fd32bd72ccd7522b2aed082de392
+-finale27/F2011-staffstyle-assigned.musx
+    sha256 f88cad0f8fba373d42c6e4526b52dba70c24187c6ae0a8f9b8c655e9c45166f9
+    Derived by assigning the defined style to staff 1. Staff word 5 changes only by setting
+    `0x1000`; the Finale 27 companion writes both the assignment and `hasStyles`.

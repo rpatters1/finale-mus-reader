@@ -131,3 +131,19 @@ F2008-bookmarks.musx
     only one carrying `changePercent`. `Percent 75 off` leaves word 26 clear
     with 75 still in word 25, and its companion keeps `viewPerc` 75, which is
     what shows the percent is stored as written whether or not it applies.
+
+F2008-staff-nohidenoteitems.mus
+    sha256 9be10a038c4500cd62f444fd75461b4c5b0a98d344c85d98ba894cf48d7112fe
+-finale27/F2008-staff-nohidenoteitems.musx
+    sha256 8850556029f00fdf848bc2bbacfcc6473744ac10bda496847978b31d23c355c5
+    Derived from F2008-empty by unchecking Show Note-attached Items. Staff word 2 changes from
+    `0x6700` to `0x6600`, word 4 materializes `0x1800`, and no other Staff byte changes. The Finale
+    27 companion expands the edit to the six modern hide properties.
+
+F2008-notehead-font.mus
+    sha256 938b7dbd3f8beeae7b451303fb53d181d3860a1a6a363926d69336953eb57d5c
+-finale27/F2008-notehead-font.musx
+    sha256 454770aafbc77907e9e8cc165c5a846a74835c937188e8d95972415ea0236ff6
+    Derived from F2008-empty by selecting American Typewriter, size 17, underline as the independent
+    notehead font. Staff words 3, 4, and 5 become `0x0009`, `0x1104`, and `0x0020`; the Finale 27
+    companion preserves the font, size, effect, and enabled setting.

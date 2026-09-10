@@ -123,3 +123,44 @@ F2000-F372-facingpages-parts.mus / .etf / .musx
     its facing-pages value 1 at word 17, is preserved exactly. The ETF repeats the
     payload, and the Finale 27 companion retains facing pages for parts while leaving
     the score setting off.
+
+F2000-staff-unshownoteitems.mus / .etf / .musx
+    sha256 9de91e2fcd4b09d1c2e606097506637c127f1755eef3eb1c9df636cdabe3f69e (.mus)
+    sha256 8cfbbc99b67cb08a870e352ed7077c0c3e7e48a9d1d485fabcc51be2082dc1b7 (.etf)
+    sha256 1adc056a5d798cbc3760cfe8735873d5245dccb66c6f40464f7020c8276ae721 (.musx)
+    From F2000-baseline, with the single Staff setting “Show Note-attached Items” unchecked.
+    Staff 1 word 2 changes from 0x0700 to 0x0600 and word 4 from 0x0000 to 0x1800; its ETF
+    repeats those words. The Finale 27 companion sets the six corresponding hide properties.
+
+F2000-staff-hideothernotes.mus / .etf / .musx
+    sha256 e8e1daa1762ac12eeac8337663595d1cb2717b5986bf1cad7978a384dce1a06e (.mus)
+    sha256 0559c412c4bcb3989f98b9d46b205b96290e04188878c1a68903d2aa4a963743 (.etf)
+    sha256 91ee5884087c8ff10b221803d5ddcbccf525e6d142d2829520946df0bd1c7d4b (.musx)
+    From F2000-baseline, with “Show Notes in Other Layers” unchecked. Staff 1 word 2 changes
+    from 0x0700 to 0x0500, clearing only 0x0200, and word 4 materializes as 0x1800. Its ETF
+    repeats those words. The Finale 27 companion changes only altHideOtherNotes to true.
+
+F2000-staff-hideotheritems.mus / .etf / .musx
+    sha256 0bb97d1f4709ff8ee372d35e8ce4b7a40666fb2ac912c82089690f682a15f6e5 (.mus)
+    sha256 fb408b14ec2b620f7dff28bc072b09772f599a5c2b74da13723ccc23b9762028 (.etf)
+    sha256 32dcc2489d9e06fd0f5fce5a1f93525f703c2c52e1392a17e259fd81539114c6 (.musx)
+    From F2000-baseline, with “Show Note-attached Items in Other Layers” unchecked. Staff 1
+    word 2 changes from 0x0700 to 0x0300, clearing only 0x0400, and word 4 materializes as
+    0x1800. Its ETF repeats those words. The Finale 27 companion changes altHideOtherArtics,
+    altHideOtherLyrics, altHideOtherSmartShapes, and altHideOtherExpressions to true.
+
+F2000-staff-style.mus / .etf / .musx
+    sha256 b215c9b891a17a444521f74fab03b9b1e91d1b12f6de3693070309fb18ae896f (.mus)
+    sha256 ffd79160610a02b99fbc723d03dea74fde754d649162b5ba683e4b1a25ba759d (.etf)
+    sha256 add03b22a79c26eaabf9f8c52a292e15eb9b0e937dde98cff43c4a8b1ac68a12 (.musx)
+    From F2000-empty, with one Staff Style defined but not assigned. The source and ETF add eight
+    SY rows while all three IS rows remain byte-identical. The Finale 27 companion adds one
+    staffStyle but does not add staffStyleAssign or staffSpec.hasStyles.
+
+F2000-staffstyle-applied.mus / .etf / .musx
+    sha256 de06dd8f994547fac24b7e3353335c39d1f0ea49b767909bcbc1f0cd5692a38d (.mus)
+    sha256 dfb4ac2ee24a0fd8abc825eaf77fc927652186a21a27b725821867a36e9679db (.etf)
+    sha256 c8b34a93ba7574222f430a316a4d68540b9dedebc479c0a108f7d737a93f7210 (.musx)
+    From F2000-staff-style, with style 1 assigned to Staff 1 from measure 1 through measure 2.
+    The source and ETF add two Sy rows while all IS and SY rows remain byte-identical. The Finale
+    27 companion adds staffStyleAssign and staffSpec.hasStyles.

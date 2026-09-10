@@ -392,8 +392,21 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     continue;
                 }
             }
+            std::optional<bool> staffNameReferents;
+            if (inSource && inCompanion && sourceFound->second.first.isInteger() &&
+                companionFound->second.first.isInteger()) {
+                staffNameReferents = comparison_text::compareStaffNameReferents(
+                    path, sourceFound->second.first.asInteger(),
+                    companionFound->second.first.asInteger(), sourceDocument, companionDocument);
+                if (staffNameReferents && *staffNameReferents) {
+                    ++stats.same;
+                    ++result.transformations[
+                        ComparisonTransformation::EquivalentTextBlockReferent];
+                    continue;
+                }
+            }
             if (inSource && inCompanion && !fontReference &&
-                sourceFound->second.first == companionFound->second.first) {
+                !staffNameReferents && sourceFound->second.first == companionFound->second.first) {
                 ++stats.same;
                 continue;
             }

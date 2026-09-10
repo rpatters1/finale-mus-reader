@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -538,6 +539,32 @@ TEST_CASE("Stem connections are source owned", "[class]") { testStemConnectionsA
 TEST_CASE("Stale Unicode stem record", "[class]") { testStemStaleUnicodeRecord(); }
 TEST_CASE("Stem font reference validation", "[class]") { testStemFontReferenceValidation(); }
 TEST_CASE("Dangling font comparator requires construction assignment", "[class]") { testDanglingFontComparatorRequiresAssignment(); }
+
+TEST_CASE("Finale conversion decodes a Windows Times stem symbol as MacRoman", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    constexpr std::string_view prefix = "stem_options.stem_connections[0]";
+    const auto symbolPath = std::string(prefix) + ".symbol";
+    const auto fontPath = std::string(prefix) + ".font_name";
+    ComparisonLeaves source{
+        {symbolPath, {Value(0x00c0), "legacy-mus"}}, {fontPath, {Value("Times"), {}}}};
+    ComparisonLeaves companion{{symbolPath, {Value(0x00bf), {}}}, {fontPath, {Value("Times"), {}}}};
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
+    report.sourcePlatform = finale_mus_reader::SourcePlatform::MacOS;
+    DifferenceContext context{symbolPath, DifferenceCategory::Differs, "legacy-mus",
+        source.at(symbolPath).first, companion.at(symbolPath).first, source, companion,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+
+    REQUIRE(classifyStemConnectionEncodingError(context) ==
+            DifferenceClassification::TextEncodingError);
+
+    report.sourcePlatform = finale_mus_reader::SourcePlatform::Windows;
+    REQUIRE_FALSE(classifyStemConnectionEncodingError(context));
+    report.sourcePlatform = finale_mus_reader::SourcePlatform::MacOS;
+    source.at(fontPath).first = Value("Petrucci");
+    REQUIRE_FALSE(classifyStemConnectionEncodingError(context));
+}
 
 } // namespace
 } // namespace finale_mus_reader_tests
