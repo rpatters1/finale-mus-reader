@@ -244,7 +244,8 @@ TEST_CASE("Pre-Finale-3.7 block texts align by semantic content", "[coverage]")
         auto session = musx::factory::DocumentFactory::begin();
         const auto building = session.getDocument();
         auto fontDefinition = std::make_shared<musx::dom::others::FontDefinition>(building,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+            musx::dom::Cmper{1});
         fontDefinition->name = "Times New Roman";
         building->getOthers()->add(
             musx::dom::others::FontDefinition::XmlNodeName, std::move(fontDefinition));
@@ -264,7 +265,8 @@ TEST_CASE("Pre-Finale-3.7 block texts align by semantic content", "[coverage]")
         building->getOthers()->add(
             musx::dom::others::TextBlock::XmlNodeName, std::move(textBlock));
         auto staff = std::make_shared<musx::dom::others::Staff>(building,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+            musx::dom::Cmper{1});
         staff->fullNameTextId = number;
         staff->staffLines = 5;
         building->getOthers()->add(musx::dom::others::Staff::XmlNodeName, std::move(staff));

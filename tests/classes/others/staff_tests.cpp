@@ -26,6 +26,11 @@ classifyStaffDifference(const finale_mus_reader::coverage::DifferenceContext &co
 
 constexpr std::size_t staffFieldManifestSize = 101;
 constexpr int evpusPerSpace = static_cast<int>(musx::dom::EVPU_PER_SPACE);
+constexpr musx::dom::Cmper staffCmper1{1};
+constexpr musx::dom::Cmper staffCmper7{7};
+constexpr musx::dom::Cmper staffCmper9{9};
+constexpr musx::dom::Cmper staffCmper10{10};
+constexpr musx::dom::Cmper staffCmper11{11};
 constexpr std::string_view staffAlternateNotationFields[] = {
     "altNotation",
     "altLayer",
@@ -267,9 +272,11 @@ TEST_CASE("Finale 2000 custom Staff masks preserve line order across both words"
         CHECK(staff->botRepeatDotOff == expected.bottomRepeatDot);
         CHECK(staff->topRepeatDotOff == expected.topRepeatDot);
         const auto *bottomDot =
-            result.report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID, 1);
+            result.report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID,
+                                           staffCmper1);
         const auto *topDot =
-            result.report.findField<Staff>("topRepeatDotOff", musx::dom::SCORE_PARTID, 1);
+            result.report.findField<Staff>("topRepeatDotOff", musx::dom::SCORE_PARTID,
+                                           staffCmper1);
         REQUIRE(bottomDot);
         REQUIRE(topDot);
         CHECK(bottomDot->origin == ValueOrigin::LegacyBehavior);
@@ -326,12 +333,13 @@ TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting")
         for (const auto *member : {"altHideArtics", "altHideLyrics", "altHideSmartShapes",
                                    "altHideExpressions", "hideFretboards", "hideChords"})
         {
-            const auto *field = result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1);
+            const auto *field =
+                result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyMus);
         }
         const auto *hasStyles =
-            result.report.findField<Staff>("hasStyles", musx::dom::SCORE_PARTID, 1);
+            result.report.findField<Staff>("hasStyles", musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(hasStyles);
         CHECK(hasStyles->origin == ValueOrigin::Unmapped);
     }
@@ -367,7 +375,8 @@ TEST_CASE("Short post-Finale-2000 Staff layouts expand the aggregate "
 
         for (const auto member : staffAlternateNotationFields)
         {
-            const auto *field = result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1);
+            const auto *field =
+                result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyMus);
         }
@@ -403,7 +412,8 @@ TEST_CASE("Pre-Finale-2000 Staff alternate notation is legacy "
 
         for (const auto member : staffAlternateNotationFields)
         {
-            const auto *field = result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1);
+            const auto *field =
+                result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyBehavior);
         }
@@ -429,7 +439,8 @@ TEST_CASE("Finale 3.7.2 uses the later Staff notehead-font representation")
              "noteFont.fontSize",
          })
     {
-        const auto *field = result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1);
+        const auto *field =
+            result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(field);
         CHECK(field->origin == ValueOrigin::LegacyMus);
     }
@@ -573,9 +584,9 @@ TEST_CASE("Controlled Finale 2005 tablature settings recover from Staff")
         CHECK(staff->vertTabNumOff == -1088);
 
         const auto *capoSource =
-            result.report.findField<Staff>("capoPos", musx::dom::SCORE_PARTID, 1);
+            result.report.findField<Staff>("capoPos", musx::dom::SCORE_PARTID, staffCmper1);
         const auto *lowestFretSource =
-            result.report.findField<Staff>("lowestFret", musx::dom::SCORE_PARTID, 1);
+            result.report.findField<Staff>("lowestFret", musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(capoSource);
         REQUIRE(lowestFretSource);
         CHECK(capoSource->origin == ValueOrigin::LegacyMus);
@@ -851,7 +862,8 @@ TEST_CASE("Coda Staff attributes distinguish line-count and one-line forms")
     CHECK(fret->name == "E5");
     REQUIRE(fret->strings.size() == 1);
     CHECK(fret->strings.front()->pitch == 76);
-    const auto *fretSource = report.findField<Staff>("fretInstId", musx::dom::SCORE_PARTID, 10);
+    const auto *fretSource =
+        report.findField<Staff>("fretInstId", musx::dom::SCORE_PARTID, staffCmper10);
     REQUIRE(fretSource);
     CHECK(fretSource->origin == ValueOrigin::LegacyBehavior);
 }
@@ -889,7 +901,8 @@ TEST_CASE("Coda Staff attributes recover independent note settings")
     CHECK(independentTabFontStaff->useNoteFont);
     CHECK(staffField(report, "useNoteFont").origin == ValueOrigin::LegacyMus);
     CHECK(staffField(report, "useNoteShapes").origin == ValueOrigin::LegacyMus);
-    const auto *tabFontSource = report.findField<Staff>("useNoteFont", musx::dom::SCORE_PARTID, 9);
+    const auto *tabFontSource =
+        report.findField<Staff>("useNoteFont", musx::dom::SCORE_PARTID, staffCmper9);
     REQUIRE(tabFontSource);
     CHECK(tabFontSource->origin == ValueOrigin::LegacyBehavior);
 }
@@ -1038,7 +1051,7 @@ TEST_CASE("Coda Staff line overrides decode signed ordinary and custom forms")
     REQUIRE(inactive);
     CHECK(inactive->staffLines == 5);
     const auto *topBarline =
-        report.findField<Staff>("topBarlineOffset", musx::dom::SCORE_PARTID, 11);
+        report.findField<Staff>("topBarlineOffset", musx::dom::SCORE_PARTID, staffCmper11);
     REQUIRE(topBarline);
     CHECK(topBarline->origin == ValueOrigin::LegacyMusAdjusted);
     for (const auto staffId : {musx::dom::Cmper{7}, musx::dom::Cmper{8},
@@ -1273,9 +1286,10 @@ TEST_CASE("Parallel Staff names supplement missing stored name references")
     CHECK(recovered->getAbbreviatedName() == "Abbr");
     CHECK(recovered->fullNameTextId != 0);
     CHECK(recovered->abbrvNameTextId != 0);
-    const auto *fullName = report.findField<Staff>("fullNameTextId", musx::dom::SCORE_PARTID, 7);
+    const auto *fullName =
+        report.findField<Staff>("fullNameTextId", musx::dom::SCORE_PARTID, staffCmper7);
     const auto *abbreviatedName =
-        report.findField<Staff>("abbrvNameTextId", musx::dom::SCORE_PARTID, 7);
+        report.findField<Staff>("abbrvNameTextId", musx::dom::SCORE_PARTID, staffCmper7);
     REQUIRE(fullName);
     REQUIRE(abbreviatedName);
     CHECK(fullName->origin == ValueOrigin::LegacyBehavior);
@@ -1331,7 +1345,7 @@ TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")
     CHECK(nameBlock->wordWrap);
 
     const auto field = [&](const char *member)
-    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1); };
+    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1); };
     REQUIRE(field("defaultClef"));
     REQUIRE(field("transposition.keysig.interval"));
     REQUIRE(field("dwRestOffset"));
@@ -1358,7 +1372,7 @@ TEST_CASE("The six-word Staff transposition word carries its set-to-clef index")
     CHECK(staff->transposition->keysig->interval == 0);
     CHECK(staff->transposition->keysig->adjust == 0);
     const auto *field =
-        result.report.findField<Staff>("transposedClef", musx::dom::SCORE_PARTID, 1);
+        result.report.findField<Staff>("transposedClef", musx::dom::SCORE_PARTID, staffCmper1);
     REQUIRE(field);
     CHECK(field->origin == ValueOrigin::LegacyMus);
 }
@@ -1423,7 +1437,7 @@ TEST_CASE("Finale 2.6.3 optional Staff attributes recover custom lines and "
     CHECK(fullNameBlock->textId != abbreviatedNameBlock->textId);
 
     const auto field = [&](const char *member)
-    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, 1); };
+    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1); };
     REQUIRE(field("customStaff"));
     REQUIRE(field("botBarlineOffset"));
     REQUIRE(field("topBarlineOffset"));
@@ -1559,11 +1573,11 @@ TEST_CASE("The Finale 2012 Staff layout adds independent staff-line hiding")
     CHECK(hiddenStaff->hideStaffLines);
 
     const auto *earlierSource =
-        finale2011.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, 1);
+        finale2011.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *baselineSource =
-        baseline.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, 1);
+        baseline.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *hiddenSource =
-        hidden.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, 1);
+        hidden.report.findField<Staff>("hideStaffLines", musx::dom::SCORE_PARTID, staffCmper1);
     REQUIRE(earlierSource);
     REQUIRE(baselineSource);
     REQUIRE(hiddenSource);
@@ -1596,19 +1610,22 @@ TEST_CASE("The Finale 2012 Staff layout adds automatic name numbering")
     CHECK(numberedStaff->autoNumbering == Staff::AutoNumberingStyle::OrdinalPrefix);
 
     const auto *earlierStyle =
-        finale2011.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, 1);
+        finale2011.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *earlierUuid =
-        finale2011.report.findField<Staff>("instUuid", musx::dom::SCORE_PARTID, 1);
+        finale2011.report.findField<Staff>("instUuid", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *earlierEnabled =
-        finale2011.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID, 1);
+        finale2011.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
+                                          staffCmper1);
     const auto *baselineStyle =
-        baseline.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, 1);
+        baseline.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *baselineEnabled =
-        baseline.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID, 1);
+        baseline.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
+                                        staffCmper1);
     const auto *numberedStyle =
-        numbered.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, 1);
+        numbered.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *numberedEnabled =
-        numbered.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID, 1);
+        numbered.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
+                                        staffCmper1);
     REQUIRE(earlierStyle);
     REQUIRE(earlierUuid);
     REQUIRE(earlierEnabled);
