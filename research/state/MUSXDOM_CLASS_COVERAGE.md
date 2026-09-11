@@ -116,7 +116,7 @@ Explanation added here has to be removed again.
     [x] SmartShapeCustomLine                    smart_shape_custom_lines.cpp
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
-    [~] Staff                                   staff.cpp                       Coda fields remain unmapped
+    [~] Staff                                   staff.cpp                       only hasStyles awaits StaffStyleAssign
     [x] StaffListCategoryName                   staff_list.cpp
     [x] StaffListCategoryParts                  staff_list.cpp
     [x] StaffListCategoryScore                  staff_list.cpp

@@ -113,3 +113,34 @@ F2002-tips-avoid-stafflines.musx
     source changes only selector 50 incidence 0 word 5, from 9 to 18. The
     modern companion preserves the displayed value 17, confirming that a
     positive stored amount is one greater than the option value.
+
+F2002-ignore-key.mus
+    sha256 64e8611a96e8eebdf397fa3281ad382ec507ef3ab75ae412bdaa6e71048eb129
+F2002-ignore-key.etf
+    sha256 dca0929ba86b21b89a654d3ec5682a3a557a008f6771934baf6c0b7a68821a93
+-finale27/F2002-ignore-key.musx
+    sha256 c76bc4bdbe1eae0c9d18dd94c45f0a4969f9e746b002b9f2c0a4fcb746b85d29
+    From F2002-baseline, with Ignore Key Signatures enabled on Staff 1. `IS(1)`
+    incidence 1 word 5 changes from `0x0000` to `0x0001`. Saving through the
+    Staff dialog also materializes a dormant note-font tuple and matching `NS`
+    and `ns` rows; the companion confirms `noKey` true.
+
+F2002-tablature.mus
+    sha256 5f8f89d043360b01f4fd050ac0a32ebaa2add1a9d7bdda46cbcbe1ca1755073f
+F2002-tablature.etf
+    sha256 fe5467151a260939abfc601be4f4a3fd0b986d9d1ed24d90fe5440ee57edb2bd
+-finale27/F2002-tablature.musx
+    sha256 2232852f707833cb10b2ddf8f276645860e310a5a337a0a1d79b5aa353eee4ad
+    From F2002-baseline, with tablature notation enabled on Staff 1. The
+    18-word `IS(1)` sets word 5 to `0x0200`, and the companion creates a
+    one-string fret instrument at MIDI pitch 0.
+
+F2002-tablature-basekey47.mus
+    sha256 143921b2f4dbb001f22eee0b1b3790b62b8ee205d7d664a22f5e4daf624cb36f
+F2002-tablature-basekey47.etf
+    sha256 11dd5303b087050564b4ff9005a02a35468c6181b1208f546a288c95506e96e5
+-finale27/F2002-tablature-basekey47.musx
+    sha256 57904683f28ac23c68fac7bdb334f7b20e476fd14f1f3703a1b9fae4c01666a7
+    From F2002-tablature, changing only Base Key to 47. `IS(1)` word 1 changes
+    from 0 to 47, and the companion changes only the synthesized instrument's
+    string pitch and derived name, to MIDI pitch 47 and `B2`.

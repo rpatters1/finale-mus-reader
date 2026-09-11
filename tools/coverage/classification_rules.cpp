@@ -357,5 +357,16 @@ classifyTieOptionsDifference(const DifferenceContext& context)
     return std::nullopt;
 }
 
+std::optional<DifferenceClassification>
+classifyCodaChordOptionsDifference(const DifferenceContext& context)
+{
+    if (context.category == DifferenceCategory::Differs &&
+        context.path == "chord_options.show_fretboards" &&
+        context.epoch == FormatEpoch::CodaBanner && context.origin == "finale27-default") {
+        return DifferenceClassification::DifferentDefaults;
+    }
+    return std::nullopt;
+}
+
 } // namespace coverage
 } // namespace finale_mus_reader

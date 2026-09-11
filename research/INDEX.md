@@ -49,6 +49,7 @@ Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning mi
 | [`STATE.md`](STATE.md) | Status, priorities, open questions, gaps | Always, at session start |
 | [`state/PRODUCTION_READINESS.md`](state/PRODUCTION_READINESS.md) | P0–P3 blockers and gaps with status and dates | Choosing what to work on, or judging whether something is already decided |
 | [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md) | One line per registered class | Starting or finishing a class |
+| [`state/STAFF_UNMAPPED_FIELDS.md`](state/STAFF_UNMAPPED_FIELDS.md) | Staff field recovery checklist and fallback dispositions | Choosing or completing Staff recovery work |
 | [`state/EVIDENCE_REQUESTS.md`](state/EVIDENCE_REQUESTS.md) | Precise ETF and controlled-difference requests | You need a fixture that does not exist, or are about to ask for one |
 | [`state/OPTIONS_EXTERNAL_CMPER_TODO.md`](state/OPTIONS_EXTERNAL_CMPER_TODO.md) | Options-pool external-cmper work | Options referencing external cmpers |
 

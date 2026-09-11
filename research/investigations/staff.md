@@ -87,21 +87,33 @@ meant five lines. It also refutes the assignment of word 5 bit `0x0040` to `useN
 line-setting fixture sets that bit but leaves `useNoteFont` false. The controlled tablature-font
 case establishes words 3–4 as the font ID and size/effects, but its nonzero ID does not imply an
 independent font on other notation styles. Comparing the word-3 ID with the imported default music
-font only for tablature resolves all 40 previously unexpected `useNoteFont` leaves across ten Coda
-sources; each non-tab source instead uses false legacy behavior. The earlier interpretation of
-word 5's high byte as an ordinary fret-instrument ID was a coincidental match: its values 1 and 2
-are the empty-measure-rest and tablature flags. Removing that interpretation resolved all 185
-`fretInstId` disagreements across 13 Finale 2.6 documents from `rpatters1-main` in the adhoc
-cohort; no disagreement remained. The full name remains in `IN`, while the
+font only for tablature matched the then-observed cohort, but the controlled plain-tablature
+fixture supersedes that rule: its font tuple is zero while its companion enables `useNoteFont`.
+Tablature itself therefore implies the modern switch. Each non-tab source instead uses the
+explicit switch or false legacy behavior. The earlier interpretation of word 5's high byte as an
+ordinary fret-instrument ID was a coincidental match: its values 1 and 2 are the empty-measure-rest
+and tablature flags. Removing that interpretation resolved all 185 `fretInstId` disagreements
+across 13 Finale 2.6 documents from `rpatters1-main` in the adhoc cohort; no disagreement remained
+because the earlier cohort did not compare synthesized fret-instrument referents semantically.
+The full name remains in `IN`, while the
 new abbreviation uses lowercase `in`. Each name row contributes 12 NUL-terminated or padded bytes.
 The zero-line setting hides the lines while retaining the middle position of a standard five-line
 staff. Musxdom's middle-position helper therefore returns -4 whether zero lines are represented by
 an ordinary zero count or an empty custom-line vector.
 
-Evidence: the tablature edit is reproducible with `tests/evidence/F263/F263-staffopts.mus`; the
-broader comparison covered 77 companion-backed Coda documents selected from `rpatters1-installs`
-and `rpatters1-main`. The narrowed rule leaves no observed Coda `useNoteFont` disagreement in that
-cohort.
+The controlled plain-tablature edit adds only `IA(1)` with word 5 equal to `0x0200`. Its companion
+creates fret instrument 2 with one string at MIDI pitch 0. Changing only word 1's low byte to 48
+changes that string to pitch 48 and its generated name from `C-1` to `C3`; the Staff continues to
+point to comparator 2. This confirms Base Key as a MIDI pitch and shows that synthesis is not
+limited to the older line-11 form. The same fixture family independently isolates word 1's signed
+high byte as vertical offset 29 and words 3–4 as font ID 126 at 13 points in italic.
+
+Evidence: `tests/evidence/F263/F263-staffopts.mus` and
+`tests/evidence/F263/staffopts/F263-tabstaff.mus`,
+`tests/evidence/F263/staffopts/F263-tabstaff-basekey48.mus`,
+`tests/evidence/F263/staffopts/F263-tabstaff-font13ital.mus`, and
+`tests/evidence/F263/staffopts/F263-tabstaff-yoff29.mus`. The broader earlier comparison covered 77
+companion-backed Coda documents selected from `rpatters1-installs` and `rpatters1-main`.
 
 ## 2026-09-10 — Finale 3.5 parallel Staff names
 
@@ -116,14 +128,33 @@ any nonzero stored reference.
 Evidence: `mus-5b7b60a987127038` supplies four full names and two abbreviations that agree with its
 Finale 27 companion; `mus-1cedbe6534698c4c` independently supplies one full name and abbreviation.
 
+## 2026-09-11 — early-uncompressed key controls
+
+Question: does word 5 bit `0x0020` combine `hideKeySigs` and `noKey` after the Coda epoch?
+
+Result: no. Nine Finale 3.0 sources set the bit on Staffs 12 and 18. Every companion sets
+`hideKeySigs` and leaves `noKey` false. Recovery now limits the combined interpretation to
+`CodaBanner`; the structurally identical early-uncompressed layout recovers only `hideKeySigs`.
+**Strong.**
+
+Evidence: `mus-771deb01f2a7786d`, `mus-b31eee90f8cddc26`, `mus-217ebf8f3a67933d`,
+`mus-7a6c5e6b3fc3d7e4`, `mus-3d09b13da22c0f78`, `mus-ee852bd48dba1dfd`,
+`mus-e0b83e3206279632`, `mus-d5289e231e42d9d1`, and `mus-3f98253cc4f9ce78` in
+`rpatters1-main`.
+
 In ordinary `IA` tablature, word 1 retains Base Key in the low byte and the signed vertical
 tablature-number offset in the high byte. In the line-11 form, the low byte is instead the
 open-string MIDI pitch. Finale 27 synthesizes a one-string fret instrument with 20 frets and points
 the Staff at it; recovery does the same. Equivalent 18-word post-Coda Staffs use the same word-1
-interpretation. Before Finale 2000 they retain custom line 11 and hide both repeat dots; Finale
-2000 uses the ordinary one-line representation and therefore retains the reference repeat-dot
-offsets; the earlier custom form calculates offsets -1 and 1. Breaking staff lines at note numbers
-is false through Finale 97 and true in the Finale 98 and 2000 templates.
+interpretation. The Finale 2002 controlled pair changes only the low byte from 0 to 47, and its
+companions synthesize respective one-string fret instruments at MIDI pitches 0 and 47. Before
+Finale 2000 these Staffs retain custom line 11 and hide both repeat dots; Finale 2000 uses the
+ordinary one-line representation and therefore retains the reference repeat-dot offsets; the
+earlier custom form calculates offsets -1 and 1. Breaking staff lines at note numbers is false
+through Finale 97 and true in the Finale 98 and 2000 templates. That template observation does not
+describe fixed tablature behavior: controlled `tests/evidence/F2000/F2000-tablature.mus` and both
+Finale 2002 tablature fixtures produce false companions. Recovery therefore retains the pinned
+Finale 27 default when the extended flag word is structurally absent.
 
 The conversion synthesizes five modern tablature visibility values: show clefs on every system
 and hide rests, augmentation dots, stems, and tuplets. The companion leaves the remaining

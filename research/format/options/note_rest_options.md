@@ -110,10 +110,14 @@ placement was tuned for months before Finale 1.0 shipped. See [“Meet Steve Peh
 Petrucci, Finale's first music font”](https://www.finalemusic.com/blog/meet-steve-peha-creator-of-petrucci-finales-first-music-font/)
 (published 2010-02-18; accessed 2026-09-01).
 
-The Coda layout is narrower. Selector `12` word 4 continues to agree with every companion, but
-selector `1` word 1 cannot be treated as Use Shape Notes: one tracked Finale 1.0.0 source stores
-one while its raw companion omits `doShapeNotes`. With no applicable Coda source mapping, that
-field retains its seeded value as `Finale27Default`. Selector `41` word 5 is also not the later
+The Coda layout is narrower. Selector `12` word 4 continues to agree with every companion.
+`CS` comparator 1 word 5 bit `0x0080` stores `doShapeNotes`, as it does in the early uncompressed
+layout. The controlled Finale 1.0 enablement changes that bit from zero to one and its companion
+writes `doShapeNotes`; changing only the separate per-Staff note-shape gate sets `0x1000` instead
+and leaves the option false. Selector `1` word 1 cannot be treated as Use Shape Notes: one tracked
+Finale 1.0.0 source stores one while its raw companion omits `doShapeNotes`. **Confirmed** by
+`tests/evidence/F100/F100-noteshapes-enable.mus` and
+`tests/evidence/F100/F100-noteshapes-float.mus`. Selector `41` word 5 is also not the later
 scale-manual flag there: all 64 tracked Coda
 occurrences store zero while their raw companions explicitly store `<scaleManualPositioning/>`.
 **Confirmed:** scaling manual note positioning is fixed true behavior before Finale 3.0, when the

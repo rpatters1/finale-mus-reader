@@ -62,6 +62,8 @@ bool storesLateShapeNoteSwitch(const records::LegacyRecordIndex &index,
 }
 
 const FieldMapping codaNoteRestOptionFields[] = {
+    MUS_BIT(NoteRestOptionsTarget, earlyShapeNoteTag, shapeNoteSelector, 0, 5, 7,
+            doShapeNotes),
     MUS_WORD(NoteRestOptionsTarget, "12", GLOBALS_CMPER, 0, 4,
              doCrossStaffNotes),
 };
@@ -284,14 +286,6 @@ void reportDefaultedNoteRestFields(const ImportContext &context,
 
             reporting.template defaultField<NoteRestOptionsTarget>(
                 "drawOutline", target.drawOutline);
-        }
-        if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
-            for (const auto [member, value] : {
-                     std::pair{"doShapeNotes", static_cast<musx::dom::Evpu>(target.doShapeNotes)},
-                 }) {
-
-                reporting.template defaultField<NoteRestOptionsTarget>(std::string(member), value);
-            }
         }
         if (recoveredNoteColors) {
             return;

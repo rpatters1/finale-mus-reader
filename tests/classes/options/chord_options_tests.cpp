@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -140,6 +141,75 @@ TEST_CASE("Chord accidental lifts recover from Finale 3.7 onward")
     CHECK(finale37->chordNaturalLift == 26);
     CHECK(field(finale37Report, "options.chordOptions.chordSharpLift").origin
         == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("Finale 2.6.3 recovers the unambiguous fretboard display states", "[class][reader]")
+{
+    for (const auto& [fixture, expected] : {
+             std::pair{"evidence/F263/F263-baseline.mus", false},
+             std::pair{"evidence/F263/F263-fretboards.mus", true},
+             std::pair{"evidence/F263/F263-fretboards-cleared.mus", false},
+         }) {
+        const auto result = readFixture(fixture);
+        const auto options = result.document->getOptions()->get<ChordOptions>();
+        REQUIRE(options);
+        INFO(fixture);
+        CHECK(options->showFretboards == expected);
+        CHECK(field(result, "options.chordOptions.showFretboards").origin
+            == ValueOrigin::LegacyMus);
+    }
+
+    for (const auto mixedState : {0x0004, 0x0008}) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        auto options = std::make_shared<ChordOptions>(document);
+        options->showFretboards = true;
+        document->getOptions()->add(ChordOptions::XmlNodeName, options);
+
+        auto referenceSession = musx::factory::DocumentFactory::begin();
+        const auto reference = chordReferenceDocument(referenceSession);
+        const auto parsed = makeContainer({{GLOBALS_CMPER, "41", {0, 0,
+            static_cast<std::int16_t>(mixedState), 0, 0, 0}}}, FormatEpoch::CodaBanner);
+        SourceProfile profile(FormatEpoch::CodaBanner);
+        profile.byteOrder = parsed.byteOrder;
+        ImportReport report(profile.epoch);
+        const auto index = LegacyRecordIndex::build(parsed);
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{
+            index, profile, noSource, document, reference, report, pending, construction};
+
+        finale_mus_reader::options::importChordOptions(context);
+        INFO(mixedState);
+        CHECK(options->showFretboards);
+    }
+}
+
+TEST_CASE("Unresolved Coda fretboard display is a different default", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(false);
+    const Value companionValue(true);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    DifferenceContext context{"chord_options.show_fretboards", DifferenceCategory::Differs,
+        "finale27-default", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+
+    REQUIRE(classifyCodaChordOptionsDifference(context)
+        == DifferenceClassification::DifferentDefaults);
+    context.origin = "legacy-mus";
+    REQUIRE_FALSE(classifyCodaChordOptionsDifference(context));
+    context.origin = "finale27-default";
+    context.epoch = finale_mus_reader::FormatEpoch::UncompressedLegacy;
+    REQUIRE_FALSE(classifyCodaChordOptionsDifference(context));
+    context.epoch = finale_mus_reader::FormatEpoch::CodaBanner;
+    context.path = "chord_options.use_fretboard_font";
+    REQUIRE_FALSE(classifyCodaChordOptionsDifference(context));
+    context.path = "chord_options.show_fretboards";
+    context.category = DifferenceCategory::ReaderOnly;
+    REQUIRE_FALSE(classifyCodaChordOptionsDifference(context));
 }
 
 } // namespace

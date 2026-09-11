@@ -60,6 +60,8 @@ std::optional<DifferenceClassification>
 classifyPartDefinitionDifference(const DifferenceContext& context);
 std::optional<DifferenceClassification>
 classifyTieOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification>
+classifyCodaChordOptionsDifference(const DifferenceContext& context);
 
 } // namespace coverage
 } // namespace finale_mus_reader

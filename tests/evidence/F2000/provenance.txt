@@ -164,3 +164,12 @@ F2000-staffstyle-applied.mus / .etf / .musx
     From F2000-staff-style, with style 1 assigned to Staff 1 from measure 1 through measure 2.
     The source and ETF add two Sy rows while all IS and SY rows remain byte-identical. The Finale
     27 companion adds staffStyleAssign and staffSpec.hasStyles.
+
+F2000-tablature.mus / .etf / .musx
+    sha256 1d4979c9d5c8d760c6f2c5ab2baba5f0622c3b335e9b1979ccb15c2ea4683b91 (.mus)
+    sha256 bf9789967b03bdf2f68e389ef9adfff079399febe22463c6ba50aef5428fe8f0 (.etf)
+    sha256 bf20857e851f16a078cddcb122d26ccdeb6a60c7d4659da61cba48751547c7cc (.musx)
+    From F2000-empty, with tablature notation enabled on Staff 1. The 18-word Staff layout has no
+    extended flag word, and the Finale 27 companion leaves breakTabLinesAtNotes false. Together
+    with the controlled Finale 2002 fixtures, this disproves treating the true value in shipped
+    tablature templates as fixed legacy behavior.

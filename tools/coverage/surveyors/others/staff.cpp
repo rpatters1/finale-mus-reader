@@ -16,6 +16,7 @@
 namespace {
 
 using namespace finale_mus_reader::coverage;
+using FretInstrumentSurveyTarget = musx::dom::others::FretInstrument;
 using StaffSurveyTarget = musx::dom::others::Staff;
 
 [[nodiscard]] std::optional<musx::dom::StaffCmper> staffIdFromComparisonPath(
@@ -61,6 +62,19 @@ using StaffSurveyTarget = musx::dom::others::Staff;
     return restOffset && restOffset->origin == finale_mus_reader::ValueOrigin::Finale27Default;
 }
 
+[[nodiscard]] bool sourceStaffUsesSynthesizedFretInstrument(const DifferenceContext& context)
+{
+    if (!context.sourceValue.isInteger()) return false;
+    const auto fretInstId = context.sourceValue.asInteger();
+    if (fretInstId <= 0 || fretInstId > (std::numeric_limits<musx::dom::Cmper>::max)()) {
+        return false;
+    }
+    const auto instance = finale_mus_reader::instanceKey<FretInstrumentSurveyTarget>(
+        musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(fretInstId));
+    const auto* origin = context.sourceReport.findInstanceOrigin(instance);
+    return origin && *origin == finale_mus_reader::ValueOrigin::LegacyBehavior;
+}
+
 std::optional<DifferenceClassification> classifyStaffDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
@@ -77,6 +91,7 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
     constexpr std::string_view hideModeSuffix = ".hide_mode";
     constexpr std::string_view hideKeySigsShowAccisSuffix = ".hide_key_sigs_show_accis";
     constexpr std::string_view fretInstIdSuffix = ".fret_inst_id";
+    constexpr std::string_view breakTabLinesAtNotesSuffix = ".break_tab_lines_at_notes";
     const auto noneHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::None);
     const auto scoreHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::Score);
     if (context.category == Differs && comparisonPathStartsWith(context.path, "staff[") &&
@@ -117,6 +132,17 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
                 static_cast<std::int64_t>(StaffSurveyTarget::NotationStyle::Tablature)) {
             return DifferenceClassification::FinaleUpgradeLoss;
         }
+    }
+    if (context.category == Differs && context.origin == "legacy-behavior" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, fretInstIdSuffix) &&
+        sourceStaffUsesSynthesizedFretInstrument(context)) {
+        return DifferenceClassification::DifferentDefaults;
+    }
+    if (context.category == Differs && context.origin == "finale27-default" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, breakTabLinesAtNotesSuffix)) {
+        return DifferenceClassification::DifferentDefaults;
     }
     if (context.category == Differs && context.origin == "unmapped" &&
         comparisonPathStartsWith(context.path, "staff[") &&

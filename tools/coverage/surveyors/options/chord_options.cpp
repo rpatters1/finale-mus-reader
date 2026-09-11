@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "coverage/support/source_gate.h"
@@ -27,6 +28,7 @@ bool equivalentChordDifference(const DifferenceContext& context)
 std::optional<DifferenceClassification> classifyChordDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
+    if (const auto coda = classifyCodaChordOptionsDifference(context)) return coda;
     if (context.category != Differs || context.origin != "finale27-default") {
         return std::nullopt;
     }

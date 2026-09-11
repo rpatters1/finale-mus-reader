@@ -65,17 +65,20 @@ custom-line fixtures reproduce both odd- and even-line-count companion results, 
 2000 Guitar Tablature template retains the reference offsets for ordinary one-line staves. The
 Coda exception is described below.
 
-The 18-word one-string tablature form uses word 1 differently. Its low byte is the open-string
-MIDI pitch used to synthesize a one-string `FretInstrument`, and its signed high byte is the
-tablature-number vertical offset in quarter-EVPUs. `capoPos` and `lowestFret` are unavailable in
-that form. Before Finale 2000, words 7–8 encode this as the legacy custom line 11; Finale 2000
-uses the ordinary one-line count. The pre-Finale-2000 form hides both repeat dots. All represented
-short one-string tablature Staffs show the clef
-on every system and hide rests, dots, stems, and tuplets. Breaking lines at note numbers remains
-disabled through Finale 97 and is enabled beginning with Finale 98. **Strong.** Observed in four
-companion-backed template generations across `rpatters1-installs`; the general one-string
-conversion is also continuous with the controlled `tests/evidence/F263/F263-staffopts.mus`
-attributes layout.
+An 18-word tablature Staff uses word 1 differently. Its low byte is the MIDI Base Key used to
+synthesize a one-string `FretInstrument`, and its signed high byte is the tablature-number vertical
+offset in quarter-EVPUs. `capoPos` and `lowestFret` are unavailable in this layout. Before Finale
+2000, words 7–8 encode the tablature Staff as legacy custom line 11; Finale 2000 uses the ordinary
+one-line count, while Finale 2002 permits an ordinary five-line tablature Staff without changing
+the word-1 interpretation. A non-tablature layout without the stored fret-instrument field retains
+the Finale 27 default. The pre-Finale-2000 form hides both repeat dots. All represented
+18-word tablature Staffs show the clef
+on every system and hide rests, dots, stems, and tuplets. The layout has no recovered
+`breakTabLinesAtNotes` field, so that value retains the pinned Finale 27 Staff default. **Confirmed.**
+The controlled Finale 2000 and Finale 2002 tablature companions leave it false; the earlier
+template-derived contrary observation is preserved in the investigation notes. The general
+one-string conversion is also continuous with the controlled
+`tests/evidence/F263/F263-staffopts.mus` attributes layout.
 
 The transposition masks and signed subfields follow the public PDK declaration. A zero word omits
 the contained object. Bit `0x2000` selects the chromatic variant; otherwise the low two six-bit
@@ -157,9 +160,10 @@ Payload structure, rather than saving-version numbers, gates the extensions:
 - The represented 96-byte Finale 2012 layout maps display word bit `0x0004` to
   `hideStaffLines`, stores automatic name numbering in word 37, and stores the canonical 16 UUID
   bytes at byte 80. In word 37, bit `0x8000` enables numbering and the remaining bits select
-  `autoNumbering`. Shorter layouts leave `hideStaffLines` unmapped because its bit had an earlier
-  whole-staff hiding meaning; they report automatic numbering disabled with numeric style value
-  zero and `instUuid` as `uuid::Unknown`, both as `LegacyBehavior`.
+  `autoNumbering`. Shorter layouts take `hideStaffLines` from the pinned Finale 27 Staff because
+  the setting is structurally absent and the earlier display bit has a different meaning. They
+  report automatic numbering disabled with numeric style value zero and `instUuid` as
+  `uuid::Unknown`, both as `LegacyBehavior`.
 
 The 32-bit fields use native long-word order: high word first in big-endian files and low word first
 in little-endian files. The controlled cohort exercises both byte orders for the early 32-bit
@@ -170,6 +174,13 @@ Controlled Finale 2005 tablature edits independently exercise the extended flag 
 showing clefs on every system, using letters, breaking lines at numbers, and hiding tuplets. They
 also distinguish both bytes of word 1 and corroborate the stored fret-instrument reference and
 vertical number offset.
+
+When the payload ends before the extended flag word, its non-tablature fields and the absent stem
+offset tail come from the pinned Finale 27 Staff. Tablature instead supplies its fixed legacy
+behavior for showing the clef on every system and hiding rests, dots, stems, and tuplets;
+`breakTabLinesAtNotes` retains the pinned default. **Confirmed.** The 18-word boundary and
+tablature values are reproducible with the controlled Finale 2000 and Finale 2002 fixtures named
+below.
 
 `redisplayLayerAccis`, `hideTimeSigsInParts`, and `hideKeySigsShowAccis` postdate the legacy
 formats and have no raw Staff location to recover. Legacy behavior leaves `redisplayLayerAccis`
@@ -182,17 +193,26 @@ instance from both source and companion observations.
 
 ## Coda layout
 
-Finale 1.0 and 2.6 use a distinct six-word `IS` payload. Within that row, word 0 is `defaultClef`
-and word 4 uses the later packed `transposition` representation. Word 5 selectively retains the
-later display masks: `0x8000` is `floatKeys`, `0x2000` is `blineBreak`, `0x0400` is
-`hideMeasNums`, `0x0200` is `hideRepeats`, `0x0100` is `hideNameInScore`, `0x0010` is
-`hideTimeSigs`, and `0x0008` is `hideClefs`. Its lower active bits do not retain the later
-`hideBarlines`, `hideStaffLines`, `hideChords`, or `noKey` meanings. Words 1–3 remain open; in
-particular, their common values in ordinary Staffs do not establish modern field meanings.
+Finale 1.0 and 2.6 use a distinct six-word `IS` payload. Within that row, word 0 is `defaultClef`.
+Word 4 uses the later packed `transposition` representation unless bit `0x8000` selects Set to
+Clef; in that mode, bits `0x7000` hold the three-bit `transposedClef` index and do not carry the
+later simplify-key or chromatic meanings. Word 5 selectively retains the
+later display masks: `0x8000` is `floatKeys`, `0x4000` is `floatTime`, `0x2000` is
+`blineBreak`, `0x1000` is `rbarBreak`, `0x0400` is `hideMeasNums`, `0x0200` is
+`hideRepeats`, `0x0100` is `hideNameInScore`, `0x0020` expands to both `hideKeySigs` and
+`noKey`, `0x0010` is `hideTimeSigs`, and `0x0008` is `hideClefs`. The `0x0800` control has
+no persisted musxdom Staff destination. The lower active bits do not retain the later
+`hideBarlines`, `hideStaffLines`, `hideChords`, or independent `noKey` meanings. Words 1–3 remain
+open; in particular, their common values in ordinary Staffs do not establish modern field
+meanings.
 **Strong.** The mapped bits agree across 509 non-Studio-View Staff occurrences in 77
 companion-backed Coda documents selected from `rpatters1-installs` and `rpatters1-main`.
 
-Finale 2.6.3 can add a parallel six-word `IA` row for controls absent from Finale 1.0. Word 5 bit
+The structurally identical Staff row in early uncompressed files keeps the `0x0020` controls
+separate: it recovers `hideKeySigs`, while `noKey` retains the Finale 27 default. This distinction
+is confirmed for Finale 3.0 files and applies to the structurally gated 3.0–3.2 layout. **Strong.**
+
+The Coda layout can add a parallel six-word `IA` row for optional Staff controls. Word 5 bit
 `0x0040` activates the signed staff-line value in word 2. Without that bit, the Staff has five
 ordinary lines. With it, nonnegative values are ordinary line counts except that `1` selects
 custom line 13 with barline extents two spaces below and above its reference line. A negative
@@ -208,17 +228,16 @@ by `staffLines == 0` or an empty `customStaff`. Consequently,
 `Staff::calcMiddleStaffPosition()` returns -4 for either zero-line representation and for a
 five-line staff.
 
-Word 1 packs the legacy Base Key value in its low byte and the signed vertical
-tablature-number offset in its high byte; the latter becomes an Efix value by multiplication by
-256. In the `0xffff` one-line form, the low byte instead supplies the open-string MIDI pitch for
-a synthesized one-string `FretInstrument`; the Staff points to that new referent. `IA` words 3
-and 4 hold the tablature font ID and packed size/effects, as in the later base. On a tablature
-Staff, a font ID different from the imported default music font enables `useNoteFont`; other
-notation styles receive false as `LegacyBehavior`. **Strong.** Word 5 bit `0x0100` is
-`blankMeasure`, and bit `0x0200` selects tablature notation. No ordinary Coda `fretInstId` field is
-known, so it remains zero and `Unmapped`. The older line-11 form is separate: Finale replaces its
-stored open-string pitch with a synthesized fret-instrument referent, and recovery does likewise.
-**Strong.** A Coda tablature Staff shows clefs on every system while hiding rests, augmentation
+Word 1 packs the legacy MIDI Base Key in its low byte and the signed vertical tablature-number
+offset in its high byte; the latter becomes an Efix value by multiplication by 256. Every
+tablature form converts Base Key to the pitch of a synthesized one-string `FretInstrument`, and
+the Staff points to that new referent rather than interpreting the byte as `capoPos` or
+`lowestFret`. `IA` words 3 and 4 hold the note font ID and packed size/effects, as in the later
+base. Word 5 bit `0x0020` enables `useNoteFont` independently; tablature notation also implies
+`useNoteFont` when that bit is absent. Bit `0x0080` enables `useNoteShapes`, bit `0x0100` is
+`blankMeasure`, and bit `0x0200` selects tablature notation. **Confirmed.** No ordinary Coda
+`fretInstId` is stored; its comparator is assigned while synthesizing the referent. A Coda
+tablature Staff shows clefs on every system while hiding rests, augmentation
 dots, stems, and tuplets; the other modern tablature visibility switches retain their false
 defaults. Without the optional row, recovery supplies the era's fixed five-line Staff as
 `LegacyBehavior`. It also creates the otherwise unavailable Staff-local note-font tuple with the
@@ -237,8 +256,13 @@ Staff reference is zero, it compares the comparator values directly instead.
 
 Neither six-word row has locations for the later line spacing, four rest offsets, or stem
 reversal. Recovery takes those unavailable scalars from the ordinary Staff in the pinned Finale
-27 reference and reports them as `Finale27Default`. It reports `instUuid` as `uuid::Unknown`;
-fields without another stated mapping or legacy behavior remain unmapped.
+27 reference and reports them as `Finale27Default`. The same baseline supplies `transposedClef`
+when Set to Clef is not active, `capoPos`, `lowestFret`, and the later Staff-item switches that the
+six-word UI cannot edit. Recovery reports `instUuid` as `uuid::Unknown`; fields without another
+stated mapping or legacy behavior remain unmapped.
+
+The live work queue for fields that can still retain `Unmapped` provenance is maintained in
+[`STAFF_UNMAPPED_FIELDS.md`](../../state/STAFF_UNMAPPED_FIELDS.md).
 
 ## Evidence
 
@@ -248,8 +272,15 @@ The byte offsets and both byte orders are reproducible with
 `tests/evidence/F2012/F2012-bookmarks.mus`, and the Finale 2012 display-bit meaning with
 `tests/evidence/F2012/F2012-hidestafflines.mus`. The earlier boundaries are reproducible with
 `tests/evidence/F100/F100-baseline.mus`, `tests/evidence/F100/F100-staffprops.mus`,
+`tests/evidence/F100/staffopts/F100-floatfont.mus`,
+`tests/evidence/F100/staffopts/F100-floatkey.mus`,
+`tests/evidence/F100/staffopts/F100-floatnoteshapes.mus`,
+`tests/evidence/F100/staffopts/F100-floattime.mus`,
 `tests/evidence/F263/F263-timecomp.mus`, `tests/evidence/F263/F263-staffopts.mus`, and
-`tests/evidence/F372/F372-baseline.mus`; the early note-font representation is corroborated by
+`tests/evidence/F372/F372-baseline.mus`. The 18-word DCL tablature interpretation is reproducible
+with `tests/evidence/F2002/F2002-tablature.mus` and
+`tests/evidence/F2002/F2002-tablature-basekey47.mus`; the early note-font representation is
+corroborated by
 `tests/evidence/F372/F372-notehead-font.mus`, and its inherited size by
 `tests/evidence/F97/F97-notehead-size28.mus` and
 `tests/evidence/F97/F97-notehead-size26.mus`. The signed Coda line forms are reproducible with the
