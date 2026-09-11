@@ -21,6 +21,14 @@
 - Do not require `NOMINMAX`. Protect standard-library `min` and `max` tokens
   from the Windows macros with parentheses, such as `(std::min)(a, b)` and
   `(std::numeric_limits<T>::max)()`.
+- The test target compiles with `/W4 /WX` under MSVC and `-Werror` elsewhere,
+  so an implicit narrowing conversion is a build break, and MSVC reports
+  narrowing that GCC and Clang accept. Never pass a bare literal where the
+  parameter is a `std::optional<T>` or a `T` narrower than the literal's own
+  type; write the literal as `T(value)` so the conversion is explicit, for
+  example `Evpu(24)` or `std::uint8_t(0x7f)` rather than `24` or `0x7f`. Test
+  files are the usual offender because the parameter type is not visible at
+  the call site and a local Unix build stays green.
 - Compile every C and C++ object with `/bigobj` under MSVC. Keep this as a
   directory-wide build invariant so template-heavy musxdom factory
   instantiations cannot exceed the default COFF section limit in any target.
