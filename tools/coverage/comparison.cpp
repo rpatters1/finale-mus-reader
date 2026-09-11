@@ -327,8 +327,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         source, companion, result.transformations, sourceEpoch};
     runComparisonPreparers(preparation);
     if (sourceEpoch == FormatEpoch::CodaBanner) {
-        comparison_text::realignCodaBlockTexts(source, companion, sourceDocument,
-                                               companionDocument, result);
+        comparison_text::realignCodaBlockTexts(
+            source, companion, sourceDocument, companionDocument, result);
+    } else if (sourcePredatesVersion(sourceEpoch, sourceVersion,
+                   FormatEpoch::UncompressedLegacy, versions::finale3_7)) {
+        comparison_text::realignPreFinale37StaffNameBlockTexts(
+            source, companion, sourceDocument, companionDocument, result);
     }
     const auto textBlockReferents =
         comparison_text::compareTextBlockReferents(sourceDocument, companionDocument);
@@ -400,8 +404,10 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     companionFound->second.first.asInteger(), sourceDocument, companionDocument);
                 if (staffNameReferents && *staffNameReferents) {
                     ++stats.same;
-                    ++result.transformations[
-                        ComparisonTransformation::EquivalentTextBlockReferent];
+                    if (sourceFound->second.first != companionFound->second.first) {
+                        ++result.transformations[
+                            ComparisonTransformation::EquivalentTextBlockReferent];
+                    }
                     continue;
                 }
             }
@@ -499,7 +505,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 path,         category,        origin,      sourceValue,     companionValue,
                 sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
                 sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
-                &companionDocumentLeaves};
+                &companionDocumentLeaves, companionDocument.get()};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;

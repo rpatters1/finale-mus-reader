@@ -76,6 +76,7 @@ add_executable(finale_mus_reader_tests
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
+    coverage_probe_support_tests.cpp
     coverage_schema_tests.cpp
     ../tools/coverage/comparison.cpp
     ../tools/coverage/comparison_text.cpp

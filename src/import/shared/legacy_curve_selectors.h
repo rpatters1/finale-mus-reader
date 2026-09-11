@@ -6,12 +6,9 @@
 #include <cstdint>
 #include <string_view>
 
-namespace finale_mus_reader
-{
-namespace options
-{
-namespace legacy_curve
-{
+namespace finale_mus_reader {
+namespace options {
+namespace legacy_curve {
 
 inline constexpr std::string_view slurThicknessTag = "50";
 inline constexpr std::string_view engraverSlurTag = "51";

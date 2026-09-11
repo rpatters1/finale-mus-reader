@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include "import/options/legacy_curve_selectors.h"
+#include "import/shared/legacy_curve_selectors.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {

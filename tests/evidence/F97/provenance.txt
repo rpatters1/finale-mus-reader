@@ -77,6 +77,25 @@ F97-beams-inclrests.etf
     switch into both incEdgeRestsInBeamGroups and extendSecBeamsOverRests, and
     does not enable incRestsInFourGroups.
 
+F97-notehead-size28.mus / .etf
+    sha256 MUS 947508edfc82615020f42661b12cda9cfc85f241a91fbd4bf64be07de2a169b0
+    sha256 ETF 34c56b474df3a930744d34afe2b64b3be3603b322553f5b20aff1f74f87a8b66
+F97-notehead-size26.mus / .etf
+    sha256 MUS 09da253bc2a18d247952baf389e5c95555f2def3d75834bc0ee6f64ecc166fef
+    sha256 ETF 37ff7719aec7fd639e6b0157cfda8c8f4c39400cca470b0da7a30c2222594287
+    Created from Fin97-baseline by enabling an independent 28-point Staff
+    notehead font, then changing that size to 26 points. The first edit changes
+    Staff words 3--5 to font ID 6, size/effects `0x1c00`, and flags `0x0020`;
+    the second changes only size/effects to `0x1a00`. The untouched Staff stores
+    ID and size zero when the independent font is disabled; the document's
+    separate Noteheads option is 26 points.
+
+-finale27/F97-notehead-size28.musx
+    sha256 f2d475ae510243eb6ff687f40c6b776300ee013eea80e6d149c12769a8ca6eaa
+-finale27/F97-notehead-size26.musx
+    sha256 ad70d725d4ef69461ca35ccc3d9054fd1cb4f968ac98e4150d46f737bd2905fc
+    Finale 27 companions for the controlled Staff-font edits above.
+
 F97-def-measrest.mus
     sha256 8279f870a52987762d620361edaba52aefeeb22a2f4c97c344b26b5110a11070
 F97-def-measrest.etf

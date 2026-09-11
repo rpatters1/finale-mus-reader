@@ -23,6 +23,7 @@ std::optional<finale_mus_reader::coverage::DifferenceClassification> classifySta
 }
 
 constexpr std::size_t staffFieldManifestSize = 101;
+constexpr int evpusPerSpace = static_cast<int>(musx::dom::EVPU_PER_SPACE);
 constexpr std::string_view staffAlternateNotationFields[] = {
     "altNotation",
     "altLayer",
@@ -39,10 +40,18 @@ constexpr std::string_view staffAlternateNotationFields[] = {
     "altHideOtherExpressions",
 };
 
-musx::dom::DocumentPtr emptyStaffDocument()
+musx::dom::DocumentPtr emptyStaffDocument(musx::dom::Cmper musicFontId = 0)
 {
     auto session = musx::factory::DocumentFactory::begin();
-    return session.getDocument();
+    const auto document = session.getDocument();
+    auto fontOptions = std::make_shared<musx::dom::options::FontOptions>(document);
+    auto musicFont = std::make_shared<musx::dom::FontInfo>(document);
+    musicFont->fontId = musicFontId;
+    fontOptions->fontOptions.emplace(
+        musx::dom::options::FontOptions::FontType::Music, std::move(musicFont));
+    document->getOptions()->add(
+        musx::dom::options::FontOptions::XmlNodeName, std::move(fontOptions));
+    return document;
 }
 
 ImportReport staffImport(const finale_mus_reader::container::ParsedContainer& parsed,
@@ -55,7 +64,7 @@ ImportReport staffImport(const finale_mus_reader::container::ParsedContainer& pa
     auto referenceStaff = std::make_shared<Staff>(
         referenceDocument, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
     referenceStaff->staffLines = 5;
-    referenceStaff->lineSpace = 24;
+    referenceStaff->lineSpace = evpusPerSpace;
     referenceStaff->dwRestOffset = -4;
     referenceStaff->wRestOffset = -4;
     referenceStaff->hRestOffset = -4;
@@ -78,6 +87,7 @@ ImportReport staffImport(const finale_mus_reader::container::ParsedContainer& pa
     const finale_mus_reader::ImportContext context{
         index, profile, noSource, document, reference, report, pending, construction};
     finale_mus_reader::others::importStaff(context);
+    finale_mus_reader::runDeferredChecks(pending);
     return report;
 }
 
@@ -143,10 +153,10 @@ TEST_CASE("The Finale 2000 Staff base layout recovers its complete raw field "
             CHECK_FALSE(staff->staffLines);
             REQUIRE(staff->customStaff);
             CHECK(*staff->customStaff == std::vector<int>{13});
-            CHECK(staff->botBarlineOffset == -48);
+            CHECK(staff->botBarlineOffset == -2 * evpusPerSpace);
             CHECK(staff->capoPos == 23);
             CHECK(staff->lowestFret == 11);
-            CHECK(staff->topBarlineOffset == 48);
+            CHECK(staff->topBarlineOffset == 2 * evpusPerSpace);
             REQUIRE(staff->transposition);
             REQUIRE(staff->transposition->keysig);
             CHECK(staff->transposition->setToClef);
@@ -167,7 +177,7 @@ TEST_CASE("The Finale 2000 Staff base layout recovers its complete raw field "
             CHECK(staff->stemReversal == -4);
             CHECK(staff->fullNameTextId == 9);
             CHECK(staff->abbrvNameTextId == 10);
-            CHECK(staff->lineSpace == 24);
+            CHECK(staff->lineSpace == evpusPerSpace);
             CHECK(staff->botRepeatDotOff == -5);
             CHECK(staff->topRepeatDotOff == -3);
             CHECK(staffField(report, "notationStyle").origin == ValueOrigin::LegacyMus);
@@ -176,14 +186,99 @@ TEST_CASE("The Finale 2000 Staff base layout recovers its complete raw field "
             CHECK(staffField(report, "hideLyrics").origin == ValueOrigin::LegacyMus);
             CHECK(staffField(report, "altHideOtherLyrics").origin == ValueOrigin::LegacyMus);
             CHECK(staffField(report, "lineSpace").origin == ValueOrigin::Finale27Default);
-            CHECK(staffField(report, "botRepeatDotOff").origin == ValueOrigin::Finale27Default);
-            CHECK(staffField(report, "topRepeatDotOff").origin == ValueOrigin::Finale27Default);
+            CHECK(staffField(report, "botRepeatDotOff").origin == ValueOrigin::LegacyBehavior);
+            CHECK(staffField(report, "topRepeatDotOff").origin == ValueOrigin::LegacyBehavior);
             CHECK(staffField(report, "redisplayLayerAccis").origin == ValueOrigin::LegacyBehavior);
             CHECK(staffField(report, "hideTimeSigsInParts").origin == ValueOrigin::LegacyBehavior);
             CHECK(staffField(report, "hideKeySigsShowAccis").origin == ValueOrigin::LegacyBehavior);
             CHECK(reportedFieldCount(report) == staffFieldManifestSize);
         }
     }
+}
+
+TEST_CASE("Finale 2000 custom Staff masks preserve line order across both words")
+{
+    for (const auto& [top, bottom, expected] : {
+             std::tuple<std::int16_t, std::int16_t, std::vector<int>>{1, 0x000f, {11, 12, 13, 14}},
+             std::tuple<std::int16_t, std::int16_t, std::vector<int>>{1, 0x001e, {12, 13, 14, 15}},
+             std::tuple<std::int16_t, std::int16_t, std::vector<int>>{
+                 static_cast<std::int16_t>(0x8021), 0, {0, 10}},
+             std::tuple<std::int16_t, std::int16_t, std::vector<int>>{1, 0, {}},
+         }) {
+        const auto parsed = makeContainer(
+            {
+                {7, "IS", {0, 0, 0, 0, 0, 0}},
+                {7, "IS", {0, top, bottom, 0, 0, 0}},
+                {7, "IS", {0, 0, 0, 0, 0, 0}},
+            },
+            FormatEpoch::UncompressedLegacy);
+        const auto document = emptyStaffDocument();
+        auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+        profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
+        profile.byteOrder = ByteOrder::BigEndian;
+        const auto report = staffImport(parsed, profile, document);
+
+        const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+        REQUIRE(staff);
+        REQUIRE(staff->customStaff);
+        CHECK(*staff->customStaff == expected);
+        if (expected.empty()) {
+            CHECK(staff->botRepeatDotOff == -5);
+            CHECK(staff->topRepeatDotOff == -3);
+            CHECK(staffField(report, "botRepeatDotOff").origin == ValueOrigin::LegacyBehavior);
+            CHECK(staffField(report, "topRepeatDotOff").origin == ValueOrigin::LegacyBehavior);
+        }
+    }
+
+    struct CustomStaffCase
+    {
+        const char* path;
+        std::vector<int> lines;
+        int bottomRepeatDot;
+        int topRepeatDot;
+    };
+    for (const auto& expected : {
+             CustomStaffCase{"evidence/F2000/F2000-lines-upper4.mus", {11, 12, 13, 14}, -3, -1},
+             CustomStaffCase{"evidence/F2000/F2000-lines-lower4.mus", {12, 13, 14, 15}, -5, -3},
+             CustomStaffCase{"evidence/F2000/F2000-lines-cl10.mus", {10}, 1, 3},
+             CustomStaffCase{"evidence/F2000/F2000-lines-cl0.mus", {0}, 21, 23},
+         }) {
+        const auto result = readFixture(expected.path);
+        const auto staff = result.document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 1);
+        REQUIRE(staff);
+        REQUIRE(staff->customStaff);
+        CHECK(*staff->customStaff == expected.lines);
+        CHECK(staff->botRepeatDotOff == expected.bottomRepeatDot);
+        CHECK(staff->topRepeatDotOff == expected.topRepeatDot);
+        const auto* bottomDot = result.report.findField<Staff>(
+            "botRepeatDotOff", musx::dom::SCORE_PARTID, 1);
+        const auto* topDot = result.report.findField<Staff>(
+            "topRepeatDotOff", musx::dom::SCORE_PARTID, 1);
+        REQUIRE(bottomDot);
+        REQUIRE(topDot);
+        CHECK(bottomDot->origin == ValueOrigin::LegacyBehavior);
+        CHECK(topDot->origin == ValueOrigin::LegacyBehavior);
+    }
+}
+
+TEST_CASE("Legacy Staff alternate notation accepts the terminal Blank value")
+{
+    const auto parsed = makeContainer(
+        {
+            {7, "IS", {0, 0, 6, 0, 0, 0}},
+            {7, "IS", {0, 0, 5, 0, 0, 0}},
+            {7, "IS", {0, 0, 0, 0, 0, 0}},
+        },
+        FormatEpoch::UncompressedLegacy);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
+    profile.byteOrder = ByteOrder::BigEndian;
+    staffImport(parsed, profile, document);
+
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->altNotation == Staff::AlternateNotation::Blank);
 }
 
 TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting")
@@ -357,7 +452,7 @@ TEST_CASE("The zlib Staff class retains the base words and its established "
         REQUIRE(staff);
         REQUIRE(staff->staffLines);
         CHECK(*staff->staffLines == 5);
-        CHECK(staff->lineSpace == 24);
+        CHECK(staff->lineSpace == evpusPerSpace);
         CHECK(staff->botRepeatDotOff == -5);
         CHECK(staff->topRepeatDotOff == -3);
         CHECK(staff->vertTabNumOff == -1024);
@@ -441,6 +536,61 @@ TEST_CASE("Controlled Finale 2005 tablature settings recover from Staff")
     }
 }
 
+TEST_CASE("Staff hiding changes representation in Finale 2011")
+{
+    std::vector<std::int16_t> words(23, 0);
+    words[11] = 0x0004;
+    words[22] = static_cast<std::int16_t>(0x8000);
+    const auto parsed = makeClassContainer(0x00e7, words, ByteOrder::BigEndian, 7);
+
+    const auto importAt = [&](finale_mus_reader::VersionBound version) {
+        const auto document = emptyStaffDocument();
+        auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
+        profile.version = SourceVersion{
+            .major = version.major, .minor = version.minor, .maint = version.maint};
+        profile.byteOrder = ByteOrder::BigEndian;
+        auto report = staffImport(parsed, profile, document);
+        const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+        REQUIRE(staff);
+        return std::pair{staff, std::move(report)};
+    };
+
+    const auto [finale2010Staff, finale2010Report] =
+        importAt(finale_mus_reader::versions::finale2010);
+    CHECK(finale2010Staff->hideMode == Staff::HideMode::Cutaway);
+    CHECK(staffField(finale2010Report, "hideMode").origin == ValueOrigin::LegacyMus);
+
+    const auto [finale2011Staff, finale2011Report] =
+        importAt(finale_mus_reader::versions::finale2011);
+    CHECK(finale2011Staff->hideMode == Staff::HideMode::ScoreParts);
+    CHECK(staffField(finale2011Report, "hideMode").origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("The six-word Staff layout survives the uncompressed container transition")
+{
+    const auto parsed = makeContainer(
+        {
+            {7, "IS", {4, 0, 0, 0, 0, 0x0010}},
+            {7, "IA", {0, 0, 3, 0, 0, 0x0040}},
+        },
+        FormatEpoch::UncompressedLegacy);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = 3, .minor = 0};
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->defaultClef == 4);
+    CHECK(staff->hideTimeSigs);
+    CHECK(staff->staffLines == 3);
+    CHECK(staffField(report, "defaultClef").origin == ValueOrigin::LegacyMus);
+    CHECK(staffField(report, "staffLines").origin == ValueOrigin::LegacyMus);
+    CHECK(staffField(report, "lineSpace").origin == ValueOrigin::Finale27Default);
+    CHECK(reportedFieldCount(report) == staffFieldManifestSize);
+}
+
 TEST_CASE("The distinct Coda Staff layout constructs a valid explicitly "
           "partial Staff")
 {
@@ -455,7 +605,7 @@ TEST_CASE("The distinct Coda Staff layout constructs a valid explicitly "
     CHECK(staff->staffLines == 5);
     REQUIRE(staff->noteFont);
     CHECK(staff->noteFont->fontSize == 24);
-    CHECK(staff->lineSpace == 24);
+    CHECK(staff->lineSpace == evpusPerSpace);
     CHECK(staff->dwRestOffset == -4);
     CHECK(staff->wRestOffset == -4);
     CHECK(staff->hRestOffset == -4);
@@ -485,6 +635,7 @@ TEST_CASE("The distinct Coda Staff layout constructs a valid explicitly "
     CHECK(staffField(report, "lineSpace").origin == ValueOrigin::Finale27Default);
     CHECK(staffField(report, "dwRestOffset").origin == ValueOrigin::Finale27Default);
     CHECK(staffField(report, "stemReversal").origin == ValueOrigin::Finale27Default);
+    CHECK(staffField(report, "fretInstId").origin == ValueOrigin::Finale27Default);
     CHECK(staffField(report, "botRepeatDotOff").origin == ValueOrigin::Finale27Default);
     CHECK(staffField(report, "topRepeatDotOff").origin == ValueOrigin::Finale27Default);
     CHECK(staffField(report, "defaultClef").origin == ValueOrigin::LegacyMus);
@@ -501,6 +652,366 @@ TEST_CASE("The distinct Coda Staff layout constructs a valid explicitly "
     CHECK(reportedFieldCount(report) == staffFieldManifestSize);
 }
 
+TEST_CASE("Coda Staff default clef occupies the low three bits of its display word")
+{
+    const auto parsed =
+        makeContainer({{7, "IS", {7, 0, 4, 1024, 0, 0x051c}}}, FormatEpoch::CodaBanner);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::CodaBanner);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->defaultClef == 4);
+    CHECK(staff->hideClefs);
+    CHECK(staffField(report, "defaultClef").origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("Coda Staff display flags retain their later meanings")
+{
+    constexpr std::int16_t displayFlags = static_cast<std::int16_t>(0xa718);
+    const auto parsed =
+        makeContainer({{7, "IS", {0, 0, 4, 1024, 0, displayFlags}}}, FormatEpoch::CodaBanner);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::CodaBanner);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->floatKeys);
+    CHECK(staff->blineBreak);
+    CHECK(staff->hideMeasNums);
+    CHECK(staff->hideRepeats);
+    CHECK(staff->hideNameInScore);
+    CHECK(staff->hideTimeSigs);
+    CHECK(staff->hideTimeSigsInParts);
+    CHECK(staff->hideClefs);
+    for (const auto* member : {
+             "floatKeys",
+             "blineBreak",
+             "hideMeasNums",
+             "hideRepeats",
+             "hideNameInScore",
+             "hideTimeSigs",
+             "hideClefs",
+         }) {
+        CHECK(staffField(report, member).origin == ValueOrigin::LegacyMus);
+    }
+}
+
+TEST_CASE("Coda Staff attributes distinguish line-count and one-line forms")
+{
+    const auto parsed = makeContainer(
+        {
+            {7, "IS", {0, 0, 4, 1024, 0, 0}},
+            {7, "IA", {0, 0, 0, 0, 0, 0x0040}},
+            {8, "IS", {0, 0, 4, 1024, 0, 0}},
+            {8, "IA", {0, 0, 3, 0, 0, 0x0040}},
+            {9, "IS", {0, 0, 4, 1024, 0, 0}},
+            {9, "IA", {0, 0, 1, 0, 0, 0x0040}},
+            {10, "IS", {0, 0, 4, 1024, 0, 0}},
+            {10, "IA", {0, -948, -1, 2, 0x0900, 0x0340}},
+        },
+        FormatEpoch::CodaBanner);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::CodaBanner);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto fiveLine = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    const auto threeLine = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 8);
+    const auto centered = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 9);
+    const auto legacyTab = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 10);
+    REQUIRE(fiveLine);
+    REQUIRE(threeLine);
+    REQUIRE(centered);
+    REQUIRE(legacyTab);
+    CHECK(fiveLine->staffLines == 0);
+    CHECK(fiveLine->botRepeatDotOff == -5);
+    CHECK(fiveLine->topRepeatDotOff == -3);
+    CHECK(threeLine->staffLines == 3);
+    CHECK_FALSE(fiveLine->useNoteFont);
+    REQUIRE(centered->customStaff);
+    CHECK(*centered->customStaff == std::vector<int>{13});
+    CHECK(centered->botBarlineOffset == -2 * evpusPerSpace);
+    CHECK(centered->topBarlineOffset == 2 * evpusPerSpace);
+    REQUIRE(legacyTab->customStaff);
+    CHECK(*legacyTab->customStaff == std::vector<int>{11});
+    CHECK(legacyTab->blankMeasure);
+    CHECK(legacyTab->vertTabNumOff == -1024);
+    CHECK(legacyTab->botRepeatDotOff == -1);
+    CHECK(legacyTab->topRepeatDotOff == 1);
+    CHECK(legacyTab->fretInstId == 2);
+    const auto fret = document->getOthers()->get<musx::dom::others::FretInstrument>(
+        musx::dom::SCORE_PARTID, legacyTab->fretInstId);
+    REQUIRE(fret);
+    CHECK(fret->numFrets == 20);
+    CHECK(fret->numStrings == 1);
+    CHECK(fret->name == "E5");
+    REQUIRE(fret->strings.size() == 1);
+    CHECK(fret->strings.front()->pitch == 76);
+    const auto* fretSource = report.findField<Staff>("fretInstId", musx::dom::SCORE_PARTID, 10);
+    REQUIRE(fretSource);
+    CHECK(fretSource->origin == ValueOrigin::LegacyBehavior);
+}
+
+TEST_CASE("Coda Staff notehead font enablement compares with the default music font")
+{
+    const auto parsed = makeContainer(
+        {
+            {7, "IS", {0, 0, 4, 1024, 0, 0}},
+            {7, "IA", {0, 0, 0, 3, 0, 0}},
+            {8, "IS", {0, 0, 4, 1024, 0, 0}},
+            {8, "IA", {0, 0, 0, 2, 0, 0x0200}},
+            {9, "IS", {0, 0, 4, 1024, 0, 0}},
+            {9, "IA", {0, 0, 0, 3, 0, 0x0200}},
+        },
+        FormatEpoch::CodaBanner);
+    const auto document = emptyStaffDocument(2);
+    auto profile = SourceProfile(FormatEpoch::CodaBanner);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto standardStaff =
+        document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    const auto defaultTabFontStaff =
+        document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 8);
+    const auto independentTabFontStaff =
+        document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 9);
+    REQUIRE(standardStaff);
+    REQUIRE(defaultTabFontStaff);
+    REQUIRE(independentTabFontStaff);
+    CHECK_FALSE(standardStaff->useNoteFont);
+    CHECK_FALSE(defaultTabFontStaff->useNoteFont);
+    CHECK(independentTabFontStaff->useNoteFont);
+    CHECK(staffField(report, "useNoteFont").origin == ValueOrigin::LegacyBehavior);
+    const auto* tabFontSource =
+        report.findField<Staff>("useNoteFont", musx::dom::SCORE_PARTID, 9);
+    REQUIRE(tabFontSource);
+    CHECK(tabFontSource->origin == ValueOrigin::LegacyMusAdjusted);
+}
+
+TEST_CASE("Coda Staff line overrides decode signed ordinary and custom forms")
+{
+    const auto parsed = makeContainer({
+        {7, "IS", {0, 0, 4, 1024, 0, 0}},
+        {7, "IA", {0, 0, 2, 0, 0, 0x0040}},
+        {8, "IS", {0, 0, 4, 1024, 0, 0}},
+        {8, "IA", {0, 0, 4, 0, 0, 0x0040}},
+        {9, "IS", {0, 0, 4, 1024, 0, 0}},
+        {9, "IA", {0, 0, 17, 0, 0, 0x0040}},
+        {10, "IS", {0, 0, 4, 1024, 0, 0}},
+        {10, "IA", {0, 0, -3, 0, 0, 0x0040}},
+        {11, "IS", {0, 0, 4, 1024, 0, 0}},
+        {11, "IA", {0, 0, -11, 0, 0, 0x0040}},
+        {12, "IS", {0, 0, 4, 1024, 0, 0}},
+        {12, "IA", {0, 0, 17, 0, 0, 0}},
+    },
+        FormatEpoch::CodaBanner);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::CodaBanner);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto twoLine = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    const auto fourLine = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 8);
+    const auto seventeenLine = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 9);
+    REQUIRE(twoLine);
+    REQUIRE(fourLine);
+    REQUIRE(seventeenLine);
+    CHECK(twoLine->staffLines == 2);
+    CHECK(fourLine->staffLines == 4);
+    CHECK(seventeenLine->staffLines == 17);
+    for (const auto& staff : {twoLine, fourLine, seventeenLine}) {
+        CHECK(staff->botRepeatDotOff == -5);
+        CHECK(staff->topRepeatDotOff == -3);
+    }
+
+    const auto line13 = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 10);
+    REQUIRE(line13);
+    REQUIRE(line13->customStaff);
+    CHECK(*line13->customStaff == std::vector<int>{13});
+    CHECK(line13->botBarlineOffset == 0);
+    CHECK(line13->topBarlineOffset == 2 * evpusPerSpace);
+    CHECK(line13->botRepeatDotOff == -5);
+    CHECK(line13->topRepeatDotOff == -3);
+
+    const auto line21 = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 11);
+    REQUIRE(line21);
+    REQUIRE(line21->customStaff);
+    CHECK(*line21->customStaff == std::vector<int>{21});
+    CHECK(line21->botBarlineOffset == 0);
+    CHECK(line21->topBarlineOffset == 10 * evpusPerSpace);
+    CHECK(line21->botRepeatDotOff == -21);
+    CHECK(line21->topRepeatDotOff == -19);
+
+    const auto inactive = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 12);
+    REQUIRE(inactive);
+    CHECK(inactive->staffLines == 5);
+    const auto* topBarline = report.findField<Staff>(
+        "topBarlineOffset", musx::dom::SCORE_PARTID, 11);
+    REQUIRE(topBarline);
+    CHECK(topBarline->origin == ValueOrigin::LegacyMusAdjusted);
+    for (const auto staffId : {7, 8, 9}) {
+        const auto* bottomDot = report.findField<Staff>(
+            "botRepeatDotOff", musx::dom::SCORE_PARTID, staffId);
+        const auto* topDot = report.findField<Staff>(
+            "topRepeatDotOff", musx::dom::SCORE_PARTID, staffId);
+        REQUIRE(bottomDot);
+        REQUIRE(topDot);
+        CHECK(bottomDot->origin == ValueOrigin::Finale27Default);
+        CHECK(topDot->origin == ValueOrigin::Finale27Default);
+    }
+}
+
+TEST_CASE("Short one-string tablature Staffs retain their legacy behavior")
+{
+    struct LegacyTabCase
+    {
+        finale_mus_reader::VersionBound version;
+        bool modernLineCount;
+        bool breakLines;
+    };
+    constexpr LegacyTabCase cases[]{
+        {finale_mus_reader::versions::finale97, false, false},
+        {finale_mus_reader::versions::finale98, false, true},
+        {finale_mus_reader::versions::finale2000, true, true},
+    };
+
+    for (const auto& testCase : cases) {
+        const std::int16_t topLines = testCase.modernLineCount ? 0 : 1;
+        const std::int16_t primary = testCase.modernLineCount ? 0x0301 : 0x0340;
+        const auto parsed = makeContainer(
+            {
+                {7, "IS", {0, -948, 0, 3, 0x0900, primary}},
+                {7, "IS", {0, topLines, 1, 0, 0, 0x0f38}},
+                {7, "IS", {-772, -772, -4, 1, 0, 0}},
+            },
+            FormatEpoch::UncompressedLegacy);
+        const auto document = emptyStaffDocument();
+        auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+        profile.version = SourceVersion{.major = testCase.version.major,
+            .minor = testCase.version.minor,
+            .maint = testCase.version.maint};
+        profile.byteOrder = ByteOrder::BigEndian;
+        const auto report = staffImport(parsed, profile, document);
+
+        const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+        REQUIRE(staff);
+        if (testCase.modernLineCount) {
+            CHECK(staff->staffLines == 1);
+        } else {
+            CHECK_FALSE(staff->staffLines);
+            REQUIRE(staff->customStaff);
+            CHECK(*staff->customStaff == std::vector<int>{11});
+        }
+        CHECK(staff->capoPos == 0);
+        CHECK(staff->lowestFret == 0);
+        CHECK(staff->vertTabNumOff == -1024);
+        CHECK(staff->showTabClefAllSys);
+        CHECK(staff->hideRests);
+        CHECK(staff->hideDots);
+        CHECK(staff->hideStems);
+        CHECK(staff->hideTuplets);
+        CHECK(staff->breakTabLinesAtNotes == testCase.breakLines);
+        CHECK(staff->fretInstId == 2);
+        CHECK(staff->botRepeatDotOff == (testCase.modernLineCount ? -5 : -1));
+        CHECK(staff->topRepeatDotOff == (testCase.modernLineCount ? -3 : 1));
+        if (!testCase.modernLineCount) {
+            CHECK(staff->hideRepeatBottomDot);
+            CHECK(staff->hideRepeatTopDot);
+        }
+        const auto fret = document->getOthers()->get<musx::dom::others::FretInstrument>(
+            musx::dom::SCORE_PARTID, staff->fretInstId);
+        REQUIRE(fret);
+        CHECK(fret->name == "E5");
+        REQUIRE(fret->strings.size() == 1);
+        CHECK(fret->strings.front()->pitch == 76);
+        CHECK(staffField(report, "vertTabNumOff").origin == ValueOrigin::LegacyMus);
+        CHECK(staffField(report, "fretInstId").origin == ValueOrigin::LegacyBehavior);
+        CHECK(staffField(report, "showTabClefAllSys").origin == ValueOrigin::LegacyBehavior);
+        CHECK(staffField(report, "breakTabLinesAtNotes").origin == ValueOrigin::LegacyBehavior);
+    }
+}
+
+TEST_CASE("The short tablature compatibility form ends with the uncompressed epoch")
+{
+    const auto parsed = makeContainer({
+                                          {7, "IS", {0, -948, 0, 3, 0x0900, 0x0301}},
+                                          {7, "IS", {0, 0, 1, 0, 0, 0x0f38}},
+                                          {7, "IS", {-772, -772, -4, 1, 0, 0}},
+                                      },
+        FormatEpoch::DclLegacy);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::DclLegacy);
+    profile.version =
+        SourceVersion{.major = finale_mus_reader::versions::finale2001.major};
+    profile.byteOrder = ByteOrder::BigEndian;
+    staffImport(parsed, profile, document);
+
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->staffLines == 1);
+    CHECK(staff->capoPos == 76);
+    CHECK(staff->lowestFret == 252);
+    CHECK(staff->vertTabNumOff == 0);
+    CHECK(staff->fretInstId == 0);
+    CHECK_FALSE(document->getOthers()->get<musx::dom::others::FretInstrument>(
+        musx::dom::SCORE_PARTID, 2));
+}
+
+TEST_CASE("Parallel Staff names supplement missing stored name references")
+{
+    const auto parsed = makeContainer({
+        {7, "IS", {0, 0, 0, 0, 0, 0}},
+        {7, "IS", {0, 5, 0, 0, 0, 0}},
+        {7, "IS", {0, 0, 0, 0, 0, 0}},
+        {7, "IN", {0x4e61, 0x6d65, 0, 0, 0, 0}},
+        {7, "in", {0x4162, 0x6272, 0, 0, 0, 0}},
+        {8, "IS", {0, 0, 0, 0, 0, 0}},
+        {8, "IS", {0, 5, 0, 0, 0, 0}},
+        {8, "IS", {0, 0, 0, 21, 22, 0}},
+        {8, "IN", {0x4967, 0x6e6f, 0x7265, 0x6400, 0, 0}},
+        {8, "in", {0x4967, 0x6e6f, 0x7265, 0x6400, 0, 0}},
+    });
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = 3, .minor = 5};
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = staffImport(parsed, profile, document);
+
+    const auto recovered = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(recovered);
+    CHECK(recovered->getFullName() == "Name");
+    CHECK(recovered->getAbbreviatedName() == "Abbr");
+    CHECK(recovered->fullNameTextId != 0);
+    CHECK(recovered->abbrvNameTextId != 0);
+    const auto* fullName =
+        report.findField<Staff>("fullNameTextId", musx::dom::SCORE_PARTID, 7);
+    const auto* abbreviatedName =
+        report.findField<Staff>("abbrvNameTextId", musx::dom::SCORE_PARTID, 7);
+    REQUIRE(fullName);
+    REQUIRE(abbreviatedName);
+    CHECK(fullName->origin == ValueOrigin::LegacyBehavior);
+    CHECK(abbreviatedName->origin == ValueOrigin::LegacyBehavior);
+
+    const auto stored = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 8);
+    REQUIRE(stored);
+    CHECK(stored->fullNameTextId == 21);
+    CHECK(stored->abbrvNameTextId == 22);
+
+    const auto finale37Document = emptyStaffDocument();
+    profile.version = SourceVersion{.major = 3, .minor = 7};
+    staffImport(parsed, profile, finale37Document);
+    const auto finale37Staff =
+        finale37Document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(finale37Staff);
+    CHECK(finale37Staff->fullNameTextId == 0);
+    CHECK(finale37Staff->abbrvNameTextId == 0);
+}
+
 TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")
 {
     const auto result = readFixture("evidence/F100/F100-staffprops.mus");
@@ -514,7 +1025,7 @@ TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")
     REQUIRE(staff->transposition->keysig);
     CHECK(staff->transposition->keysig->interval == 5);
     CHECK(staff->transposition->keysig->adjust == 3);
-    CHECK(staff->lineSpace == 24);
+    CHECK(staff->lineSpace == evpusPerSpace);
     CHECK(staff->dwRestOffset == -4);
     CHECK(staff->wRestOffset == -4);
     CHECK(staff->hRestOffset == -4);
@@ -559,11 +1070,11 @@ TEST_CASE("Finale 2.6.3 optional Staff attributes recover custom lines and "
     CHECK_FALSE(staff->staffLines);
     REQUIRE(staff->customStaff);
     CHECK(*staff->customStaff == std::vector<int>{13});
-    CHECK(staff->botBarlineOffset == -48);
-    CHECK(staff->topBarlineOffset == 48);
+    CHECK(staff->botBarlineOffset == -2 * evpusPerSpace);
+    CHECK(staff->topBarlineOffset == 2 * evpusPerSpace);
     CHECK(staff->notationStyle == Staff::NotationStyle::Tablature);
     CHECK(staff->vertTabNumOff == 768);
-    CHECK(staff->fretInstId == 2);
+    CHECK(staff->fretInstId == 0);
     CHECK(staff->showTabClefAllSys);
     CHECK(staff->hideRests);
     CHECK(staff->hideDots);
@@ -624,7 +1135,7 @@ TEST_CASE("Finale 2.6.3 optional Staff attributes recover custom lines and "
     CHECK(field("topBarlineOffset")->origin == ValueOrigin::LegacyBehavior);
     CHECK(field("notationStyle")->origin == ValueOrigin::LegacyMus);
     CHECK(field("vertTabNumOff")->origin == ValueOrigin::LegacyMus);
-    CHECK(field("fretInstId")->origin == ValueOrigin::LegacyMus);
+    CHECK(field("fretInstId")->origin == ValueOrigin::Finale27Default);
     CHECK(field("showTabClefAllSys")->origin == ValueOrigin::LegacyBehavior);
     CHECK(field("hideRests")->origin == ValueOrigin::LegacyBehavior);
     CHECK(field("hideDots")->origin == ValueOrigin::LegacyBehavior);
@@ -781,14 +1292,23 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
     const auto source = makeDocument(7, 3, "Horn");
     const auto equivalent = makeDocument(19, 41, "Horn");
     const auto different = makeDocument(7, 3, "Trumpet");
+    const auto formattingOnly = makeDocument(23, 47, "^font(Times)^size(14)^nfx(2)");
+    auto danglingSession = musx::factory::DocumentFactory::begin();
+    const auto dangling = danglingSession.getDocument();
+    auto danglingBlock = std::make_shared<TextBlock>(dangling, musx::dom::SCORE_PARTID,
+        musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(29));
+    danglingBlock->textId = 53;
+    dangling->getOthers()->add(TextBlock::XmlNodeName, std::move(danglingBlock));
     REQUIRE(comparison_text::compareStaffNameReferents(
                 "staff[cmper=1].full_name_text_id", 7, 19, source, equivalent) == true);
     REQUIRE(comparison_text::compareStaffNameReferents(
                 "staff[cmper=1].abbrv_name_text_id", 7, 7, source, different) == false);
-    REQUIRE_FALSE(comparison_text::compareStaffNameReferents(
-        "staff[cmper=1].full_name_text_id", 0, 19, source, equivalent));
-    REQUIRE_FALSE(comparison_text::compareStaffNameReferents(
-        "staff[cmper=1].abbrv_name_text_id", 7, 0, source, equivalent));
+    REQUIRE(comparison_text::compareStaffNameReferents(
+                "staff[cmper=1].full_name_text_id", 0, 29, source, dangling) == true);
+    REQUIRE(comparison_text::compareStaffNameReferents(
+                "staff[cmper=1].abbrv_name_text_id", 23, 0, formattingOnly, equivalent) == true);
+    REQUIRE(comparison_text::compareStaffNameReferents(
+                "staff[cmper=1].full_name_text_id", 0, 19, source, equivalent) == false);
     REQUIRE_FALSE(comparison_text::compareStaffNameReferents(
         "staff[cmper=1].default_clef", 7, 19, source, equivalent));
 
@@ -802,10 +1322,10 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
         finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
         nullptr, report);
     const auto& zeroStats = zeroMismatch.classes.at("others").at("staff");
-    CHECK(zeroStats.same == 1);
-    CHECK(zeroStats.unexpected == 1);
+    CHECK(zeroStats.same == 2);
+    CHECK(zeroStats.unexpected == 0);
     CHECK(zeroMismatch.transformations.at(ComparisonTransformation::EquivalentTextBlockReferent) ==
-          1);
+          2);
 
     const auto equalComparatorDifferentText = compareSnapshots(snapshot(7, 0), snapshot(7, 0),
         source, different, finale_mus_reader::FormatEpoch::CodaBanner,
@@ -815,54 +1335,32 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
     CHECK(differentStats.unexpected == 1);
 }
 
-TEST_CASE("Disabled pre-Finale 2001 Staff note-font sizes have different defaults", "[coverage]")
+TEST_CASE("Disabled Staff note-font size differences are different defaults", "[coverage]")
 {
     using namespace finale_mus_reader::coverage;
-    const Value zero{0};
-    const Value one{1};
-    const Value twentyThree{23};
-    const Value twentyFour{24};
-    const ComparisonLeaves disabled{{"staff[cmper=1].use_note_font", {Value(false), "legacy-mus"}}};
-    const ComparisonLeaves enabled{{"staff[cmper=1].use_note_font", {Value(true), "legacy-mus"}}};
+    const ComparisonLeaves disabled{{"staff[cmper=1].use_note_font", {Value(false), {}}}};
+    const ComparisonLeaves enabled{{"staff[cmper=1].use_note_font", {Value(true), {}}}};
     const ComparisonLeaves none;
-    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
-    const finale_mus_reader::SourceVersion finale2000{
-        .major = finale_mus_reader::versions::finale2000.major};
-    const finale_mus_reader::SourceVersion finale2001{
-        .major = finale_mus_reader::versions::finale2001.major};
-    const auto context = [&](const ComparisonLeaves& leaves, const Value& source,
-                             const Value& companion, std::string_view path, std::string_view origin,
-                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch,
-                             const finale_mus_reader::SourceVersion* version) {
-        return DifferenceContext{path, category, origin, source, companion, leaves, none, epoch,
-            finale_mus_reader::ByteOrder::BigEndian, version, report};
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const auto context = [&](const ComparisonLeaves& source, std::int64_t sourceSize,
+                             std::int64_t companionSize, std::string_view origin,
+                             DifferenceCategory category = DifferenceCategory::Differs) {
+        return DifferenceContext{"staff[cmper=1].note_font.font_size", category, origin,
+            Value(sourceSize), Value(companionSize), source, none,
+            finale_mus_reader::FormatEpoch::ZlibLegacy,
+            finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
     };
 
-    REQUIRE(classifyStaffDifference(context(disabled, zero, twentyFour,
-                "staff[cmper=1].note_font.font_size", "legacy-mus", DifferenceCategory::Differs,
-                finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)) ==
+    REQUIRE(classifyStaffDifference(context(disabled, 26, 0, "legacy-mus")) ==
             DifferenceClassification::DifferentDefaults);
-    REQUIRE_FALSE(classifyStaffDifference(context(enabled, zero, twentyFour,
-        "staff[cmper=1].note_font.font_size", "legacy-mus", DifferenceCategory::Differs,
-        finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)));
-    REQUIRE_FALSE(classifyStaffDifference(context(disabled, one, twentyFour,
-        "staff[cmper=1].note_font.font_size", "legacy-mus", DifferenceCategory::Differs,
-        finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)));
-    REQUIRE_FALSE(classifyStaffDifference(context(disabled, zero, twentyThree,
-        "staff[cmper=1].note_font.font_size", "legacy-mus", DifferenceCategory::Differs,
-        finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)));
+    REQUIRE(classifyStaffDifference(context(disabled, 0, 24, "finale27-default")) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE_FALSE(classifyStaffDifference(context(enabled, 26, 0, "legacy-mus")));
     REQUIRE_FALSE(classifyStaffDifference(
-        context(disabled, zero, twentyFour, "staff[cmper=1].note_font.font_size", "legacy-mus",
-            DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::DclLegacy, &finale2001)));
-    REQUIRE_FALSE(classifyStaffDifference(context(disabled, zero, twentyFour,
-        "staff[cmper=1].note_font.font_size", "unmapped", DifferenceCategory::Differs,
-        finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)));
-    REQUIRE_FALSE(classifyStaffDifference(context(disabled, zero, twentyFour,
-        "staff[cmper=1].note_font.font_size", "legacy-mus", DifferenceCategory::ReaderOnly,
-        finale_mus_reader::FormatEpoch::UncompressedLegacy, &finale2000)));
+        context(disabled, 26, 0, "legacy-mus", DifferenceCategory::ReaderOnly)));
 }
 
-TEST_CASE("Through Finale 2008 percussion and tablature note-font enablement "
+TEST_CASE("Before Finale 2012 percussion and tablature note-font enablement "
           "is upgrade loss",
     "[coverage]")
 {
@@ -872,8 +1370,10 @@ TEST_CASE("Through Finale 2008 percussion and tablature note-font enablement "
     const Value yes(true);
     const finale_mus_reader::SourceVersion finale2008{
         .major = finale_mus_reader::versions::finale2008.major};
-    const finale_mus_reader::SourceVersion finale2009{
-        .major = finale_mus_reader::versions::finale2009.major};
+    const finale_mus_reader::SourceVersion finale2011{
+        .major = finale_mus_reader::versions::finale2011.major};
+    const finale_mus_reader::SourceVersion finale2012{
+        .major = finale_mus_reader::versions::finale2012.major};
     const finale_mus_reader::SourceVersion finale97{
         .major = finale_mus_reader::versions::finale97.major};
     const finale_mus_reader::SourceVersion finale2005{
@@ -906,14 +1406,18 @@ TEST_CASE("Through Finale 2008 percussion and tablature note-font enablement "
                 &finale2005)) == DifferenceClassification::FinaleUpgradeLoss);
     REQUIRE_FALSE(classifyStaffDifference(context(standard, no, yes, "legacy-mus",
         DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2008)));
-    REQUIRE_FALSE(classifyStaffDifference(context(percussion, yes, no, "legacy-mus",
-        DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2008)));
+    REQUIRE(classifyStaffDifference(context(percussion, yes, no, "legacy-mus",
+                DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy,
+                &finale2008)) == DifferenceClassification::FinaleUpgradeLoss);
+    REQUIRE(classifyStaffDifference(context(percussion, yes, no, "legacy-mus",
+                DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy,
+                &finale2011)) == DifferenceClassification::FinaleUpgradeLoss);
     REQUIRE_FALSE(classifyStaffDifference(context(percussion, no, yes, "legacy-behavior",
         DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2008)));
     REQUIRE_FALSE(classifyStaffDifference(context(percussion, no, yes, "legacy-mus",
         DifferenceCategory::ReaderOnly, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2008)));
     REQUIRE_FALSE(classifyStaffDifference(context(percussion, no, yes, "legacy-mus",
-        DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2009)));
+        DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2012)));
 }
 
 TEST_CASE("Coverage excludes the Studio View Staff", "[coverage]")
@@ -974,6 +1478,166 @@ TEST_CASE("Only pre-Finale 2012 behavioral Staff UUIDs have different defaults",
         "staff[cmper=1].line_space", "legacy-behavior", DifferenceCategory::Differs, &finale2011)));
 }
 
+TEST_CASE("Unavailable and upgraded Staff hide-mode differences are different defaults",
+    "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    using HideMode = musx::dom::others::Staff::HideMode;
+    const Value none{static_cast<std::int64_t>(HideMode::None)};
+    const Value score{static_cast<std::int64_t>(HideMode::Score)};
+    const Value cutaway{static_cast<std::int64_t>(HideMode::Cutaway)};
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const finale_mus_reader::SourceVersion finale2010{
+        .major = finale_mus_reader::versions::finale2010.major};
+    const finale_mus_reader::SourceVersion finale2011{
+        .major = finale_mus_reader::versions::finale2011.major};
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category, const Value& source,
+                             const Value& companion, finale_mus_reader::FormatEpoch epoch,
+                             const finale_mus_reader::SourceVersion* version) {
+        return DifferenceContext{path, category, origin, source, companion, leaves, leaves, epoch,
+            finale_mus_reader::ByteOrder::LittleEndian, version, report};
+    };
+
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+                DifferenceCategory::Differs, none, score,
+                finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+                DifferenceCategory::Differs, cutaway, score,
+                finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "finale27-default",
+                DifferenceCategory::Differs, none, score,
+                finale_mus_reader::FormatEpoch::CodaBanner, nullptr)) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "finale27-default",
+                DifferenceCategory::Differs, none, cutaway,
+                finale_mus_reader::FormatEpoch::CodaBanner, nullptr)) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "finale27-default",
+                DifferenceCategory::Differs, none, score,
+                finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2011)) ==
+            DifferenceClassification::DifferentDefaults);
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+        DifferenceCategory::Differs, none, score,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2011)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+        DifferenceCategory::Differs, cutaway, score,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2011)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+        DifferenceCategory::Differs, none, cutaway,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+        DifferenceCategory::Differs, score, none,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "finale27-default",
+        DifferenceCategory::Differs, score, none,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "unmapped",
+        DifferenceCategory::Differs, none, score,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_mode", "legacy-mus",
+        DifferenceCategory::ReaderOnly, none, score,
+        finale_mus_reader::FormatEpoch::ZlibLegacy, &finale2010)));
+}
+
+TEST_CASE("Finale 2012 beta Staff accidental display behavior is upgrade loss", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value disabled{false};
+    const Value enabled{true};
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const finale_mus_reader::SourceVersion beta{
+        .major = finale_mus_reader::versions::finale2012.major, .devStatus = 2};
+    const finale_mus_reader::SourceVersion release{
+        .major = finale_mus_reader::versions::finale2012.major};
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category, const Value& source,
+                             const Value& companion,
+                             const finale_mus_reader::SourceVersion* version) {
+        return DifferenceContext{path, category, origin, source, companion, leaves, leaves,
+            finale_mus_reader::FormatEpoch::ZlibLegacy,
+            finale_mus_reader::ByteOrder::LittleEndian, version, report};
+    };
+
+    REQUIRE(classifyStaffDifference(context("staff[cmper=1].hide_key_sigs_show_accis",
+                "legacy-behavior", DifferenceCategory::Differs, disabled, enabled, &beta)) ==
+            DifferenceClassification::BetaDiscrepancy);
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_key_sigs_show_accis",
+        "legacy-behavior", DifferenceCategory::Differs, disabled, enabled, &release)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_key_sigs_show_accis",
+        "legacy-mus", DifferenceCategory::Differs, disabled, enabled, &beta)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].hide_key_sigs_show_accis",
+        "legacy-behavior", DifferenceCategory::Differs, enabled, disabled, &beta)));
+}
+
+TEST_CASE("Six-word Staff defaults with fallback provenance are possibly unrecoverable",
+    "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value source{-3};
+    const Value companion{-2};
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch) {
+        return DifferenceContext{path, category, origin, source, companion, leaves, leaves, epoch,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    };
+
+    const Value shown{true};
+    const Value hidden{false};
+    const auto hideKeySigs = [&](finale_mus_reader::FormatEpoch epoch) {
+        return DifferenceContext{"staff[cmper=1].hide_key_sigs", DifferenceCategory::Differs,
+            "unmapped", hidden, shown, leaves, leaves, epoch,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    };
+    REQUIRE_FALSE(classifyStaffDifference(
+        hideKeySigs(finale_mus_reader::FormatEpoch::UncompressedLegacy)));
+    report.setField(finale_mus_reader::instanceKey<Staff>(musx::dom::SCORE_PARTID, 1),
+        "dwRestOffset", {ValueOrigin::Finale27Default, 0, 0, -4});
+    for (const auto epoch : {finale_mus_reader::FormatEpoch::CodaBanner,
+             finale_mus_reader::FormatEpoch::UncompressedLegacy}) {
+        REQUIRE(classifyStaffDifference(hideKeySigs(epoch)) ==
+                DifferenceClassification::PossiblyUnrecoverable);
+    }
+
+    for (const auto suffix : {"dw_rest_offset", "w_rest_offset", "h_rest_offset",
+             "other_rest_offset", "stem_reversal"}) {
+        for (const auto epoch : {finale_mus_reader::FormatEpoch::CodaBanner,
+                 finale_mus_reader::FormatEpoch::UncompressedLegacy}) {
+            REQUIRE(classifyStaffDifference(context("staff[cmper=1]." + std::string(suffix),
+                        "finale27-default", DifferenceCategory::Differs, epoch)) ==
+                    DifferenceClassification::PossiblyUnrecoverable);
+        }
+    }
+    const Value zero{0};
+    const Value two{2};
+    const DifferenceContext fretInstrument{"staff[cmper=1].fret_inst_id",
+        DifferenceCategory::Differs, "finale27-default", zero, two, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE(classifyStaffDifference(fretInstrument) ==
+            DifferenceClassification::PossiblyUnrecoverable);
+    const DifferenceContext reverseFretInstrument{"staff[cmper=1].fret_inst_id",
+        DifferenceCategory::Differs, "finale27-default", two, zero, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyStaffDifference(reverseFretInstrument));
+    REQUIRE_FALSE(
+        classifyStaffDifference(context("staff[cmper=1].dw_rest_offset", "legacy-behavior",
+            DifferenceCategory::Differs, finale_mus_reader::FormatEpoch::CodaBanner)));
+    REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].dw_rest_offset",
+        "finale27-default", DifferenceCategory::ReaderOnly,
+        finale_mus_reader::FormatEpoch::CodaBanner)));
+    REQUIRE_FALSE(classifyStaffDifference(context("measures[cmper=1].dw_rest_offset",
+        "finale27-default", DifferenceCategory::Differs,
+        finale_mus_reader::FormatEpoch::CodaBanner)));
+}
+
 TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
 {
     using namespace finale_mus_reader::coverage;
@@ -1015,6 +1679,59 @@ TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
     REQUIRE_FALSE(classifyStaffDifference(codaUnmapped));
     REQUIRE(classifyStaffDifference(derivedStyles) ==
             DifferenceClassification::AwaitsDependentRecovery);
+}
+
+TEST_CASE("Staff fields omitted from the companion Scroll View await StaffUsed recovery",
+    "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value source{26};
+    const Value companion{0};
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const auto document = emptyStaffDocument();
+    auto staffUsed = std::make_shared<musx::dom::others::StaffUsed>(document,
+        musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+        document->calcScrollViewCmper(musx::dom::SCORE_PARTID), 0);
+    staffUsed->staffId = 1;
+    document->getOthers()->add(
+        musx::dom::others::StaffUsed::XmlNodeName, std::move(staffUsed));
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category) {
+        return DifferenceContext{path, category, origin, source, companion, leaves, leaves,
+            finale_mus_reader::FormatEpoch::ZlibLegacy,
+            finale_mus_reader::ByteOrder::LittleEndian, nullptr, report, {}, {}, nullptr, nullptr,
+            document.get()};
+    };
+
+    for (const auto suffix :
+        {".full_name_text_id", ".abbrv_name_text_id", ".note_font.font_size",
+            ".transposition.present", ".transposition.keysig.present",
+            ".transposition.keysig.interval", ".transposition.keysig.adjust", ".hide_meas_nums",
+            ".hide_name_in_score"}) {
+        REQUIRE(classifyStaffDifference(context(
+                    std::string("staff[cmper=2]") + suffix, "legacy-mus",
+                    DifferenceCategory::Differs)) ==
+                DifferenceClassification::AwaitsDependentRecovery);
+        REQUIRE_FALSE(classifyStaffDifference(context(
+            std::string("staff[cmper=1]") + suffix, "legacy-mus", DifferenceCategory::Differs)));
+    }
+    REQUIRE_FALSE(classifyStaffDifference(context(
+        "staff[cmper=2].use_note_font", "legacy-mus", DifferenceCategory::Differs)));
+    REQUIRE_FALSE(classifyStaffDifference(context(
+        "staff[cmper=2].note_font.font_size", "unmapped", DifferenceCategory::Differs)));
+    REQUIRE_FALSE(classifyStaffDifference(context(
+        "staff[cmper=2].note_font.font_size", "legacy-mus", DifferenceCategory::ReaderOnly)));
+    REQUIRE(classifyStaffDifference(context("staff[part_id=3,cmper=2].full_name_text_id",
+                "legacy-mus", DifferenceCategory::Differs)) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+    REQUIRE_FALSE(classifyStaffDifference(context(
+        "staff[cmper=invalid].full_name_text_id", "legacy-mus", DifferenceCategory::Differs)));
+
+    setDeferredRecoveryClassified(false);
+    CHECK_FALSE(classifyStaffDifference(context(
+        "staff[cmper=2].note_font.font_size", "legacy-mus", DifferenceCategory::Differs)));
+    setDeferredRecoveryClassified(true);
 }
 
 } // namespace

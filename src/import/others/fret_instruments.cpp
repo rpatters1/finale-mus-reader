@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "import/support/field_manifest.h"
 #include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
@@ -28,24 +29,15 @@ void reportFretInstrument(ImportReport& report, const FretInstrumentTarget& targ
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<FretInstrumentTarget>(partId, cmper);
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
-        const auto report = [&](std::string member, auto value,
-                                typename Reporting::Origin origin) {
-            reporting.report().setField(
-                key, std::move(member), {origin, row.blockOffset, row.decodedOffset, value});
+        const auto stored = [&](std::string member, auto value) {
+            reporting.report().setField(key, std::move(member),
+                {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
         };
-        report("numFrets", target.numFrets, Reporting::Origin::LegacyMus);
-        report("numStrings", target.numStrings, Reporting::Origin::LegacyMus);
-        report("speedyClef", target.speedyClef, Reporting::Origin::LegacyMus);
-        for (std::size_t index = 0; index < target.strings.size(); ++index) {
-            report("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch,
-                Reporting::Origin::LegacyMus);
-            report("strings[" + std::to_string(index) + "].nutOffset",
-                target.strings[index]->nutOffset, Reporting::Origin::LegacyBehavior);
-        }
-        for (std::size_t index = 0; index < target.fretSteps.size(); ++index) {
-            report("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index],
-                Reporting::Origin::LegacyMus);
-        }
+        const auto behavior = [&](std::string member, auto value) {
+            reporting.report().setField(key, std::move(member),
+                {Reporting::Origin::LegacyBehavior, row.blockOffset, row.decodedOffset, value});
+        };
+        reportFretInstrumentFields(target, true, stored, behavior);
     });
 }
 

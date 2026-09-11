@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include "musx/musx.h"
 
@@ -58,4 +60,32 @@ struct MusicSymbolOptionsField
 std::span<const MusicSymbolOptionsField> musicSymbolOptionsFields();
 
 } // namespace options
+
+namespace others {
+
+template <typename Stored, typename Behavior>
+void reportFretInstrumentFields(const musx::dom::others::FretInstrument& target,
+    bool storedStructure, Stored&& stored, Behavior&& behavior)
+{
+    const auto structure = [&](std::string member, auto value) {
+        if (storedStructure) {
+            stored(std::move(member), value);
+        } else {
+            behavior(std::move(member), value);
+        }
+    };
+    structure("numFrets", target.numFrets);
+    structure("numStrings", target.numStrings);
+    structure("speedyClef", target.speedyClef);
+    for (std::size_t index = 0; index < target.strings.size(); ++index) {
+        stored("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch);
+        behavior(
+            "strings[" + std::to_string(index) + "].nutOffset", target.strings[index]->nutOffset);
+    }
+    for (std::size_t index = 0; index < target.fretSteps.size(); ++index) {
+        stored("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index]);
+    }
+}
+
+} // namespace others
 } // namespace finale_mus_reader

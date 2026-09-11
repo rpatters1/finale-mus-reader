@@ -55,12 +55,18 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
                            ComparisonResult& result);
+void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
+                                          const musx::dom::DocumentPtr& sourceDocument,
+                                          const musx::dom::DocumentPtr& companionDocument,
+                                          ComparisonResult& result);
 std::map<std::string, ReferentComparison>
 compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
                           const musx::dom::DocumentPtr& companionDocument);
 /// @brief Compares a Staff name reference through its TextBlock and BlockText.
-/// @return No value for fields other than Staff names or when either comparator is zero;
-/// otherwise, whether the two referenced names are semantically equivalent.
+/// @details A zero comparator, an unresolved reference, and formatting without visible text all
+/// represent an empty Staff name.
+/// @return No value for fields other than Staff names; otherwise, whether the two names are
+/// semantically equivalent.
 std::optional<bool> compareStaffNameReferents(
     std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
     const musx::dom::DocumentPtr& sourceDocument,

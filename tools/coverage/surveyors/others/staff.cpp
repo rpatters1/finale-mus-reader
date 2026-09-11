@@ -6,6 +6,9 @@
 #include "coverage/support/source_gate.h"
 #include "musx/musx.h"
 
+#include <charconv>
+#include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -15,18 +18,69 @@ namespace {
 using namespace finale_mus_reader::coverage;
 using StaffSurveyTarget = musx::dom::others::Staff;
 
+[[nodiscard]] std::optional<musx::dom::StaffCmper> staffIdFromComparisonPath(
+    std::string_view path)
+{
+    constexpr std::string_view cmperKey = "cmper=";
+    const auto identityBegin = path.find('[');
+    const auto identityEnd = path.find(']', identityBegin);
+    if (identityBegin == std::string_view::npos || identityEnd == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const auto valueBegin = path.find(cmperKey, identityBegin + 1);
+    if (valueBegin == std::string_view::npos || valueBegin >= identityEnd) return std::nullopt;
+    const auto digitsBegin = valueBegin + cmperKey.size();
+    const auto digitsEnd = path.find_first_of(",]", digitsBegin);
+    if (digitsEnd == std::string_view::npos || digitsEnd > identityEnd) return std::nullopt;
+
+    unsigned int value{};
+    const auto [parsedEnd, error] =
+        std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, value);
+    if (error != std::errc{} || parsedEnd != path.data() + digitsEnd ||
+        value > (std::numeric_limits<musx::dom::StaffCmper>::max)()) {
+        return std::nullopt;
+    }
+    return static_cast<musx::dom::StaffCmper>(value);
+}
+
+[[nodiscard]] bool companionOmitsStaffFromScrollView(const DifferenceContext& context)
+{
+    if (!context.companionDocument) return false;
+    const auto staffId = staffIdFromComparisonPath(context.path);
+    if (!staffId) return false;
+    return !context.companionDocument->getScrollViewStaves(musx::dom::SCORE_PARTID)
+                .getIndexForStaff(*staffId);
+}
+
+[[nodiscard]] bool sourceStaffUsesSixWordFallbacks(const DifferenceContext& context)
+{
+    const auto staffId = staffIdFromComparisonPath(context.path);
+    if (!staffId) return false;
+    const auto* restOffset = context.sourceReport.findField<StaffSurveyTarget>(
+        "dwRestOffset", musx::dom::SCORE_PARTID, *staffId);
+    return restOffset && restOffset->origin == finale_mus_reader::ValueOrigin::Finale27Default;
+}
+
 std::optional<DifferenceClassification> classifyStaffDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
     constexpr std::string_view useNoteFontSuffix = ".use_note_font";
     constexpr std::string_view noteFontSizeSuffix = ".note_font.font_size";
-    if (context.category == Differs && context.origin == "legacy-mus" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, noteFontSizeSuffix) &&
-        context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 &&
-        context.companionValue.isInteger() && context.companionValue.asInteger() == 24 &&
-        sourcePredatesVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::DclLegacy, finale_mus_reader::versions::finale2001)) {
+    constexpr std::string_view fullNameTextIdSuffix = ".full_name_text_id";
+    constexpr std::string_view abbrvNameTextIdSuffix = ".abbrv_name_text_id";
+    constexpr std::string_view transpositionPresentSuffix = ".transposition.present";
+    constexpr std::string_view keysigPresentSuffix = ".transposition.keysig.present";
+    constexpr std::string_view keysigIntervalSuffix = ".transposition.keysig.interval";
+    constexpr std::string_view keysigAdjustSuffix = ".transposition.keysig.adjust";
+    constexpr std::string_view hideMeasNumsSuffix = ".hide_meas_nums";
+    constexpr std::string_view hideNameInScoreSuffix = ".hide_name_in_score";
+    constexpr std::string_view hideModeSuffix = ".hide_mode";
+    constexpr std::string_view hideKeySigsShowAccisSuffix = ".hide_key_sigs_show_accis";
+    constexpr std::string_view fretInstIdSuffix = ".fret_inst_id";
+    const auto noneHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::None);
+    const auto scoreHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::Score);
+    if (context.category == Differs && comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, noteFontSizeSuffix)) {
         const auto objectPath =
             context.path.substr(0, context.path.size() - noteFontSizeSuffix.size());
         const auto useNoteFont = context.source.find(std::string(objectPath) + ".use_note_font");
@@ -35,13 +89,24 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
             return DifferenceClassification::DifferentDefaults;
         }
     }
+    if (deferredRecoveryClassified() && context.category == Differs &&
+        context.origin == "legacy-mus" && comparisonPathStartsWith(context.path, "staff[")) {
+        for (const auto suffix : {fullNameTextIdSuffix, abbrvNameTextIdSuffix, noteFontSizeSuffix,
+                 transpositionPresentSuffix, keysigPresentSuffix, keysigIntervalSuffix,
+                 keysigAdjustSuffix, hideMeasNumsSuffix, hideNameInScoreSuffix}) {
+            if (comparisonPathEndsWith(context.path, suffix) &&
+                companionOmitsStaffFromScrollView(context)) {
+                return DifferenceClassification::AwaitsDependentRecovery;
+            }
+        }
+    }
     if (context.category == Differs && context.origin == "legacy-mus" &&
         comparisonPathStartsWith(context.path, "staff[") &&
         comparisonPathEndsWith(context.path, useNoteFontSuffix) && context.sourceValue.isBool() &&
-        !context.sourceValue.asBool() && context.companionValue.isBool() &&
-        context.companionValue.asBool() &&
+        context.companionValue.isBool() &&
+        context.sourceValue.asBool() != context.companionValue.asBool() &&
         sourcePredatesVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2009)) {
+            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
         const auto objectPath =
             context.path.substr(0, context.path.size() - useNoteFontSuffix.size());
         const auto notationStyle =
@@ -53,16 +118,61 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
             return DifferenceClassification::FinaleUpgradeLoss;
         }
     }
+    if (context.category == Differs && context.origin == "unmapped" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, ".hide_key_sigs") &&
+        sourceStaffUsesSixWordFallbacks(context)) {
+        return DifferenceClassification::PossiblyUnrecoverable;
+    }
     if (deferredRecoveryClassified() && context.category == Differs &&
         context.origin == "unmapped" && comparisonPathStartsWith(context.path, "staff[") &&
         comparisonPathEndsWith(context.path, ".has_styles")) {
         return DifferenceClassification::AwaitsDependentRecovery;
+    }
+    if (context.category == Differs && context.origin == "finale27-default" &&
+        comparisonPathStartsWith(context.path, "staff[")) {
+        for (const auto suffix : {".dw_rest_offset", ".w_rest_offset", ".h_rest_offset",
+                 ".other_rest_offset", ".stem_reversal"}) {
+            if (comparisonPathEndsWith(context.path, suffix)) {
+                return DifferenceClassification::PossiblyUnrecoverable;
+            }
+        }
+        if (comparisonPathEndsWith(context.path, fretInstIdSuffix) &&
+            context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 &&
+            context.companionValue.isInteger()) {
+            return DifferenceClassification::PossiblyUnrecoverable;
+        }
     }
     if (context.category == Differs && context.origin == "legacy-behavior" &&
         comparisonPathStartsWith(context.path, "staff[") &&
         comparisonPathEndsWith(context.path, ".inst_uuid") &&
         sourcePredatesVersion(context.epoch, context.sourceVersion,
             finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
+        return DifferenceClassification::DifferentDefaults;
+    }
+    if (context.category == Differs && context.origin == "legacy-behavior" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, hideKeySigsShowAccisSuffix) &&
+        context.sourceValue.isBool() && !context.sourceValue.asBool() &&
+        context.companionValue.isBool() && context.companionValue.asBool() &&
+        sourceIsBeta(context.sourceVersion) &&
+        sourceIsVersion(context.epoch, context.sourceVersion,
+            finale_mus_reader::FormatEpoch::ZlibLegacy,
+            finale_mus_reader::versions::finale2012)) {
+        return DifferenceClassification::BetaDiscrepancy;
+    }
+    if (context.category == Differs && context.origin == "finale27-default" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() &&
+        context.companionValue.isInteger() && context.sourceValue.asInteger() == noneHideMode) {
+        return DifferenceClassification::DifferentDefaults;
+    }
+    if (context.category == Differs && context.origin == "legacy-mus" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() &&
+        context.companionValue.isInteger() && context.companionValue.asInteger() == scoreHideMode &&
+        sourcePredatesVersion(context.epoch, context.sourceVersion,
+            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011)) {
         return DifferenceClassification::DifferentDefaults;
     }
     return std::nullopt;

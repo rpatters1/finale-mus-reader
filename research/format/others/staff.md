@@ -9,12 +9,15 @@ attribute extension; `open` for remaining unmapped fields.
 ## Identity and scope
 
 The fixed-row selector is `IS`; the zlib class is `0x00e7`. Both are keyed by staff ID. Recovery
-constructs source-owned `musx::dom::others::Staff` objects. Coda staff names are parallel Others
-rows keyed by the same staff ID: uppercase `IN` holds the full name, and by Finale 2.6.3 lowercase
-`in` holds the abbreviation. Each incidence carries 12 eight-bit, NUL-terminated or padded bytes.
-Recovery converts each nonempty name with the corresponding imported name font, creates a
+constructs source-owned `musx::dom::others::Staff` objects. Before Finale 3.7, staff names are
+parallel Others rows keyed by the same staff ID: uppercase `IN` holds the full name, and by Finale
+2.6.3 lowercase `in` holds the abbreviation. Each incidence carries 12 eight-bit, NUL-terminated
+or padded bytes. Finale 3.7 moves the names to TextBlock references in the Staff record. Recovery
+converts each nonempty parallel name with the corresponding imported name font, creates a
 `texts::BlockText` and an `others::TextBlock`, and writes the TextBlock comparator to the Staff.
-The PDK's other synthesized referents remain outside this raw Staff slice.
+Other synthesized referents remain outside this raw Staff slice. **Strong.** The
+pre-Finale-3.7 representation occurs in Coda controlled fixtures and two companion-backed Finale
+3.5 documents from `rpatters1-main`; Finale 3.7 is the documented transition.
 
 The public Finale-2000 `EDTStaffSpec` declaration establishes that its fields through the final
 padding word are the raw base. The following staff ID, related-record tags and cmpers, and measure
@@ -30,7 +33,7 @@ layout through Finale 2012.
 | Word | Raw field | Recovered Staff value |
 |---:|---|---|
 | 0 | bottom barline offset | `botBarlineOffset` |
-| 1 | packed tablature positions | low-byte `capoPos`, high-byte `lowestFret` |
+| 1 | packed tablature positions | low-byte `capoPos`, high-byte `lowestFret`, except in the short one-string tablature form described below |
 | 2 | alternate-notation flags | `altNotation`, `altLayer`, and the PDK show-detail inverses |
 | 3 | notehead/tablature font ID | `noteFont.fontId` |
 | 4 | font size and effects | remaining `noteFont` members |
@@ -45,8 +48,34 @@ layout through Finale 2012.
 | 15–16 | name text IDs | `fullNameTextId`, `abbrvNameTextId` |
 | 17 | padding in the 18-word layout | no value |
 
-The low bit of word 7 selects the custom-line representation. Remaining set bits in word 7 name
-lines 16–26; bits in word 8 name lines 15–0. Otherwise word 8 is the ordinary staff-line count.
+The low bit of word 7 selects the custom-line representation. Together, words 7–8 form a rotated
+32-bit line mask: rotate the stored value left by 11 bits and retain the low 27 bits, after which
+each bit number is its staff-line number. Word 7 bits 5–15 therefore represent lines 0–10, word 8
+bits 0–15 represent lines 11–26, word 7 bit 0 is the custom-layout marker, and word 7 bits 1–4 are
+outside the line vector. Otherwise word 8 is the ordinary staff-line count. **Confirmed.**
+Controlled fixtures exercise both ranges and their line 0, 10, 11, 14, and 15 boundaries.
+
+When the post-Coda source layout has no repeat-dot-offset field, its line representation selects
+the fallback. An ordinary `staffLines` count retains the reference Staff's offsets. A `customStaff`
+uses `Staff::calcMiddleStaffPosition()`, including an empty custom vector. An even result is already
+a line; an odd result is the center space, in which case the line immediately above it is selected.
+The bottom and top dots are placed one staff-position unit below and above that line. A structurally
+present repeat-dot-offset field supersedes either fallback. **Strong.** The controlled Finale 2000
+custom-line fixtures reproduce both odd- and even-line-count companion results, while the Finale
+2000 Guitar Tablature template retains the reference offsets for ordinary one-line staves. The
+Coda exception is described below.
+
+The 18-word one-string tablature form uses word 1 differently. Its low byte is the open-string
+MIDI pitch used to synthesize a one-string `FretInstrument`, and its signed high byte is the
+tablature-number vertical offset in quarter-EVPUs. `capoPos` and `lowestFret` are unavailable in
+that form. Before Finale 2000, words 7–8 encode this as the legacy custom line 11; Finale 2000
+uses the ordinary one-line count. The pre-Finale-2000 form hides both repeat dots. All represented
+short one-string tablature Staffs show the clef
+on every system and hide rests, dots, stems, and tuplets. Breaking lines at note numbers remains
+disabled through Finale 97 and is enabled beginning with Finale 98. **Strong.** Observed in four
+companion-backed template generations across `rpatters1-installs`; the general one-string
+conversion is also continuous with the controlled `tests/evidence/F263/F263-staffopts.mus`
+attributes layout.
 
 The transposition masks and signed subfields follow the public PDK declaration. A zero word omits
 the contained object. Bit `0x2000` selects the chromatic variant; otherwise the low two six-bit
@@ -73,17 +102,22 @@ size/effects word as `0x1800`; the controlled tablature records establish that t
 another flag field. Layouts containing the second alternate-notation flag word use the independent
 modern interpretations instead.
 
-Through Finale 2000, a stored zero note-font size on a Staff that does not use an independent
-notehead font becomes the Finale 27 default size of 24 on upgrade. Where the layout contains that
-tuple, the reader preserves the stored zero; recovery coverage classifies only that exact
-disabled-font `0` to `24` comparison as `DifferentDefaults`. Finale 2001 and later companions
-retain zero, so the classification ends at that boundary. Nonzero sizes and Staffs with
-`useNoteFont` enabled are excluded.
+The low nibble uses the musxdom `AlternateNotation` order through its terminal `Blank` value;
+notably, stored value 6 is `Blank`, not `BlankWithRests`. **Strong.** This agrees across 22 distinct
+Finale 2011 documents in the current companion-backed Staff cohort.
 
-Through Finale 2008, Finale 27 can enable `useNoteFont` while upgrading percussion and tablature
-Staffs whose stored value is false. Recovery preserves the stored switch; coverage classifies that
-exact false-to-true conversion as `FinaleUpgradeLoss` for either notation style. Standard Staffs,
-the reverse conversion, other provenance, and Finale 2009 or later are excluded.
+A nonempty Staff font tuple is a direct override: enabling the independent font in the controlled
+Finale 97 pair exposes sizes of 28 and 26 directly in word 4. When `useNoteFont` is false, recovery
+preserves the stored size rather than replacing zero from a document font option. Coverage treats
+any size disagreement as `DifferentDefaults` for a disabled independent font, without a version,
+value-pair, or provenance gate; an enabled font remains subject to exact comparison. The withdrawn
+inheritance trial is recorded in [`../../investigations/staff.md`](../../investigations/staff.md).
+**Confirmed** for the stored override; the dormant-value treatment is a semantic comparison rule.
+
+Before Finale 2012, Finale 27 can change `useNoteFont` in either direction while upgrading
+percussion and tablature Staffs. Recovery preserves the stored switch; coverage classifies either
+Boolean conversion as `FinaleUpgradeLoss` for those notation styles. Standard Staffs, other
+provenance, and Finale 2012 or later are excluded. **Strong.**
 
 The setting does not recover `hasStyles`. That property
 is not stored in the Finale 2000 or 2003 `IS` record. Finale 27 synthesizes it when the staff has a
@@ -105,8 +139,8 @@ switch, and coverage classifies only that narrowly identified conversion as upgr
 Payload structure, rather than saving-version numbers, gates the extensions:
 
 - More than 18 words repurposes word 17 as two signed repeat-dot offsets: bottom in the low byte,
-  top in the high byte. The 18-word post-Coda layout retains the ordinary Finale 27 Staff's
-  `-5`/`-3` values as `Finale27Default`.
+  top in the high byte. The 18-word post-Coda layout uses the legacy geometry calculation
+  described above.
 - At least 40 bytes stores `lineSpace` as a signed 32-bit Efix at byte 36; divide by 64 for EVPUs.
   Shorter post-Coda layouts retain the ordinary Finale 27 Staff's 24-EVPU value as
   `Finale27Default`.
@@ -148,41 +182,63 @@ instance from both source and companion observations.
 
 ## Coda layout
 
-Finale 1.0 and 2.6 use a distinct six-word `IS` payload. Within that row, word 0 is `defaultClef`,
-word 4 uses the later packed `transposition` representation, and word 5 bit `0x0010` hides time
-signatures. The other bits and words remain open. In particular, a constant word 2 value of 4 and
-word 3 value of 1024 in ordinary Staffs do not establish modern field meanings.
+Finale 1.0 and 2.6 use a distinct six-word `IS` payload. Within that row, word 0 is `defaultClef`
+and word 4 uses the later packed `transposition` representation. Word 5 selectively retains the
+later display masks: `0x8000` is `floatKeys`, `0x2000` is `blineBreak`, `0x0400` is
+`hideMeasNums`, `0x0200` is `hideRepeats`, `0x0100` is `hideNameInScore`, `0x0010` is
+`hideTimeSigs`, and `0x0008` is `hideClefs`. Its lower active bits do not retain the later
+`hideBarlines`, `hideStaffLines`, `hideChords`, or `noKey` meanings. Words 1–3 remain open; in
+particular, their common values in ordinary Staffs do not establish modern field meanings.
+**Strong.** The mapped bits agree across 509 non-Studio-View Staff occurrences in 77
+companion-backed Coda documents selected from `rpatters1-installs` and `rpatters1-main`.
 
-Finale 2.6.3 can add a parallel six-word `IA` row for controls absent from Finale 1.0. In the
-represented row, word 2 low bit marks a custom staff and `IS` word 2 supplies its line mask; the
-combination maps to custom line 13. Word 1 packs the legacy Base Key UI value in its low byte and
-the signed vertical tablature-number offset in its high byte; the latter becomes an Efix value by
-multiplication by 256. Musxdom has no Staff member for Base Key. `IA` words 3 and 4 hold the
-notehead font ID and packed size/effects, as in the later base. Word 5's high byte holds the
-fret-instrument ID; its low byte includes the `useNoteFont` switch, while the represented value
-also selects tablature notation. A Coda tablature Staff has the legacy behavior of showing clefs
-on every system while hiding rests, augmentation dots, stems, and tuplets; the other modern
-tablature visibility switches retain their false defaults. A recovered one-line custom Staff has
-legacy barline extents of -48 below and 48 above its reference line. The remaining `IA` values
-remain open. Without the optional row, recovery supplies the era's fixed five-line Staff as
+Finale 2.6.3 can add a parallel six-word `IA` row for controls absent from Finale 1.0. Word 5 bit
+`0x0040` activates the signed staff-line value in word 2. Without that bit, the Staff has five
+ordinary lines. With it, nonnegative values are ordinary line counts except that `1` selects
+custom line 13 with barline extents two spaces below and above its reference line. A negative
+value *n* selects custom line `10 - n`; its bottom barline offset is zero and its top offset is
+`(-n - 1)` spaces. Positive values retain the reference Staff's repeat-dot offsets. Zero follows
+the general legacy geometry rule above, as do negative values. The legacy visual suppression for
+negative values is not represented by the modern Staff repeat-dot hide flags.
+**Confirmed.** Controlled source/companion pairs cover active values `0`, `1`, `2`, `4`, `17`,
+`-1`, `-3`, and `-11`, plus an inactive baseline.
+
+A zero line count hides the lines but retains standard five-line staff geometry, whether represented
+by `staffLines == 0` or an empty `customStaff`. Consequently,
+`Staff::calcMiddleStaffPosition()` returns -4 for either zero-line representation and for a
+five-line staff.
+
+Word 1 packs the legacy Base Key value in its low byte and the signed vertical
+tablature-number offset in its high byte; the latter becomes an Efix value by multiplication by
+256. In the `0xffff` one-line form, the low byte instead supplies the open-string MIDI pitch for
+a synthesized one-string `FretInstrument`; the Staff points to that new referent. `IA` words 3
+and 4 hold the tablature font ID and packed size/effects, as in the later base. On a tablature
+Staff, a font ID different from the imported default music font enables `useNoteFont`; other
+notation styles receive false as `LegacyBehavior`. **Strong.** Word 5 bit `0x0100` is
+`blankMeasure`, and bit `0x0200` selects tablature notation. No ordinary Coda `fretInstId` field is
+known, so it remains zero and `Unmapped`. The older line-11 form is separate: Finale replaces its
+stored open-string pitch with a synthesized fret-instrument referent, and recovery does likewise.
+**Strong.** A Coda tablature Staff shows clefs on every system while hiding rests, augmentation
+dots, stems, and tuplets; the other modern tablature visibility switches retain their false
+defaults. Without the optional row, recovery supplies the era's fixed five-line Staff as
 `LegacyBehavior`. It also creates the otherwise unavailable Staff-local note-font tuple with the
-pinned Finale 27 notehead-font size and reports that size as `Finale27Default`; the other tuple
-members remain unmapped.
+pinned Finale 27 notehead-font size and reports that size as `Finale27Default`; fields without
+another stated mapping remain open.
 
-Each nonempty `IN` or `in` family becomes a regular block-text pair. The raw eight-bit bytes are
-decoded through `FontOptions::StaffNames` or `FontOptions::AbbrvStaffNames`, respectively. The
-created `TextBlock` uses block text, automatic 100-percent line spacing, the modern position and
-shape switches, word wrapping, and the square-corner legacy behavior. Coda `HT`/`HS` block text is
-materialized first so its historical ordinal IDs remain available to page and measure text
-assignments. Staff-name text is then allocated after those pools are complete.
+Before Finale 3.7, each nonempty `IN` or `in` family becomes a regular block-text pair. The raw
+eight-bit bytes are decoded through `FontOptions::StaffNames` or `FontOptions::AbbrvStaffNames`,
+respectively. The created `TextBlock` uses block text, automatic 100-percent line spacing, the
+modern position and shape switches, word wrapping, and the square-corner legacy behavior. Coda
+`HT`/`HS` block text is materialized first so its historical ordinal IDs remain available to page
+and measure text assignments. Staff-name text is then allocated after those pools are complete.
 Recovery coverage follows both full and abbreviated Staff-name references through their
 `TextBlock` and compares the resulting `BlockText` semantically in every source version. If either
 Staff reference is zero, it compares the comparator values directly instead.
 
-Neither six-word row has locations for the later line spacing, four rest offsets, stem reversal,
-or repeat-dot offsets. Recovery takes only those scalars from the ordinary Staff in the pinned
-Finale 27 reference and reports them as `Finale27Default`. It reports `instUuid` as
-`uuid::Unknown`; fields without another stated mapping or legacy behavior remain unmapped.
+Neither six-word row has locations for the later line spacing, four rest offsets, or stem
+reversal. Recovery takes those unavailable scalars from the ordinary Staff in the pinned Finale
+27 reference and reports them as `Finale27Default`. It reports `instUuid` as `uuid::Unknown`;
+fields without another stated mapping or legacy behavior remain unmapped.
 
 ## Evidence
 
@@ -194,6 +250,9 @@ The byte offsets and both byte orders are reproducible with
 `tests/evidence/F100/F100-baseline.mus`, `tests/evidence/F100/F100-staffprops.mus`,
 `tests/evidence/F263/F263-timecomp.mus`, `tests/evidence/F263/F263-staffopts.mus`, and
 `tests/evidence/F372/F372-baseline.mus`; the early note-font representation is corroborated by
-`tests/evidence/F372/F372-notehead-font.mus`. The tablature fields are reproducible with the
-`tests/evidence/F2005/F2005-tab-*` fixtures. The broader controlled comparison and remaining
+`tests/evidence/F372/F372-notehead-font.mus`, and its inherited size by
+`tests/evidence/F97/F97-notehead-size28.mus` and
+`tests/evidence/F97/F97-notehead-size26.mus`. The signed Coda line forms are reproducible with the
+`tests/evidence/F263/staffopts/F263-lines-*` fixtures. The tablature fields are reproducible with
+the `tests/evidence/F2005/F2005-tab-*` fixtures. The broader controlled comparison and remaining
 differences are recorded in [`../../investigations/staff.md`](../../investigations/staff.md).
