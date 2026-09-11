@@ -34,11 +34,13 @@ using StaffSurveyTarget = musx::dom::others::Staff;
     const auto digitsEnd = path.find_first_of(",]", digitsBegin);
     if (digitsEnd == std::string_view::npos || digitsEnd > identityEnd) return std::nullopt;
 
-    unsigned int value{};
+    using UnsignedStaffCmper = std::make_unsigned_t<musx::dom::StaffCmper>;
+    UnsignedStaffCmper value{};
     const auto [parsedEnd, error] =
         std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, value);
     if (error != std::errc{} || parsedEnd != path.data() + digitsEnd ||
-        value > (std::numeric_limits<musx::dom::StaffCmper>::max)()) {
+        value > static_cast<UnsignedStaffCmper>(
+                    (std::numeric_limits<musx::dom::StaffCmper>::max)())) {
         return std::nullopt;
     }
     return static_cast<musx::dom::StaffCmper>(value);
