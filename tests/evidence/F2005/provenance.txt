@@ -1,6 +1,45 @@
 Version 2005b.r1
 Mac OS X 10.4.11 running in QEMU PowerPC emulator
 
+F2005-tab-breaklines.mus
+    sha256 a4f129fd53c00d2f9faea4491ec6549dfa3f2867e6aedff9db52f9582fcc90fa
+F2005-tab-breaklines.etf
+    sha256 483166c8e004080776fce8ef31fea1e89865ede539a41fb17589114dbf42ffe4
+-finale27/F2005-tab-breaklines.musx
+    sha256 7f3712a73e2e3cf575bb8b6bc74f90375c787fb619d4a61d624d4c753d090ba7
+    From F2005-baseline, changed staff 1 to tablature and enabled breaking staff lines at numbers.
+    The extended flag word is 0x2c1f; its `0x0800` bit is the setting unique to this variant.
+
+F2005-tab-notuplets.mus
+    sha256 76ad0ca8e5246b4e198a4a98e3629969a4066b0cee0d52648c12a1b2f2e3241e
+F2005-tab-notuplets.etf
+    sha256 b5e1e834f91d81385e8ad3c130c37a866ead035d61de83ab02364983e179020c
+-finale27/F2005-tab-notuplets.musx
+    sha256 6e98a7305c6ee9ded9dd492765a18794183ba5d55aa57f6f3448cc73ee52dba5
+    The same tablature setup with tuplets hidden, capo position 5, and default lowest fret 13. The
+    extended flag word is 0x041f, clearing `0x2000`; word 1 is 0x0d05.
+
+F2005-tab-showclefs.mus
+    sha256 78710f77d2076e67813220ee627928fcc7693f4e47825db9954aeb42c795b82d
+F2005-tab-showclefs.etf
+    sha256 ac44479e4275a1136525937d139165f578a3da7d316975184fb81cafded226d3
+-finale27/F2005-tab-showclefs.musx
+    sha256 1baa4d150e4ce3b983b7c419cf51ebb69db4f9f11026b1b108ce3f0fa991b3b6
+    The same tablature setup with clefs shown on every system. The extended flag word is 0x241e,
+    clearing `0x0001`.
+
+F2005-tab-showletters.mus
+    sha256 0c1bd828cd593575e5631cea4f4059eddae2ae5d4a6f918e6fc9cdf0ee0d656a
+F2005-tab-showletters.etf
+    sha256 f4c8a32299c54764efbf1f76df47ccf2bbfbe18755c32659254f111ccd23b
+-finale27/F2005-tab-showletters.musx
+    sha256 77d78abf908ca833d8e0c99db7d6ce607f18b302b7085f6ce69322ae11739f31
+    The same tablature setup with letters in place of numbers. The extended flag word is 0x261f,
+    setting `0x0200`. Except for the no-tuplets variant, word 1 is 0x0b17: capo position 23 in the
+    low byte and default lowest fret 11 in the high byte. All four ETF and Finale 27 companions
+    corroborate the named setting, the two packed positions, vertical number offset -1088, and
+    fret-instrument comparator 2.
+
 F2005-clef-baseline: from F2005-baseline, Clef Designer baseline adjustment set on two clefs.
   Clef 0 (treble): 1 inch requested. The document's measurement unit was inches, so this is
   288 Evpu and the file stores 18432 Efix.

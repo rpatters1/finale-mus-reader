@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 #include <algorithm>
 #include <array>
@@ -357,6 +358,126 @@ TEST_CASE("Custom-key clef octave presence normalizes attributes", "[class]") {
 
 TEST_CASE("Custom-key symbol list across epochs", "[class]") {
   testKeySymbolListAcrossEpochs();
+}
+
+TEST_CASE("Finale conversion corrupts legacy key-symbol-list double sharps", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value source("$\xC3\x9C#\xC3\x9C");
+    const Value mojibake("$\xC2\x8B#\xC2\x8B");
+    const Value other("$\xC2\x8B#x");
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
+    DifferenceContext context{"key_symbol_list_elements[4].accidental_string",
+        DifferenceCategory::Differs, "legacy-mus", source, mojibake, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+
+    REQUIRE(
+        classifyKeySymbolListDifference(context) == DifferenceClassification::TextEncodingError);
+
+    context.epoch = finale_mus_reader::FormatEpoch::ZlibLegacy;
+    REQUIRE(
+        classifyKeySymbolListDifference(context) == DifferenceClassification::TextEncodingError);
+
+    context.epoch = finale_mus_reader::FormatEpoch::CodaBanner;
+    REQUIRE_FALSE(classifyKeySymbolListDifference(context));
+    context.epoch = finale_mus_reader::FormatEpoch::UncompressedLegacy;
+    context.origin = "unmapped";
+    REQUIRE_FALSE(classifyKeySymbolListDifference(context));
+    context.origin = "legacy-mus";
+    context.category = DifferenceCategory::ReaderOnly;
+    REQUIRE_FALSE(classifyKeySymbolListDifference(context));
+    context.category = DifferenceCategory::Differs;
+    context.path = "key_symbol_list_elements[4].cmper2";
+    REQUIRE_FALSE(classifyKeySymbolListDifference(context));
+
+    DifferenceContext otherChange{"key_symbol_list_elements[4].accidental_string",
+        DifferenceCategory::Differs, "legacy-mus", source, other, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(otherChange));
+
+    DifferenceContext reverse{"key_symbol_list_elements[4].accidental_string",
+        DifferenceCategory::Differs, "legacy-mus", mojibake, source, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(reverse));
+}
+
+TEST_CASE("Finale conversion omits elemental Coda key-symbol-list records", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    constexpr std::string_view prefix = "key_symbol_list_elements[cmper1=1,cmper2=1]";
+    const auto cmper1Path = std::string(prefix) + ".cmper1";
+    const auto cmper2Path = std::string(prefix) + ".cmper2";
+    const auto stringPath = std::string(prefix) + ".accidental_string";
+    const ComparisonLeaves source{
+        {cmper1Path, {Value(1), {}}},
+        {cmper2Path, {Value(1), {}}},
+        {stringPath, {Value("$"), "legacy-mus"}},
+    };
+    const ComparisonLeaves companion;
+    const Value absentValue;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+
+    for (const auto& path : {cmper1Path, cmper2Path, stringPath}) {
+        const DifferenceContext context{path, DifferenceCategory::ReaderOnly,
+            source.at(path).second, source.at(path).first, absentValue, source, companion,
+            finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+            nullptr, report};
+        REQUIRE(classifyKeySymbolListDifference(context) ==
+                DifferenceClassification::FinaleUpgradeLoss);
+    }
+
+    const DifferenceContext laterEpoch{stringPath, DifferenceCategory::ReaderOnly, "legacy-mus",
+        source.at(stringPath).first, absentValue, source, companion,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(laterEpoch));
+
+    auto nonElemental = source;
+    nonElemental.at(cmper2Path).first = Value(3);
+    const DifferenceContext otherSlot{stringPath, DifferenceCategory::ReaderOnly, "legacy-mus",
+        nonElemental.at(stringPath).first, absentValue, nonElemental, companion,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(otherSlot));
+}
+
+TEST_CASE("Finale drops trailing Coda key-symbol-list whitespace controls", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    constexpr std::string_view path =
+        "key_symbol_list_elements[cmper1=1,cmper2=30].accidental_string";
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    const Value companion("symbols");
+    for (const auto control : {'\x01', '\x06'}) {
+        const Value source(std::string("symbols") + control);
+        const DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", source,
+            companion, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+        REQUIRE(classifyKeySymbolListDifference(context) ==
+                DifferenceClassification::WhitespaceControl);
+    }
+
+    const Value internal(std::string("sym") + '\x01' + "bols");
+    const DifferenceContext internalControl{path, DifferenceCategory::Differs, "legacy-mus",
+        internal, companion, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(internalControl));
+
+    const Value trailing(std::string("symbols") + '\x01');
+    const DifferenceContext laterEpoch{path, DifferenceCategory::Differs, "legacy-mus", trailing,
+        companion, leaves, leaves, finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(laterEpoch));
+
+    const DifferenceContext reverse{path, DifferenceCategory::Differs, "legacy-mus", companion,
+        trailing, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    REQUIRE_FALSE(classifyKeySymbolListDifference(reverse));
 }
 
 } // namespace

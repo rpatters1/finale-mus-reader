@@ -3,6 +3,8 @@
 
 #include "class_test_support.h"
 
+#include "coverage/comparison.h"
+
 namespace finale_mus_reader_tests {
 namespace {
 
@@ -224,6 +226,74 @@ void testCodaTextBlockSynthesis()
 
 TEST_CASE("Stored text blocks span three epochs", "[class]") { testStoredTextBlocksAcrossEpochs(); }
 TEST_CASE("Coda text blocks are assembled from text structure", "[class]") { testCodaTextBlockSynthesis(); }
+
+TEST_CASE("Pre-Finale-3.7 block texts align by semantic content", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto snapshot = [](std::int64_t number) {
+        Value::Object item;
+        item.emplace("number", number);
+        item.emplace("text", "^fontid(1)^size(12)^nfx(0)Staff Name");
+        Value::Array items;
+        items.emplace_back(std::move(item));
+        SurveySnapshot result;
+        result.emplace("block_texts", std::move(items));
+        return result;
+    };
+    const auto document = [](musx::dom::Cmper number) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto building = session.getDocument();
+        auto fontDefinition = std::make_shared<musx::dom::others::FontDefinition>(building,
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+            musx::dom::Cmper{1});
+        fontDefinition->name = "Times New Roman";
+        building->getOthers()->add(
+            musx::dom::others::FontDefinition::XmlNodeName, std::move(fontDefinition));
+        auto fontOptions = std::make_shared<musx::dom::options::FontOptions>(building);
+        auto textBlockFont = std::make_shared<musx::dom::FontInfo>(building);
+        textBlockFont->fontId = 1;
+        textBlockFont->fontSize = 12;
+        fontOptions->fontOptions.emplace(
+            musx::dom::options::FontOptions::FontType::TextBlock, std::move(textBlockFont));
+        building->getOptions()->add(
+            musx::dom::options::FontOptions::XmlNodeName, std::move(fontOptions));
+        auto textBlock = std::make_shared<musx::dom::others::TextBlock>(building,
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
+        textBlock->textId = number;
+        textBlock->textType = musx::dom::others::TextBlock::TextType::Block;
+        textBlock->lineSpacingPercentage = 100;
+        building->getOthers()->add(
+            musx::dom::others::TextBlock::XmlNodeName, std::move(textBlock));
+        auto staff = std::make_shared<musx::dom::others::Staff>(building,
+            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
+            musx::dom::Cmper{1});
+        staff->fullNameTextId = number;
+        staff->staffLines = 5;
+        building->getOthers()->add(musx::dom::others::Staff::XmlNodeName, std::move(staff));
+        return std::move(session).finish();
+    };
+    const auto sourceDocument = document(1);
+    const auto companionDocument = document(2);
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const SourceVersion finale35{.major = 3, .minor = 5};
+    const SourceVersion finale37{.major = 3, .minor = 7};
+    const auto compareAt = [&](const SourceVersion* version) {
+        return compareSnapshots(snapshot(1), snapshot(2), sourceDocument, companionDocument,
+            FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian, version, report);
+    };
+
+    const auto early = compareAt(&finale35);
+    CHECK(early.transformations.at(
+              ComparisonTransformation::SemanticallyPairedPreFinale37BlockText) == 1);
+    CHECK(early.classes.at("texts").at("block_texts").same == 2);
+    CHECK(early.unexpectedExamples.empty());
+
+    const auto later = compareAt(&finale37);
+    CHECK_FALSE(later.transformations.contains(
+        ComparisonTransformation::SemanticallyPairedPreFinale37BlockText));
+    CHECK(later.classes.at("texts").at("block_texts").sourceOnly == 2);
+    CHECK(later.classes.at("texts").at("block_texts").companionOnly == 2);
+}
 
 } // namespace
 } // namespace finale_mus_reader_tests

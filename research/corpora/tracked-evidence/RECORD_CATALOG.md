@@ -157,8 +157,10 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00a9` | metaKeySig | others | weak | 2012 | 12 | `mus-f99c887dff9cdaa1` (0:0x204a) |
 | `0x00b0` | measSpec | others | strong | 2007, 2008, 2011, 2012 | 8, 26 | `mus-86fafceb1ef2ebe2` (0:0x1b3a) |
 | `0x00b1` | unknown | unknown/options | open | 2012 | 24 | `mus-80f8c631de435726` (0:0x2e10) |
-| `0x00b3` | unknown | unknown/options | open | 2008 | 12 | `mus-be8c0d397598ddd0` (0:0x1c16) |
-| `0x00b5` | unknown | unknown/options | open | 2008 | 12 | `mus-be8c0d397598ddd0` (0:0x1c30) |
+| `0x00b3` | namePosFull | others | weak | 2008, 2011, 2012 | 12 | `mus-938b7dbd3f8beeae` (0:0x1bfc) |
+| `0x00b4` | unknown | unknown/options | open | 2011 | 12 | `mus-c262459df71082f5` (0:0x1ce0) |
+| `0x00b5` | namePosFull | others | weak | 2008, 2011, 2012 | 12 | `mus-938b7dbd3f8beeae` (0:0x1c16) |
+| `0x00b6` | unknown | unknown/options | open | 2011 | 12 | `mus-c262459df71082f5` (0:0x1cfa) |
 | `0x00b7` | textBlock | others | strong | 2007, 2008, 2011, 2012 | 36 | `mus-86fafceb1ef2ebe2` (0:0x1b8a) |
 | `0x00b9` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 12, 24 | `mus-86fafceb1ef2ebe2` (0:0x1bbc) |
 | `0x00ba` | playbackRouteName | others | weak | 2007, 2008, 2011, 2012 | 24, 36, 48 | `mus-86fafceb1ef2ebe2` (0:0x1bd6) |
@@ -183,7 +185,8 @@ This reference table records two-character tags identified from the publicly acc
 | `0x00e5` | unknown | unknown/options | open | 2012 | 12 | `mus-42c6d5caf1e3b6ff` (0:0x263a) |
 | `0x00e6` | staffPlayData | others | strong | 2007, 2008, 2011, 2012 | 48 | `mus-86fafceb1ef2ebe2` (0:0x2276) |
 | `0x00e7` | staffSpec | others | strong | 2007, 2008, 2011, 2012 | 72, 84, 96 | `mus-86fafceb1ef2ebe2` (0:0x22b4) |
-| `0x00e8` | staffStyle | others | weak | 2012 | 300 | `mus-f99c887dff9cdaa1` (0:0x289e) |
+| `0x00e8` | staffStyle | others | weak | 2011, 2012 | 144, 300 | `mus-c262459df71082f5` (0:0x23e6) |
+| `0x00e9` | unknown | unknown/options | open | 2011 | 24 | `mus-c262459df71082f5` (0:0x2484) |
 | `0x00eb` | unknown | unknown/options | open | 2012 | 36 | `mus-80f8c631de435726` (0:0x37be) |
 | `0x00f1` | textExprDef | others | weak | 2011, 2012 | 36, 48, 60 | `mus-b15ea3ab2ee278d7` (0:0x23bc) |
 | `0x00f7` | unknown | unknown/options | open | 2012 | 48 | `mus-4ffcb6b07d802e7c` (0:0x28dc) |

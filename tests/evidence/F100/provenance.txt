@@ -477,3 +477,140 @@ F100-chordsuffs.mus / .etf / .musx
     Selector IK stores suffix 1 playback as 3, 7, 10, 0, 0, 0. The ETF repeats each
     IV and IK word, and the Finale 27 companion preserves four suffix elements and all
     six playback values.
+
+F100-staffprops.mus / .etf / .musx
+    sha256 b3d997e77effc5f3ba9b4643902ce0da7843006ab6e7f9f5c263bb895097656d (.mus)
+    sha256 f6ae7e3cf112da2300fdd4876ad3331197bd9710d0ed66acfa8da9ef8b60654b (.etf)
+    sha256 645cd6dd71c06b1fc99c8564f4e4de9a3dfd306dad13eb987741ce255210fa49 (.musx)
+    Exercises the Staff controls available in Finale 1.0.0. `IS(1)` changes from
+    `0 0 4 1024 0 0` to `2 0 4 1024 323 2050`; the ETF repeats that row. The first
+    word selects clef 2, and word 4 packs key-signature transposition interval 5 with
+    adjustment 3. The full name is stored separately as two 12-byte `IN(1)` rows,
+    containing `Blown Horn` followed by a NUL-padded row. This release exposes neither
+    custom staff lines nor an abbreviated staff name.
+
+F100-noteshapes-enable.mus / F100-noteshapes -enable.etf / F100-noteshapes-enable.musx
+    sha256 3532fa8ed0c09c1734f76a71d6310034597f6189bb6c19141aee807108368043 (.mus)
+    sha256 aa4f4fee323fca3065b0aa4b23dbed63b171eb2d449eaecee8e588c6f4e2270c (.etf)
+    sha256 f7ca3c25a482cd62dc1043746a794155250eedd6ef7afee8a53988e6e6892d7e (.musx)
+    Enables the document-wide Use Shape Notes option. Relative to F100-baseline, `CS(1)`
+    word 5 changes from zero to `0x0080`, eight `HI` detail rows are added, and the Finale 27
+    companion writes `doShapeNotes`.
+
+F100-noteshapes-float.mus / .etf / .musx
+    sha256 20f33e95873d30454a2fae2256d1cf71c5b8a8e645ed47437ba83577057f6cc9 (.mus)
+    sha256 9cbd25e42e471de9b96386b97a925be939bc410ceeccca7198695627ef9cace0 (.etf)
+    sha256 0a278b98377279108ad268b76a84f04f1b5e1fca6a9257c012739a696875ff18 (.musx)
+    Enables the separate global gate for per-Staff note shapes. Relative to F100-baseline,
+    `CS(1)` word 5 changes from zero to `0x1000`; no `HI` rows are added, and the Finale 27
+    companion leaves `doShapeNotes` false.
+
+staffopts/F100-baseline-floats.mus / .etf / .musx
+    sha256 819c63e8f193e72e4179fa0467dee887c49f553d4d629472a060320108198591 (.mus)
+    sha256 1ec9102779f5d53f4a3a04de79d8576d4bf1914f9422d5ec8b364be5b331474a (.etf)
+    sha256 045f4533dfa24d09ef4548a702b31d8422663ac8c028db0f2c2d77a7b24716b6 (.musx)
+    Enables the four document-wide gates needed to edit the corresponding independent Staff
+    controls. `CS(1)` word 5 is `0xf080`, and the document contains the eight global `HI` rows.
+    The remaining `staffopts/F100-float*` fixtures use this file as their baseline.
+
+staffopts/F100-floatfont.mus / .etf / .musx
+    sha256 ded0e145797c79e8a65e32e217ae8cf4afcad4c0d30b95ec8de94da4cde545ef (.mus)
+    sha256 88caca938bf457cae81f6dc2d09ae53b2fd31cdbe2bad3f4fe5fb4448d08cfd1 (.etf)
+    sha256 879a0b3b1165e91b90d29f5189c2165219e508ade8a3c593ee8b23dd58b37e64 (.musx)
+    Enables the Staff's independent note font and selects Charcoal at 15 points. It adds
+    `IA(1)` with words 3--5 equal to `5, 0x0f00, 0x0020`; the companion writes the same font
+    tuple and `useNoteFont`.
+
+staffopts/F100-floatkey.mus / .etf / .musx
+    sha256 dcc8e260f0aa1f0e33d4c213a7a1975c913fffea1d6dd585309c9467cda36619 (.mus)
+    sha256 c1261c78f374b566b0c62eedb8baddee31d5aa45f86f8095b2f74d9f7b2868ef (.etf)
+    sha256 bd5408a31b1bd9e9244e99b3cfbf4354febae3e7f1be5b2dd15f780c0b9364e9 (.musx)
+    Enables the Staff's independent key signature. `IS(1)` word 5 changes from zero to
+    `0x8000`, and the companion writes `floatKeys`.
+
+staffopts/F100-floatnoteshapes.mus / .etf / .musx
+    sha256 bb35b5f588ecb18dbb26e583a258761db677a6d0e283f01704298294202a189b (.mus)
+    sha256 2bd0ffd46a8173ad1f175c85bed368ce4363344e22890c151ccd8b4876329afa (.etf)
+    sha256 7213a55e52f947311736c9f91a6cf93be2d177b0932a5f701754edb3c9a74114 (.musx)
+    Enables independent note shapes for Staff 1. It adds `IA(1)` with word 5 equal to
+    `0x0080` and eight `HI(1,*)` detail rows; the companion writes `useNoteShapes` and the
+    corresponding Staff-local shape definitions.
+
+staffopts/F100-floattime.mus / .etf / .musx
+    sha256 3303ae2484d9f389356a0d9a4902023da1c45a5c5c08cc1502fef3b891fcce6e (.mus)
+    sha256 11a6274e57191188b12a8be4950ab25d7444679c4df1a1a200ac36f7a08e6e35 (.etf)
+    sha256 4cd7dc491e6a165b52f552cbefa4705a1fcf24a29f763bf873c3e2b6fd58bf20 (.musx)
+    Enables the Staff's independent time signature. `IS(1)` word 5 changes from zero to
+    `0x4000`, and the companion writes `floatTime`.
+
+staffopts/F100-break-barlines.mus / .etf / .musx
+    sha256 f3d0815791485e432fa7f16d6c5489b9c0c6a374014b27c6c34fb63bbce25213 (.mus)
+    sha256 bedaa5910ff391381ded0550a4a8f373d079c532df3a5907cfeeaed4bbd55d08 (.etf)
+    sha256 4c429916a8fbe9ca001e3fb81485e8907bf4e8fbbafb3f9c79837b3b649a580c (.musx)
+    Enables the Staff's barline break. `IS(1)` word 5 changes from zero to `0x2000`, and the
+    companion writes `blineBreak`.
+
+staffopts/F100-break-repeatbars.mus / .etf / .musx
+    sha256 322339496aeab4d75c8d76eacc77c37d24021bc111f94cee15a8aa536c13f04b (.mus)
+    sha256 5688e2598f4431e19c8791915f06881f842b37ef9824cd8d4355f908dd666a85 (.etf)
+    sha256 e24813c4388889d6840b3e23f949d5eecf4586ef7e616115f7c037f1bcc408f5 (.musx)
+    Enables the Staff's repeat-barline break. `IS(1)` word 5 changes from zero to `0x1000`, and
+    the companion writes `rbarBreak`.
+
+staffopts/F100-hide-clefs.mus / .etf / .musx
+    sha256 564c65799ca6c703d739434aae17e9fd10c8c5e357cf24821ec7beb105f679ca (.mus)
+    sha256 63785d28303065e15d517cc9923454eaa77f3e6ae90eed64fb53ae646185b4c8 (.etf)
+    sha256 fe2373ca481e817b89d7d8967ccb5aca76237df8d03370ec9c2b1d6614e99323 (.musx)
+    Hides clefs on the Staff. `IS(1)` word 5 changes from zero to `0x0008`, and the companion
+    writes `hideClefs`.
+
+staffopts/F100-hide-endingsrpts.mus / .etf / .musx
+    sha256 ce670778be8f45455f2c6892f7e7b86c9ec893168d09972a969291cd83b206d4 (.mus)
+    sha256 99e136df43c23275e7bf96ba51bbac57c5ce6725ce071466bd9bf52aca6c7e04 (.etf)
+    sha256 d13939b275b3b958cb9e8c17b66b534fcc1b832a3ef747a2faf10beca370fc45 (.musx)
+    Hides endings and repeats on the Staff. `IS(1)` word 5 changes from zero to `0x0200`, and
+    the companion writes `hideRepeats`.
+
+staffopts/F100-hide-measnums.mus / .etf / .musx
+    sha256 cf574ca8693ef1cc30f2b973d4fd8427ee2494d47bb43eaed01970985820b628 (.mus)
+    sha256 2abf80180fcf51a666d230b0e3106fc7bb8ca078d507fa1dbc91e5e9f6696b01 (.etf)
+    sha256 29c6c9ed3e9c68400c8204efed59c9a61c6247b54d1d1e6efe259c8870cf64c0 (.musx)
+    Hides measure numbers on the Staff. `IS(1)` word 5 changes from zero to `0x0400`, and the
+    companion writes `hideMeasNums`.
+
+staffopts/F100-hide-name.mus / .etf / .musx
+    sha256 8fe74ce7a47f397fe5ec7cffede52cf13b3095f3d58589f0da331d2d308a15f2 (.mus)
+    sha256 ad0d3fae00e5580f0b309e8a584388a014ddb540c5c61766f0d94af4997955a9 (.etf)
+    sha256 969be1c7dfa8191640dbef1577e3a51943aa443f4f24ebe18e0591d02222cbac (.musx)
+    Hides the Staff name. `IS(1)` word 5 changes from zero to `0x0100`, and the companion writes
+    `hideNameInScore`.
+
+staffopts/F100-hide-scoreexps.mus / .etf / .musx
+    sha256 30c5eefdbb671bda55cc1392a54e2d9630aceb720afd14001038821ab4319ca4 (.mus)
+    sha256 27880e3d1ed67d9319aff56cb54799492d113f262782651fa5fda38693c00aa2 (.etf)
+    sha256 2ed431312f3b7555b518d22b54fb18986beeaf8137e541550526c5cc7754891c (.musx)
+    Disables score-expression display on the Staff. `IS(1)` word 5 changes from zero to `0x0800`;
+    the companion has no persisted musxdom Staff field for this control.
+
+staffopts/F100-hide-timesigs.mus / .etf / .musx
+    sha256 e8d88e3c5b132e297e7f300436c5d6a9a0ef544c9404ec58338791b8f7d75775 (.mus)
+    sha256 2688668f855a1630ba18d6799d2935ce451a488795ca6fa50073c0746a51aa11 (.etf)
+    sha256 54d4deb60883c21be4ec5fe0a5dc8bdf41282164a92a9de07f22b7d4150fae9b (.musx)
+    Hides time signatures on the Staff. `IS(1)` word 5 changes from zero to `0x0010`, and the
+    companion writes `hideTimeSigs` and `hideTimeSigsInParts`.
+
+staffopts/F100-negate-keys.mus / .etf / .musx
+    sha256 e60572d51734ed625e53ff87937a7a3e2030eac4524cd6c152a03e66f044e9e7 (.mus)
+    sha256 c46bb55871cc6efea654c37b81af95928d6873c8499083a48e015ba4f83ee32b (.etf)
+    sha256 87f23fdd622076cbb7a0d58e1422155df29374324a548528a8e9d43cff808c04 (.musx)
+    Disables key-signature participation on the Staff. `IS(1)` word 5 changes from zero to
+    `0x0020`; the companion expands the control to both `hideKeySigs` and `noKey`.
+
+staffopts/F100-transp-settoclef7.mus / .etf / .musx
+    sha256 4437eb1a44721dc386e7604ad3f95fa96cb7df37d227875f928a4f96aaa73bfc (.mus)
+    sha256 88282b172c69fe9e673be84f0932240988c3d247297a15ce9260cc280b29f5ae (.etf)
+    sha256 35b9449f08c3221a201e3b5f4600459fd1af5457725f3344b380bea95bc248c9 (.musx)
+    From F100-baseline, selects Set to Clef 7 for Staff transposition. `IS(1)` word 4 changes
+    from zero to `0xf000`, and the ETF repeats that value. The companion sets `setToClef`, writes
+    `transposedClef` 7, keeps key-signature interval and adjustment zero, and does not set the
+    later `noSimplifyKey` or chromatic controls.

@@ -137,8 +137,8 @@ std::string_view transformationName(ComparisonTransformation transformation)
         return "Finale-reformatted part-name text";
     case FinaleSynthesizedPercussionMapNote:
         return "Finale-synthesized percussion-map note";
-    case SemanticallyPairedCodaBlockText:
-        return "Semantically paired Coda block text";
+    case SemanticallyPairedPreFinale37BlockText:
+        return "Semantically paired pre-Finale-3.7 block text";
     }
     throw std::logic_error("unhandled comparison transformation");
 }

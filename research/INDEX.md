@@ -32,7 +32,7 @@ reading the file.
 | Pool | Directory | Start at |
 |---|---|---|
 | options | [`format/options/`](format/options/index.md) | [`options/index.md`](format/options/index.md) for addressing, then the class file |
-| others | [`format/others/`](format/others/) | `bookmark`, `chord_suffix_elements`, `chord_suffix_playback`, `custom_keys`, `drum_staff`, `font_definitions`, `fret_records`, `graphic_assignments`, `layer_attributes`, `marking_category`, `measure`, `part_definitions`, `part_globals`, `percussion_note_info`, `shape_definitions`, `smart_shape_custom_lines`, `staff_list`, `text_blocks` |
+| others | [`format/others/`](format/others/) | `bookmark`, `chord_suffix_elements`, `chord_suffix_playback`, `custom_keys`, `drum_staff`, `font_definitions`, `fret_records`, `graphic_assignments`, `layer_attributes`, `marking_category`, `measure`, `part_definitions`, `part_globals`, `percussion_note_info`, `shape_definitions`, `smart_shape_custom_lines`, `staff`, `staff_list`, `text_blocks` |
 | details | [`format/details/`](format/details/) | `custom_key_octaves`, `fretboard_diagrams`, `key_symbol_list`, `measure_graphic_assign`, `percussion_note_code` |
 | texts | [`format/texts/`](format/texts/) | `text_pool` first, then `coda_texts`, `file_info_text`, `bookmark_text`, `expression_text` |
 
@@ -49,6 +49,7 @@ Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning mi
 | [`STATE.md`](STATE.md) | Status, priorities, open questions, gaps | Always, at session start |
 | [`state/PRODUCTION_READINESS.md`](state/PRODUCTION_READINESS.md) | P0–P3 blockers and gaps with status and dates | Choosing what to work on, or judging whether something is already decided |
 | [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md) | One line per registered class | Starting or finishing a class |
+| [`state/STAFF_UNMAPPED_FIELDS.md`](state/STAFF_UNMAPPED_FIELDS.md) | Staff field recovery checklist and fallback dispositions | Choosing or completing Staff recovery work |
 | [`state/EVIDENCE_REQUESTS.md`](state/EVIDENCE_REQUESTS.md) | Precise ETF and controlled-difference requests | You need a fixture that does not exist, or are about to ask for one |
 | [`state/OPTIONS_EXTERNAL_CMPER_TODO.md`](state/OPTIONS_EXTERNAL_CMPER_TODO.md) | Options-pool external-cmper work | Options referencing external cmpers |
 

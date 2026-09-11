@@ -14,9 +14,12 @@ namespace {
 
 using ChordOptionsTarget = musx::dom::options::ChordOptions;
 
-// Coda-banner documents have no document-level chord preferences to overlay. The pinned
-// baseline supplies their chord behavior, so only the typed fixed-row epoch uses these rows.
+// Only the typed fixed-row epoch has the fully mapped selector-41 layout. The Coda form uses
+// word 2 as a flag word whose individual meanings are not yet distinguished.
 constexpr EpochMask chordFixedRowEpochs = EpochMask::FixedRow;
+constexpr std::uint16_t codaChordSelector = 41;
+constexpr std::size_t codaShowFretboardsSlot = 2;
+constexpr std::uint16_t codaShowFretboardsMask = 0x000c;
 constexpr std::int64_t preFinale37ChordAccidentalLift = 12;
 constexpr double unstatedChordPercent = 100.0;
 
@@ -189,6 +192,26 @@ void reportChordBehavior(const ImportContext& context, const char* member, std::
     });
 }
 
+void importCodaShowFretboards(const ImportContext& context, ChordOptionsTarget& target)
+{
+    if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+    const auto source = readGlobalWords(context.index, context.profile, codaChordSelector);
+    if (!source.present || source.words.size() <= codaShowFretboardsSlot) return;
+
+    const auto raw = static_cast<std::uint16_t>(source.words[codaShowFretboardsSlot]);
+    const auto state = raw & codaShowFretboardsMask;
+    if (state != 0 && state != codaShowFretboardsMask) return;
+
+    target.showFretboards = state == codaShowFretboardsMask;
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        reporting.report().setField(reporting.template instanceKey<ChordOptionsTarget>(),
+            "showFretboards",
+            {Reporting::Origin::LegacyMus, source.blockOffset,
+                source.decodedOffset + codaShowFretboardsSlot * 2, raw,
+                numericGlobalTag(codaChordSelector)});
+    });
+}
+
 } // namespace
 
 void importChordOptions(const ImportContext& context)
@@ -201,6 +224,7 @@ void importChordOptions(const ImportContext& context)
 
     applyMappingTables({&chordTable(), &classChordTable(), &storedChordPercentTable()}, context.index,
         context.profile, context.document, context.report);
+    importCodaShowFretboards(context, *target);
 
     reportChordDefault(context, "useFretboardFont");
 

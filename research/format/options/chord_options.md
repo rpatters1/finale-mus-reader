@@ -4,6 +4,14 @@
 **Read when:** Changing `src/import/options/chord_options.cpp` or interpreting its coverage differences.
 **Confidence:** strong for the accidental-lift boundary; other mappings remain source-derived.
 
+The represented Coda layout changes selector 41 incidence 0 word 2 bits `0x0004` and `0x0008`
+together when its document-level fretboard display is toggled. Recovery treats both bits set as
+`showFretboards` true and neither set as false. Either mixed combination retains the pinned
+Finale 27 value because the individual meanings are unresolved. A companion disagreement is
+`different_defaults` only in that fallback case; a source-recovered disagreement remains
+unexpected. **Confirmed.** Reproducible against `tests/evidence/F263/F263-fretboards.mus` and
+`tests/evidence/F263/F263-fretboards-cleared.mus` with their independently saved companions.
+
 Selector 37 words 3--5 store `chordSharpLift`, `chordFlatLift`, and `chordNaturalLift` from
 Finale 3.7 onward. Before Finale 3.7, the importer supplies 12 for all three as
 `LegacyBehavior`. This is a version gate within the uncompressed epoch: the selector exists in

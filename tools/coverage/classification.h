@@ -94,7 +94,7 @@ enum class ComparisonTransformation
     FinaleMaterializedPartMeasure,
     FinaleReformattedPartName,
     FinaleSynthesizedPercussionMapNote,
-    SemanticallyPairedCodaBlockText
+    SemanticallyPairedPreFinale37BlockText
 };
 
 using SurveySnapshot = Value::Object;
@@ -151,6 +151,7 @@ struct DifferenceContext
     std::string_view companionFontIdentity{};
     const ComparisonLeaves* sourceDocumentLeaves{}; ///< Cross-class source referents, when available.
     const ComparisonLeaves* companionDocumentLeaves{}; ///< Cross-class companion referents, when available.
+    const musx::dom::Document* companionDocument{}; ///< Companion document, when available.
 };
 
 using DifferenceClassifierFn =

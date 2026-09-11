@@ -2,7 +2,8 @@
 """Inventory legacy Finale files without modifying the source corpus.
 
 A companion is defined by its path: a source ``name.mus`` pairs with
-``source-parent/<export-dir-name>/name<export-suffix>`` and with nothing else.
+``source-parent/<export-dir-name>/name<export-suffix>`` and with nothing else. Only a
+case-insensitive terminal ``.mus`` is removed; other dots belong to the filename.
 If that file is absent, the source has no companion and is reported ``missing``.
 
 There is deliberately no basename fallback.  A corpus of application installs is
@@ -168,7 +169,8 @@ def find_export(
     export_suffix: str,
 ) -> tuple[Path | None, str]:
     """Pair a source with its companion by path, or report that it has none."""
-    expected = source.parent / export_dir_name / f"{source.stem}{export_suffix}"
+    base_name = source.stem if source.suffix.casefold() == ".mus" else source.name
+    expected = source.parent / export_dir_name / f"{base_name}{export_suffix}"
     if expected.is_file():
         return expected, "adjacent-exact"
     return None, "missing"

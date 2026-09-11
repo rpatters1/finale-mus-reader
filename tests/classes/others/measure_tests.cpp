@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 #include "coverage/registry.h"
 
 #include <algorithm>
@@ -477,6 +478,213 @@ TEST_CASE("A truncated measure record decodes the words it has")
         musx::dom::Cmper(0), musx::dom::Cmper(2));
     expect(report.fields.at(truncatedKey).size() == measureFieldManifestSize,
         "The short measure's report does not exhaust the Measure field manifest");
+}
+
+// The measure rules live in their own surveyor translation unit, so the registry is how a test
+// reaches them.
+std::optional<finale_mus_reader::coverage::DifferenceClassification> classifyMeasureDifference(
+    const finale_mus_reader::coverage::DifferenceContext& context)
+{
+    const auto classify = finale_mus_reader::coverage::differenceClassifier("measures");
+    return classify ? classify(context) : std::nullopt;
+}
+
+TEST_CASE("Deferred measure recovery classifies both directions of a tabled member")
+{
+    using namespace finale_mus_reader::coverage;
+
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+    const Value no(false);
+    const Value yes(true);
+    const ComparisonLeaves leaves;
+    const auto context = [&](std::string_view path, std::string_view origin, const Value& source,
+                             const Value& companion) {
+        return DifferenceContext{path, DifferenceCategory::Differs, origin, source, companion,
+            leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    };
+    constexpr std::string_view smartShape = "measures[cmper=1].has_smart_shape";
+
+    // The companion states a smart shape the reader cannot yet build, so the
+    // value is owed.
+    REQUIRE(classifyMeasureDifference(context(smartShape, "legacy-mus", no, yes)) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+
+    // The other direction waits on the same class: with no shapes recovered, the
+    // reader cannot know the source bit is stale, so it can neither keep nor
+    // clear it on evidence.
+    REQUIRE(classifyMeasureDifference(context(smartShape, "legacy-mus", yes, no)) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+
+    // The rest of the "something is attached here" flags are tabled on the same
+    // terms, each waiting on the class that holds the objects Finale 27
+    // recomputes it from.
+    for (const auto* member : {"has_expression", "has_text_block", "has_ossia"}) {
+        const auto path = std::string("measures[cmper=1].") + member;
+        REQUIRE(classifyMeasureDifference(context(path, "legacy-mus", no, yes)) ==
+                DifferenceClassification::AwaitsDependentRecovery);
+        REQUIRE(classifyMeasureDifference(context(path, "legacy-mus", yes, no)) ==
+                DifferenceClassification::AwaitsDependentRecovery);
+    }
+    // The chord flag is tabled under both provenances it can report. The
+    // twelve-word layout carries its bit and reports a stored value; the six-word
+    // layout has no word for it.
+    for (const auto* origin : {"legacy-mus", "legacy-behavior"}) {
+        REQUIRE(classifyMeasureDifference(context("measures[cmper=1].has_chord", origin, no,
+                    yes)) == DifferenceClassification::AwaitsDependentRecovery);
+    }
+    // A provenance neither layout produces is still not this rule's to absorb.
+    REQUIRE_FALSE(
+        classifyMeasureDifference(context("measures[cmper=1].has_chord", "unmapped", no, yes)));
+
+    // A member that is not a presence flag is not deferred, in either direction.
+    REQUIRE_FALSE(classifyMeasureDifference(
+        context("measures[cmper=1].begin_new_system", "legacy-mus", no, yes)));
+    REQUIRE_FALSE(classifyMeasureDifference(
+        context("measures[cmper=1].begin_new_system", "legacy-mus", yes, no)));
+    // Nor is the same member on another class.
+    REQUIRE_FALSE(classifyMeasureDifference(
+        context("staves[cmper=1].has_smart_shape", "legacy-mus", no, yes)));
+    // Nor a value with different provenance than the rule names.
+    REQUIRE_FALSE(classifyMeasureDifference(context(smartShape, "legacy-behavior", no, yes)));
+
+    // The whole deferral backs out through one switch, which is what
+    // --strict-deferred sets.
+    setDeferredRecoveryClassified(false);
+    REQUIRE_FALSE(classifyMeasureDifference(context(smartShape, "legacy-mus", no, yes)));
+    REQUIRE_FALSE(classifyMeasureDifference(context(smartShape, "legacy-mus", yes, no)));
+    setDeferredRecoveryClassified(true);
+    REQUIRE(classifyMeasureDifference(context(smartShape, "legacy-mus", no, yes)) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+}
+
+TEST_CASE("A later beta's back-save explains a key-signature switch the format "
+          "cannot carry")
+{
+    using namespace finale_mus_reader::coverage;
+
+    // A Finale 2012 file whose creator was a Finale 2014 beta: the layout on disk
+    // is 17, the release that made the document is 18, and its development status
+    // is beta.
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
+    const auto creator = [](std::uint8_t major, std::uint8_t devStatus) {
+        finale_mus_reader::SourceVersion version;
+        version.major = major;
+        version.devStatus = devStatus;
+        return version;
+    };
+    report.creatorVersion = creator(18, 2);
+
+    const Value no(false);
+    const Value yes(true);
+    const ComparisonLeaves leaves;
+    const auto context = [&](std::string_view path) {
+        return DifferenceContext{path, DifferenceCategory::Differs, "legacy-behavior", no, yes,
+            leaves, leaves, finale_mus_reader::FormatEpoch::ZlibLegacy,
+            finale_mus_reader::ByteOrder::LittleEndian, nullptr, report};
+    };
+    constexpr std::string_view hideAccis =
+        "measures[cmper=1].global_key_sig.hide_key_sig_show_accis";
+    constexpr std::string_view keyless = "measures[cmper=1].global_key_sig.keyless";
+
+    REQUIRE(
+        classifyMeasureDifference(context(hideAccis)) == DifferenceClassification::BetaDiscrepancy);
+    REQUIRE(
+        classifyMeasureDifference(context(keyless)) == DifferenceClassification::BetaDiscrepancy);
+
+    // Both halves of the condition are load-bearing. A release build of the same
+    // later version wrote what it wrote, so a difference there is not explained
+    // away.
+    report.creatorVersion = creator(18, 4);
+    REQUIRE_FALSE(classifyMeasureDifference(context(hideAccis)));
+    // Neither is a beta of the release that owns the format: it had no such
+    // member to lose.
+    report.creatorVersion = creator(17, 2);
+    REQUIRE_FALSE(classifyMeasureDifference(context(hideAccis)));
+    // A file with no creator tuple says nothing about what made it.
+    report.creatorVersion.reset();
+    REQUIRE_FALSE(classifyMeasureDifference(context(hideAccis)));
+
+    // The rule reaches these two members and no others.
+    report.creatorVersion = creator(18, 2);
+    REQUIRE_FALSE(classifyMeasureDifference(context("measures[cmper=1].global_key_sig.key")));
+    REQUIRE_FALSE(classifyMeasureDifference(context("measures[cmper=1].width")));
+}
+
+TEST_CASE("Finale's musx conversion writes a word-extension break the source "
+          "does not carry")
+{
+    using namespace finale_mus_reader::coverage;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
+    const Value no(false);
+    const Value yes(true);
+    constexpr std::string_view path = "measures[cmper=1].break_word_ext";
+
+    // The sibling leaves the rule reads: the measure's barline and its backwards
+    // repeat.
+    const auto leaves = [](std::int64_t barline, bool repeat) {
+        return ComparisonLeaves{{"measures[cmper=1].barline_type", {Value(barline), "legacy-mus"}},
+            {"measures[cmper=1].backwards_repeat_bar", {Value(repeat), "legacy-mus"}}};
+    };
+    const auto classify = [&](const ComparisonLeaves& side, const Value& source,
+                              const Value& companion) {
+        const DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", source,
+            companion, side, side, finale_mus_reader::FormatEpoch::DclLegacy,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+        return classifyMeasureDifference(context);
+    };
+
+    // Double, final and solid barlines, and a backwards repeat, are what Finale
+    // ties it to.
+    for (const std::int64_t barline : {3, 4, 5}) {
+        REQUIRE(classify(leaves(barline, false), no, yes) ==
+                DifferenceClassification::FinaleUpgradeLoss);
+    }
+    REQUIRE(classify(leaves(2, true), no, yes) == DifferenceClassification::FinaleUpgradeLoss);
+
+    // A measure with none of them is not explained by this rule and stays
+    // unexpected.
+    REQUIRE_FALSE(classify(leaves(2, false), no, yes));
+    REQUIRE_FALSE(classify(leaves(0, false), no, yes));
+    // Nor is the other direction: a stored bit the companion drops would be a
+    // real loss.
+    REQUIRE_FALSE(classify(leaves(4, false), yes, no));
+}
+
+TEST_CASE("A composite time-signature word is deferred, a plain one is not")
+{
+    using namespace finale_mus_reader::coverage;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+
+    const auto leaves = [](bool numerator, bool denominator) {
+        return ComparisonLeaves{
+            {"measures[cmper=1].composite_numerator", {Value(numerator), "legacy-mus"}},
+            {"measures[cmper=1].composite_denominator", {Value(denominator), "legacy-mus"}}};
+    };
+    const auto classify = [&](std::string_view path, const ComparisonLeaves& side,
+                              std::int64_t source, std::int64_t companion) {
+        const Value a(source), b(companion);
+        const DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", a, b, side,
+            side, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+        return classifyMeasureDifference(context);
+    };
+    constexpr std::string_view beats = "measures[cmper=1].beats";
+    constexpr std::string_view divBeat = "measures[cmper=1].div_beat";
+
+    // Each word is deferred only when its own flag says it is a list comparator.
+    REQUIRE(classify(beats, leaves(true, false), 1, 2) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+    REQUIRE(classify(divBeat, leaves(false, true), 1, 2) ==
+            DifferenceClassification::AwaitsDependentRecovery);
+
+    // A plain beat count or Edu value that disagrees is a decoding failure, not a
+    // renumbering.
+    REQUIRE_FALSE(classify(beats, leaves(false, false), 1, 2));
+    REQUIRE_FALSE(classify(divBeat, leaves(false, false), 1, 2));
+    // And each flag governs only its own word.
+    REQUIRE_FALSE(classify(beats, leaves(false, true), 1, 2));
+    REQUIRE_FALSE(classify(divBeat, leaves(true, false), 1, 2));
 }
 
 } // namespace

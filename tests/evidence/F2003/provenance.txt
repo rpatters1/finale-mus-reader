@@ -36,3 +36,21 @@ F2003Win-empty.ETF
     An untouched new document authored in Finale 2003 for Windows (internal source version
     8.0.0.2), with its direct ETF export and Finale 27 conversion. The MUS uses little-endian
     DCL framing; the companion is a semantic reference.
+
+F2003-staffstyle.mus
+    sha256 94e3bf3d849f280bccc2698628ad77e40c91ef4346c8e64878d4a1feef98c09a
+F2003-staffstyle.etf
+    sha256 e9ad427945aa63b081c5b85c549fb49b685badd1d7fdaa0d8ccf3ac2d7af5382
+-finale27/F2003-staffstyle.musx
+    sha256 e792110a9f3dfc6baf1b2ad8f03ee669df2b82f8415707519e238d406cceb663
+    Derived from F2003-baseline by defining one Staff Style without assigning it. The Staff record
+    remains byte-identical and the Finale 27 companion does not write `hasStyles`.
+
+F2003-staffstyle-assigned.mus
+    sha256 4d1ec3aa6516aa8050bcdf22ebf3c61d4c4e2c7fd19a9fbc7c1b8fef4e1f8ad7
+F2003-staffstyle-assigned.etf
+    sha256 2275c35a28061a6453bbacf59ce322a4f8c64d269c5e9b1d88ad56c784ead1f6
+-finale27/F2003-staffstyle-assigned.musx
+    sha256 5cb6221137288cea86b0251f5e2c8bc458626fa0e903570ad2ad24267db08a05
+    Derived by assigning the defined style to staff 1. The assignment is present, but the Staff
+    record remains byte-identical; the Finale 27 companion writes `hasStyles`.

@@ -241,3 +241,87 @@ F263-noavoid-margincoll.mus / .etf / .musx
     (`fi`) comparator 65534 incidence 51 word 5 changes from 1 to 0, and the ETF
     repeats that value. The Finale 27 companion omits `<avoidSystemMarginCollisions/>`.
     The unrelated `KL(0)` tail also changes as save noise.
+
+F263-staffopts.mus / .etf / .musx
+    sha256 f89922f35bca3087b1fbced2247cd79d6e4352fa5d2c46ee208c97939594b445 (.mus)
+    sha256 1fc00a9c50ec4586d00d503a5ccfe752d9128fa85919bc4a5309a71bcc819669 (.etf)
+    sha256 f4bd0f0e070e95e3f878b2c17756227e1fbda68697280ebc2c6054384106b864 (.musx)
+    Exercises the expanded Staff controls available in Finale 2.6.3. The ETF records
+    `IS(1)` as `1 0 4 1024 0 17` and adds `IA(1)` as
+    `0 769 1 33 3330 576`. Word 1 is `0x0301`: the entered vertical
+    tablature-number offset of 3 is its signed high byte and becomes the companion's Efix
+    value 768, while the entered Base Key value 1 is its low byte. The latter row also
+    supplies the custom-layout marker,
+    notehead font 33 at 13 points in italic, tablature notation, and the enabled notehead
+    font. Finale 27 synthesizes fret-instrument ID 2 with one string at MIDI pitch 1 from
+    the Base Key byte. Together its
+    marker and `IS` word 2 describe custom staff line 13. The full name
+    `Horn Blown` remains in uppercase `IN(1)` rows, while the newly available
+    abbreviation `H.B.` appears in parallel lowercase `in(1)` rows. The Finale 27
+    companion also supplies line spacing, rest offsets, stem reversal, and repeat-dot
+    offsets that have no location in either six-word source row.
+    Its converted Staff shows clefs on every system and hides rests, augmentation dots,
+    stems, and tuplets; the other modern tablature visibility switches remain clear.
+    Its -48/48 barline extents are the legacy behavior of the recovered one-line custom
+    Staff rather than values stored in either six-word source row.
+
+F263-fretboards.mus / .etf / .musx
+    sha256 685b6bc341799b5b85d3a0c01aa3cad8a05575691119379e0c0aad50b085e690 (.mus)
+    sha256 6f35d7fb7d2313b5d8d1530926c318df53738fd213e10e2d04f5bb204dce1b89 (.etf)
+    sha256 b21dcc0cf061444c387fa27071983e8698faabacc58fd8406b3582979c6c2f04 (.musx)
+    From F263-baseline, adds chord assignments with displayed fretboards. Selector 41 incidence 0
+    word 2 is `0x000c` instead of 0, and the companion enables `ChordOptions.showFretboards`.
+    Bits `0x0004` and `0x0008` changed together, so this fixture does not distinguish which bit
+    stores that option or what the other bit represents.
+
+F263-fretboards-cleared.mus / .etf / .musx
+    sha256 aebc780bf60cf212981e7b3b1670f56093cdcee0e0240cdad37e3fae57ea8067 (.mus)
+    sha256 3279bae2b2e9d44b89eb284100a7f486be4e60a432be221f2ecff2a8c0f3069e (.etf)
+    sha256 d438084ff2a3a9ae871c28c14b6866487845810297471571f314ee8bed34cdb7 (.musx)
+    From F263-fretboards, clears the document Show Fretboards setting while retaining its chord
+    assignments. Selector 41 incidence 0 word 2 changes from `0x000c` to 0, and the companion
+    clears `ChordOptions.showFretboards`. Both source bits still move together, establishing the
+    combined all-set/all-clear mapping without distinguishing either mixed state.
+
+staffopts/F263-blank-emptymeas.mus / .etf / .musx
+    sha256 97d41c644d5a8f8411ca780fc7d258801b43880a25eb56f82b811a1ca1dfd489 (.mus)
+    sha256 941a0734596a535a60dc6ce75da9947d1455d40bc9f759cb0de7dd37eb84e76d (.etf)
+    sha256 95c41feb72c1c5766d09fa5674ebaa9da873a1eb358dedcc5e84df66bc408b3b (.musx)
+    From F263-baseline, enables blank empty measures. The sole logical-record change is the
+    addition of `IA(1)` with word 5 equal to `0x0100`; the companion writes `blankMeasure`.
+
+staffopts/F263-hide-fretboards.mus / .etf / .musx
+    sha256 ec910badddfa669988bf81f532335fb738bc90b8ba60e70211b0ae06cd22622f (.mus)
+    sha256 b8ea15f09fb7e66726f00d498dd8f00301a04ed1a9d0d7de0f8c38f82104e359 (.etf)
+    sha256 0ce62abbfbc71eac401b0efc7957b7bf85d98677c75c21ee8e739c478d4fa698 (.musx)
+    Attempts to hide fretboards through a macro. The MUS is byte-identical to F263-baseline, and
+    the companion keeps `hideFretboards` false; the setting did not persist in the document.
+
+staffopts/F263-tabstaff.mus / .etf / .musx
+    sha256 82c1e2edd4b2997df2d34c1b8d16d812638f3497cf36df06be4ece5e46302920 (.mus)
+    sha256 b1c2a74338eaf1fed1884206c44306e030483032e65b66feede6f5278d631233 (.etf)
+    sha256 7d67587602b74599553f58e6fca3a4e76c77387d1574e687e1e313bc33a0277b (.musx)
+    From F263-baseline, enables tablature notation without another edit. It adds only `IA(1)` with
+    word 5 equal to `0x0200`. The companion enables `useNoteFont` and synthesizes fret instrument 2
+    with one string at the word-1 low byte's default MIDI pitch 0.
+
+staffopts/F263-tabstaff-basekey48.mus / .etf / .musx
+    sha256 5c4e7e892e72e750b39b8651a3011daacbcc7aec07a90d303e670eb941b2199a (.mus)
+    sha256 8595a398fe88f952eefc54d99d0093431a4f0f1d14e7cae51961bd0af8c57015 (.etf)
+    sha256 29af80586eb856f048eb1eaa687efd0da0bed39ff8dc3d86750f0380faf30283 (.musx)
+    From F263-tabstaff, changes only `IA(1)` word 1 from 0 to 48. The companion changes the
+    synthesized one-string fret instrument's pitch from 0 to 48 and its name from `C-1` to `C3`.
+
+staffopts/F263-tabstaff-font13ital.mus / .etf / .musx
+    sha256 1dc30502a7dc49f41fd60e3318bbd21d183166343fbc4c5fddd899e0bb77e9b4 (.mus)
+    sha256 8da878bdd872537f1de3a97b41ab2b72508d1cdcbc691cf9a116af4360076fc4 (.etf)
+    sha256 63bf92ae2dd9c1eebd3ad7f66b5980590e928dcde924ef37a7b1bc2ae6919db1 (.musx)
+    From F263-tabstaff, changes only `IA(1)` words 3–4 to 126 and `0x0d02`. The companion writes
+    note font ID 126 at 13 points in italic.
+
+staffopts/F263-tabstaff-yoff29.mus / .etf / .musx
+    sha256 6b62f3dc23c9396294cdcb76a0bf376240da26e8524fbaac2e86f5fa60376346 (.mus)
+    sha256 9aa79b32d224fecd6a088de20715954bd360f61f835d2daa7a17bb6bf8f5be75 (.etf)
+    sha256 27e89fd52e7ea059aa3ac68956c977f0483338d379a0f92cbd91a43a89220362 (.musx)
+    From F263-tabstaff, changes only the high byte of `IA(1)` word 1 to 29. The companion writes
+    `vertTabNumOff` as 7424, confirming the byte's signed Efix conversion.

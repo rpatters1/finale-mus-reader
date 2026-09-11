@@ -42,6 +42,12 @@ struct TextChunk
     std::optional<std::pair<CharsetBank, int>> charset;
 };
 
+const std::regex& enigmaCommandPattern()
+{
+    static const std::regex result(R"(\^[A-Za-z]+\([^)]*\))");
+    return result;
+}
+
 std::vector<TextChunk> enigmaChunks(const musx::dom::DocumentPtr& document,
                                     const std::string& rawText, bool dropTime)
 {
@@ -234,7 +240,6 @@ bool utf16BytePairGlitch(const std::vector<TextChunk>& source,
 {
     using Bank = TextChunk::CharsetBank;
     if (source.empty() || source.size() != companion.size()) return false;
-    static const std::regex command(R"(\^[A-Za-z]+\([^)]*\))");
     for (std::size_t index = 0; index < source.size(); ++index) {
         if (!source[index].charset) continue;
         const auto [bank, value] = *source[index].charset;
@@ -262,8 +267,8 @@ bool utf16BytePairGlitch(const std::vector<TextChunk>& source,
         flush();
         rebuilt = text::normalizeLineBreaks(std::move(rebuilt));
         if (pairedCharacters >= 2 && source[index].text == rebuilt) return true;
-        const auto sourcePlain = std::regex_replace(source[index].text, command, "");
-        const auto rebuiltPlain = std::regex_replace(rebuilt, command, "");
+        const auto sourcePlain = std::regex_replace(source[index].text, enigmaCommandPattern(), "");
+        const auto rebuiltPlain = std::regex_replace(rebuilt, enigmaCommandPattern(), "");
         const auto meaningful =
             std::count_if(rebuiltPlain.begin(), rebuiltPlain.end(),
                           [](unsigned char character) { return !std::isspace(character); });
@@ -385,7 +390,8 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                 chunksEqual(*sourceChunks[sourceIndex], *companionChunks[companionIndex])) {
                 matchedSource.insert(sourceIndex);
                 matchedCompanion.insert(companionIndex);
-                ++result.transformations[ComparisonTransformation::SemanticallyPairedCodaBlockText];
+                ++result.transformations[
+                    ComparisonTransformation::SemanticallyPairedPreFinale37BlockText];
                 ++result.classes[std::string(surveyorPool("block_texts"))]["block_texts"].same;
                 break;
             }
@@ -411,6 +417,112 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
     }
     sourceItems = std::move(remainingSource);
     companionItems = std::move(remainingCompanion);
+}
+
+void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
+                                          const musx::dom::DocumentPtr& sourceDocument,
+                                          const musx::dom::DocumentPtr& companionDocument,
+                                          ComparisonResult& result)
+{
+    using Staff = musx::dom::others::Staff;
+    using TextBlock = musx::dom::others::TextBlock;
+
+    auto sourceFound = source.find("block_texts");
+    auto companionFound = companion.find("block_texts");
+    if (sourceFound == source.end() || companionFound == companion.end() ||
+        !sourceFound->second.isArray() || !companionFound->second.isArray()) {
+        return;
+    }
+    const auto indicesByNumber = [](Value::Array& items) {
+        std::map<std::int64_t, std::size_t> result;
+        for (std::size_t index = 0; index < items.size(); ++index) {
+            const auto* number = items[index].find("number");
+            if (number && number->isInteger()) result.emplace(number->asInteger(), index);
+        }
+        return result;
+    };
+    auto& sourceItems = sourceFound->second.asArray();
+    auto& companionItems = companionFound->second.asArray();
+    const auto sourceIndices = indicesByNumber(sourceItems);
+    const auto companionIndices = indicesByNumber(companionItems);
+    const auto rawTextNumber = [](const musx::dom::DocumentPtr& document,
+                                  musx::dom::Cmper partId,
+                                  musx::dom::Cmper blockId) -> std::optional<musx::dom::Cmper> {
+        if (blockId == 0) return std::nullopt;
+        const auto block = document->getOthers()->get<TextBlock>(partId, blockId);
+        if (!block || block->textType != TextBlock::TextType::Block || block->textId == 0) {
+            return std::nullopt;
+        }
+        return block->textId;
+    };
+    std::set<std::pair<musx::dom::Cmper, musx::dom::Cmper>> aligned;
+    constexpr std::pair<musx::dom::Cmper Staff::*, std::string_view> nameMembers[]{
+        {&Staff::fullNameTextId, "full"},
+        {&Staff::abbrvNameTextId, "abbrv"},
+    };
+    const auto staffNameTexts = [&](const musx::dom::DocumentPtr& document) {
+        std::set<musx::dom::Cmper> result;
+        for (const auto& staff : sourceInstances<Staff>(document)) {
+            for (const auto& nameMember : nameMembers) {
+                if (const auto number = rawTextNumber(
+                        document, staff->getSourcePartId(), staff.get()->*nameMember.first)) {
+                    result.insert(*number);
+                }
+            }
+        }
+        return result;
+    };
+    const auto sourceNameTexts = staffNameTexts(sourceDocument);
+    const auto companionNameTexts = staffNameTexts(companionDocument);
+    for (const auto& sourceStaff : sourceInstances<Staff>(sourceDocument)) {
+        const auto partId = sourceStaff->getSourcePartId();
+        const auto companionStaff = companionDocument->getOthers()->get<Staff>(
+            partId, sourceStaff->getCmper());
+        if (!companionStaff) continue;
+        for (const auto& [member, kind] : nameMembers) {
+            const auto sourceText =
+                rawTextNumber(sourceDocument, partId, sourceStaff.get()->*member);
+            const auto companionText =
+                rawTextNumber(companionDocument, partId, companionStaff.get()->*member);
+            if (!sourceText || !companionText) continue;
+            const auto sourceIndex = sourceIndices.find(*sourceText);
+            const auto companionIndex = companionIndices.find(*companionText);
+            if (sourceIndex == sourceIndices.end() || companionIndex == companionIndices.end() ||
+                !aligned.emplace(*sourceText, *companionText).second) {
+                continue;
+            }
+            const auto key = "staff-name-" + std::to_string(partId) + '-' +
+                             std::to_string(sourceStaff->getCmper()) + '-' + std::string(kind);
+            sourceItems[sourceIndex->second].asObject().insert_or_assign(
+                "_report_match_key", Value(key));
+            companionItems[companionIndex->second].asObject().insert_or_assign(
+                "_report_match_key", Value(key));
+            companionItems[companionIndex->second].asObject().insert_or_assign(
+                "number", Value(static_cast<std::int64_t>(*sourceText)));
+            ++result.transformations[
+                ComparisonTransformation::SemanticallyPairedPreFinale37BlockText];
+        }
+    }
+    std::set<musx::dom::Cmper> alignedSource;
+    std::set<musx::dom::Cmper> alignedCompanion;
+    for (const auto& [sourceNumber, companionNumber] : aligned) {
+        alignedSource.insert(sourceNumber);
+        alignedCompanion.insert(companionNumber);
+    }
+    for (const auto number : sourceNameTexts) {
+        if (alignedSource.contains(number)) continue;
+        if (const auto found = sourceIndices.find(number); found != sourceIndices.end()) {
+            sourceItems[found->second].asObject().insert_or_assign(
+                "_report_match_key", Value("source-staff-name-" + std::to_string(number)));
+        }
+    }
+    for (const auto number : companionNameTexts) {
+        if (alignedCompanion.contains(number)) continue;
+        if (const auto found = companionIndices.find(number); found != companionIndices.end()) {
+            companionItems[found->second].asObject().insert_or_assign(
+                "_report_match_key", Value("companion-staff-name-" + std::to_string(number)));
+        }
+    }
 }
 
 bool enigmaTextIsPageInsertOnly(const std::string& value)
@@ -471,6 +583,45 @@ compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
         }
     }
     return result;
+}
+
+std::optional<bool> compareStaffNameReferents(
+    std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
+    const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument)
+{
+    const bool nameField = path.starts_with("staff[") &&
+                           (path.ends_with(".full_name_text_id") ||
+                            path.ends_with(".abbrv_name_text_id"));
+    if (!nameField) return std::nullopt;
+
+    const auto referencedText = [](const musx::dom::DocumentPtr& document,
+                                   std::int64_t textBlockId) -> std::string {
+        using TextBlock = musx::dom::others::TextBlock;
+        if (textBlockId == 0) return {};
+        const auto block = document->getOthers()->get<TextBlock>(
+            musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(textBlockId));
+        if (!block || block->textType != TextBlock::TextType::Block || block->textId == 0)
+            return {};
+        const auto text = document->getTexts()->get<musx::dom::texts::BlockText>(block->textId);
+        if (!text) return {};
+        if (std::regex_replace(text->text, enigmaCommandPattern(), "").empty()) return {};
+        const auto chunks = tryEnigmaChunks(document, text->text, false);
+        if (chunks && std::ranges::all_of(*chunks, [](const TextChunk& chunk) {
+                return chunk.text.empty();
+            })) {
+            return {};
+        }
+        return text->text;
+    };
+    const auto sourceText = referencedText(sourceDocument, sourceTextBlockId);
+    const auto companionText = referencedText(companionDocument, companionTextBlockId);
+    const auto comparison = compareText("block_texts", std::string(path), sourceText,
+                                        companionText, sourceDocument, companionDocument,
+                                        false, false);
+    return !comparison.differences.contains(TextDifferenceClassification::Other) &&
+           !comparison.differences.contains(TextDifferenceClassification::MissingRun) &&
+           !comparison.differences.contains(TextDifferenceClassification::UnresolvedFont);
 }
 
 /// @brief The text ids a document's part definitions name, or empty when they

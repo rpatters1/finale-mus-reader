@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 #include <algorithm>
 #include <map>
@@ -576,6 +577,31 @@ TEST_CASE("Absent page format records retain the seeded values", "[class]")
             && field(report, "options.pageFormatOptions.adjustPageScope").origin
                 == ValueOrigin::Finale27Default,
         "Absent PageFormatOptions records reported incorrect origins");
+}
+
+TEST_CASE("Page adjustment scope differences are different defaults", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(0);
+    const Value companionValue(1);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
+    DifferenceContext context{"page_format_options.adjust_page_scope", DifferenceCategory::Differs,
+        "finale27-default", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::DclLegacy, finale_mus_reader::ByteOrder::BigEndian, nullptr,
+        report};
+
+    REQUIRE(classifyPageFormatOptionsDifference(context) ==
+            DifferenceClassification::DifferentDefaults);
+
+    context.origin = "legacy-mus";
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
+    context.origin = "finale27-default";
+    context.category = DifferenceCategory::ReaderOnly;
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
+    context.category = DifferenceCategory::Differs;
+    context.path = "page_format_options.avoid_system_margin_collisions";
+    REQUIRE_FALSE(classifyPageFormatOptionsDifference(context));
 }
 
 } // namespace

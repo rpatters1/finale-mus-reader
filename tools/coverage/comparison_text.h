@@ -5,8 +5,10 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 
 #include "coverage/comparison.h"
 
@@ -53,9 +55,22 @@ void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
                            const musx::dom::DocumentPtr& sourceDocument,
                            const musx::dom::DocumentPtr& companionDocument,
                            ComparisonResult& result);
+void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
+                                          const musx::dom::DocumentPtr& sourceDocument,
+                                          const musx::dom::DocumentPtr& companionDocument,
+                                          ComparisonResult& result);
 std::map<std::string, ReferentComparison>
 compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
                           const musx::dom::DocumentPtr& companionDocument);
+/// @brief Compares a Staff name reference through its TextBlock and BlockText.
+/// @details A zero comparator, an unresolved reference, and formatting without visible text all
+/// represent an empty Staff name.
+/// @return No value for fields other than Staff names; otherwise, whether the two names are
+/// semantically equivalent.
+std::optional<bool> compareStaffNameReferents(
+    std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
+    const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument);
 bool isPartNameText(const std::string& className, const std::string& path,
                     const SurveySnapshot& source, const SurveySnapshot& companion);
 bool isSynthesizedScoreNameText(const std::string& className, const std::string& path,

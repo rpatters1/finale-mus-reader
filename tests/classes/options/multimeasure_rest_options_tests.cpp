@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -268,6 +269,32 @@ void testMultimeasureRestRecovery()
 TEST_CASE("Multimeasure rest recovery", "[class][reader]") { testMultimeasureRestRecovery(); }
 
 TEST_CASE("Multimeasure rest layout marker", "[class]") { testMmRestEarlyLayoutMarker(); }
+
+TEST_CASE("Finale normalizes a zero multimeasure-rest number threshold", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value zero(0);
+    const Value one(1);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
+    DifferenceContext context{"mmrest_options.num_start", DifferenceCategory::Differs, "legacy-mus",
+        zero, one, leaves, leaves, finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+
+    REQUIRE(classifyMultimeasureRestOptionsDifference(context) ==
+            DifferenceClassification::FinaleUpgradeNormalization);
+
+    context.origin = "finale27-default";
+    REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(context));
+    context.origin = "legacy-mus";
+    context.path = "mmrest_options.use_syms_threshold";
+    REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(context));
+
+    const DifferenceContext reverse{"mmrest_options.num_start", DifferenceCategory::Differs,
+        "legacy-mus", one, zero, leaves, leaves, finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(reverse));
+}
 
 } // namespace
 } // namespace finale_mus_reader_tests

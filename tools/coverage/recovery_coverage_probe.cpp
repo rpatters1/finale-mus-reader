@@ -58,6 +58,7 @@
 #include "coverage/comparison.h"
 #include "coverage/json.h"
 #include "coverage/registry.h"
+#include "coverage/support/companion_path.h"
 #include "finale_mus_reader/reader.h"
 #include "reader/timing.h"
 #include "musx/musx.h"
@@ -231,6 +232,9 @@ void printHelp()
         "                  '#companion:' line, formatted '#companion: <dir-name> <suffix>',\n"
         "                  declares one of that corpus's companion-naming conventions: a\n"
         "                  source dir/name.mus pairs with dir/<dir-name>/name<suffix>.\n"
+        "                  If both name and name.mus exist, -finale27 companions use\n"
+        "                  .from-no-extension and .from-mus. An older -exports companion\n"
+        "                  belongs to name.mus; the extensionless source cannot use it.\n"
         "                  Repeatable, for a corpus whose convention changed over time --\n"
         "                  each row tries them in the order declared and uses the first\n"
         "                  whose file actually exists. When one is found and the source\n"
@@ -514,22 +518,24 @@ std::string displayPathFor(const std::filesystem::path& path, const std::filesys
     return path.filename().string();
 }
 
-// The companion path a source pairs with, tried under each of `conventions` in order (see
-// CompanionConvention) and matching the rule scripts/inventory.py uses to build the
-// corpus's own inventory: `source.parent / dirName / (source.stem() + suffix)`. Existence
-// is checked here, not left to the caller, because a fallback chain only means something if
-// the first convention that actually exists on disk wins -- a corpus with more than one
-// convention (rpatters1-main: some sources still pair under the older `-exports`/
-// `.fin27.musx`, more recent ones under `-finale27`/`.musx`) would otherwise always resolve
-// to the first declared convention's path whether or not that file is really there. Returns
-// nothing when no declared convention's candidate exists -- comparison against a companion
-// is opt-in per corpus and best-effort per row, not attempted speculatively.
+// Returns the first existing companion under the corpus's ordered naming conventions. When both
+// extensionless and `.mus` source names would map to the same basename, modern companions are
+// differentiated. The older exporter only recognized `.mus` sources, so its undifferentiated
+// candidate remains valid for that source but is never considered for the extensionless one.
 std::optional<std::filesystem::path> companionPathFor(
     const std::filesystem::path& source, const std::vector<CompanionConvention>& conventions)
 {
+    std::error_code conflictError;
+    const auto distinguishFromSibling = std::filesystem::exists(
+        finale_mus_reader::coverage::companionNameConflictFor(source), conflictError) &&
+        !conflictError;
     for (const auto& convention : conventions) {
-        auto candidate =
-            source.parent_path() / convention.dirName / (source.stem().string() + convention.suffix);
+        const auto legacyMusCompanion = distinguishFromSibling &&
+            finale_mus_reader::coverage::hasMusExtension(source) &&
+            convention.dirName == "-exports" && convention.suffix == ".fin27.musx";
+        const auto baseName = finale_mus_reader::coverage::companionBaseNameFor(
+            source, distinguishFromSibling && !legacyMusCompanion);
+        auto candidate = source.parent_path() / convention.dirName / (baseName + convention.suffix);
         std::error_code error;
         if (std::filesystem::exists(candidate, error) && !error) {
             return candidate;

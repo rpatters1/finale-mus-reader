@@ -327,8 +327,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
         source, companion, result.transformations, sourceEpoch};
     runComparisonPreparers(preparation);
     if (sourceEpoch == FormatEpoch::CodaBanner) {
-        comparison_text::realignCodaBlockTexts(source, companion, sourceDocument,
-                                               companionDocument, result);
+        comparison_text::realignCodaBlockTexts(
+            source, companion, sourceDocument, companionDocument, result);
+    } else if (sourcePredatesVersion(sourceEpoch, sourceVersion,
+                   FormatEpoch::UncompressedLegacy, versions::finale3_7)) {
+        comparison_text::realignPreFinale37StaffNameBlockTexts(
+            source, companion, sourceDocument, companionDocument, result);
     }
     const auto textBlockReferents =
         comparison_text::compareTextBlockReferents(sourceDocument, companionDocument);
@@ -392,8 +396,23 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     continue;
                 }
             }
+            std::optional<bool> staffNameReferents;
+            if (inSource && inCompanion && sourceFound->second.first.isInteger() &&
+                companionFound->second.first.isInteger()) {
+                staffNameReferents = comparison_text::compareStaffNameReferents(
+                    path, sourceFound->second.first.asInteger(),
+                    companionFound->second.first.asInteger(), sourceDocument, companionDocument);
+                if (staffNameReferents && *staffNameReferents) {
+                    ++stats.same;
+                    if (sourceFound->second.first != companionFound->second.first) {
+                        ++result.transformations[
+                            ComparisonTransformation::EquivalentTextBlockReferent];
+                    }
+                    continue;
+                }
+            }
             if (inSource && inCompanion && !fontReference &&
-                sourceFound->second.first == companionFound->second.first) {
+                !staffNameReferents && sourceFound->second.first == companionFound->second.first) {
                 ++stats.same;
                 continue;
             }
@@ -486,7 +505,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                 path,         category,        origin,      sourceValue,     companionValue,
                 sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
                 sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
-                &companionDocumentLeaves};
+                &companionDocumentLeaves, companionDocument.get()};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;

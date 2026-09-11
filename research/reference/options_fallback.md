@@ -54,6 +54,10 @@ that status; the Python report must not infer it from values, epochs, incidental
 presence of a mapping table. Prefer expressing `Unmapped` and `MusxOnly` directly in `ValueOrigin`
 where that cleanly avoids a parallel status model.
 
-Never leak fallback measures, staves, entries, text, document identity, header
-values, or other score content into an imported document. The fallback document
-must not remain the owner of options placed in the imported document.
+Never import fallback measures, staves, entries, text, document identity, header
+values, or other score objects into an imported document. A class-specific
+importer may copy an individually reviewed scalar from one of those objects when
+the applicable source structure provably has no location for it. Such an
+exception is an explicit field allowlist, never an object clone; document-local
+identities and references remain excluded. The fallback document must not remain
+the owner of anything placed in the imported document.

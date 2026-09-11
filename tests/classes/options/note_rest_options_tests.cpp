@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "coverage/classification_rules.h"
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -236,6 +237,44 @@ TEST_CASE("Earliest Coda note/rest options retain seeded rest-position defaults"
       "NoteRestOptions did not report the absent Coda rest positions as defaults");
 }
 
+TEST_CASE("Coda note/rest options recover the shape-note switch", "[class]") {
+  const std::vector<SyntheticRow> rows{
+      {1, "CS", {0, 0, 0, 0, 0, 0x0080}},
+      {GLOBALS_CMPER, "12", {0, 0, 0, 0, 0, 0}},
+  };
+  ImportReport report(FormatEpoch::CodaBanner);
+  const auto options =
+      importNoteRestOptions(makeContainer(rows, FormatEpoch::CodaBanner),
+                            FormatEpoch::CodaBanner, report);
+
+  REQUIRE(options->doShapeNotes);
+  const auto &recovered =
+      field(report, "options.noteRestOptions.doShapeNotes");
+  REQUIRE(recovered.origin == ValueOrigin::LegacyMus);
+  REQUIRE(recovered.sourceIdentity ==
+          finale_mus_reader::records::packTag("CS"));
+}
+
+TEST_CASE("Finale 1.0 distinguishes the shape-note switch from its Staff float gate",
+          "[class][reader]") {
+  for (const auto &[fixture, expected] : {
+           std::pair{"evidence/F100/F100-noteshapes-enable.mus", true},
+           std::pair{"evidence/F100/F100-noteshapes-float.mus", false},
+       }) {
+    const auto result = readFixture(fixture);
+    const auto options =
+        result.document->getOptions()->get<NoteRestOptionsTarget>();
+    REQUIRE(options);
+    INFO(fixture);
+    REQUIRE(options->doShapeNotes == expected);
+    const auto &source =
+        field(result.report, "options.noteRestOptions.doShapeNotes");
+    REQUIRE(source.origin == ValueOrigin::LegacyMus);
+    REQUIRE(source.sourceIdentity ==
+            finale_mus_reader::records::packTag("CS"));
+  }
+}
+
 TEST_CASE("Finale 1.0 uses fixed rest-position behavior", "[class][reader]") {
   const auto result = readFixture("evidence/F100/F100-baseline.mus");
   const auto options =
@@ -437,6 +476,37 @@ TEST_CASE(
   REQUIRE(shapeNotes->origin == ValueOrigin::LegacyMus);
   REQUIRE(shapeNotes->sourceIdentity ==
           finale_mus_reader::records::packTag("CS"));
+}
+
+TEST_CASE("Seeded rest-drop differences are different defaults", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value sourceValue(-24);
+    const Value companionValue(0);
+    const ComparisonLeaves leaves;
+    finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
+
+    for (const auto leaf : {noteRestDrop8thLeaf, noteRestDrop16thLeaf, noteRestDrop32ndLeaf,
+             noteRestDrop64thLeaf, noteRestDrop128thLeaf}) {
+        const auto path = std::string("note_rest_options.") + std::string(leaf);
+        DifferenceContext context{path, DifferenceCategory::Differs, "finale27-default",
+            sourceValue, companionValue, leaves, leaves, finale_mus_reader::FormatEpoch::CodaBanner,
+            finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+        REQUIRE(classifyNoteRestOptionsDifference(context) ==
+                DifferenceClassification::DifferentDefaults);
+
+        context.origin = "legacy-mus";
+        REQUIRE_FALSE(classifyNoteRestOptionsDifference(context));
+        context.origin = "finale27-default";
+        context.category = DifferenceCategory::ReaderOnly;
+        REQUIRE_FALSE(classifyNoteRestOptionsDifference(context));
+    }
+
+    const DifferenceContext unrelated{"note_rest_options.draw_outline", DifferenceCategory::Differs,
+        "finale27-default", sourceValue, companionValue, leaves, leaves,
+        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
+        nullptr, report};
+    REQUIRE_FALSE(classifyNoteRestOptionsDifference(unrelated));
 }
 
 } // namespace

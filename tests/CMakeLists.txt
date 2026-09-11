@@ -61,6 +61,7 @@ add_executable(finale_mus_reader_tests
     classes/others/custom_keys_tests.cpp
     classes/others/drum_staff_tests.cpp
     classes/others/file_path_tests.cpp
+    classes/others/font_definitions_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/marking_category_tests.cpp
@@ -70,10 +71,12 @@ add_executable(finale_mus_reader_tests
     classes/others/percussion_note_info_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
+    classes/others/staff_tests.cpp
     classes/others/staff_list_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
+    coverage_probe_support_tests.cpp
     coverage_schema_tests.cpp
     ../tools/coverage/comparison.cpp
     ../tools/coverage/comparison_text.cpp
@@ -85,6 +88,7 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/surveyors/others/file_path.cpp
     ../tools/coverage/surveyors/others/measure.cpp
     ../tools/coverage/surveyors/others/percussion_note_info.cpp
+    ../tools/coverage/surveyors/others/staff.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

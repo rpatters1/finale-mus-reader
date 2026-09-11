@@ -39,3 +39,23 @@ F98-beams-no4-8thcommon.etf
 finale27-upgrade.log
     sha256 fb1ab5581d1133674a5fd2c3fbcce54d665a2b8d85b65b2eb9b43ea1ada61457
     Log from creating the three Finale 27 semantic companions.
+
+F98-altnotation-full.mus
+    sha256 f9ef8485921dd031436b33d736a00c0ec21121f2ce908b3ca2f787605f97bde3
+F98-altnotation-full.etf
+    sha256 586068826735e5cc9b0bfcc6ccc3b985e8034d29f1931441d1b664a92d791e5c
+-finale27/F98-altnotation-full.musx
+    sha256 f56903e5283099c5b2792a38951a78cbb47f86b1f16a6c03ffe8acede939442b
+    Created from the baseline by applying alternate notation to the entire staff. The
+    Staff record is unchanged; the edit adds paired GF records for all 44 measures.
+    Finale 27 synthesizes a Two Bar Repeats Staff Style assignment over measures 1–44.
+
+F98-altnotation-partial.mus
+    sha256 81f54296d9cd4946f6a2ac874adb9c8717c555d6ff4d5e9b69d5472b1c7aac61
+F98-altnotation-partial.etf
+    sha256 ec822fe4c728b2ae9bfa4bd0a9ae6e0a5360a02aa362806c796702ae09fe3dd5
+-finale27/F98-altnotation-partial.musx
+    sha256 2a5ccbceb02e1291b81801a13490931d092929d8e95f5a9f37c70baf29d67279
+    Created from the baseline by applying alternate notation to measures 1–3. The
+    Staff record is unchanged; the edit adds measure-keyed GF records. Finale 27
+    synthesizes a Slash Notation Staff Style assignment over measures 1–3.
