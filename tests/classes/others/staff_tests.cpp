@@ -68,7 +68,8 @@ ImportReport staffImport(const finale_mus_reader::container::ParsedContainer &pa
     auto referenceSession = musx::factory::DocumentFactory::begin();
     const auto referenceDocument = referenceSession.getDocument();
     auto referenceStaff = std::make_shared<Staff>(referenceDocument, musx::dom::SCORE_PARTID,
-                                                  musx::dom::EnigmaBase::ShareMode::All, 1);
+                                                  musx::dom::EnigmaBase::ShareMode::All,
+                                                  musx::dom::Cmper{1});
     referenceStaff->staffLines = 5;
     referenceStaff->lineSpace = evpusPerSpace;
     referenceStaff->dwRestOffset = -4;
@@ -1040,7 +1041,8 @@ TEST_CASE("Coda Staff line overrides decode signed ordinary and custom forms")
         report.findField<Staff>("topBarlineOffset", musx::dom::SCORE_PARTID, 11);
     REQUIRE(topBarline);
     CHECK(topBarline->origin == ValueOrigin::LegacyMusAdjusted);
-    for (const auto staffId : {7, 8, 9})
+    for (const auto staffId : {musx::dom::Cmper{7}, musx::dom::Cmper{8},
+                               musx::dom::Cmper{9}})
     {
         const auto *bottomDot =
             report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID, staffId);
@@ -2249,8 +2251,8 @@ TEST_CASE("Staff fields omitted from the companion Scroll View await StaffUsed "
     const auto document = emptyStaffDocument();
     auto staffUsed = std::make_shared<musx::dom::others::StaffUsed>(
         document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
-        document->calcScrollViewCmper(musx::dom::SCORE_PARTID), 0);
-    staffUsed->staffId = 1;
+        document->calcScrollViewCmper(musx::dom::SCORE_PARTID), musx::dom::Inci{0});
+    staffUsed->staffId = musx::dom::StaffCmper{1};
     document->getOthers()->add(musx::dom::others::StaffUsed::XmlNodeName, std::move(staffUsed));
     const auto context =
         [&](std::string_view path, std::string_view origin, DifferenceCategory category)
