@@ -2068,7 +2068,7 @@ TEST_CASE("Six-word Staff defaults with fallback provenance are possibly "
     };
     REQUIRE_FALSE(
         classifyStaffDifference(hideKeySigs(finale_mus_reader::FormatEpoch::UncompressedLegacy)));
-    report.setField(finale_mus_reader::instanceKey<Staff>(musx::dom::SCORE_PARTID, 1),
+    report.setField(finale_mus_reader::instanceKey<Staff>(musx::dom::SCORE_PARTID, staffCmper1),
                     "dwRestOffset", {ValueOrigin::Finale27Default, 0, 0, -4});
     for (const auto epoch : {finale_mus_reader::FormatEpoch::CodaBanner,
                              finale_mus_reader::FormatEpoch::UncompressedLegacy})
@@ -2134,7 +2134,8 @@ TEST_CASE("Synthesized Staff fret instrument references may be renumbered", "[co
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
     report.setInstanceOrigin(
-        finale_mus_reader::instanceKey<FretInstrument>(musx::dom::SCORE_PARTID, 2),
+        finale_mus_reader::instanceKey<FretInstrument>(musx::dom::SCORE_PARTID,
+                                                       musx::dom::Cmper{2}),
         ValueOrigin::LegacyBehavior);
     const auto context = [&](std::string_view path, std::string_view origin,
                              DifferenceCategory category, const Value &source,
