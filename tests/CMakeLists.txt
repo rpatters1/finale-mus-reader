@@ -73,6 +73,7 @@ add_executable(finale_mus_reader_tests
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/others/staff_tests.cpp
     classes/others/staff_list_tests.cpp
+    classes/others/staff_style_assign_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
@@ -86,10 +87,12 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/surveyors/details/percussion_note_code.cpp
     ../tools/coverage/surveyors/others/drum_staff.cpp
     ../tools/coverage/surveyors/others/file_path.cpp
+    ../tools/coverage/surveyors/others/font_definitions.cpp
     ../tools/coverage/surveyors/others/measure.cpp
     ../tools/coverage/surveyors/others/percussion_note_info.cpp
     ../tools/coverage/surveyors/others/staff.cpp
     ../tools/coverage/surveyors/others/staff_style.cpp
+    ../tools/coverage/surveyors/others/staff_style_assign.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

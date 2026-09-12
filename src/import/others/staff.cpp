@@ -1173,8 +1173,7 @@ void reportMappedStaff(Reporting &reporting, const Target &target, const RecordF
     {
         STAFF_MAPPED(vertTabNumOff, tablaturePositionsSlot);
     }
-    const auto longOrder =
-        byteOrder == ByteOrder::BigEndian ? LongWordOrder::HighFirst : LongWordOrder::LowFirst;
+    const auto longOrder = nativeLongWordOrder(byteOrder);
     if (wordCount >= lineSpaceSlot + 2)
     {
         reportStaffField(reporting, key, source, rows, "lineSpace", lineSpaceSlot,
@@ -1637,8 +1636,7 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
         target.botRepeatDotOff = signedByte(repeatDots, false);
         target.topRepeatDotOff = signedByte(repeatDots, true);
     }
-    const auto longOrder =
-        byteOrder == ByteOrder::BigEndian ? LongWordOrder::HighFirst : LongWordOrder::LowFirst;
+    const auto longOrder = nativeLongWordOrder(byteOrder);
     if (wordCount >= lineSpaceSlot + 2)
     {
         target.lineSpace = payloadLong(payload, lineSpaceSlot * 2, byteOrder, longOrder) / 64;

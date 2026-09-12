@@ -7,6 +7,7 @@
 #include "coverage/schema.h"
 #include "coverage/support/source_gate.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cstdint>
 #include <limits>
@@ -18,6 +19,30 @@
 namespace finale_mus_reader {
 namespace coverage {
 namespace staff_fields {
+
+[[nodiscard]] inline std::optional<musx::dom::Cmper>
+partIdFromComparisonPath(std::string_view path)
+{
+    constexpr std::string_view partIdKey = "part_id=";
+    const auto identityBegin = path.find('[');
+    const auto identityEnd = path.find(']', identityBegin);
+    if (identityBegin == std::string_view::npos || identityEnd == std::string_view::npos)
+        return std::nullopt;
+    const auto valueBegin = path.find(partIdKey, identityBegin + 1);
+    if (valueBegin == std::string_view::npos || valueBegin >= identityEnd)
+        return musx::dom::SCORE_PARTID;
+    const auto digitsBegin = valueBegin + partIdKey.size();
+    const auto digitsEnd = path.find_first_of(",]", digitsBegin);
+    if (digitsEnd == std::string_view::npos || digitsEnd > identityEnd)
+        return std::nullopt;
+
+    musx::dom::Cmper value{};
+    const auto [parsedEnd, error] =
+        std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, value);
+    return error == std::errc{} && parsedEnd == path.data() + digitsEnd
+        ? std::optional{value}
+        : std::nullopt;
+}
 
 [[nodiscard]] inline std::optional<musx::dom::StaffCmper>
 staffLikeCmperFromComparisonPath(std::string_view path)
@@ -93,6 +118,54 @@ classifyNoteAttachedItemsExpressionUpgradeLoss(const DifferenceContext& context,
     return sourceHasNoteAttachedItemsExpansion(context, objectPath)
                ? std::optional{DifferenceClassification::FinaleUpgradeLoss}
                : std::nullopt;
+}
+
+inline std::optional<DifferenceClassification>
+classifyAggregateOtherSmartShapeUpgradeLoss(const DifferenceContext& context,
+                                            std::string_view classPrefix,
+                                            bool usesAggregateOtherAttachedItems)
+{
+    if (context.category == DifferenceCategory::Differs && context.origin == "legacy-mus" &&
+        comparisonPathStartsWith(context.path, classPrefix) &&
+        comparisonPathEndsWith(context.path, ".alt_hide_other_smart_shapes") &&
+        context.sourceValue.isBool() && context.companionValue.isBool() &&
+        context.sourceValue.asBool() != context.companionValue.asBool() &&
+        usesAggregateOtherAttachedItems) {
+        return DifferenceClassification::FinaleUpgradeLoss;
+    }
+    return std::nullopt;
+}
+
+inline std::optional<DifferenceClassification> classifyNoteAttachedItemsAggregateHideUpgradeLoss(
+    const DifferenceContext& context, std::string_view classPrefix, std::string_view maskContainer,
+    std::optional<std::string_view> requiredMaskOrigin = {})
+{
+    constexpr std::string_view aggregateHideSuffixes[] = {".hide_chords", ".hide_fretboards"};
+    const auto suffix = std::ranges::find_if(aggregateHideSuffixes, [&](const auto candidate) {
+        return comparisonPathEndsWith(context.path, candidate);
+    });
+    if (suffix == std::ranges::end(aggregateHideSuffixes) ||
+        context.category != DifferenceCategory::Differs || context.origin != "legacy-mus" ||
+        !comparisonPathStartsWith(context.path, classPrefix) || !context.sourceValue.isBool() ||
+        !context.sourceValue.asBool() || !context.companionValue.isBool() ||
+        context.companionValue.asBool() ||
+        !sourceAtOrAfter(context.epoch, context.sourceVersion, FormatEpoch::UncompressedLegacy,
+                         versions::finale2000) ||
+        !sourcePredatesVersion(context.epoch, context.sourceVersion, FormatEpoch::ZlibLegacy,
+                               versions::finale2009)) {
+        return std::nullopt;
+    }
+    const auto objectPath = context.path.substr(0, context.path.size() - suffix->size());
+    if (!sourceHasNoteAttachedItemsExpansion(context, objectPath))
+        return std::nullopt;
+    const auto mask = context.source.find(std::string(objectPath) + std::string(maskContainer) +
+                                          std::string(suffix->substr(1)));
+    if (mask == context.source.end() || !mask->second.first.isBool() ||
+        !mask->second.first.asBool() ||
+        (requiredMaskOrigin && mask->second.second != *requiredMaskOrigin)) {
+        return std::nullopt;
+    }
+    return DifferenceClassification::FinaleUpgradeLoss;
 }
 
 inline std::optional<DifferenceClassification>

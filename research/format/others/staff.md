@@ -147,7 +147,8 @@ applied over measure ranges by separate records that Finale 27 upgrades into syn
 Styles and assignments. The early Staff has none of the modern alternate-notation properties, so
 recovery supplies the legacy behavior as `Normal`, layer 0, slash dots enabled, and every other
 alternate-notation boolean disabled. Recovery of the range records and their synthesized Staff
-Styles is outside the raw Staff slice.
+Styles is outside the raw Staff slice; direct `Sy` assignment recovery is documented in
+[`staff_style_assign.md`](staff_style_assign.md).
 
 The remaining undecoded Coda Staff leaves retain `Unmapped` provenance. Recovery coverage does not
 classify disagreements on those leaves as expected; they remain unexpected until their raw values
@@ -191,14 +192,13 @@ percussion and tablature Staffs. Recovery preserves the stored switch; coverage 
 Boolean conversion as `FinaleUpgradeLoss` for those notation styles. Standard Staffs, other
 provenance, and Finale 2012 or later are excluded. **Strong.**
 
-The setting does not recover `hasStyles`. That property
-is not stored in the Finale 2000 or 2003 `IS` record. Finale 27 synthesizes it when the staff has a
-separate `Sy` assignment record; merely defining an `SY` Staff Style does not set it. By Finale
-2011, word 5 bit `0x1000` stores the value. Its exact introduction is intentionally unresolved:
-future `StaffStyleAssign` recovery will refresh `hasStyles` from assignment presence in every
-source version rather than treating the stored bit as authoritative. Until then it remains
-`Unmapped`, and a differing companion value is deferred as awaiting that dependent recovery. The
-classification stops applying when assignment recovery gives the field a calculated provenance.
+`hasStyles` is not stored in the Finale 2000 or 2003 `IS` record. Finale 27 sets it when the Staff
+has a separate `Sy` assignment; merely defining an `SY` Staff Style does not set it. By Finale
+2011, word 5 bit `0x1000` stores the value, but recovery consistently recalculates the property
+from imported assignments rather than treating that bit as authoritative. Pre-Finale-2000 Staffs
+remain false until the separate alternate-notation synthesis cycle. See
+[`staff_style_assign.md`](staff_style_assign.md). **Confirmed** for represented source
+assignments; the earlier synthesis remains open.
 
 Word 5 bit `0x0020` independently enables `noteFont`; word 3 is its font ID and word 4 packs its
 size in the high byte and effects in the low byte. This representation is already present in Finale

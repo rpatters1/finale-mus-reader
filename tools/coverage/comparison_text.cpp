@@ -598,7 +598,9 @@ std::optional<bool> compareStaffNameReferents(
     const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument)
 {
-    const bool staffLikePath = path.starts_with("staff[") || path.starts_with("staff_style[");
+    const bool staffLikePath = path.starts_with("staff[") || path.starts_with("staff_style[") ||
+                               (path.starts_with("staff_style_assigns[") &&
+                                path.find("].applied_style.") != std::string_view::npos);
     const bool nameField = staffLikePath && (path.ends_with(".full_name_text_id") ||
                                              path.ends_with(".abbrv_name_text_id"));
     if (!nameField) return std::nullopt;

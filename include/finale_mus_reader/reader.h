@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -221,6 +222,20 @@ struct TextFieldInfo
     /// @brief The reader supplied the initial effects command from the text class default.
     bool effectsWereSynthesized{};
 };
+
+/// @brief Instrumentation audit for every source family that produces staff-style assignments.
+/// @details Producers add the number of assignments their source structure requires. After all
+/// importers run, the audit records the number actually constructed and is marked complete only
+/// when every staff agrees. A present entry with zero expected assignments identifies malformed
+/// source material rather than proving that the staff had no assignment source.
+struct StaffStyleAssignmentAudit
+{
+    musx::dom::Cmper partId = musx::dom::SCORE_PARTID;
+    musx::dom::Cmper staffId{};
+    std::size_t expectedAssignments{};
+    std::size_t constructedAssignments{};
+    bool malformedSource{};
+};
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 /// @brief One message about the import, with the level that decides where it surfaces.
@@ -278,6 +293,10 @@ struct ImportReport
     /// @brief Text conversion provenance keyed first by class instance, then member.
     std::unordered_map<InstanceKey,
         std::unordered_map<std::string, TextFieldInfo>, InstanceKeyHash> textFields;
+    /// @brief Selector-neutral completeness accounting for staff-style assignment importers.
+    std::vector<StaffStyleAssignmentAudit> staffStyleAssignmentAudits;
+    /// @brief True only after assignment counts were reconciled against the constructed document.
+    bool staffStyleAssignmentAuditComplete{};
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
     std::vector<Diagnostic> diagnostics;
 
@@ -316,6 +335,31 @@ struct ImportReport
         const InstanceKey& instance, std::string member, TextFieldInfo info)
     {
         textFields[instance].insert_or_assign(std::move(member), std::move(info));
+    }
+
+    StaffStyleAssignmentAudit& expectStaffStyleAssignments(musx::dom::Cmper partId,
+        musx::dom::Cmper staffId, std::size_t count, bool malformedSource)
+    {
+        auto found = std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) {
+            return audit.partId == partId && audit.staffId == staffId;
+        });
+        if (found == staffStyleAssignmentAudits.end()) {
+            found = staffStyleAssignmentAudits
+                        .insert(staffStyleAssignmentAudits.end(),
+                            StaffStyleAssignmentAudit{partId, staffId});
+        }
+        found->expectedAssignments += count;
+        found->malformedSource = found->malformedSource || malformedSource;
+        return *found;
+    }
+
+    [[nodiscard]] const StaffStyleAssignmentAudit* findStaffStyleAssignmentAudit(
+        musx::dom::Cmper partId, musx::dom::Cmper staffId) const
+    {
+        const auto found = std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) {
+            return audit.partId == partId && audit.staffId == staffId;
+        });
+        return found == staffStyleAssignmentAudits.end() ? nullptr : &*found;
     }
 
     [[nodiscard]] const FieldInfo* findField(

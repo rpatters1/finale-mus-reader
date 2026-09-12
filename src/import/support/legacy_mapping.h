@@ -74,6 +74,13 @@ enum class LongWordOrder : std::uint8_t
     LowFirst
 };
 
+/// @brief Returns the long-word order native to the container's byte order.
+[[nodiscard]] constexpr LongWordOrder nativeLongWordOrder(ByteOrder byteOrder)
+{
+    return byteOrder == ByteOrder::BigEndian ? LongWordOrder::HighFirst
+                                             : LongWordOrder::LowFirst;
+}
+
 /// @brief Selects a bit range within the source value. A zero count means the whole value.
 struct BitRange
 {

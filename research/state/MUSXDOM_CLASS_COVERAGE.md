@@ -15,7 +15,7 @@ sentence belongs in that class's own file under [`research/format/`](../format/)
 needs a paragraph belongs in its [`research/investigations/`](../investigations/index.md) file.
 Explanation added here has to be removed again.
 
-**81 done, 6 partial, 103 to do, 190 total.** Verified class for class against the registry on
+**81 done, 7 partial, 102 to do, 190 total.** Verified class for class against the registry on
 2026-09-05: every registered type appears here and nothing here is unregistered.
 
 ## options  (28 done, 0 partial, 0 to do, 28 total)
@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (41 done, 4 partial, 48 to do, 93 total)
+## others  (41 done, 5 partial, 47 to do, 93 total)
 
     [x] AcciAmountFlats                         custom_keys.cpp
     [x] AcciAmountSharps                        custom_keys.cpp
@@ -116,7 +116,7 @@ Explanation added here has to be removed again.
     [x] SmartShapeCustomLine                    smart_shape_custom_lines.cpp
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
-    [~] Staff                                   staff.cpp                       only hasStyles awaits StaffStyleAssign
+    [~] Staff                                   staff.cpp                       pre-F2000 hasStyles synthesis pending
     [x] StaffListCategoryName                   staff_list.cpp
     [x] StaffListCategoryParts                  staff_list.cpp
     [x] StaffListCategoryScore                  staff_list.cpp
@@ -127,7 +127,7 @@ Explanation added here has to be removed again.
     [x] StaffListRepeatScoreForced              staff_list.cpp
     [ ] StaffPlayData
     [x] StaffStyle                              staff.cpp
-    [ ] StaffStyleAssign
+    [~] StaffStyleAssign                        staff_style_assign.cpp          pre-F2000 synthesis pending
     [ ] StaffSystem
     [ ] StaffUsed
     [ ] SystemLock

@@ -79,9 +79,9 @@ void importFileDescriptions(const ImportContext& context)
             target.version = static_cast<std::uint16_t>(word(0));
             target.pathId = static_cast<musx::dom::Cmper>(word(4));
             target.volRefNum = static_cast<std::int16_t>(word(6));
-            target.dirId = static_cast<std::int32_t>(payloadLong(payload, 8,
-                context.profile.byteOrder, context.profile.byteOrder == ByteOrder::BigEndian
-                    ? LongWordOrder::HighFirst : LongWordOrder::LowFirst));
+            target.dirId = static_cast<std::int32_t>(payloadLong(
+                payload, 8, context.profile.byteOrder,
+                nativeLongWordOrder(context.profile.byteOrder)));
             // POSIX and URL-bookmark paths are treated as MUSX-only; unknown wire values
             // still produce diagnostics rather than silently selecting a modern type.
             const auto type = word(2);
