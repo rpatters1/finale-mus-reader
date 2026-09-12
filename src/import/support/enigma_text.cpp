@@ -634,6 +634,10 @@ private:
         // command because the resolved `FontDefinition` states the same thing.
         const auto comma = arguments.find(',');
         const auto spelled = arguments.substr(0, comma);
+        // An empty ordinary font command names no font and has no effect on the active state.
+        if ((name == "font" || name == "Font") && spelled.empty()) {
+            return;
+        }
         std::optional<std::uint16_t> packedCharset;
         if (comma != std::string_view::npos) {
             if (const auto packed = readDecimal(arguments.substr(comma + 1))) {

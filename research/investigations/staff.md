@@ -6,6 +6,87 @@ six-word Coda record.
 **Confidence:** `confirmed` for observed structure; `open` for unedited fields and upgrade
 transformations not yet reviewed.
 
+## 2026-09-11 — StaffStyle prefix and trailer
+
+Question: does the `SY` family reuse the Staff payload, with override metadata appended?
+
+Method: dump the normalized fixed-row records for controlled Finale 2000 and 2003 styles and the
+class records for a controlled Finale 2011 style. Separate each candidate suffix from the Staff
+prefix by its fixed name field, then compare the decoded values with the independently converted
+Finale 27 StaffStyle objects.
+
+Result: the Finale 2000, 2003, and 2011 records end in one six-word metadata row and 48 name bytes.
+Removing that 60-byte trailer leaves an 18-word Finale 2000 Staff payload and 36-word Finale 2003
+and 2011 Staff payloads. The existing Staff decoder recovers the companion values from each prefix. In every
+metadata row word 0 is `0x0080`, words 1 through 4 are zero, and word 5 is `0x0005`; the companions
+independently select only `masks.staffType` and `addToMenu`. This confirms the trailer geometry and
+those two public meanings. The other mask mappings remain private-framework-derived pending
+controlled one-bit edits.
+
+`copyable` and `addToMenu` affect Finale's Staff Style management UI rather than the musical
+meaning represented by musxdom. Coverage therefore reports any source/companion disagreement in
+either value as `DifferentDefaults`; their exact recovery remains independently tested.
+
+The ad hoc cohort contains 22 distinct Finale 2010 documents in which Finale 27 reinterprets
+Windows-1252 StaffStyle name bytes as Mac Roman. Each changes both `Flöte` to `Flˆte` and
+`Notenköpfe` to `Notenkˆpfe`, for 44 occurrences. Coverage recognizes the complete cross-platform
+reinterpretation and reports it as `text-encoding-error`; partial or otherwise different names
+remain unexpected. **Strong.**
+
+The five standard alternate-notation styles in the Finale 2000 facing-pages fixture store only
+word 1 bit `0x1000` in their mask metadata. Their Finale 27 companions materialize
+`masks.altNotation`, `masks.hideChords`, and `masks.hideFretboards` for every style, including
+styles whose resulting hide values are false. The bit therefore governs all three overrides; it
+is not conditional on either resulting Boolean value. **Confirmed.** Evidence:
+`tests/evidence/F2000/F2000-F372-facingpages-parts.mus` and its ETF and Finale 27 companion.
+
+The first coverage pass exposed a distinct Finale 2012 shape rather than an upgrade-time naming
+change. All 18 controlled records are 300 bytes: a 96-byte Staff prefix, the same six metadata
+words, and 192 bytes of UTF-16LE name storage. The source records themselves contain the six names
+Normal Notation, Slash Notation, Rhythmic Notation, One Bar Repeats, Two Bar Repeats, and Blank
+Notation. Their metadata words are `0x0000`, `0x1000`, `0x0006`, `0x0000`, `0x0000`, and `0x0007`,
+matching the companion masks and controls. The original fixed 60-byte suffix assumption read only
+zero padding at the end of this wider name field and was withdrawn.
+
+The registered inventories contain only 132-, 144-, and 300-byte StaffStyle records. The decoder
+therefore keeps record geometry authoritative for those represented layouts and uses the Finale
+2012 Unicode boundary only for the unrepresented 145-through-299-byte interval.
+
+Finale 2012 also changes the semantic grouping of notation styles. Earlier applications expose
+Note Shapes as a notation style alongside Normal, Percussion, and Tablature. In the modern model,
+Normal, Percussion, and Tablature participate in an instrument change, while Note Shapes becomes a
+staff-specific notation override. The shared Staff payload already supplies the distinguishing
+combination: the recovered modern values are Standard notation with `useNoteShapes` enabled. For
+pre-Finale-2012 StaffStyles, recovery consequently redirects an active notation-style mask to the
+note-shape mask for that combination. The notation-style mask remains unchanged for the other
+three source styles. Staff values use the same source-style split even though they have no mask to
+redirect. **Strong.** The four tracked Finale 2006 image fixtures contain duplicate copies of
+style 19, “15. Note Shapes”; all store the old combination and all Finale 27 companions contain
+`masks.notationStyle = false` and `masks.useNoteShapes = true`. Their duplicate origin means this
+is one independent document observation. Evidence:
+`tests/evidence/F2006/F2006-embedded-tif.mus`,
+`tests/evidence/F2006/F2006-embedded-tiff.mus`,
+`tests/evidence/F2006/F2006-eps-then-tiff.mus`, and
+`tests/evidence/F2006/F2006-linked-tiff.mus`, with their Finale 27 companions. After applying the
+conversion, the tracked snapshot has 15,738 equal StaffStyle leaves, 112 expected differences, and
+no unexpected differences; the eight former mask differences all became equal.
+
+Coverage applies the Staff rule for dormant note-font sizes to StaffStyle as well: when
+`useNoteFont` is false, a source/companion size disagreement is `DifferentDefaults`; an enabled
+font's size remains an exact comparison. This accounts for the seven `0 -> 24` Finale 2000 style
+differences in the tracked snapshot. StaffStyle adds a separate effective-value rule: when both
+source and companion leave `masks.floatNoteheadFont` disabled, `useNoteFont` and every member of
+the note-font tuple are dormant and their disagreements are also `DifferentDefaults`. This covers
+the `true -> false` enablement and `24 -> 0` size differences on the F2006 “06. Normal Notation”
+style without weakening comparison when either side activates the override.
+
+Evidence: `tests/evidence/F2000/F2000-staff-style.mus` and its ETF and Finale 27 companion;
+`tests/evidence/F2003/F2003-staffstyle.mus` and its ETF and Finale 27 companion; and
+`tests/evidence/F2011/F2011-staffstyle.mus` with its Finale 27 companion. The Finale 2012 extension
+is represented by `tests/evidence/F2012/F2012-bookmarks.mus`,
+`tests/evidence/F2012/F2012-F372-activelayer-only.mus`, and
+`tests/evidence/F2012/F2012-F372-noteopts.mus`, each with its Finale 27 companion.
+
 ## 2026-09-09 — base and extension reconstruction
 
 Question: which portion of the public Finale-2000 `EDTStaffSpec` is raw, and how does it align with
@@ -337,9 +418,60 @@ Finale 2006 and 2008. The alternate-notation style and layer subfields remain ze
 2005 tablature fixtures establish that word 4 is the note-font size/effects value; the edit has
 materialized a 24-point default rather than set two more flags. All three companions set
 `altHideArtics`, `altHideLyrics`, `altHideSmartShapes`, `altHideExpressions`, `hideFretboards`, and
-`hideChords`. This confirms the one-to-many conversion through Finale 2008. Finale 2009's removal
-of entry-attached expressions is the compatibility boundary; its representation can be checked
-when the broader corpus next supplies that version.
+`hideChords`. Controlled legacy UI verification establishes that the switch does not affect Smart
+Shape display in the source, but the modern UI requires the Smart Shape member that Finale 27 adds
+while expanding the group. Expressions are measure-attached, and current UI review supplies no
+evidence that they participate in this note-attached-items group. The earlier six-field recovery
+expansion is superseded: recovery maps the aggregate onto articulations, lyrics, Smart Shapes,
+fretboards, and chords, while `altHideExpressions` retains the Finale 27 default of false. Finale
+2000 keeps expressions visible, and the modern UI does not couple their visibility to this group;
+its Finale 27 companion instead hides them. That exact Finale 2000 conversion is confirmed upgrade
+loss. Coverage applies the same narrowly constrained upgrade-loss rule to Staff and StaffStyle in
+every version from Finale 2000 when the source fields carry the complete recovered aggregate
+signature and `altHideExpressions` still has fallback provenance. Companion sibling values and the
+alternate-notation type are deliberately not predicates: StaffStyle masks can change those
+effective companion values, while neither fact makes expressions part of the source aggregate.
+The rule therefore stops when the value is directly recoverable rather than at a guessed version
+boundary. Its extension beyond the verified Finale 2000 source behavior remains weak.
+
+Finale 2006 has a separate StaffStyle upgrade loss. Style 5, “05. Blank Notation: All Layers,”
+stores the aggregate with note-attached items hidden and activates the chord and fretboard
+overrides. Recovery therefore correctly produces true values, but some Finale 27 companions write
+either value false while retaining its mask. Coverage classifies either `true -> false` StaffStyle
+conversion from Finale 2000 through Finale 2008 when the complete source aggregate signature and
+the affected mask are both present. The era extension is weak outside the represented conversions.
+The fretboard result repeats in
+`F2006-embedded-tif.mus`, `F2006-embedded-tiff.mus`, `F2006-eps-then-tiff.mus`, and
+`F2006-linked-tiff.mus`; these are four fixture occurrences of the same underlying document.
+The chord result appears in `mus-0f4eba682cbab3f7`, `mus-a767fc45617d6277`,
+`mus-d73f90d17235b048`, `mus-2b3cd6d4d6c8aff5`, `mus-dbf7a5f9c3b479fb`, and
+`mus-97e8cc0549bbd8b3` in the `rpatters1-main` survey.
+
+The standard styles in `tests/evidence/F2000/F2000-F372-facingpages-parts.mus` independently show
+the type contribution: Slash, One Bar Repeat, Two Bar Repeat, and Blank upgrade with
+`altHideSmartShapes` enabled, while Rhythmic upgrades with it disabled. Normal is exercised by the
+controlled UI check above rather than inferred from those companions. Blank With Rests is not
+represented and remains a weak extension of the same rule. Recovery combines this type result
+with the aggregate control. Finale 2009's removal of entry-attached expressions is the believed
+boundary at which the dedicated Smart Shape value becomes independently recoverable.
+
+The `rpatters1-main` survey contains 61 distinct Finale 2000 documents whose “02. Rhythmic
+Notation” StaffStyle combines the aggregate control and notation type to recover
+`altHideSmartShapes = true`, while Finale 27 stores `false`. Coverage treats this exact
+pre-Finale-2009, `LegacyMusAdjusted` conversion as upgrade loss rather than discarding the source
+semantics. **Strong.**
+
+Three old-layout “07. Two-Bar Repeat” StaffStyles in the `rpatters1-main` survey preserve visible
+articulations and lyrics in their aggregate source word, but their Finale 27 companions explicitly
+hide both. The affected documents are `mus-e09f13d06ff0f25e`, `mus-8fc93fa852c6c878`, and
+`mus-386ac60522cf2c79`, spanning Finale 2004 and Finale 2007. Coverage classifies only the
+`false -> true` articulation and lyric differences as upgrade loss when field provenance proves
+the aggregate layout and the recovered notation is Two Bar Repeat. In the third document only,
+Finale also changes `hideChords` and `hideFretboards` from false to true when the source's
+other-layer note-attached-items group is hidden; coverage classifies those two changes under the
+same structural and notation constraints. Other notation types, independently stored layouts,
+reverse changes, and adjusted values remain outside the rule.
+**Strong for the observed conversion.**
 
 Two further Finale 2000 edits distinguish the other aggregate controls. Unchecking “Show Notes in
 Other Layers” clears only word 2 bit `0x0200`, and its companion changes only
@@ -349,7 +481,38 @@ Other Layers” clears only word 2 bit `0x0200`, and its companion changes only
 `0x1800`. The 74-byte extension supplies independent storage for the latter three properties, so
 its presence is the structural boundary between this aggregate conversion and the later direct
 interpretation. The represented F2008 layout is shorter, while the represented F2011 layout
-contains the extension.
+contains the extension. The controlled Staff companion retains visible chords and fretboards when
+this other-layer control is cleared. StaffStyle 6 in `mus-386ac60522cf2c79` instead stores
+`0x2104` and upgrades with both values hidden; the comparable styles in `mus-e09f13d06ff0f25e`
+and `mus-8fc93fa852c6c878` store `0x2504` and retain visible values. A trial that projected the
+additional values only onto StaffStyle was withdrawn because Staff and StaffStyle share the source
+semantics; the isolated companion conversion is treated as upgrade loss instead. **Confirmed** for
+Staff behavior by the controlled fixture; **weak** for the StaffStyle conversion represented by
+one positive source.
+
+Across 20 StaffStyles in 12 distinct Finale 2002 through Finale 2008 documents from
+`rpatters1-main`, Finale 27 materializes a different `altHideOtherSmartShapes` value while
+splitting this aggregate: 18 change from false to true and two from true to false. Coverage
+recognizes the aggregate structurally because its Smart Shape and articulation values originate
+in the same source word, and classifies either Boolean direction as upgrade loss. Independently
+stored layouts remain outside the rule. **Strong.**
+
+One Finale 2008 StaffStyle in `mus-6ed571c9dd3b941a` enables the Normal notation-style override but
+does not satisfy the later instrument-style mask rules, plausibly because a plug-in created it.
+Finale 27 retains that notation override, enables the four required instrument payload masks, and
+also enables the default-clef and note-color masks while leaving the independently instrument-only
+hide-key-signatures/show-accidentals mask disabled. Coverage accepts this malformed same-style
+promotion and its newly governed values as upgrade normalization. One promotion definition serves
+same-style and split conversions: a pre-Finale-2012 companion with all four required shared masks
+and at least one instrument-only mask. A split is recognized when a retained non-instrument style
+has a same-named companion satisfying that definition; each classified instrument value must also
+appear intact on that companion fork. The same result governs mask changes, moved or newly governed
+values—including active or dormant transposition payload—and `Unknown` to meaningful instrument
+UUID changes. When a same-comparator promotion replaces the source style name rather than retaining
+it in another style, coverage classifies that user-visible metadata change as upgrade loss.
+The shared Staff/StaffStyle source report attributes every scalar projection of the stored
+transposition word to that word, including zero projections when no optional transposition object
+is constructed. **Weak.**
 
 A separate Finale 2008 notehead-font edit changes only Staff words 3, 4, and 5 to `0x0009`,
 `0x1104`, and `0x0020`. Its companion resolves font ID 9 to American Typewriter, preserves size 17
@@ -450,3 +613,17 @@ because the dormant size does not affect the Staff. Enabled-font sizes remain ex
 Evidence: `tests/evidence/F97/Fin97-baseline.mus`,
 `tests/evidence/F97/F97-notehead-size28.mus`, and
 `tests/evidence/F97/F97-notehead-size26.mus`, together with their ETFs and Finale 27 companions.
+
+## 2026-09-11 — Finale 2009 beta with legacy StaffStyle structure
+
+The Finale 2009 beta source `mus-da9e72c0a8ce7f8c` has development status 2 but stores its
+StaffStyles in the older 132-byte form. Removing the 60-byte StaffStyle trailer leaves a 72-byte
+Staff payload, ending before the independently stored second alternate-notation flags. Its Finale
+27 companion normalizes several standard alternate-notation styles in ways that cannot be judged
+against the later Finale 2009 layout.
+
+Coverage omits the `staff_style` class from comparison only when both conditions hold: the source
+is a Finale 2009 beta and StaffStyle field provenance shows the legacy aggregate
+alternate-notation structure. Finale 2009 releases, other beta versions, and Finale 2009 beta
+StaffStyles with independent fields remain comparable. Other classes in the excluded document
+are unaffected. **Strong for the observed structure; comparison exclusion is policy.**

@@ -1,7 +1,9 @@
 # Staff
 
-**Covers:** Raw legacy `Staff` records, their stable Finale-2000 base, and later stored extensions.
-**Read when:** Working on `Staff`, selector `IS`, class `0x00e7`, or the pre-Finale-3.7 staff layout.
+**Covers:** Raw legacy `Staff` and `StaffStyle` records, their shared Staff payload layouts, and
+later stored extensions.
+**Read when:** Working on `Staff` or `StaffStyle`, selectors `IS`/`SY`, classes `0x00e7`/`0x00e8`,
+or the pre-Finale-3.7 staff layout.
 **Confidence:** `confirmed` for identities and represented payload boundaries; `public-PDK-derived`
 and independently binary-verified for the 18-word base; `strong` for the represented Coda
 attribute extension; `open` for remaining unmapped fields.
@@ -18,6 +20,61 @@ converts each nonempty parallel name with the corresponding imported name font, 
 Other synthesized referents remain outside this raw Staff slice. **Strong.** The
 pre-Finale-3.7 representation occurs in Coda controlled fixtures and two companion-backed Finale
 3.5 documents from `rpatters1-main`; Finale 3.7 is the documented transition.
+
+## Staff styles
+
+The fixed-row StaffStyle selector is `SY`; the zlib class is `0x00e8`. The comparator is the
+one-based style ID. Recovery constructs source-owned `musx::dom::others::StaffStyle` objects and
+does not gate them by saving version. No controlled pre-Finale-2000 source stores this family;
+StaffStyles that Finale synthesizes while upgrading earlier alternate-notation assignments remain
+companion-only until those assignments are recovered. **Confirmed** for the identities and
+represented absence.
+
+The record begins with one of the Staff payload shapes decoded below. The narrow form appends a
+12-byte metadata row and a 48-byte NUL-terminated or padded style name, which has no associated font
+and is converted through the source platform's default code page. The Finale 2012 form instead has
+a 96-byte Staff prefix, the same 12-byte metadata row, and a 192-byte NUL-terminated or padded
+UTF-16LE name. Represented narrow records are at most 144 bytes, while the Finale 2012 records are
+300 bytes; those record geometries select the name encoding directly. No record from 145 through
+299 bytes occurs in the inventoried corpora. For that unrepresented interval, the decoder uses the
+Finale 2012 Unicode boundary and still requires enough bytes for the selected trailer and base
+layout. The three leading metadata words map bits to the correspondingly named members of
+`StaffStyle::Masks`. The alternate-notation bit also includes the `hideChords` and
+`hideFretboards` overrides, which musxdom represents as independent masks; the separately stored
+bits for either override remain additive. The two words after the masks remain uninterpreted. The
+final word's low bit selects explicit control values. When set, `0x0002` stores `copyable` and
+`0x0004` stores `addToMenu`; when clear, `addToMenu` is implicitly true and alternate-notation
+styles are implicitly copyable. The low bit itself has no musxdom destination. **Confirmed** for
+both trailer geometries and the represented metadata values. The three explicit control states
+are reproducible with `tests/evidence/F2000/F2000-style-menu.mus`,
+`tests/evidence/F2000/F2000-style-nomenu.mus`, and
+`tests/evidence/F2000/F2000-style-menu-copyable.mus`; the implicit state is independently
+binary-verified against `mus-09deed3ef3f054d6`. The remaining bit meanings are
+`private-framework-derived`.
+
+| Metadata word | Mask bit to musxdom member |
+|---:|---|
+| 0 | `0x0001 floatNoteheadFont`, `0x0002 flatBeams`, `0x0004 notationStyle`, `0x0010 blankMeasureRest`, `0x0020 noOptimize`, `0x0040 defaultClef`, `0x0080 staffType`, `0x0100 transposition`, `0x0200 blineBreak`, `0x0400 rbarBreak`, `0x1000 negMnumb`, `0x2000 negRepeat`, `0x4000 negNameScore`, `0x8000 hideBarlines` |
+| 1 | `0x0001 fullName`, `0x0002 abrvName`, `0x0004 floatKeys`, `0x0008 floatTime`, `0x0010 hideRptBars`, `0x0020 negKey`, `0x0040 negTime`, `0x0080 negClef`, `0x0100 hideStaff`, `0x0200 noKey`, `0x0400 fullNamePos`, `0x0800 abrvNamePos`, `0x1000 altNotation` (also `hideChords` and `hideFretboards`), `0x2000 showTies`, `0x4000 showDots`, `0x8000 showRests` |
+| 2 | `0x0001 showStems`, `0x0002 hideChords`, `0x0004 hideFretboards`, `0x0008 hideLyrics`, `0x0010 showNameParts`, `0x0020 showNoteColors`, `0x0040 hideStaffLines`, `0x0080 useNoteShapes`, `0x0100 hideKeySigsShowAccis`, `0x0200 redisplayLayerAccis`, `0x0400 negTimeParts` |
+
+Before the Finale 2012 layout, Note Shapes is a fourth source notation style alongside Normal,
+Percussion, and Tablature. Recovery splits that source style into the modern Staff values
+`notationStyle = Standard` and `useNoteShapes = true`. On a StaffStyle, its source notation-style
+override becomes only `masks.useNoteShapes`; `masks.notationStyle` remains active for Normal,
+Percussion, and Tablature because those are the instrument-changing notation choices. The Finale
+2012 layout stores the notation-style and note-shape masks independently. **Strong.** The tracked
+Finale 2006 “15. Note Shapes” style supplies the pre-Finale-2012 conversion, while the distinct
+Finale 2012 Staff and mask representation supplies the boundary.
+
+The represented Finale 2000 style has an 18-word Staff prefix; the Finale 2003 and 2011 styles
+have 36-word prefixes. Their prefix values agree with the same Staff decoder and their modern
+companions. **Confirmed.** Evidence:
+`tests/evidence/F2000/F2000-staff-style.mus`,
+`tests/evidence/F2003/F2003-staffstyle.mus`, and
+`tests/evidence/F2011/F2011-staffstyle.mus`, with their tracked ETF or Finale 27 companions. The
+Finale 2012 geometry and its six stored standard style names are reproducible with
+`tests/evidence/F2012/F2012-bookmarks.mus` and its Finale 27 companion.
 
 The public Finale-2000 `EDTStaffSpec` declaration establishes that its fields through the final
 padding word are the raw base. The following staff ID, related-record tags and cmpers, and measure
@@ -97,13 +154,25 @@ classify disagreements on those leaves as expected; they remain unexpected until
 are resolved correctly.
 
 Post-Finale-2000 layouts that lack the second alternate-notation flag word use three aggregate
-controls in word 2. Clearing `0x0100` hides same-layer note-attached items and also hides fretboards
-and chords. Clearing `0x0200` hides notes in other layers. Clearing `0x0400` hides articulations,
-lyrics, smart shapes, and expressions in other layers. The first and third controls therefore each
-expand into several modern booleans. Opening the Staff dialog can also materialize the note-font
-size/effects word as `0x1800`; the controlled tablature records establish that this word is not
-another flag field. Layouts containing the second alternate-notation flag word use the independent
-modern interpretations instead.
+controls in word 2. The shared decoding applies these controls identically to Staff and StaffStyle.
+Clearing `0x0100` maps to hiding same-layer articulations, lyrics, Smart Shapes, and also hides
+fretboards and chords. It does not supply `altHideExpressions`, which retains the Finale 27 default
+of false until an independent field is present. Clearing `0x0200` hides notes in other layers.
+Clearing `0x0400` hides articulations, lyrics, smart shapes, and expressions in other layers. The
+first and third controls therefore each expand into several modern booleans.
+The expression exclusion is **confirmed** for Finale 2000 and **weak** for later aggregate layouts.
+Opening the Staff dialog can also materialize the note-font size/effects word as `0x1800`; the
+controlled tablature records establish that this word is not another flag field. Layouts
+containing the second alternate-notation flag word use the independent modern interpretations for
+the other-layer fields.
+
+From Finale 2000 through Finale 2008, `altHideSmartShapes` is synthesized as the logical OR of the
+note-attached-items control and the alternate-notation type. The type enables it for Slash, One Bar
+Repeat, Two Bar Repeat, and Blank and disables it for Normal and Rhythmic; Blank With Rests is
+believed to follow the enabled group. Recovery calls musxdom's notation-type predicate for this
+partition and reports the combined result as `LegacyMusAdjusted`; Finale 2009 and later recover
+the independent stored value. **Strong** for the represented types; **weak** for Blank With Rests
+and the exact Finale 2009 boundary.
 
 The low nibble uses the musxdom `AlternateNotation` order through its terminal `Blank` value;
 notably, stored value 6 is `Blank`, not `BlankWithRests`. **Strong.** This agrees across 22 distinct
@@ -186,6 +255,10 @@ below.
 formats and have no raw Staff location to recover. Legacy behavior leaves `redisplayLayerAccis`
 and `hideKeySigsShowAccis` false, while `hideTimeSigsInParts` follows the resolved
 `hideTimeSigs` value. All three report `LegacyBehavior` provenance.
+
+StaffStyle recovery applies the same coupled time-signature behavior: `negTimeParts` follows
+`negTime`, and the derived mask reports `LegacyBehavior` provenance rather than an independent
+legacy source location.
 
 `STUDIO_VIEW_STAFF_ID` identifies Finale's application-owned Studio View Staff rather than authored
 score content. Recovery imports that Staff on a best-effort basis, but coverage omits the entire

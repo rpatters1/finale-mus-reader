@@ -815,6 +815,10 @@ void testSyntheticStreamBoundaries()
             == "^font(Times)^size(12)^nfx(0)Ped.",
         "Whitespace between a font command and its argument made the font name literal");
 
+    const auto emptyFont = importStream("^block(1)^font(Times)a^font(,4096)b^Font()c^end");
+    expectText(textOf<BlockText>(emptyFont, 1) == "^font(Times)abc",
+        "An empty font command was retained or cleared the active font");
+
     const std::string japaneseName("\x83\x71\x83\x89\x83\x4d\x83\x6d\x96\xbe\x92\xa9 Pro W3", 19);
     const std::string japaneseText("\x95\x73\x94\x40\x8b\x41", 6);
     const auto japanese = importStream(

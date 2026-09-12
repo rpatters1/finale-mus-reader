@@ -62,7 +62,7 @@ void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapsho
 std::map<std::string, ReferentComparison>
 compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
                           const musx::dom::DocumentPtr& companionDocument);
-/// @brief Compares a Staff name reference through its TextBlock and BlockText.
+/// @brief Compares a Staff or StaffStyle name reference through its TextBlock and BlockText.
 /// @details A zero comparator, an unresolved reference, and formatting without visible text all
 /// represent an empty Staff name.
 /// @return No value for fields other than Staff names; otherwise, whether the two names are
@@ -82,6 +82,7 @@ TextClassificationResult compareText(const std::string& className, const std::st
                                      bool partNameText, bool synthesizedScoreName);
 bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className,
                              const std::string& path);
+bool isWindowsAnsiReinterpretedAsMacRoman(std::string_view source, std::string_view companion);
 
 } // namespace comparison_text
 } // namespace coverage

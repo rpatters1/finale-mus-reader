@@ -53,6 +53,15 @@ bool endsWith(std::string_view value, std::string_view suffix)
     return value.size() >= suffix.size() && value.substr(value.size() - suffix.size()) == suffix;
 }
 
+std::string_view trimWhitespace(std::string_view value)
+{
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())))
+        value.remove_prefix(1);
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())))
+        value.remove_suffix(1);
+    return value;
+}
+
 std::string snakeToCamel(std::string_view value)
 {
     std::string result;
@@ -324,7 +333,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
 {
     ComparisonResult result;
     ComparisonPreparationContext preparation{
-        source, companion, result.transformations, sourceEpoch};
+        source, companion, result.transformations, sourceEpoch, sourceVersion, &sourceReport};
     runComparisonPreparers(preparation);
     if (sourceEpoch == FormatEpoch::CodaBanner) {
         comparison_text::realignCodaBlockTexts(
@@ -413,6 +422,14 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             }
             if (inSource && inCompanion && !fontReference &&
                 !staffNameReferents && sourceFound->second.first == companionFound->second.first) {
+                ++stats.same;
+                continue;
+            }
+            if (inSource && inCompanion && startsWith(path, "staff_style[") &&
+                endsWith(path, ".style_name") && sourceFound->second.first.isString() &&
+                companionFound->second.first.isString() &&
+                trimWhitespace(sourceFound->second.first.asString()) ==
+                    trimWhitespace(companionFound->second.first.asString())) {
                 ++stats.same;
                 continue;
             }

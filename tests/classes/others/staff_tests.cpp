@@ -17,8 +17,8 @@ namespace
 using namespace classes;
 using Staff = musx::dom::others::Staff;
 
-std::optional<finale_mus_reader::coverage::DifferenceClassification>
-classifyStaffDifference(const finale_mus_reader::coverage::DifferenceContext &context)
+std::optional<finale_mus_reader::coverage::DifferenceClassification> classifyStaffDifference(
+    const finale_mus_reader::coverage::DifferenceContext &context)
 {
     const auto classify = finale_mus_reader::coverage::differenceClassifier("staff");
     return classify ? classify(context) : std::nullopt;
@@ -66,15 +66,16 @@ musx::dom::DocumentPtr emptyStaffDocument(musx::dom::Cmper musicFontId = 0)
 }
 
 ImportReport staffImport(const finale_mus_reader::container::ParsedContainer &parsed,
-                         const SourceProfile &profile, const musx::dom::DocumentPtr &document)
+                         const SourceProfile &profile, const musx::dom::DocumentPtr &document,
+                         bool styles = false)
 {
     ImportReport report(profile.epoch);
     const auto index = LegacyRecordIndex::build(parsed);
     auto referenceSession = musx::factory::DocumentFactory::begin();
     const auto referenceDocument = referenceSession.getDocument();
-    auto referenceStaff = std::make_shared<Staff>(referenceDocument, musx::dom::SCORE_PARTID,
-                                                  musx::dom::EnigmaBase::ShareMode::All,
-                                                  musx::dom::Cmper{1});
+    auto referenceStaff =
+        std::make_shared<Staff>(referenceDocument, musx::dom::SCORE_PARTID,
+                                musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
     referenceStaff->staffLines = 5;
     referenceStaff->lineSpace = evpusPerSpace;
     referenceStaff->dwRestOffset = -4;
@@ -99,6 +100,10 @@ ImportReport staffImport(const finale_mus_reader::container::ParsedContainer &pa
     const finale_mus_reader::ImportContext context{index,     profile, noSource, document,
                                                    reference, report,  pending,  construction};
     finale_mus_reader::others::importStaff(context);
+    if (styles)
+    {
+        finale_mus_reader::others::importStaffStyles(context);
+    }
     finale_mus_reader::runDeferredChecks(pending);
     return report;
 }
@@ -209,6 +214,10 @@ TEST_CASE("The Finale 2000 Staff base layout recovers its complete raw field "
             CHECK(staffField(report, "redisplayLayerAccis").origin == ValueOrigin::LegacyBehavior);
             CHECK(staffField(report, "hideTimeSigsInParts").origin == ValueOrigin::LegacyBehavior);
             CHECK(staffField(report, "hideKeySigsShowAccis").origin == ValueOrigin::LegacyBehavior);
+            CHECK(staffField(report, "transposition.chromatic.alteration").origin ==
+                  ValueOrigin::LegacyMus);
+            CHECK(staffField(report, "transposition.chromatic.diatonic").origin ==
+                  ValueOrigin::LegacyMus);
             CHECK(reportedFieldCount(report) == staffFieldManifestSize);
         }
     }
@@ -272,11 +281,9 @@ TEST_CASE("Finale 2000 custom Staff masks preserve line order across both words"
         CHECK(staff->botRepeatDotOff == expected.bottomRepeatDot);
         CHECK(staff->topRepeatDotOff == expected.topRepeatDot);
         const auto *bottomDot =
-            result.report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID,
-                                           staffCmper1);
+            result.report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID, staffCmper1);
         const auto *topDot =
-            result.report.findField<Staff>("topRepeatDotOff", musx::dom::SCORE_PARTID,
-                                           staffCmper1);
+            result.report.findField<Staff>("topRepeatDotOff", musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(bottomDot);
         REQUIRE(topDot);
         CHECK(bottomDot->origin == ValueOrigin::LegacyBehavior);
@@ -297,14 +304,70 @@ TEST_CASE("Legacy Staff alternate notation accepts the terminal Blank value")
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
     profile.byteOrder = ByteOrder::BigEndian;
-    staffImport(parsed, profile, document);
+    const auto report = staffImport(parsed, profile, document);
 
     const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
     REQUIRE(staff);
     CHECK(staff->altNotation == Staff::AlternateNotation::Blank);
+    CHECK(staff->altHideSmartShapes);
+    CHECK(staffField(report, "altHideSmartShapes").origin == ValueOrigin::LegacyMusAdjusted);
 }
 
-TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting")
+TEST_CASE("Finale 2000 through 2008 combine Smart Shape hiding sources")
+{
+    struct Expected
+    {
+        Staff::AlternateNotation notation;
+        bool hideSmartShapes;
+    };
+    for (const auto expected : {
+             Expected{Staff::AlternateNotation::Normal, false},
+             Expected{Staff::AlternateNotation::SlashBeats, true},
+             Expected{Staff::AlternateNotation::Rhythmic, false},
+             Expected{Staff::AlternateNotation::OneBarRepeat, true},
+             Expected{Staff::AlternateNotation::TwoBarRepeat, true},
+             Expected{Staff::AlternateNotation::BlankWithRests, true},
+             Expected{Staff::AlternateNotation::Blank, true},
+         })
+    {
+        const auto altFlags = std::int16_t(0x0100 | static_cast<std::int16_t>(expected.notation));
+        const auto parsed = makeContainer({{7, "IS", {0, 0, altFlags, 0, 0, 0}},
+                                           {7, "IS", {0, 0, 0, 0, 0, 0}},
+                                           {7, "IS", {0, 0, 0, 0, 0, 0}}},
+                                          FormatEpoch::UncompressedLegacy);
+        const auto document = emptyStaffDocument();
+        auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+        profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
+        profile.byteOrder = ByteOrder::BigEndian;
+        const auto report = staffImport(parsed, profile, document);
+        const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+
+        REQUIRE(staff);
+        CHECK(staff->altHideSmartShapes == expected.hideSmartShapes);
+        CHECK(staffField(report, "altHideSmartShapes").origin == ValueOrigin::LegacyMusAdjusted);
+    }
+}
+
+TEST_CASE("Finale 2009 directly recovers alternate-notation Smart Shape hiding")
+{
+    std::vector<std::int16_t> words(42, 0);
+    words[2] = std::int16_t(0x0401);
+    const auto parsed = makeClassContainer(0x00e7, words, ByteOrder::LittleEndian, 7);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
+    profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2009.major};
+    profile.byteOrder = ByteOrder::LittleEndian;
+    const auto report = staffImport(parsed, profile, document);
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+
+    REQUIRE(staff);
+    CHECK(staff->altNotation == Staff::AlternateNotation::SlashBeats);
+    CHECK_FALSE(staff->altHideSmartShapes);
+    CHECK(staffField(report, "altHideSmartShapes").origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting "
+          "without expressions")
 {
     const auto baseline = readFixture("evidence/F2008/F2008-empty.mus");
     const auto baselineStaff =
@@ -325,19 +388,23 @@ TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting")
         CHECK(staff->altHideArtics);
         CHECK(staff->altHideLyrics);
         CHECK(staff->altHideSmartShapes);
-        CHECK(staff->altHideExpressions);
+        CHECK_FALSE(staff->altHideExpressions);
         CHECK(staff->hideFretboards);
         CHECK(staff->hideChords);
         CHECK_FALSE(staff->hasStyles);
 
-        for (const auto *member : {"altHideArtics", "altHideLyrics", "altHideSmartShapes",
-                                   "altHideExpressions", "hideFretboards", "hideChords"})
+        for (const auto *member :
+             {"altHideArtics", "altHideLyrics", "hideFretboards", "hideChords"})
         {
             const auto *field =
                 result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyMus);
         }
+        CHECK(staffField(result.report, "altHideSmartShapes", staffCmper1).origin ==
+              ValueOrigin::LegacyMusAdjusted);
+        CHECK(staffField(result.report, "altHideExpressions", staffCmper1).origin ==
+              ValueOrigin::Finale27Default);
         const auto *hasStyles =
             result.report.findField<Staff>("hasStyles", musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(hasStyles);
@@ -372,13 +439,14 @@ TEST_CASE("Short post-Finale-2000 Staff layouts expand the aggregate "
         CHECK(staff->altHideOtherLyrics == expected.hideOtherItems);
         CHECK(staff->altHideOtherSmartShapes == expected.hideOtherItems);
         CHECK(staff->altHideOtherExpressions == expected.hideOtherItems);
-
         for (const auto member : staffAlternateNotationFields)
         {
             const auto *field =
                 result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
             REQUIRE(field);
-            CHECK(field->origin == ValueOrigin::LegacyMus);
+            CHECK(field->origin == (member == "altHideSmartShapes" ? ValueOrigin::LegacyMusAdjusted
+                                    : member == "altHideExpressions" ? ValueOrigin::Finale27Default
+                                                                     : ValueOrigin::LegacyMus));
         }
     }
 }
@@ -469,8 +537,7 @@ TEST_CASE("The zlib Staff class retains the base words and its established "
                                         0,
                                         0,
                                         static_cast<std::int16_t>(0xfdfb)};
-        const auto appendLong = [&](std::int32_t value)
-        {
+        const auto appendLong = [&](std::int32_t value) {
             const auto bits = static_cast<std::uint32_t>(value);
             const auto high = static_cast<std::int16_t>(bits >> 16U);
             const auto low = static_cast<std::int16_t>(bits & 0xffffU);
@@ -601,8 +668,7 @@ TEST_CASE("Staff hiding changes representation in Finale 2011")
     words[22] = static_cast<std::int16_t>(0x8000);
     const auto parsed = makeClassContainer(0x00e7, words, ByteOrder::BigEndian, 7);
 
-    const auto importAt = [&](finale_mus_reader::VersionBound version)
-    {
+    const auto importAt = [&](finale_mus_reader::VersionBound version) {
         const auto document = emptyStaffDocument();
         auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
         profile.version =
@@ -900,7 +966,9 @@ TEST_CASE("Coda Staff attributes recover independent note settings")
     CHECK(defaultTabFontStaff->useNoteFont);
     CHECK(independentTabFontStaff->useNoteFont);
     CHECK(staffField(report, "useNoteFont").origin == ValueOrigin::LegacyMus);
-    CHECK(staffField(report, "useNoteShapes").origin == ValueOrigin::LegacyMus);
+    CHECK(standardStaff->notationStyle == Staff::NotationStyle::Standard);
+    CHECK(staffField(report, "notationStyle").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(staffField(report, "useNoteShapes").origin == ValueOrigin::LegacyMusAdjusted);
     const auto *tabFontSource =
         report.findField<Staff>("useNoteFont", musx::dom::SCORE_PARTID, staffCmper9);
     REQUIRE(tabFontSource);
@@ -1054,8 +1122,7 @@ TEST_CASE("Coda Staff line overrides decode signed ordinary and custom forms")
         report.findField<Staff>("topBarlineOffset", musx::dom::SCORE_PARTID, staffCmper11);
     REQUIRE(topBarline);
     CHECK(topBarline->origin == ValueOrigin::LegacyMusAdjusted);
-    for (const auto staffId : {musx::dom::Cmper{7}, musx::dom::Cmper{8},
-                               musx::dom::Cmper{9}})
+    for (const auto staffId : {musx::dom::Cmper{7}, musx::dom::Cmper{8}, musx::dom::Cmper{9}})
     {
         const auto *bottomDot =
             report.findField<Staff>("botRepeatDotOff", musx::dom::SCORE_PARTID, staffId);
@@ -1344,8 +1411,9 @@ TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")
     CHECK(nameBlock->showShape);
     CHECK(nameBlock->wordWrap);
 
-    const auto field = [&](const char *member)
-    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1); };
+    const auto field = [&](const char *member) {
+        return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
+    };
     REQUIRE(field("defaultClef"));
     REQUIRE(field("transposition.keysig.interval"));
     REQUIRE(field("dwRestOffset"));
@@ -1436,8 +1504,9 @@ TEST_CASE("Finale 2.6.3 optional Staff attributes recover custom lines and "
     CHECK(abbreviatedNameBlock->textId != 0);
     CHECK(fullNameBlock->textId != abbreviatedNameBlock->textId);
 
-    const auto field = [&](const char *member)
-    { return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1); };
+    const auto field = [&](const char *member) {
+        return result.report.findField<Staff>(member, musx::dom::SCORE_PARTID, staffCmper1);
+    };
     REQUIRE(field("customStaff"));
     REQUIRE(field("botBarlineOffset"));
     REQUIRE(field("topBarlineOffset"));
@@ -1468,8 +1537,7 @@ TEST_CASE("Finale 2.6.3 optional Staff attributes recover custom lines and "
 
 TEST_CASE("Finale 2.6.3 Staff attributes recover the remaining tablature controls")
 {
-    const auto checkDefaultNoteheadFontSize = [](const auto &result, const auto &staff)
-    {
+    const auto checkDefaultNoteheadFontSize = [](const auto &result, const auto &staff) {
         const auto defaultFont = musx::dom::options::FontOptions::getFontInfoOrNull(
             result.document, musx::dom::options::FontOptions::FontType::Noteheads);
         REQUIRE(defaultFont);
@@ -1613,19 +1681,16 @@ TEST_CASE("The Finale 2012 Staff layout adds automatic name numbering")
         finale2011.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *earlierUuid =
         finale2011.report.findField<Staff>("instUuid", musx::dom::SCORE_PARTID, staffCmper1);
-    const auto *earlierEnabled =
-        finale2011.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
-                                          staffCmper1);
+    const auto *earlierEnabled = finale2011.report.findField<Staff>(
+        "useAutoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *baselineStyle =
         baseline.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *baselineEnabled =
-        baseline.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
-                                        staffCmper1);
+        baseline.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *numberedStyle =
         numbered.report.findField<Staff>("autoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     const auto *numberedEnabled =
-        numbered.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID,
-                                        staffCmper1);
+        numbered.report.findField<Staff>("useAutoNumbering", musx::dom::SCORE_PARTID, staffCmper1);
     REQUIRE(earlierStyle);
     REQUIRE(earlierUuid);
     REQUIRE(earlierEnabled);
@@ -1663,9 +1728,8 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
     using BlockText = musx::dom::texts::BlockText;
     using TextBlock = musx::dom::others::TextBlock;
 
-    const auto makeDocument =
-        [](musx::dom::Cmper blockId, musx::dom::Cmper textId, std::string text)
-    {
+    const auto makeDocument = [](musx::dom::Cmper blockId, musx::dom::Cmper textId,
+                                 std::string text) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
         auto raw = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID,
@@ -1692,8 +1756,12 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
     dangling->getOthers()->add(TextBlock::XmlNodeName, std::move(danglingBlock));
     REQUIRE(comparison_text::compareStaffNameReferents("staff[cmper=1].full_name_text_id", 7, 19,
                                                        source, equivalent) == true);
+    REQUIRE(comparison_text::compareStaffNameReferents("staff_style[cmper=1].full_name_text_id", 7,
+                                                       19, source, equivalent) == true);
     REQUIRE(comparison_text::compareStaffNameReferents("staff[cmper=1].abbrv_name_text_id", 7, 7,
                                                        source, different) == false);
+    REQUIRE(comparison_text::compareStaffNameReferents("staff_style[cmper=1].abbrv_name_text_id", 7,
+                                                       7, source, different) == false);
     REQUIRE(comparison_text::compareStaffNameReferents("staff[cmper=1].full_name_text_id", 0, 29,
                                                        source, dangling) == true);
     REQUIRE(comparison_text::compareStaffNameReferents("staff[cmper=1].abbrv_name_text_id", 23, 0,
@@ -1703,8 +1771,7 @@ TEST_CASE("Staff name references compare through their block text", "[coverage]"
     REQUIRE_FALSE(comparison_text::compareStaffNameReferents("staff[cmper=1].default_clef", 7, 19,
                                                              source, equivalent));
 
-    const auto snapshot = [](std::int64_t fullName, std::int64_t abbreviatedName)
-    {
+    const auto snapshot = [](std::int64_t fullName, std::int64_t abbreviatedName) {
         return SurveySnapshot{
             {"staff", Value::Array{Value::Object{{"cmper", 1},
                                                  {"full_name_text_id", fullName},
@@ -1739,8 +1806,7 @@ TEST_CASE("Disabled Staff note-font size differences are different defaults", "[
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::ZlibLegacy);
     const auto context = [&](const ComparisonLeaves &source, std::int64_t sourceSize,
                              std::int64_t companionSize, std::string_view origin,
-                             DifferenceCategory category = DifferenceCategory::Differs)
-    {
+                             DifferenceCategory category = DifferenceCategory::Differs) {
         return DifferenceContext{"staff[cmper=1].note_font.font_size",
                                  category,
                                  origin,
@@ -1795,8 +1861,7 @@ TEST_CASE("Before Finale 2012 percussion and tablature note-font enablement "
     const auto context = [&](const ComparisonLeaves &leaves, const Value &source,
                              const Value &companion, std::string_view origin,
                              DifferenceCategory category, finale_mus_reader::FormatEpoch epoch,
-                             const finale_mus_reader::SourceVersion *version)
-    {
+                             const finale_mus_reader::SourceVersion *version) {
         return DifferenceContext{"staff[cmper=1].use_note_font",
                                  category,
                                  origin,
@@ -1850,8 +1915,7 @@ TEST_CASE("Coverage excludes the Studio View Staff", "[coverage]")
     using Staff = musx::dom::others::Staff;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    const auto addStaff = [&](musx::dom::Cmper cmper)
-    {
+    const auto addStaff = [&](musx::dom::Cmper cmper) {
         auto staff = std::make_shared<Staff>(document, musx::dom::SCORE_PARTID,
                                              musx::dom::EnigmaBase::ShareMode::All, cmper);
         document->getOthers()->add(Staff::XmlNodeName, std::move(staff));
@@ -1879,8 +1943,7 @@ TEST_CASE("Only pre-Finale 2012 behavioral Staff UUIDs have different defaults",
         .major = finale_mus_reader::versions::finale2012.major};
     const auto context = [&](std::string_view path, std::string_view origin,
                              DifferenceCategory category,
-                             const finale_mus_reader::SourceVersion *version)
-    {
+                             const finale_mus_reader::SourceVersion *version) {
         return DifferenceContext{path,
                                  category,
                                  origin,
@@ -1937,8 +2000,7 @@ TEST_CASE("Unavailable and upgraded Staff hide-mode differences are different "
     const auto context = [&](std::string_view path, std::string_view origin,
                              DifferenceCategory category, const Value &source,
                              const Value &companion, finale_mus_reader::FormatEpoch epoch,
-                             const finale_mus_reader::SourceVersion *version)
-    {
+                             const finale_mus_reader::SourceVersion *version) {
         return DifferenceContext{path,    category,  origin,
                                  source,  companion, leaves,
                                  leaves,  epoch,     finale_mus_reader::ByteOrder::LittleEndian,
@@ -2002,8 +2064,7 @@ TEST_CASE("Finale 2012 beta Staff accidental display behavior is upgrade loss", 
     const auto context = [&](std::string_view path, std::string_view origin,
                              DifferenceCategory category, const Value &source,
                              const Value &companion,
-                             const finale_mus_reader::SourceVersion *version)
-    {
+                             const finale_mus_reader::SourceVersion *version) {
         return DifferenceContext{path,
                                  category,
                                  origin,
@@ -2042,8 +2103,7 @@ TEST_CASE("Six-word Staff defaults with fallback provenance are possibly "
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
     const auto context = [&](std::string_view path, std::string_view origin,
-                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch)
-    {
+                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch) {
         return DifferenceContext{path,    category,  origin,
                                  source,  companion, leaves,
                                  leaves,  epoch,     finale_mus_reader::ByteOrder::BigEndian,
@@ -2052,8 +2112,7 @@ TEST_CASE("Six-word Staff defaults with fallback provenance are possibly "
 
     const Value shown{true};
     const Value hidden{false};
-    const auto hideKeySigs = [&](finale_mus_reader::FormatEpoch epoch)
-    {
+    const auto hideKeySigs = [&](finale_mus_reader::FormatEpoch epoch) {
         return DifferenceContext{"staff[cmper=1].hide_key_sigs",
                                  DifferenceCategory::Differs,
                                  "unmapped",
@@ -2133,14 +2192,12 @@ TEST_CASE("Synthesized Staff fret instrument references may be renumbered", "[co
     using FretInstrument = musx::dom::others::FretInstrument;
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
-    report.setInstanceOrigin(
-        finale_mus_reader::instanceKey<FretInstrument>(musx::dom::SCORE_PARTID,
-                                                       musx::dom::Cmper{2}),
-        ValueOrigin::LegacyBehavior);
+    report.setInstanceOrigin(finale_mus_reader::instanceKey<FretInstrument>(musx::dom::SCORE_PARTID,
+                                                                            musx::dom::Cmper{2}),
+                             ValueOrigin::LegacyBehavior);
     const auto context = [&](std::string_view path, std::string_view origin,
                              DifferenceCategory category, const Value &source,
-                             const Value &companion)
-    {
+                             const Value &companion) {
         return DifferenceContext{path,
                                  category,
                                  origin,
@@ -2176,9 +2233,8 @@ TEST_CASE("Defaulted Staff tablature line breaking may differ", "[coverage]")
     using namespace finale_mus_reader::coverage;
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::DclLegacy);
-    const auto context =
-        [&](std::string_view path, std::string_view origin, DifferenceCategory category)
-    {
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category) {
         return DifferenceContext{path,
                                  category,
                                  origin,
@@ -2212,8 +2268,7 @@ TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
     const auto context = [&](std::string_view path, std::string_view origin,
-                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch)
-    {
+                             DifferenceCategory category, finale_mus_reader::FormatEpoch epoch) {
         return DifferenceContext{path,    category,  origin,
                                  source,  companion, leaves,
                                  leaves,  epoch,     finale_mus_reader::ByteOrder::BigEndian,
@@ -2257,6 +2312,103 @@ TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
             DifferenceClassification::AwaitsDependentRecovery);
 }
 
+TEST_CASE("Legacy note-attached-items expansion loses fallback expression display", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value disabled(false);
+    const Value enabled(true);
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const SourceVersion finale98{.major = finale_mus_reader::versions::finale98.major};
+    const SourceVersion finale2000{.major = finale_mus_reader::versions::finale2000.major};
+    const SourceVersion finale2006{.major = finale_mus_reader::versions::finale2006.major};
+    const SourceVersion finale2008{.major = finale_mus_reader::versions::finale2008.major};
+    const SourceVersion finale2009{.major = finale_mus_reader::versions::finale2009.major};
+
+    for (const auto &[className, classPrefix, otherPrefix] : {
+             std::tuple{"staff", "staff[", "staff_style["},
+             std::tuple{"staff_style", "staff_style[", "staff["},
+         })
+    {
+        CAPTURE(className);
+        const auto classify = differenceClassifier(className);
+        REQUIRE(classify);
+        const auto objectPath = std::string(classPrefix) + "cmper=1]";
+        const auto differencePath = objectPath + ".alt_hide_expressions";
+        ComparisonLeaves sourceLeaves{
+            {objectPath + ".alt_hide_artics", {Value(true), "legacy-mus"}},
+            {objectPath + ".alt_hide_lyrics", {Value(true), "legacy-mus"}},
+            {objectPath + ".alt_hide_smart_shapes", {Value(true), "legacy-mus-adjusted"}},
+            {objectPath + ".hide_chords", {Value(true), "legacy-mus"}},
+            {objectPath + ".hide_fretboards", {Value(true), "legacy-mus"}},
+            {objectPath + ".alt_notation",
+             {Value(static_cast<std::int64_t>(Staff::AlternateNotation::Normal)), "legacy-mus"}},
+        };
+        ComparisonLeaves companionLeaves = sourceLeaves;
+        const auto context = [&](const ComparisonLeaves &source, const ComparisonLeaves &companion,
+                                 FormatEpoch epoch, const SourceVersion *version,
+                                 const Value *sourceValue = nullptr,
+                                 const Value *companionValue = nullptr) {
+            return DifferenceContext{differencePath,
+                                     DifferenceCategory::Differs,
+                                     "finale27-default",
+                                     sourceValue ? *sourceValue : disabled,
+                                     companionValue ? *companionValue : enabled,
+                                     source,
+                                     companion,
+                                     epoch,
+                                     ByteOrder::BigEndian,
+                                     version,
+                                     report};
+        };
+
+        REQUIRE(classify(context(sourceLeaves, companionLeaves, FormatEpoch::UncompressedLegacy,
+                                 &finale2000)) == DifferenceClassification::FinaleUpgradeLoss);
+        REQUIRE(classify(context(sourceLeaves, companionLeaves, FormatEpoch::DclLegacy,
+                                 &finale2006)) == DifferenceClassification::FinaleUpgradeLoss);
+        REQUIRE(classify(context(sourceLeaves, companionLeaves, FormatEpoch::ZlibLegacy,
+                                 &finale2008)) == DifferenceClassification::FinaleUpgradeLoss);
+        CHECK_FALSE(classify(
+            context(sourceLeaves, companionLeaves, FormatEpoch::UncompressedLegacy, &finale98)));
+        REQUIRE(classify(context(sourceLeaves, companionLeaves, FormatEpoch::ZlibLegacy,
+                                 &finale2009)) == DifferenceClassification::FinaleUpgradeLoss);
+
+        auto missingAggregateLeaf = sourceLeaves;
+        missingAggregateLeaf.erase(objectPath + ".alt_hide_smart_shapes");
+        CHECK_FALSE(classify(context(missingAggregateLeaf, companionLeaves,
+                                     FormatEpoch::UncompressedLegacy, &finale2000)));
+        auto wrongAggregateOrigin = sourceLeaves;
+        wrongAggregateOrigin.at(objectPath + ".alt_hide_lyrics").second = "finale27-default";
+        CHECK_FALSE(classify(context(wrongAggregateOrigin, companionLeaves,
+                                     FormatEpoch::UncompressedLegacy, &finale2000)));
+        auto disabledAggregateLeaf = sourceLeaves;
+        disabledAggregateLeaf.at(objectPath + ".hide_chords").first = Value(false);
+        CHECK_FALSE(classify(context(disabledAggregateLeaf, companionLeaves,
+                                     FormatEpoch::UncompressedLegacy, &finale2000)));
+        auto differingCompanionExpansion = companionLeaves;
+        differingCompanionExpansion.at(objectPath + ".hide_chords").first = Value(false);
+        CHECK(classify(context(sourceLeaves, differingCompanionExpansion,
+                               FormatEpoch::UncompressedLegacy, &finale2000)) ==
+              DifferenceClassification::FinaleUpgradeLoss);
+        auto rhythmicSource = sourceLeaves;
+        rhythmicSource.at(objectPath + ".alt_notation").first =
+            Value(static_cast<std::int64_t>(Staff::AlternateNotation::Rhythmic));
+        CHECK(classify(context(rhythmicSource, companionLeaves, FormatEpoch::UncompressedLegacy,
+                               &finale2000)) == DifferenceClassification::FinaleUpgradeLoss);
+        CHECK_FALSE(classify(context(sourceLeaves, companionLeaves, FormatEpoch::UncompressedLegacy,
+                                     &finale2000, &enabled, &disabled)));
+
+        auto wrongClass =
+            context(sourceLeaves, companionLeaves, FormatEpoch::UncompressedLegacy, &finale2000);
+        const auto otherPath = std::string(otherPrefix) + "cmper=1].alt_hide_expressions";
+        wrongClass.path = otherPath;
+        CHECK_FALSE(classify(wrongClass));
+        auto wrongOrigin =
+            context(sourceLeaves, companionLeaves, FormatEpoch::UncompressedLegacy, &finale2000);
+        wrongOrigin.origin = "legacy-behavior";
+        CHECK_FALSE(classify(wrongOrigin));
+    }
+}
+
 TEST_CASE("Staff fields omitted from the companion Scroll View await StaffUsed "
           "recovery",
           "[coverage]")
@@ -2272,9 +2424,8 @@ TEST_CASE("Staff fields omitted from the companion Scroll View await StaffUsed "
         document->calcScrollViewCmper(musx::dom::SCORE_PARTID), musx::dom::Inci{0});
     staffUsed->staffId = musx::dom::StaffCmper{1};
     document->getOthers()->add(musx::dom::others::StaffUsed::XmlNodeName, std::move(staffUsed));
-    const auto context =
-        [&](std::string_view path, std::string_view origin, DifferenceCategory category)
-    {
+    const auto context = [&](std::string_view path, std::string_view origin,
+                             DifferenceCategory category) {
         return DifferenceContext{path,
                                  category,
                                  origin,
@@ -2320,6 +2471,1326 @@ TEST_CASE("Staff fields omitted from the companion Scroll View await StaffUsed "
     CHECK_FALSE(classifyStaffDifference(
         context("staff[cmper=2].note_font.font_size", "legacy-mus", DifferenceCategory::Differs)));
     setDeferredRecoveryClassified(true);
+}
+
+TEST_CASE("Finale 2000 StaffStyles share notation-derived Smart Shape hiding")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto result = readFixture("evidence/F2000/F2000-F372-facingpages-parts.mus");
+    constexpr bool expected[] = {true, false, true, true, true};
+
+    for (std::size_t index = 0; index < std::size(expected); ++index)
+    {
+        const auto cmper = static_cast<musx::dom::Cmper>(index + 1);
+        const auto style =
+            result.document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, cmper);
+        REQUIRE(style);
+        CHECK(style->altHideSmartShapes == expected[index]);
+        CHECK_FALSE(style->altHideExpressions);
+        const auto *field = result.report.findField<StaffStyle>("altHideSmartShapes",
+                                                                musx::dom::SCORE_PARTID, cmper);
+        REQUIRE(field);
+        CHECK(field->origin == ValueOrigin::LegacyMusAdjusted);
+        const auto *expressions = result.report.findField<StaffStyle>(
+            "altHideExpressions", musx::dom::SCORE_PARTID, cmper);
+        REQUIRE(expressions);
+        CHECK(expressions->origin == ValueOrigin::Finale27Default);
+    }
+}
+
+TEST_CASE("StaffStyle reuses each Staff payload layout and decodes its trailer")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    struct Expected
+    {
+        const char *path;
+        const char *name;
+    };
+    constexpr Expected expected[] = {
+        {"evidence/F2000/F2000-staff-style.mus", "1-line staff"},
+        {"evidence/F2003/F2003-staffstyle.mus", "1-staff line"},
+        {"evidence/F2011/F2011-staffstyle.mus", "1-line staff"},
+    };
+    for (const auto &item : expected)
+    {
+        const auto result = readFixture(item.path);
+        const auto style = result.document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                                         musx::dom::Cmper{1});
+        REQUIRE(style);
+        CHECK(style->styleName == item.name);
+        CHECK(style->customStaff == std::optional<std::vector<int>>{{13}});
+        CHECK(style->lineSpace == 24);
+        CHECK(style->botBarlineOffset == -24);
+        CHECK(style->topBarlineOffset == 24);
+        CHECK(style->dwRestOffset == -5);
+        CHECK(style->wRestOffset == -6);
+        CHECK(style->hRestOffset == -4);
+        CHECK(style->otherRestOffset == -4);
+        CHECK(style->stemReversal == -4);
+        CHECK(style->botRepeatDotOff == -5);
+        CHECK(style->topRepeatDotOff == -3);
+        REQUIRE(style->masks);
+        CHECK(style->masks->staffType);
+        CHECK_FALSE(style->copyable);
+        CHECK(style->addToMenu);
+    }
+}
+
+TEST_CASE("Finale 2000 StaffStyle menu and copy controls are independent")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    struct Expected
+    {
+        const char *path;
+        bool addToMenu;
+        bool copyable;
+    };
+    constexpr Expected expected[] = {
+        {"evidence/F2000/F2000-style-menu.mus", true, false},
+        {"evidence/F2000/F2000-style-nomenu.mus", false, false},
+        {"evidence/F2000/F2000-style-menu-copyable.mus", true, true},
+    };
+
+    for (const auto &item : expected)
+    {
+        const auto result = readFixture(item.path);
+        const auto style = result.document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                                         musx::dom::Cmper{1});
+        REQUIRE(style);
+        CHECK(style->addToMenu == item.addToMenu);
+        CHECK(style->copyable == item.copyable);
+    }
+
+    const auto implicitStyle = [](std::int16_t secondMask) {
+        const auto parsed = makeContainer({{1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, secondMask, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                           {1, "SY", {0, 0, 0, 0, 0, 0}}});
+        const auto document = emptyStaffDocument();
+        staffImport(parsed, profileFor(finale_mus_reader::versions::finale2000.major), document,
+                    true);
+        return document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+    };
+    const auto ordinary = implicitStyle(0);
+    REQUIRE(ordinary);
+    CHECK(ordinary->addToMenu);
+    CHECK_FALSE(ordinary->copyable);
+    const auto alternateNotation = implicitStyle(0x1000);
+    REQUIRE(alternateNotation);
+    CHECK(alternateNotation->addToMenu);
+    CHECK(alternateNotation->copyable);
+}
+
+TEST_CASE("StaffStyle maps every stored mask and control bit")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto parsed = makeContainer({{1, "SY", {-24, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 1, 4, 24, 0, 0}},
+                                       {1, "SY", {-1285, -772, -4, 0, 0, 0}},
+                                       {1, "SY", {-1, -1, 0x03ff, 0, 0, 0x0006}},
+                                       {1, "SY", {0x540d, 0x5465, 0x7374, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}}});
+    const auto document = emptyStaffDocument();
+    auto report = staffImport(parsed, profileFor(finale_mus_reader::versions::finale2000.major),
+                              document, true);
+    const auto style =
+        document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+    REQUIRE(style);
+    CHECK(style->styleName == "T\nTest");
+    CHECK(style->copyable);
+    CHECK(style->addToMenu);
+    REQUIRE(style->masks);
+#define CHECK_STAFF_STYLE_MASK(member) CHECK(style->masks->member)
+    CHECK_STAFF_STYLE_MASK(floatNoteheadFont);
+    CHECK_STAFF_STYLE_MASK(useNoteShapes);
+    CHECK_STAFF_STYLE_MASK(flatBeams);
+    CHECK_STAFF_STYLE_MASK(blankMeasureRest);
+    CHECK_STAFF_STYLE_MASK(noOptimize);
+    CHECK_STAFF_STYLE_MASK(notationStyle);
+    CHECK_STAFF_STYLE_MASK(defaultClef);
+    CHECK_STAFF_STYLE_MASK(staffType);
+    CHECK_STAFF_STYLE_MASK(transposition);
+    CHECK_STAFF_STYLE_MASK(blineBreak);
+    CHECK_STAFF_STYLE_MASK(rbarBreak);
+    CHECK_STAFF_STYLE_MASK(negMnumb);
+    CHECK_STAFF_STYLE_MASK(negRepeat);
+    CHECK_STAFF_STYLE_MASK(negNameScore);
+    CHECK_STAFF_STYLE_MASK(hideBarlines);
+    CHECK_STAFF_STYLE_MASK(fullName);
+    CHECK_STAFF_STYLE_MASK(abrvName);
+    CHECK_STAFF_STYLE_MASK(floatKeys);
+    CHECK_STAFF_STYLE_MASK(floatTime);
+    CHECK_STAFF_STYLE_MASK(hideRptBars);
+    CHECK_STAFF_STYLE_MASK(negKey);
+    CHECK_STAFF_STYLE_MASK(negTime);
+    CHECK_STAFF_STYLE_MASK(negClef);
+    CHECK_STAFF_STYLE_MASK(hideStaff);
+    CHECK_STAFF_STYLE_MASK(noKey);
+    CHECK_STAFF_STYLE_MASK(fullNamePos);
+    CHECK_STAFF_STYLE_MASK(abrvNamePos);
+    CHECK_STAFF_STYLE_MASK(altNotation);
+    CHECK_STAFF_STYLE_MASK(showTies);
+    CHECK_STAFF_STYLE_MASK(showDots);
+    CHECK_STAFF_STYLE_MASK(showRests);
+    CHECK_STAFF_STYLE_MASK(showStems);
+    CHECK_STAFF_STYLE_MASK(hideChords);
+    CHECK_STAFF_STYLE_MASK(hideFretboards);
+    CHECK_STAFF_STYLE_MASK(hideLyrics);
+    CHECK_STAFF_STYLE_MASK(showNameParts);
+    CHECK_STAFF_STYLE_MASK(showNoteColors);
+    CHECK_STAFF_STYLE_MASK(hideStaffLines);
+    CHECK_STAFF_STYLE_MASK(redisplayLayerAccis);
+    CHECK_STAFF_STYLE_MASK(negTimeParts);
+    CHECK_STAFF_STYLE_MASK(hideKeySigsShowAccis);
+#undef CHECK_STAFF_STYLE_MASK
+
+    const auto key =
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+    REQUIRE(report.fields.contains(key));
+    CHECK(report.fields.at(key).size() == 145);
+    CHECK(report.fields.at(key).at("styleName").origin == ValueOrigin::LegacyMus);
+    CHECK(report.fields.at(key).at("masks.staffType").origin == ValueOrigin::LegacyMus);
+    CHECK(report.fields.at(key).at("masks.negTimeParts").origin == ValueOrigin::LegacyBehavior);
+    for (const auto *member : {
+             "transposition.setToClef",
+             "transposition.noSimplifyKey",
+             "transposition.keysig.interval",
+             "transposition.keysig.adjust",
+             "transposition.chromatic.alteration",
+             "transposition.chromatic.diatonic",
+         })
+    {
+        CHECK(report.fields.at(key).at(member).origin == ValueOrigin::LegacyMus);
+    }
+
+    const auto observed = finale_mus_reader::coverage::runAllSurveyors({document, report});
+    const auto &styles = observed.snapshot.at("staff_style").asArray();
+    REQUIRE(styles.size() == 1);
+    const auto &object = styles.front().asObject();
+    CHECK(object.at("style_name").asString() == "T\nTest");
+    CHECK(object.at("origin_styleName").asString() == "legacy-mus");
+    CHECK(object.at("masks").asObject().size() == 82);
+}
+
+TEST_CASE("StaffStyle alternate notation mask includes its chord and fretboard "
+          "overrides")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto parsed = makeContainer({{1, "SY", {-24, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 1, 4, 24, 0, 0}},
+                                       {1, "SY", {-1285, -772, -4, 0, 0, 0}},
+                                       {1, "SY", {0, 0x1000, 0, 0, 0, 0}},
+                                       {1, "SY", {0x5465, 0x7374, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}}});
+    const auto document = emptyStaffDocument();
+    const auto report = staffImport(
+        parsed, profileFor(finale_mus_reader::versions::finale2000.major), document, true);
+    const auto style =
+        document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+
+    REQUIRE(style);
+    REQUIRE(style->masks);
+    CHECK(style->masks->altNotation);
+    CHECK(style->masks->hideChords);
+    CHECK(style->masks->hideFretboards);
+
+    const auto &fields = report.fields.at(
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}));
+    CHECK(fields.at("masks.altNotation").decodedOffset ==
+          fields.at("masks.hideChords").decodedOffset);
+    CHECK(fields.at("masks.altNotation").decodedOffset ==
+          fields.at("masks.hideFretboards").decodedOffset);
+}
+
+TEST_CASE("Legacy Note Shapes notation uses the staff-specific StaffStyle mask")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto parsed = makeContainer({{1, "SY", {-24, 0, 0, 0, 0, 0x0080}},
+                                       {1, "SY", {0, 1, 4, 24, 0, 0}},
+                                       {1, "SY", {-1285, -772, -4, 0, 0, 0}},
+                                       {1, "SY", {0x0004, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0x5465, 0x7374, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}},
+                                       {1, "SY", {0, 0, 0, 0, 0, 0}}});
+    const auto document = emptyStaffDocument();
+    const auto report = staffImport(
+        parsed, profileFor(finale_mus_reader::versions::finale2000.major), document, true);
+    const auto style =
+        document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+
+    REQUIRE(style);
+    REQUIRE(style->masks);
+    CHECK(style->notationStyle == Staff::NotationStyle::Standard);
+    CHECK(style->useNoteShapes);
+    CHECK_FALSE(style->masks->notationStyle);
+    CHECK(style->masks->useNoteShapes);
+
+    const auto &fields = report.fields.at(
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}));
+    CHECK(fields.at("notationStyle").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(fields.at("useNoteShapes").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(fields.at("masks.notationStyle").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(fields.at("masks.useNoteShapes").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(fields.at("masks.notationStyle").decodedOffset ==
+          fields.at("masks.useNoteShapes").decodedOffset);
+}
+
+TEST_CASE("Finale 2006 Note Shapes StaffStyle uses only its staff-specific "
+          "notation mask")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto result = readFixture("evidence/F2006/F2006-embedded-tif.mus");
+    const auto style = result.document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                                     musx::dom::Cmper{19});
+
+    REQUIRE(style);
+    CHECK(style->styleName == "15.  Note Shapes");
+    CHECK(style->notationStyle == Staff::NotationStyle::Standard);
+    CHECK(style->useNoteShapes);
+    REQUIRE(style->masks);
+    CHECK_FALSE(style->masks->notationStyle);
+    CHECK(style->masks->useNoteShapes);
+
+    const auto *notationMask = result.report.findField<StaffStyle>(
+        "masks.notationStyle", musx::dom::SCORE_PARTID, musx::dom::Cmper{19});
+    const auto *noteShapesMask = result.report.findField<StaffStyle>(
+        "masks.useNoteShapes", musx::dom::SCORE_PARTID, musx::dom::Cmper{19});
+    REQUIRE(notationMask);
+    REQUIRE(noteShapesMask);
+    CHECK(notationMask->origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(noteShapesMask->origin == ValueOrigin::LegacyMusAdjusted);
+}
+
+TEST_CASE("Finale 2012 Note Shapes settings retain independent StaffStyle masks")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    std::vector<std::int16_t> words(48, 0);
+    words[5] = 0x0080;
+    words.insert(words.end(), {0x0004, 0, 0, 0, 0, 0});
+    words.resize(150, 0);
+    const auto parsed = makeClassContainer(0x00e8, words, ByteOrder::LittleEndian, 1);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
+    profile.byteOrder = ByteOrder::LittleEndian;
+    profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2012.major};
+    const auto report = staffImport(parsed, profile, document, true);
+    const auto style =
+        document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+
+    REQUIRE(style);
+    REQUIRE(style->masks);
+    CHECK(style->notationStyle == Staff::NotationStyle::Standard);
+    CHECK(style->useNoteShapes);
+    CHECK(style->masks->notationStyle);
+    CHECK_FALSE(style->masks->useNoteShapes);
+
+    const auto &fields = report.fields.at(
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}));
+    CHECK(fields.at("notationStyle").origin == ValueOrigin::LegacyMus);
+    CHECK(fields.at("useNoteShapes").origin == ValueOrigin::LegacyMus);
+    CHECK(fields.at("masks.notationStyle").origin == ValueOrigin::LegacyMus);
+    CHECK(fields.at("masks.useNoteShapes").origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("StaffStyle selects and decodes its Unicode trailer structurally")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    std::vector<std::int16_t> words(48, 0);
+    words.insert(words.end(), {0, 0x1000, 0x0006, 0, 0, 0x0006});
+    words.resize(150, 0);
+    const std::u16string name = u"Élan U0001D11E";
+    for (std::size_t index = 0; index < name.size(); ++index)
+        words[54 + index] = static_cast<std::int16_t>(name[index]);
+    const auto parsed = makeClassContainer(0x00e8, words, ByteOrder::LittleEndian, 1);
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
+    profile.byteOrder = ByteOrder::LittleEndian;
+    const auto report = staffImport(parsed, profile, document, true);
+
+    const auto style =
+        document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+    REQUIRE(style);
+    CHECK(style->styleName == "Élan U0001D11E");
+    CHECK(style->copyable);
+    CHECK(style->addToMenu);
+    REQUIRE(style->masks);
+    CHECK(style->masks->altNotation);
+    CHECK(style->masks->hideChords);
+    CHECK(style->masks->hideFretboards);
+    CHECK(report.fields
+              .at(finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                             musx::dom::Cmper{1}))
+              .at("styleName")
+              .origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("Finale 2012 StaffStyle records recover their stored names and controls")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto result = readFixture("evidence/F2012/F2012-bookmarks.mus");
+    constexpr std::string_view names[] = {"Normal Notation", "Slash Notation",  "Rhythmic Notation",
+                                          "One Bar Repeats", "Two Bar Repeats", "Blank Notation"};
+    for (std::size_t index = 0; index < std::size(names); ++index)
+    {
+        const auto style = result.document->getOthers()->get<StaffStyle>(
+            musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(index + 1));
+        REQUIRE(style);
+        CHECK(style->styleName == names[index]);
+        CHECK(style->copyable);
+        CHECK(style->addToMenu);
+        REQUIRE(style->masks);
+        CHECK(style->masks->altNotation);
+        CHECK(style->masks->hideChords);
+        CHECK(style->masks->hideFretboards);
+    }
+}
+
+TEST_CASE("StaffStyle uses its Finale 2012 boundary for unrepresented record "
+          "lengths")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto parsed =
+        makeClassContainer(0x00e8, std::vector<std::int16_t>(100), ByteOrder::LittleEndian, 1);
+    const auto importWithVersion = [&](std::uint8_t major) {
+        const auto document = emptyStaffDocument();
+        auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
+        profile.byteOrder = ByteOrder::LittleEndian;
+        profile.version = SourceVersion{.major = major};
+        return std::pair{document, staffImport(parsed, profile, document, true)};
+    };
+
+    const auto [finale2011Document, finale2011Report] =
+        importWithVersion(finale_mus_reader::versions::finale2011.major);
+    CHECK(finale2011Document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                           musx::dom::Cmper{1}));
+    CHECK(finale2011Report.diagnostics.empty());
+
+    const auto [finale2012Document, finale2012Report] =
+        importWithVersion(finale_mus_reader::versions::finale2012.major);
+    CHECK_FALSE(finale2012Document->getOthers()->get<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                                 musx::dom::Cmper{1}));
+    REQUIRE(finale2012Report.diagnostics.size() == 1);
+    CHECK(finale2012Report.diagnostics.front().message.find("shorter than") != std::string::npos);
+}
+
+TEST_CASE("StaffStyle remains absent when no source record exists")
+{
+    using StaffStyle = musx::dom::others::StaffStyle;
+    for (const auto path : {"evidence/F100/F100-baseline.mus", "evidence/F97/F97-def-measrest.mus"})
+    {
+        const auto result = readFixture(path);
+        CHECK(result.document->getOthers()->getAllSources<StaffStyle>().empty());
+    }
+}
+
+TEST_CASE("Finale 2000 through 2008 StaffStyle chord and fretboard aggregate is lost "
+          "during upgrade",
+          "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    constexpr std::string_view objectPath = "staff_style[cmper=5]";
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    ComparisonLeaves sourceLeaves{
+        {std::string(objectPath) + ".alt_hide_artics", {Value(true), "legacy-mus"}},
+        {std::string(objectPath) + ".alt_hide_lyrics", {Value(true), "legacy-mus"}},
+        {std::string(objectPath) + ".alt_hide_smart_shapes", {Value(true), "legacy-mus-adjusted"}},
+        {std::string(objectPath) + ".hide_chords", {Value(true), "legacy-mus"}},
+        {std::string(objectPath) + ".hide_fretboards", {Value(true), "legacy-mus"}},
+        {std::string(objectPath) + ".masks.hide_chords", {Value(true), "legacy-mus"}},
+        {std::string(objectPath) + ".masks.hide_fretboards", {Value(true), "legacy-mus"}},
+    };
+    const ComparisonLeaves companionLeaves = sourceLeaves;
+    const Value enabled(true);
+    const Value disabled(false);
+    ImportReport report(FormatEpoch::DclLegacy);
+    const SourceVersion finale98{.major = finale_mus_reader::versions::finale98.major};
+    const SourceVersion finale2000{.major = finale_mus_reader::versions::finale2000.major};
+    const SourceVersion finale2006{.major = finale_mus_reader::versions::finale2006.major};
+    const SourceVersion finale2008{.major = finale_mus_reader::versions::finale2008.major};
+    const SourceVersion finale2009{.major = finale_mus_reader::versions::finale2009.major};
+    const auto context = [&](const ComparisonLeaves &source, FormatEpoch epoch,
+                             const SourceVersion *version, const Value *sourceValue = nullptr,
+                             const Value *companionValue = nullptr,
+                             std::string_view suffix = ".hide_fretboards") {
+        const auto path = suffix == ".hide_chords" ? "staff_style[cmper=5].hide_chords"
+                                                   : "staff_style[cmper=5].hide_fretboards";
+        return DifferenceContext{path,
+                                 DifferenceCategory::Differs,
+                                 "legacy-mus",
+                                 sourceValue ? *sourceValue : enabled,
+                                 companionValue ? *companionValue : disabled,
+                                 source,
+                                 companionLeaves,
+                                 epoch,
+                                 ByteOrder::BigEndian,
+                                 version,
+                                 report};
+    };
+
+    for (const auto suffix : {".hide_chords", ".hide_fretboards"})
+    {
+        REQUIRE(classify(context(sourceLeaves, FormatEpoch::UncompressedLegacy, &finale2000,
+                                 nullptr, nullptr, suffix)) ==
+                DifferenceClassification::FinaleUpgradeLoss);
+        REQUIRE(classify(context(sourceLeaves, FormatEpoch::DclLegacy, &finale2006, nullptr,
+                                 nullptr, suffix)) == DifferenceClassification::FinaleUpgradeLoss);
+        REQUIRE(classify(context(sourceLeaves, FormatEpoch::ZlibLegacy, &finale2008, nullptr,
+                                 nullptr, suffix)) == DifferenceClassification::FinaleUpgradeLoss);
+    }
+    CHECK_FALSE(classify(context(sourceLeaves, FormatEpoch::UncompressedLegacy, &finale98)));
+    CHECK_FALSE(classify(context(sourceLeaves, FormatEpoch::ZlibLegacy, &finale2009)));
+
+    auto missingAggregateLeaf = sourceLeaves;
+    missingAggregateLeaf.erase(std::string(objectPath) + ".alt_hide_artics");
+    CHECK_FALSE(classify(context(missingAggregateLeaf, FormatEpoch::DclLegacy, &finale2006)));
+    auto disabledMask = sourceLeaves;
+    disabledMask.at(std::string(objectPath) + ".masks.hide_fretboards").first = Value(false);
+    CHECK_FALSE(classify(context(disabledMask, FormatEpoch::DclLegacy, &finale2006)));
+
+    auto wrongClass = context(sourceLeaves, FormatEpoch::DclLegacy, &finale2006);
+    wrongClass.path = "staff[cmper=5].hide_fretboards";
+    CHECK_FALSE(classify(wrongClass));
+    auto wrongOrigin = context(sourceLeaves, FormatEpoch::DclLegacy, &finale2006);
+    wrongOrigin.origin = "legacy-mus-adjusted";
+    CHECK_FALSE(classify(wrongOrigin));
+    CHECK_FALSE(
+        classify(context(sourceLeaves, FormatEpoch::DclLegacy, &finale2006, &disabled, &enabled)));
+}
+
+TEST_CASE("Legacy StaffStyle Smart Shape values can change when Finale expands them", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+
+    const Value enabled(true);
+    const Value disabled(false);
+    const ComparisonLeaves leaves;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const SourceVersion finale2000{.major = finale_mus_reader::versions::finale2000.major};
+    const SourceVersion finale2009{.major = finale_mus_reader::versions::finale2009.major};
+    const auto context = [&](std::string_view path, std::string_view origin, const Value &source,
+                             const Value &companion, const SourceVersion *version = nullptr) {
+        return DifferenceContext{path,
+                                 DifferenceCategory::Differs,
+                                 origin,
+                                 source,
+                                 companion,
+                                 leaves,
+                                 leaves,
+                                 FormatEpoch::UncompressedLegacy,
+                                 ByteOrder::BigEndian,
+                                 version ? version : &finale2000,
+                                 report};
+    };
+
+    REQUIRE(classify(context("staff_style[cmper=2].alt_hide_smart_shapes", "legacy-mus-adjusted",
+                             enabled, disabled)) == DifferenceClassification::FinaleUpgradeLoss);
+    CHECK_FALSE(classify(
+        context("staff_style[cmper=2].alt_hide_smart_shapes", "legacy-mus", enabled, disabled)));
+    CHECK_FALSE(classify(context("staff_style[cmper=2].alt_hide_smart_shapes",
+                                 "legacy-mus-adjusted", disabled, enabled)));
+    auto finale2009Context = context("staff_style[cmper=2].alt_hide_smart_shapes",
+                                     "legacy-mus-adjusted", enabled, disabled, &finale2009);
+    finale2009Context.epoch = FormatEpoch::ZlibLegacy;
+    CHECK_FALSE(classify(finale2009Context));
+
+    const auto key =
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{2});
+    report.setField(key, "altHideOtherArtics",
+                    {ValueOrigin::LegacyMus, 10, 20, 0, std::uint16_t{0x5359}});
+    report.setField(key, "altHideOtherSmartShapes",
+                    {ValueOrigin::LegacyMus, 10, 20, 0, std::uint16_t{0x5359}});
+    REQUIRE(classify(context("staff_style[cmper=2].alt_hide_other_smart_shapes", "legacy-mus",
+                             disabled, enabled)) == DifferenceClassification::FinaleUpgradeLoss);
+    REQUIRE(classify(context("staff_style[cmper=2].alt_hide_other_smart_shapes", "legacy-mus",
+                             enabled, disabled)) == DifferenceClassification::FinaleUpgradeLoss);
+
+    report.findField(key, "altHideOtherSmartShapes")->decodedOffset = 22;
+    CHECK_FALSE(classify(context("staff_style[cmper=2].alt_hide_other_smart_shapes", "legacy-mus",
+                                 disabled, enabled)));
+    CHECK_FALSE(classify(context("staff_style[cmper=2].alt_hide_other_smart_shapes",
+                                 "legacy-mus-adjusted", disabled, enabled)));
+    CHECK_FALSE(classify(context("staff_style[cmper=2].alt_hide_other_expressions", "legacy-mus",
+                                 disabled, enabled)));
+}
+
+TEST_CASE("Legacy aggregate Two-Bar Repeat StaffStyles lose visible articulations "
+          "and lyrics and may hide chords and fretboards during upgrade",
+          "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+
+    constexpr std::string_view objectPath = "staff_style[cmper=6]";
+    ComparisonLeaves source{
+        {std::string(objectPath) + ".alt_notation",
+         {Value(static_cast<std::int64_t>(Staff::AlternateNotation::TwoBarRepeat)), "legacy-mus"}},
+        {std::string(objectPath) + ".alt_hide_other_artics", {Value(true), "legacy-mus"}}};
+    const ComparisonLeaves companion = source;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const auto key =
+        finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{6});
+    report.setField(key, "altHideOtherArtics", {ValueOrigin::LegacyMus, 10, 20, 0, 0x5359});
+    report.setField(key, "altHideOtherSmartShapes", {ValueOrigin::LegacyMus, 10, 20, 0, 0x5359});
+    const SourceVersion finale2004{.major = finale_mus_reader::versions::finale2004.major};
+    const SourceVersion finale2007{.major = finale_mus_reader::versions::finale2007.major};
+    const Value visible(false);
+    const Value hidden(true);
+    const auto classifyCase = [&](std::string_view suffix, FormatEpoch epoch,
+                                  const SourceVersion *version, std::string_view origin,
+                                  const Value &sourceValue, const Value &companionValue,
+                                  const ComparisonLeaves &sourceLeaves) {
+        const auto path = std::string(objectPath) + std::string(suffix);
+        return classify(DifferenceContext{path, DifferenceCategory::Differs, origin, sourceValue,
+                                          companionValue, sourceLeaves, companion, epoch,
+                                          ByteOrder::BigEndian, version, report});
+    };
+    const auto classifyUpgrade = [&](std::string_view suffix, FormatEpoch epoch,
+                                     const SourceVersion *version) {
+        return classifyCase(suffix, epoch, version, "legacy-mus", visible, hidden, source);
+    };
+
+    for (const auto suffix : {".alt_hide_artics", ".alt_hide_lyrics"})
+    {
+        CHECK(classifyUpgrade(suffix, FormatEpoch::UncompressedLegacy, &finale2004) ==
+              DifferenceClassification::FinaleUpgradeLoss);
+        CHECK(classifyUpgrade(suffix, FormatEpoch::ZlibLegacy, &finale2007) ==
+              DifferenceClassification::FinaleUpgradeLoss);
+    }
+    for (const auto suffix : {".hide_chords", ".hide_fretboards"})
+    {
+        CHECK(classifyUpgrade(suffix, FormatEpoch::UncompressedLegacy, &finale2004) ==
+              DifferenceClassification::FinaleUpgradeLoss);
+    }
+
+    auto otherItemsVisible = source;
+    otherItemsVisible.at(std::string(objectPath) + ".alt_hide_other_artics").first = Value(false);
+    CHECK_FALSE(classifyCase(".hide_chords", FormatEpoch::UncompressedLegacy, &finale2004,
+                             "legacy-mus", visible, hidden, otherItemsVisible));
+
+    auto wrongNotation = source;
+    wrongNotation.at(std::string(objectPath) + ".alt_notation").first =
+        Value(static_cast<std::int64_t>(Staff::AlternateNotation::OneBarRepeat));
+    CHECK_FALSE(classifyCase(".alt_hide_artics", FormatEpoch::ZlibLegacy, &finale2007, "legacy-mus",
+                             visible, hidden, wrongNotation));
+    CHECK_FALSE(classifyCase(".alt_hide_artics", FormatEpoch::ZlibLegacy, &finale2007,
+                             "legacy-mus-adjusted", visible, hidden, source));
+    CHECK_FALSE(classifyCase(".alt_hide_artics", FormatEpoch::ZlibLegacy, &finale2007, "legacy-mus",
+                             hidden, visible, source));
+    report.findField(key, "altHideOtherSmartShapes")->decodedOffset = 22;
+    CHECK_FALSE(classifyUpgrade(".alt_hide_artics", FormatEpoch::ZlibLegacy, &finale2007));
+}
+
+TEST_CASE("StaffStyle Unknown UUID upgrades are normalized", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    const auto objectPath = std::string("staff_style[cmper=1]");
+    const ComparisonLeaves leaves{
+        {objectPath + ".inst_uuid",
+         {Value(std::string(musx::dom::uuid::Unknown)), "legacy-behavior"}},
+        {objectPath + ".notation_style",
+         {Value(static_cast<std::int64_t>(Staff::NotationStyle::Percussion)), "legacy-mus"}},
+        {objectPath + ".masks.notation_style", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.default_clef", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.float_notehead_font", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.no_key", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.staff_type", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.transposition", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.full_name", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.abrv_name", {Value(true), "legacy-mus"}},
+        {objectPath + ".default_clef", {Value(std::int64_t(0)), "legacy-mus"}},
+        {objectPath + ".use_note_font", {Value(true), "legacy-mus"}},
+        {objectPath + ".no_key", {Value(true), "legacy-mus"}},
+        {objectPath + ".show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".hide_key_sigs_show_accis", {Value(false), "legacy-mus"}}};
+    ComparisonLeaves companionLeaves = leaves;
+    companionLeaves.at(objectPath + ".inst_uuid").first =
+        Value(std::string(musx::dom::uuid::PercussionGeneral));
+    companionLeaves.at(objectPath + ".masks.default_clef").first = Value(true);
+    companionLeaves.at(objectPath + ".masks.float_notehead_font").first = Value(false);
+    companionLeaves.at(objectPath + ".masks.no_key").first = Value(false);
+    companionLeaves.at(objectPath + ".masks.show_note_colors").first = Value(true);
+    companionLeaves.at(objectPath + ".masks.hide_key_sigs_show_accis").first = Value(true);
+    ImportReport report(FormatEpoch::DclLegacy);
+    const Value unknown{std::string(musx::dom::uuid::Unknown)};
+    const Value blank{std::string(musx::dom::uuid::BlankStaff)};
+    const Value blank2{std::string(musx::dom::uuid::BlankStaff2)};
+    const Value flute{std::string(musx::dom::uuid::Flute)};
+    const Value percussion{std::string(musx::dom::uuid::PercussionGeneral)};
+    const auto context = [&](const Value &source, const Value &companion,
+                             const ComparisonLeaves *sourceLeaves = nullptr) {
+        return DifferenceContext{"staff_style[cmper=1].inst_uuid",
+                                 DifferenceCategory::Differs,
+                                 "legacy-behavior",
+                                 source,
+                                 companion,
+                                 sourceLeaves ? *sourceLeaves : leaves,
+                                 companionLeaves,
+                                 FormatEpoch::DclLegacy,
+                                 ByteOrder::BigEndian,
+                                 nullptr,
+                                 report};
+    };
+
+    CHECK(classify(context(unknown, blank)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK(classify(context(unknown, blank2)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK(classify(context(unknown, percussion)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK(classify(context(unknown, flute)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK_FALSE(classify(context(blank, unknown)));
+
+    for (const auto suffix : {".masks.default_clef", ".masks.float_notehead_font", ".masks.no_key",
+                              ".masks.show_note_colors", ".masks.hide_key_sigs_show_accis"})
+    {
+        const auto path = objectPath + suffix;
+        const DifferenceContext maskContext{path,
+                                            DifferenceCategory::Differs,
+                                            "legacy-mus",
+                                            leaves.at(path).first,
+                                            companionLeaves.at(path).first,
+                                            leaves,
+                                            companionLeaves,
+                                            FormatEpoch::DclLegacy,
+                                            ByteOrder::BigEndian,
+                                            nullptr,
+                                            report};
+        CHECK(classify(maskContext) == DifferenceClassification::FinaleUpgradeNormalization);
+    }
+
+    auto unmaskedPercussion = leaves;
+    unmaskedPercussion.at(objectPath + ".masks.notation_style").first = Value(false);
+    CHECK(classify(context(unknown, percussion, &unmaskedPercussion)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    auto standardNotation = leaves;
+    standardNotation.at(objectPath + ".notation_style").first =
+        Value(static_cast<std::int64_t>(Staff::NotationStyle::Standard));
+    CHECK(classify(context(unknown, percussion, &standardNotation)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    const SourceVersion finale2012{.major = finale_mus_reader::versions::finale2012.major};
+    auto post2012 = context(unknown, flute);
+    post2012.epoch = FormatEpoch::ZlibLegacy;
+    post2012.sourceVersion = &finale2012;
+    CHECK_FALSE(classify(post2012));
+
+    auto changedActualSetting = companionLeaves;
+    changedActualSetting.at(objectPath + ".no_key").first = Value(false);
+    const auto noKeyMaskPath = objectPath + ".masks.no_key";
+    const DifferenceContext changedNoKey{noKeyMaskPath,
+                                         DifferenceCategory::Differs,
+                                         "legacy-mus",
+                                         leaves.at(noKeyMaskPath).first,
+                                         companionLeaves.at(noKeyMaskPath).first,
+                                         leaves,
+                                         changedActualSetting,
+                                         FormatEpoch::DclLegacy,
+                                         ByteOrder::BigEndian,
+                                         nullptr,
+                                         report};
+    CHECK_FALSE(classify(changedNoKey));
+
+    auto wrongOrigin = context(unknown, blank);
+    wrongOrigin.origin = "legacy-mus";
+    CHECK_FALSE(classify(wrongOrigin));
+    auto readerOnly = context(unknown, blank);
+    readerOnly.category = DifferenceCategory::ReaderOnly;
+    CHECK_FALSE(classify(readerOnly));
+    auto wrongClass = context(unknown, blank);
+    wrongClass.path = "staff[cmper=1].inst_uuid";
+    CHECK_FALSE(classify(wrongClass));
+}
+
+TEST_CASE("Finale conversion may truncate a StaffStyle name", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    const ComparisonLeaves leaves;
+    ImportReport report(FormatEpoch::ZlibLegacy);
+    const auto classifyNames = [&](std::string_view path, std::string_view source,
+                                   std::string_view companion,
+                                   DifferenceCategory category = DifferenceCategory::Differs,
+                                   std::string_view origin = "legacy-mus") {
+        const Value sourceValue{std::string(source)};
+        const Value companionValue{std::string(companion)};
+        return classify(DifferenceContext{path, category, origin, sourceValue, companionValue,
+                                          leaves, leaves, FormatEpoch::ZlibLegacy,
+                                          ByteOrder::BigEndian, nullptr, report});
+    };
+
+    CHECK(classifyNames("staff_style[cmper=5].style_name",
+                        "$$$Full Name$$$ Bass Clarinet in Bb\n(actual sou",
+                        "$$$Full Name$$$ Bass Cla") == DifferenceClassification::FinaleUpgradeLoss);
+    CHECK_FALSE(
+        classifyNames("staff_style[cmper=5].style_name", "Long Style Name", "Different Name"));
+    CHECK_FALSE(classifyNames("staff_style[cmper=5].style_name", "Long Style Name", ""));
+    CHECK_FALSE(classifyNames("staff_style[cmper=5].style_name", "Long Style Name", "Long",
+                              DifferenceCategory::ReaderOnly));
+    CHECK_FALSE(classifyNames("staff[cmper=5].style_name", "Long Style Name", "Long"));
+    CHECK_FALSE(classifyNames("staff_style[cmper=5].style_name", "Long Style Name", "Long",
+                              DifferenceCategory::Differs, "legacy-behavior"));
+}
+
+TEST_CASE("Finale conversion may reinterpret a StaffStyle name through Mac Roman", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    const ComparisonLeaves leaves;
+    ImportReport report(FormatEpoch::ZlibLegacy);
+    const SourceVersion finale2010{.major = finale_mus_reader::versions::finale2010.major};
+    const SourceVersion finale2012{.major = finale_mus_reader::versions::finale2012.major};
+    const auto classifyNames =
+        [&](std::string_view path, std::string_view source, std::string_view companion,
+            DifferenceCategory category = DifferenceCategory::Differs,
+            std::string_view origin = "legacy-mus", const SourceVersion *version = nullptr) {
+            return classify(DifferenceContext{path, category, origin, Value(std::string(source)),
+                                              Value(std::string(companion)), leaves, leaves,
+                                              FormatEpoch::ZlibLegacy, ByteOrder::BigEndian,
+                                              version ? version : &finale2010, report});
+        };
+
+    CHECK(classifyNames("staff_style[cmper=14].style_name", "17.  Transposition: Flöte",
+                        "17.  Transposition: Flˆte") ==
+          DifferenceClassification::TextEncodingError);
+    CHECK(classifyNames("staff_style[cmper=19].style_name", "15.  Notenköpfe", "15.  Notenkˆpfe") ==
+          DifferenceClassification::TextEncodingError);
+    CHECK_FALSE(classifyNames("staff_style[cmper=14].style_name", "Flöte", "Flute"));
+    CHECK_FALSE(classifyNames("staff_style[cmper=14].style_name", "Flˆte", "Flöte"));
+    CHECK_FALSE(classifyNames("staff[cmper=14].style_name", "Flöte", "Flˆte"));
+    CHECK_FALSE(classifyNames("staff_style[cmper=14].style_name", "Flöte", "Flˆte",
+                              DifferenceCategory::ReaderOnly));
+    CHECK_FALSE(classifyNames("staff_style[cmper=14].style_name", "Flöte", "Flˆte",
+                              DifferenceCategory::Differs, "legacy-behavior"));
+    CHECK_FALSE(classifyNames("staff_style[cmper=14].style_name", "Flöte", "Flˆte",
+                              DifferenceCategory::Differs, "legacy-mus", &finale2012));
+}
+
+TEST_CASE("StaffStyle names compare without surrounding whitespace", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto snapshot = [](std::string name) {
+        return SurveySnapshot{{"staff_style", Value::Array{Value::Object{
+                                                  {"cmper", 1}, {"style_name", std::move(name)}}}}};
+    };
+    const auto sourceDocument = emptyStaffDocument();
+    const auto companionDocument = emptyStaffDocument();
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const auto comparison = compareSnapshots(
+        snapshot("  Normal Notation"), snapshot("Normal Notation \t"), sourceDocument,
+        companionDocument, FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian, nullptr, report);
+    const auto &stats = comparison.classes.at("others").at("staff_style");
+    CHECK(stats.same == 1);
+    CHECK(stats.unexpected == 0);
+}
+
+TEST_CASE("Finale 2009 beta legacy StaffStyle layouts are not compared", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    using StaffStyle = musx::dom::others::StaffStyle;
+    const auto comparisonWasSkipped = [](const SourceVersion &version, bool aggregateLayout) {
+        SurveySnapshot source{{"staff_style", Value::Array{Value::Object{{"cmper", 1}}}}};
+        SurveySnapshot companion{{"staff_style", Value::Array{Value::Object{{"cmper", 1}}}}};
+        std::map<ComparisonTransformation, std::uint64_t> transformations;
+        ImportReport report(FormatEpoch::ZlibLegacy);
+        const auto instance = finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID,
+                                                                         musx::dom::Cmper{1});
+        report.setField(instance, "altHideOtherArtics",
+                        {ValueOrigin::LegacyMus, 10, 20, 0, 0x00e8});
+        report.setField(instance, "altHideOtherSmartShapes",
+                        {ValueOrigin::LegacyMus, 10,
+                         aggregateLayout ? std::size_t{20} : std::size_t{22}, 0, 0x00e8});
+        ComparisonPreparationContext context{
+            source, companion, transformations, FormatEpoch::ZlibLegacy, &version, &report};
+        runComparisonPreparers(context);
+        return !source.contains("staff_style") && !companion.contains("staff_style");
+    };
+
+    const SourceVersion finale2009Beta{.major = finale_mus_reader::versions::finale2009.major,
+                                       .devStatus = 2};
+    const SourceVersion finale2009Release{.major = finale_mus_reader::versions::finale2009.major,
+                                          .devStatus = 4};
+    const SourceVersion finale2010Beta{.major = finale_mus_reader::versions::finale2010.major,
+                                       .devStatus = 2};
+
+    CHECK(comparisonWasSkipped(finale2009Beta, true));
+    CHECK_FALSE(comparisonWasSkipped(finale2009Beta, false));
+    CHECK_FALSE(comparisonWasSkipped(finale2009Release, true));
+    CHECK_FALSE(comparisonWasSkipped(finale2010Beta, true));
+}
+
+TEST_CASE("StaffStyle menu metadata does not affect semantic coverage", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    const ComparisonLeaves leaves;
+    ImportReport report(FormatEpoch::ZlibLegacy);
+    const auto classifyBoolean = [&](std::string_view path, bool source, bool companion,
+                                     DifferenceCategory category = DifferenceCategory::Differs) {
+        return classify(DifferenceContext{path, category, "legacy-mus", Value(source),
+                                          Value(companion), leaves, leaves, FormatEpoch::ZlibLegacy,
+                                          ByteOrder::BigEndian, nullptr, report});
+    };
+
+    for (const auto suffix : {".copyable", ".add_to_menu"})
+    {
+        CHECK(classifyBoolean(std::string("staff_style[cmper=5]") + suffix, true, false) ==
+              DifferenceClassification::DifferentDefaults);
+        CHECK(classifyBoolean(std::string("staff_style[cmper=5]") + suffix, false, true) ==
+              DifferenceClassification::DifferentDefaults);
+    }
+    CHECK_FALSE(classifyBoolean("staff_style[cmper=5].copyable", true, false,
+                                DifferenceCategory::ReaderOnly));
+    CHECK_FALSE(classifyBoolean("staff[cmper=5].copyable", true, false));
+    CHECK_FALSE(classifyBoolean("staff_style[cmper=5].copyable_extra", true, false));
+}
+
+TEST_CASE("Pre-Finale 2012 instrument StaffStyles acquire every required mask", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    const auto objectPath = std::string("staff_style[cmper=1]");
+    ComparisonLeaves source{
+        {objectPath + ".inst_uuid",
+         {Value(std::string(musx::dom::uuid::Unknown)), "legacy-behavior"}},
+        {objectPath + ".notation_style",
+         {Value(static_cast<std::int64_t>(Staff::NotationStyle::Standard)), "legacy-mus"}},
+        {objectPath + ".default_clef", {Value(std::int64_t(3)), "legacy-mus"}},
+        {objectPath + ".show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {objectPath + ".transposition.present", {Value(true), "legacy-mus"}},
+        {objectPath + ".transposition.chromatic.alteration",
+         {Value(std::int64_t(0)), "legacy-mus"}},
+        {objectPath + ".transposition.chromatic.diatonic", {Value(std::int64_t(3)), "legacy-mus"}},
+        {objectPath + ".style_name", {Value("Source"), "legacy-mus"}},
+        {objectPath + ".masks.notation_style", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.default_clef", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.staff_type", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.transposition", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.full_name", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.abrv_name", {Value(true), "legacy-mus"}}};
+    auto companion = source;
+    companion.at(objectPath + ".inst_uuid").first = Value(std::string(musx::dom::uuid::Flute));
+    companion.at(objectPath + ".masks.notation_style").first = Value(true);
+    companion.at(objectPath + ".masks.show_note_colors").first = Value(true);
+    companion.at(objectPath + ".masks.hide_key_sigs_show_accis").first = Value(true);
+    ImportReport report(FormatEpoch::DclLegacy);
+    const SourceVersion finale2006{.major = finale_mus_reader::versions::finale2006.major};
+    const SourceVersion finale2012{.major = finale_mus_reader::versions::finale2012.major};
+    const auto context = [&](std::string_view path, const ComparisonLeaves &sourceLeaves,
+                             const ComparisonLeaves &companionLeaves,
+                             std::string_view origin = "legacy-mus") {
+        return DifferenceContext{path,
+                                 DifferenceCategory::Differs,
+                                 origin,
+                                 sourceLeaves.at(std::string(path)).first,
+                                 companionLeaves.at(std::string(path)).first,
+                                 sourceLeaves,
+                                 companionLeaves,
+                                 FormatEpoch::DclLegacy,
+                                 ByteOrder::BigEndian,
+                                 &finale2006,
+                                 report};
+    };
+
+    for (const auto suffix :
+         {".masks.notation_style", ".masks.show_note_colors", ".masks.hide_key_sigs_show_accis"})
+    {
+        const auto path = objectPath + suffix;
+        CHECK(classify(context(path, source, companion)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+    const auto uuidPath = objectPath + ".inst_uuid";
+    CHECK(classify(context(uuidPath, source, companion, "legacy-behavior")) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    auto changedValue = companion;
+    changedValue.at(objectPath + ".show_note_colors").first = Value(true);
+    CHECK(classify(context(objectPath + ".masks.show_note_colors", source, changedValue)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK(classify(context(objectPath + ".show_note_colors", source, changedValue)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    auto changedTransposition = companion;
+    changedTransposition.at(objectPath + ".transposition.present").first = Value(false);
+    changedTransposition.at(objectPath + ".transposition.chromatic.alteration").first =
+        Value(std::int64_t(-1));
+    changedTransposition.at(objectPath + ".transposition.chromatic.diatonic").first =
+        Value(std::int64_t(4));
+    for (const auto suffix : {".transposition.present", ".transposition.chromatic.alteration",
+                              ".transposition.chromatic.diatonic"})
+    {
+        CHECK(classify(context(objectPath + suffix, source, changedTransposition)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+
+    auto dormantTransposition = source;
+    dormantTransposition.at(objectPath + ".masks.transposition").first = Value(false);
+    CHECK(classify(context(objectPath + ".transposition.present", dormantTransposition,
+                           changedTransposition)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    auto changedName = companion;
+    changedName.at(objectPath + ".style_name").first = Value("Companion");
+    CHECK(classify(context(objectPath + ".style_name", source, changedName)) ==
+          DifferenceClassification::FinaleUpgradeLoss);
+
+    auto incompleteCompanion = companion;
+    incompleteCompanion.at(objectPath + ".masks.hide_key_sigs_show_accis").first = Value(false);
+    CHECK(classify(context(objectPath + ".masks.notation_style", source, incompleteCompanion)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+    CHECK(classify(context(uuidPath, source, incompleteCompanion, "legacy-behavior")) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    auto sourceWithoutInstrumentMasks = source;
+    sourceWithoutInstrumentMasks.at(objectPath + ".masks.default_clef").first = Value(false);
+    CHECK(classify(context(objectPath + ".masks.notation_style", sourceWithoutInstrumentMasks,
+                           companion)) == DifferenceClassification::FinaleUpgradeNormalization);
+
+    ComparisonLeaves pluginSource{
+        {objectPath + ".masks.notation_style", {Value(true), "legacy-mus"}},
+        {objectPath + ".masks.default_clef", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.staff_type", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.transposition", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.full_name", {Value(false), "legacy-mus"}},
+        {objectPath + ".masks.abrv_name", {Value(false), "legacy-mus"}},
+        {objectPath + ".default_clef", {Value(std::int64_t(0)), "legacy-mus"}},
+        {objectPath + ".show_note_colors", {Value(false), "legacy-mus"}},
+        {objectPath + ".full_name_text_id", {Value(std::int64_t(0)), "legacy-mus"}},
+        {objectPath + ".abbrv_name_text_id", {Value(std::int64_t(0)), "legacy-mus"}}};
+    auto pluginCompanion = pluginSource;
+    for (const auto suffix : {".masks.default_clef", ".masks.show_note_colors", ".masks.staff_type",
+                              ".masks.transposition", ".masks.full_name", ".masks.abrv_name"})
+    {
+        pluginCompanion.at(objectPath + suffix).first = Value(true);
+    }
+    pluginCompanion.at(objectPath + ".default_clef").first = Value(std::int64_t(12));
+    pluginCompanion.at(objectPath + ".full_name_text_id").first = Value(std::int64_t(326));
+    pluginCompanion.at(objectPath + ".abbrv_name_text_id").first = Value(std::int64_t(328));
+    for (const auto suffix : {".masks.default_clef", ".masks.show_note_colors", ".masks.staff_type",
+                              ".masks.transposition", ".masks.full_name", ".masks.abrv_name",
+                              ".default_clef", ".full_name_text_id", ".abbrv_name_text_id"})
+    {
+        CHECK(classify(context(objectPath + suffix, pluginSource, pluginCompanion)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+
+    auto incompletePluginCompanion = pluginCompanion;
+    incompletePluginCompanion.at(objectPath + ".masks.abrv_name").first = Value(false);
+    CHECK_FALSE(classify(
+        context(objectPath + ".masks.default_clef", pluginSource, incompletePluginCompanion)));
+
+    auto post2012 = context(objectPath + ".masks.notation_style", source, companion);
+    post2012.epoch = FormatEpoch::ZlibLegacy;
+    post2012.sourceVersion = &finale2012;
+    CHECK_FALSE(classify(post2012));
+
+    auto removedSource = source;
+    removedSource.emplace(objectPath + ".staff_lines",
+                          std::pair{Value(std::int64_t(0)), "legacy-mus"});
+    removedSource.emplace(objectPath + ".transposed_clef",
+                          std::pair{Value(std::int64_t(4)), "legacy-mus"});
+    removedSource.emplace(objectPath + ".transposition.present",
+                          std::pair{Value(true), "legacy-mus"});
+    removedSource.emplace(objectPath + ".full_name_text_id",
+                          std::pair{Value(std::int64_t(311)), "legacy-mus"});
+    removedSource.emplace(objectPath + ".abbrv_name_text_id",
+                          std::pair{Value(std::int64_t(312)), "legacy-mus"});
+    auto removedCompanion = removedSource;
+    for (const auto suffix :
+         {".masks.notation_style", ".masks.default_clef", ".masks.show_note_colors",
+          ".masks.hide_key_sigs_show_accis", ".masks.staff_type", ".masks.transposition",
+          ".masks.full_name", ".masks.abrv_name"})
+    {
+        removedCompanion.at(objectPath + suffix).first = Value(false);
+    }
+    removedCompanion.at(objectPath + ".default_clef").first = Value(std::int64_t(0));
+    removedCompanion.at(objectPath + ".staff_lines").first = Value(std::int64_t(5));
+    removedCompanion.at(objectPath + ".transposed_clef").first = Value(std::int64_t(0));
+    removedCompanion.at(objectPath + ".transposition.present").first = Value(false);
+    removedCompanion.at(objectPath + ".full_name_text_id").first = Value(std::int64_t(0));
+    removedCompanion.at(objectPath + ".abbrv_name_text_id").first = Value(std::int64_t(0));
+    for (const auto suffix :
+         {".masks.default_clef", ".masks.staff_type", ".masks.transposition", ".masks.full_name",
+          ".masks.abrv_name", ".default_clef", ".staff_lines", ".transposed_clef",
+          ".transposition.present", ".full_name_text_id", ".abbrv_name_text_id"})
+    {
+        CHECK(classify(context(objectPath + suffix, removedSource, removedCompanion)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+
+    auto removedPost2012 =
+        context(objectPath + ".full_name_text_id", removedSource, removedCompanion);
+    removedPost2012.epoch = FormatEpoch::ZlibLegacy;
+    removedPost2012.sourceVersion = &finale2012;
+    CHECK_FALSE(classify(removedPost2012));
+}
+
+TEST_CASE("Pre-Finale 2012 mixed StaffStyles split into companion styles", "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    constexpr std::string_view retained = "staff_style[cmper=5]";
+    constexpr std::string_view split = "staff_style[cmper=6]";
+    const ComparisonLeaves source{
+        {std::string(retained) + ".style_name", {Value("Mixed"), "legacy-mus"}},
+        {std::string(retained) + ".masks.flat_beams", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.notation_style", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.default_clef", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.show_note_colors", {Value(false), "legacy-mus"}},
+        {std::string(retained) + ".masks.hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {std::string(retained) + ".masks.staff_type", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.transposition", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.float_notehead_font", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".masks.no_key", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".notation_style",
+         {Value(static_cast<std::int64_t>(Staff::NotationStyle::Percussion)), "legacy-mus"}},
+        {std::string(retained) + ".default_clef", {Value(std::int64_t(12)), "legacy-mus"}},
+        {std::string(retained) + ".show_note_colors", {Value(false), "legacy-mus"}},
+        {std::string(retained) + ".hide_key_sigs_show_accis", {Value(false), "legacy-mus"}},
+        {std::string(retained) + ".transposition.present", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".custom_staff[0]", {Value(std::int64_t(13)), "legacy-mus"}},
+        {std::string(retained) + ".use_note_font", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".no_key", {Value(true), "legacy-mus"}},
+        {std::string(retained) + ".bot_barline_offset", {Value(-24), "legacy-mus"}},
+        {std::string(retained) + ".dw_rest_offset", {Value(-5), "legacy-mus"}},
+        {std::string(retained) + ".staff_lines", {Value(0), "legacy-mus"}},
+        {std::string(retained) + ".top_barline_offset", {Value(24), "legacy-mus"}},
+        {std::string(retained) + ".w_rest_offset", {Value(-6), "legacy-mus"}},
+        {std::string(retained) + ".line_space", {Value(24), "legacy-mus"}}};
+    ComparisonLeaves companion{
+        {std::string(retained) + ".style_name", {Value("Mixed "), {}}},
+        {std::string(retained) + ".masks.flat_beams", {Value(true), {}}},
+        {std::string(retained) + ".masks.notation_style", {Value(false), {}}},
+        {std::string(retained) + ".masks.default_clef", {Value(false), {}}},
+        {std::string(retained) + ".masks.show_note_colors", {Value(false), {}}},
+        {std::string(retained) + ".masks.hide_key_sigs_show_accis", {Value(false), {}}},
+        {std::string(retained) + ".masks.staff_type", {Value(false), {}}},
+        {std::string(retained) + ".masks.transposition", {Value(false), {}}},
+        {std::string(retained) + ".masks.float_notehead_font", {Value(false), {}}},
+        {std::string(retained) + ".masks.no_key", {Value(false), {}}},
+        {std::string(retained) + ".notation_style",
+         {Value(static_cast<std::int64_t>(Staff::NotationStyle::Standard)), {}}},
+        {std::string(retained) + ".default_clef", {Value(std::int64_t(0)), {}}},
+        {std::string(retained) + ".show_note_colors", {Value(false), {}}},
+        {std::string(retained) + ".hide_key_sigs_show_accis", {Value(false), {}}},
+        {std::string(retained) + ".transposition.present", {Value(false), {}}},
+        {std::string(retained) + ".custom_staff[0]", {Value(std::int64_t(11)), {}}},
+        {std::string(retained) + ".use_note_font", {Value(true), {}}},
+        {std::string(retained) + ".no_key", {Value(true), {}}},
+        {std::string(retained) + ".bot_barline_offset", {Value(0), {}}},
+        {std::string(retained) + ".dw_rest_offset", {Value(-4), {}}},
+        {std::string(retained) + ".staff_lines", {Value(5), {}}},
+        {std::string(retained) + ".top_barline_offset", {Value(0), {}}},
+        {std::string(retained) + ".w_rest_offset", {Value(-4), {}}},
+        {std::string(retained) + ".line_space", {Value(25), {}}},
+        {std::string(split) + ".style_name", {Value("Mixed "), {}}},
+        {std::string(split) + ".masks.notation_style", {Value(true), {}}},
+        {std::string(split) + ".masks.default_clef", {Value(true), {}}},
+        {std::string(split) + ".masks.show_note_colors", {Value(true), {}}},
+        {std::string(split) + ".masks.hide_key_sigs_show_accis", {Value(true), {}}},
+        {std::string(split) + ".masks.staff_type", {Value(true), {}}},
+        {std::string(split) + ".masks.transposition", {Value(true), {}}},
+        {std::string(split) + ".masks.full_name", {Value(true), {}}},
+        {std::string(split) + ".masks.abrv_name", {Value(true), {}}},
+        {std::string(split) + ".notation_style",
+         {Value(static_cast<std::int64_t>(Staff::NotationStyle::Percussion)), {}}},
+        {std::string(split) + ".default_clef", {Value(std::int64_t(12)), {}}},
+        {std::string(split) + ".show_note_colors", {Value(false), {}}},
+        {std::string(split) + ".hide_key_sigs_show_accis", {Value(false), {}}},
+        {std::string(split) + ".transposition.present", {Value(true), {}}},
+        {std::string(split) + ".custom_staff[0]", {Value(std::int64_t(13)), {}}},
+        {std::string(split) + ".bot_barline_offset", {Value(-24), {}}},
+        {std::string(split) + ".dw_rest_offset", {Value(-5), {}}},
+        {std::string(split) + ".staff_lines", {Value(0), {}}},
+        {std::string(split) + ".top_barline_offset", {Value(24), {}}},
+        {std::string(split) + ".w_rest_offset", {Value(-6), {}}},
+        {"staff_style[cmper=7].use_note_font", {Value(true), {}}}};
+    ImportReport report(FormatEpoch::ZlibLegacy);
+    const SourceVersion finale2011{.major = finale_mus_reader::versions::finale2011.major};
+    const SourceVersion finale2012{.major = finale_mus_reader::versions::finale2012.major};
+    const auto contextFrom = [&](std::string_view path, const ComparisonLeaves &sourceLeaves,
+                                 const ComparisonLeaves &companionLeaves,
+                                 const SourceVersion *version) {
+        return DifferenceContext{path,
+                                 DifferenceCategory::Differs,
+                                 "legacy-mus",
+                                 sourceLeaves.at(std::string(path)).first,
+                                 companionLeaves.at(std::string(path)).first,
+                                 sourceLeaves,
+                                 companionLeaves,
+                                 FormatEpoch::ZlibLegacy,
+                                 ByteOrder::BigEndian,
+                                 version,
+                                 report};
+    };
+    const auto context = [&](std::string_view path, const ComparisonLeaves &companionLeaves,
+                             const SourceVersion *version) {
+        return contextFrom(path, source, companionLeaves, version);
+    };
+
+    for (const auto suffix :
+         {".masks.notation_style", ".masks.default_clef", ".masks.staff_type",
+          ".masks.transposition", ".bot_barline_offset", ".dw_rest_offset", ".staff_lines",
+          ".top_barline_offset", ".transposition.present", ".custom_staff[0]", ".w_rest_offset"})
+    {
+        CHECK(classify(context(std::string(retained) + suffix, companion, &finale2011)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+    CHECK_FALSE(classify(context(std::string(retained) + ".line_space", companion, &finale2011)));
+    CHECK_FALSE(classify(context(std::string(retained) + ".staff_lines", companion, &finale2012)));
+
+    for (const auto suffix : {".masks.float_notehead_font", ".masks.no_key"})
+    {
+        CHECK(classify(context(std::string(retained) + suffix, companion, &finale2011)) ==
+              DifferenceClassification::FinaleUpgradeNormalization);
+    }
+
+    auto sourceWithoutFormerGate = source;
+    sourceWithoutFormerGate.at(std::string(retained) + ".masks.notation_style").first =
+        Value(false);
+    sourceWithoutFormerGate.at(std::string(retained) + ".masks.staff_type").first = Value(false);
+    CHECK(classify(contextFrom(std::string(retained) + ".transposition.present",
+                               sourceWithoutFormerGate, companion, &finale2011)) ==
+          DifferenceClassification::FinaleUpgradeNormalization);
+
+    auto mismatchedFork = companion;
+    mismatchedFork.at(std::string(split) + ".custom_staff[0]").first = Value(std::int64_t(12));
+    CHECK_FALSE(
+        classify(context(std::string(retained) + ".custom_staff[0]", mismatchedFork, &finale2011)));
+
+    auto noRetainedStyleSource = source;
+    noRetainedStyleSource.at(std::string(retained) + ".masks.flat_beams").first = Value(false);
+    CHECK_FALSE(classify(contextFrom(std::string(retained) + ".staff_lines", noRetainedStyleSource,
+                                     companion, &finale2011)));
+
+    auto incompleteSplit = companion;
+    incompleteSplit.erase(std::string(split) + ".masks.staff_type");
+    CHECK_FALSE(
+        classify(context(std::string(retained) + ".staff_lines", incompleteSplit, &finale2011)));
+
+    const Value absent;
+    const DifferenceContext synthesizedNoteFont{
+        "staff_style[cmper=7].use_note_font",
+        DifferenceCategory::CompanionOnly,
+        {},
+        absent,
+        companion.at("staff_style[cmper=7].use_note_font").first,
+        source,
+        companion,
+        FormatEpoch::ZlibLegacy,
+        ByteOrder::BigEndian,
+        &finale2011,
+        report};
+    CHECK_FALSE(classify(synthesizedNoteFont));
+}
+
+TEST_CASE("Inactive StaffStyle overrides make governed values different "
+          "defaults",
+          "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto classify = differenceClassifier("staff_style");
+    REQUIRE(classify);
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const auto classifyValue = [&](std::string_view valueSuffix, std::string_view maskSuffix,
+                                   bool sourceMask = false, bool companionMask = false,
+                                   DifferenceCategory category = DifferenceCategory::Differs,
+                                   std::string_view classPrefix = "staff_style[cmper=1]") {
+        const auto valuePath = std::string(classPrefix) + std::string(valueSuffix);
+        const auto maskPath = std::string(classPrefix) + std::string(maskSuffix);
+        const Value sourceValue(std::int64_t(1));
+        const Value companionValue(std::int64_t(2));
+        const ComparisonLeaves source{{maskPath, {Value(sourceMask), "legacy-mus"}}};
+        const ComparisonLeaves companion{{maskPath, {Value(companionMask), {}}}};
+        return classify(DifferenceContext{
+            valuePath, category, "finale27-default", sourceValue, companionValue, source, companion,
+            FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian, nullptr, report});
+    };
+
+    constexpr std::pair<std::string_view, std::string_view> governedValues[] = {
+        {".note_font.font_size", ".masks.float_notehead_font"},
+        {".use_note_font", ".masks.float_notehead_font"},
+        {".use_note_shapes", ".masks.use_note_shapes"},
+        {".fret_inst_id", ".masks.notation_style"},
+        {".line_space", ".masks.staff_type"},
+        {".transposition.keysig.present", ".masks.transposition"},
+        {".alt_hide_expressions", ".masks.alt_notation"},
+        {".vert_stem_end_off_down", ".masks.show_stems"},
+        {".hide_meas_nums", ".masks.neg_mnumb"},
+        {".full_name_text_id", ".masks.full_name"},
+        {".hide_ties", ".masks.show_ties"},
+        {".hide_key_sigs_show_accis", ".masks.hide_key_sigs_show_accis"},
+    };
+    for (const auto &[valueSuffix, maskSuffix] : governedValues)
+    {
+        CHECK(classifyValue(valueSuffix, maskSuffix) ==
+              DifferenceClassification::DifferentDefaults);
+    }
+
+    CHECK_FALSE(classifyValue(".line_space", ".masks.staff_type", true, false));
+    CHECK_FALSE(classifyValue(".line_space", ".masks.staff_type", false, true));
+    CHECK_FALSE(classifyValue(".line_space", ".masks.staff_type", true, true));
+    CHECK_FALSE(classifyValue(".line_space", ".masks.staff_type", false, false,
+                              DifferenceCategory::ReaderOnly));
+    CHECK_FALSE(classifyValue(".style_name", ".masks.staff_type"));
+    CHECK_FALSE(classifyValue(".line_space", ".masks.staff_type", false, false,
+                              DifferenceCategory::Differs, "staff[cmper=1]"));
+
+    const auto objectPath = std::string("staff_style[cmper=1]");
+    const auto sizePath = objectPath + ".note_font.font_size";
+    const auto useFontPath = objectPath + ".use_note_font";
+    const auto maskPath = objectPath + ".masks.float_notehead_font";
+    const Value storedZero(std::int64_t(0));
+    const Value materializedSize(std::int64_t(24));
+    ComparisonLeaves source{{useFontPath, {Value(false), "legacy-mus"}},
+                            {maskPath, {Value(true), "legacy-mus"}}};
+    const ComparisonLeaves companion{{useFontPath, {Value(false), {}}},
+                                     {maskPath, {Value(true), {}}}};
+    const auto disabledFontContext = [&] {
+        return DifferenceContext{sizePath,
+                                 DifferenceCategory::Differs,
+                                 "legacy-mus",
+                                 storedZero,
+                                 materializedSize,
+                                 source,
+                                 companion,
+                                 FormatEpoch::UncompressedLegacy,
+                                 ByteOrder::BigEndian,
+                                 nullptr,
+                                 report};
+    };
+    CHECK(classify(disabledFontContext()) == DifferenceClassification::DifferentDefaults);
+    source.at(useFontPath).first = Value(true);
+    CHECK_FALSE(classify(disabledFontContext()));
 }
 
 } // namespace

@@ -180,6 +180,14 @@ std::optional<std::string> reinterpretEncoding(const std::string& value,
     return text::toUtf8(bytes, targetBank, targetValue);
 }
 
+bool isWindowsAnsiReinterpretedAsMacRoman(std::string_view source, std::string_view companion)
+{
+    using Bank = TextChunk::CharsetBank;
+    const auto converted =
+        reinterpretEncoding(std::string(source), Bank::Windows, 0, Bank::MacOS, 0);
+    return converted && *converted != source && *converted == companion;
+}
+
 bool wrongPlatformEncodingGlitch(const std::vector<TextChunk>& source,
                                  const std::vector<TextChunk>& companion)
 {
@@ -590,9 +598,9 @@ std::optional<bool> compareStaffNameReferents(
     const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument)
 {
-    const bool nameField = path.starts_with("staff[") &&
-                           (path.ends_with(".full_name_text_id") ||
-                            path.ends_with(".abbrv_name_text_id"));
+    const bool staffLikePath = path.starts_with("staff[") || path.starts_with("staff_style[");
+    const bool nameField = staffLikePath && (path.ends_with(".full_name_text_id") ||
+                                             path.ends_with(".abbrv_name_text_id"));
     if (!nameField) return std::nullopt;
 
     const auto referencedText = [](const musx::dom::DocumentPtr& document,
