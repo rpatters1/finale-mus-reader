@@ -273,7 +273,7 @@ The final 67 unexpected post-Coda leaves resolved as follows:
   tablature fixtures—become true and are classified as `FinaleUpgradeLoss` through Finale 2008;
 - four Finale 97 `hideTimeSigsInParts` values now match after legacy behavior was corrected to follow
   the resolved `hideTimeSigs` value;
-- assignment-derived `hasStyles` values awaiting `StaffStyleAssign` recovery are classified as
+- pre-Finale-2000 `hasStyles` values awaiting alternate-notation synthesis are classified as
   dependent recovery rather than unexpected.
 
 The complete alternate-notation defaults and aggregate-control mappings remove 229 prior
@@ -535,11 +535,11 @@ The controlled Staff Style pairs resolve how `hasStyles` should be recovered. In
 adds one `staffStyleAssign` and `staffSpec.hasStyles`. In Finale 2011, defining the style still leaves
 `IS` unchanged, but assigning it sets only Staff word 5 bit `0x1000`, and the companion again writes
 the assignment and `hasStyles`. The 36-word Finale 2003 layout therefore refutes payload expansion
-as the raw-bit gate. Locating the later introduction would not affect recovery: once the separately
-scoped `StaffStyleAssign` class is recovered, assignment presence will refresh `hasStyles` for every
-source version. The Staff slice leaves it `Unmapped` until then, and coverage defers only that
-unmapped difference as awaiting dependent recovery. A calculated value with any other provenance
-remains subject to ordinary comparison.
+as the raw-bit gate. Locating the later introduction does not affect recovery: direct
+`StaffStyleAssign` presence now refreshes `hasStyles` for every source version. The remaining
+false-to-true differences are all pre-Finale-2000 and await synthesis from the older
+alternate-notation family; coverage classifies only those as dependent recovery. The assignment
+record evidence and counts are in [`staff_style_assign.md`](staff_style_assign.md).
 
 The separate Studio View Staff is byte-identical across the Finale 2006 pair. It is application-owned
 rather than authored score content. The reader continues to recover it on a best-effort basis, while

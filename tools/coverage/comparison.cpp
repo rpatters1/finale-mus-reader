@@ -18,6 +18,7 @@
 #include "coverage/common/font_info.h"
 #include "coverage/comparison_text.h"
 #include "coverage/identity.h"
+#include "coverage/schema.h"
 #include "coverage/support/source_gate.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/CommonClasses.h"
@@ -60,24 +61,6 @@ std::string_view trimWhitespace(std::string_view value)
     while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())))
         value.remove_suffix(1);
     return value;
-}
-
-std::string snakeToCamel(std::string_view value)
-{
-    std::string result;
-    bool uppercase = false;
-    for (const char character : value) {
-        if (character == '_') {
-            uppercase = true;
-        } else if (uppercase) {
-            result.push_back(
-                static_cast<char>(std::toupper(static_cast<unsigned char>(character))));
-            uppercase = false;
-        } else {
-            result.push_back(character);
-        }
-    }
-    return result;
 }
 
 bool isNoncontentKey(std::string_view key)
@@ -257,7 +240,7 @@ void collectLeaves(const Value& value, std::string path, std::string origin, boo
             if (isExcludedPath(childPath)) continue;
             std::string childOrigin = origin;
             if (includeOrigins) {
-                const auto camelOrigin = "origin_" + snakeToCamel(key);
+                const auto camelOrigin = originKeyForLeaf(key);
                 const auto suffixOrigin = key + "_origin";
                 if (const auto* camelFound = value.find(camelOrigin);
                     camelFound && camelFound->isString()) {

@@ -7,6 +7,7 @@
 #include "coverage/comparison.h"
 #include "coverage/comparison_text.h"
 #include "coverage/registry.h"
+#include "coverage/surveyors/shared/staff_style_semantics.h"
 #include "support/finale_version.h"
 
 namespace finale_mus_reader_tests
@@ -408,7 +409,7 @@ TEST_CASE("Finale 2000 through 2008 expand the note-attached-items setting "
         const auto *hasStyles =
             result.report.findField<Staff>("hasStyles", musx::dom::SCORE_PARTID, staffCmper1);
         REQUIRE(hasStyles);
-        CHECK(hasStyles->origin == ValueOrigin::Unmapped);
+        CHECK(hasStyles->origin == ValueOrigin::LegacyMusAdjusted);
     }
 }
 
@@ -2300,6 +2301,24 @@ TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
     REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].has_styles", "legacy-mus",
                                                   DifferenceCategory::Differs,
                                                   finale_mus_reader::FormatEpoch::ZlibLegacy)));
+    const Value noStyles{false};
+    const Value hasStyles{true};
+    const finale_mus_reader::SourceVersion finale98{
+        .major = finale_mus_reader::versions::finale98.major};
+    const DifferenceContext preFinale2000HasStyles{
+        "staff[cmper=1].has_styles",
+        DifferenceCategory::Differs,
+        "legacy-mus-adjusted",
+        noStyles,
+        hasStyles,
+        leaves,
+        leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+        finale_mus_reader::ByteOrder::BigEndian,
+        &finale98,
+        report};
+    REQUIRE(classifyStaffDifference(preFinale2000HasStyles) ==
+            DifferenceClassification::AwaitsDependentRecovery);
     REQUIRE_FALSE(classifyStaffDifference(context("staff[cmper=1].line_space", "unmapped",
                                                   DifferenceCategory::Differs,
                                                   finale_mus_reader::FormatEpoch::ZlibLegacy)));
@@ -2310,6 +2329,63 @@ TEST_CASE("Only derived Staff styles are deferred", "[coverage]")
     REQUIRE_FALSE(classifyStaffDifference(codaUnmapped));
     REQUIRE(classifyStaffDifference(derivedStyles) ==
             DifferenceClassification::AwaitsDependentRecovery);
+}
+
+TEST_CASE("Post-Finale-2000 verified assignment-source absence explains Staff hasStyles",
+          "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const Value disabled(false);
+    const Value enabled(true);
+    const ComparisonLeaves leaves;
+    const SourceVersion finale2000{.major = finale_mus_reader::versions::finale2000.major};
+    const SourceVersion finale2006{.major = finale_mus_reader::versions::finale2006.major};
+    const auto context = [&](const ImportReport& report, FormatEpoch epoch,
+                             const SourceVersion& version,
+                             std::string_view path = "staff[cmper=1].has_styles") {
+        return DifferenceContext{path,
+                                 DifferenceCategory::Differs,
+                                 "legacy-mus-adjusted",
+                                 disabled,
+                                 enabled,
+                                 leaves,
+                                 leaves,
+                                 epoch,
+                                 ByteOrder::BigEndian,
+                                 &version,
+                                 report};
+    };
+
+    ImportReport incompleteAudit(FormatEpoch::DclLegacy);
+    CHECK_FALSE(classifyStaffDifference(
+        context(incompleteAudit, FormatEpoch::DclLegacy, finale2006)));
+
+    ImportReport verifiedAbsent(FormatEpoch::DclLegacy);
+    verifiedAbsent.staffStyleAssignmentAuditComplete = true;
+    REQUIRE(classifyStaffDifference(context(verifiedAbsent, FormatEpoch::DclLegacy, finale2006)) ==
+            DifferenceClassification::FinaleUpgradeSynthesis);
+
+    ImportReport sourcePresent(FormatEpoch::DclLegacy);
+    sourcePresent.expectStaffStyleAssignments(0, 1, 1, false);
+    sourcePresent.staffStyleAssignmentAuditComplete = true;
+    CHECK_FALSE(classifyStaffDifference(
+        context(sourcePresent, FormatEpoch::DclLegacy, finale2006)));
+
+    ImportReport malformedSource(FormatEpoch::DclLegacy);
+    malformedSource.expectStaffStyleAssignments(0, 1, 0, true);
+    malformedSource.staffStyleAssignmentAuditComplete = true;
+    CHECK_FALSE(classifyStaffDifference(
+        context(malformedSource, FormatEpoch::DclLegacy, finale2006)));
+
+    ImportReport partSource(FormatEpoch::DclLegacy);
+    partSource.expectStaffStyleAssignments(3, 1, 1, false);
+    partSource.staffStyleAssignmentAuditComplete = true;
+    CHECK_FALSE(classifyStaffDifference(context(partSource, FormatEpoch::DclLegacy, finale2006,
+        "staff[part_id=3,cmper=1].has_styles")));
+
+    CHECK(classifyStaffDifference(
+              context(verifiedAbsent, FormatEpoch::UncompressedLegacy, finale2000)) ==
+          DifferenceClassification::FinaleUpgradeSynthesis);
 }
 
 TEST_CASE("Legacy note-attached-items expansion loses fallback expression display", "[coverage]")
@@ -3305,6 +3381,31 @@ TEST_CASE("StaffStyle names compare without surrounding whitespace", "[coverage]
     const auto &stats = comparison.classes.at("others").at("staff_style");
     CHECK(stats.same == 1);
     CHECK(stats.unexpected == 0);
+}
+
+TEST_CASE("StaffStyle comparison ignores tablature fields outside Tablature notation",
+          "[coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    const auto snapshot = [](Staff::NotationStyle notation, std::int64_t offset) {
+        return SurveySnapshot{{"staff_style",
+                               Value::Array{Value::Object{
+                                   {"cmper", Value(1)},
+                                   {"notation_style", Value(static_cast<std::int64_t>(notation))},
+                                   {"vert_tab_num_off", Value(offset)}}}}};
+    };
+    const auto unexpected = [&](Staff::NotationStyle notation) {
+        ImportReport report(FormatEpoch::ZlibLegacy);
+        const auto comparison = compareSnapshots(
+            snapshot(notation, 0), snapshot(notation, -1024), emptyStaffDocument(),
+            emptyStaffDocument(), FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr,
+            report);
+        return comparison.classes.at("others").at("staff_style").unexpected;
+    };
+
+    CHECK(unexpected(Staff::NotationStyle::Standard) == 0);
+    CHECK(unexpected(Staff::NotationStyle::Percussion) == 0);
+    CHECK(unexpected(Staff::NotationStyle::Tablature) == 1);
 }
 
 TEST_CASE("Finale 2009 beta legacy StaffStyle layouts are not compared", "[coverage]")

@@ -4,7 +4,8 @@
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "coverage/support/source_gate.h"
-#include "coverage/surveyors/others/staff_fields.h"
+#include "coverage/surveyors/shared/staff_fields.h"
+#include "coverage/surveyors/shared/staff_style_semantics.h"
 #include "musx/musx.h"
 
 #include <optional>
@@ -126,6 +127,33 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
         context.origin == "unmapped" && comparisonPathStartsWith(context.path, "staff[") &&
         comparisonPathEndsWith(context.path, ".has_styles")) {
         return DifferenceClassification::AwaitsDependentRecovery;
+    }
+    if (deferredRecoveryClassified() && context.category == Differs &&
+        context.origin == "legacy-mus-adjusted" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool() &&
+        !context.sourceValue.asBool() && context.companionValue.isBool() &&
+        context.companionValue.asBool() &&
+        sourcePredatesVersion(context.epoch, context.sourceVersion,
+                              finale_mus_reader::FormatEpoch::UncompressedLegacy,
+                              finale_mus_reader::versions::finale2000)) {
+        return DifferenceClassification::AwaitsDependentRecovery;
+    }
+    if (context.category == Differs && context.origin == "legacy-mus-adjusted" &&
+        comparisonPathStartsWith(context.path, "staff[") &&
+        comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool() &&
+        !context.sourceValue.asBool() && context.companionValue.isBool() &&
+        context.companionValue.asBool() &&
+        sourceAtOrAfter(context.epoch, context.sourceVersion,
+                        finale_mus_reader::FormatEpoch::UncompressedLegacy,
+                        finale_mus_reader::versions::finale2000)) {
+        const auto partId = staff_fields::partIdFromComparisonPath(context.path);
+        const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
+        if (context.sourceReport.staffStyleAssignmentAuditComplete && partId && staffId &&
+            !context.sourceReport.findStaffStyleAssignmentAudit(
+                *partId, static_cast<musx::dom::Cmper>(*staffId))) {
+            return DifferenceClassification::FinaleUpgradeSynthesis;
+        }
     }
     if (context.category == Differs && context.origin == "finale27-default" &&
         comparisonPathStartsWith(context.path, "staff[")) {

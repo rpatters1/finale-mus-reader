@@ -61,9 +61,10 @@ classifySymbolFontConversionLoss(const DifferenceContext& context)
 
 bool isClassifierMetadataPath(std::string_view path)
 {
-    return path.size() > fontDefinitionIsSymbolField.size() &&
-        path[path.size() - fontDefinitionIsSymbolField.size() - 1] == '.' &&
-        path.ends_with(fontDefinitionIsSymbolField);
+    return path.find("._classifier_") != std::string_view::npos ||
+           (path.size() > fontDefinitionIsSymbolField.size() &&
+            path[path.size() - fontDefinitionIsSymbolField.size() - 1] == '.' &&
+            path.ends_with(fontDefinitionIsSymbolField));
 }
 
 std::optional<DifferenceClassification>

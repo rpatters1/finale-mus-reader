@@ -11,12 +11,13 @@ not put a field on this list. `[x]` marks a recovered field; `[~]` marks a field
 unrecoverable in the named structure and supplied through legacy behavior or the pinned baseline.
 Retain resolved items rather than removing them.
 
-Current status: `hasStyles` is the only unresolved Staff field. Every `[~]` item below has an
-intentional fallback disposition and is not outstanding recovery work.
+Current status: `hasStyles` is derived for direct Staff Style assignments but remains unresolved
+for pre-Finale-2000 alternate-notation synthesis. Every `[~]` item below has an intentional
+fallback disposition and is not outstanding recovery work.
 
 ## All structures
 
-- [ ] `hasStyles` — calculate from Staff Style assignments once they are recovered.
+- [ ] `hasStyles` — direct `Sy` assignments are calculated; pre-Finale-2000 synthesis remains.
 
 ## Before the Finale 2012 extension
 

@@ -38,6 +38,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Custom smart-shape lines, guitar-bend boundary | [`smart_shape_custom_lines.md`](smart_shape_custom_lines.md) |
 | Staff base, later extensions, Coda predecessor, and companion differences | [`staff.md`](staff.md) |
 | Staff-list identities, text width, forced arrays, and category baseline fill | Category: [`staff_list.md`](staff_list.md); repeat: [`repeat_options.md`](repeat_options.md) |
+| Staff Style assignment layout, split assignments, and companion-only accounting | [`staff_style_assign.md`](staff_style_assign.md) |
 | TextBlock storage and assembly | [`text_blocks.md`](text_blocks.md) |
 | Text expression epochs, synthesis, and companion IDs | [`text_expression_defs.md`](text_expression_defs.md) |
 | Text pool, binary command table, Coda-banner pool walk | [`text_pool.md`](text_pool.md) |

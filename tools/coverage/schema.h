@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cctype>
 #include <concepts>
 #include <functional>
 #include <optional>
@@ -18,6 +19,24 @@
 
 namespace finale_mus_reader {
 namespace coverage {
+
+inline std::string originKeyForLeaf(std::string_view leaf)
+{
+    std::string result = "origin_";
+    bool uppercase = false;
+    for (const char character : leaf) {
+        if (character == '_') {
+            uppercase = true;
+        } else if (uppercase) {
+            result.push_back(
+                static_cast<char>(std::toupper(static_cast<unsigned char>(character))));
+            uppercase = false;
+        } else {
+            result.push_back(character);
+        }
+    }
+    return result;
+}
 
 template <typename Accessor>
 struct Field

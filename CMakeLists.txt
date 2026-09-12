@@ -134,8 +134,8 @@ else()
         set(FINALE_MUS_READER_MUSXDOM_ORIGIN "local source tree")
     else()
         FetchContent_Declare(musxdom
-            GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG b1658597e23cc37738e63a2f41085933bf02f179
+            GIT_REPOSITORY https://github.com/openmusx/musxdom.git
+            GIT_TAG 122aaa24c32e4c796fbce959818f39f5b2186dee
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -223,6 +223,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/smart_shape_custom_lines.cpp
     src/import/others/staff.cpp
     src/import/others/staff_list.cpp
+    src/import/others/staff_style_assign.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
     src/import/support/embedded_graphics.cpp
