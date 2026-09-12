@@ -105,6 +105,8 @@ struct ComparisonPreparationContext
     SurveySnapshot& companion;
     std::map<ComparisonTransformation, std::uint64_t>& transformations;
     FormatEpoch sourceEpoch;
+    const SourceVersion* sourceVersion{};
+    const ImportReport* sourceReport{};
 };
 
 using ComparisonPreparationFn = void (*)(ComparisonPreparationContext& context);

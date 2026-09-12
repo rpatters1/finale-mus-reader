@@ -135,7 +135,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/rpatters1/musxdom.git
-            GIT_TAG 3af7035aaa7d61c3d82af378f3557e692b0f62c9
+            GIT_TAG b1658597e23cc37738e63a2f41085933bf02f179
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")

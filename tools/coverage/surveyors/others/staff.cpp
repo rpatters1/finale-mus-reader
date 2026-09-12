@@ -4,10 +4,9 @@
 #include "coverage/registry.h"
 #include "coverage/schema.h"
 #include "coverage/support/source_gate.h"
+#include "coverage/surveyors/others/staff_fields.h"
 #include "musx/musx.h"
 
-#include <charconv>
-#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -19,37 +18,10 @@ using namespace finale_mus_reader::coverage;
 using FretInstrumentSurveyTarget = musx::dom::others::FretInstrument;
 using StaffSurveyTarget = musx::dom::others::Staff;
 
-[[nodiscard]] std::optional<musx::dom::StaffCmper> staffIdFromComparisonPath(
-    std::string_view path)
-{
-    constexpr std::string_view cmperKey = "cmper=";
-    const auto identityBegin = path.find('[');
-    const auto identityEnd = path.find(']', identityBegin);
-    if (identityBegin == std::string_view::npos || identityEnd == std::string_view::npos) {
-        return std::nullopt;
-    }
-    const auto valueBegin = path.find(cmperKey, identityBegin + 1);
-    if (valueBegin == std::string_view::npos || valueBegin >= identityEnd) return std::nullopt;
-    const auto digitsBegin = valueBegin + cmperKey.size();
-    const auto digitsEnd = path.find_first_of(",]", digitsBegin);
-    if (digitsEnd == std::string_view::npos || digitsEnd > identityEnd) return std::nullopt;
-
-    using UnsignedStaffCmper = std::make_unsigned_t<musx::dom::StaffCmper>;
-    UnsignedStaffCmper value{};
-    const auto [parsedEnd, error] =
-        std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, value);
-    if (error != std::errc{} || parsedEnd != path.data() + digitsEnd ||
-        value > static_cast<UnsignedStaffCmper>(
-                    (std::numeric_limits<musx::dom::StaffCmper>::max)())) {
-        return std::nullopt;
-    }
-    return static_cast<musx::dom::StaffCmper>(value);
-}
-
 [[nodiscard]] bool companionOmitsStaffFromScrollView(const DifferenceContext& context)
 {
     if (!context.companionDocument) return false;
-    const auto staffId = staffIdFromComparisonPath(context.path);
+    const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
     if (!staffId) return false;
     return !context.companionDocument->getScrollViewStaves(musx::dom::SCORE_PARTID)
                 .getIndexForStaff(*staffId);
@@ -57,7 +29,7 @@ using StaffSurveyTarget = musx::dom::others::Staff;
 
 [[nodiscard]] bool sourceStaffUsesSixWordFallbacks(const DifferenceContext& context)
 {
-    const auto staffId = staffIdFromComparisonPath(context.path);
+    const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
     if (!staffId) return false;
     const auto* restOffset = context.sourceReport.findField<StaffSurveyTarget>(
         "dwRestOffset", musx::dom::SCORE_PARTID, *staffId);
@@ -96,15 +68,13 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
     constexpr std::string_view breakTabLinesAtNotesSuffix = ".break_tab_lines_at_notes";
     const auto noneHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::None);
     const auto scoreHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::Score);
-    if (context.category == Differs && comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, noteFontSizeSuffix)) {
-        const auto objectPath =
-            context.path.substr(0, context.path.size() - noteFontSizeSuffix.size());
-        const auto useNoteFont = context.source.find(std::string(objectPath) + ".use_note_font");
-        if (useNoteFont != context.source.end() && useNoteFont->second.first.isBool() &&
-            !useNoteFont->second.first.asBool()) {
-            return DifferenceClassification::DifferentDefaults;
-        }
+    if (const auto classification =
+            staff_fields::classifyDisabledNoteFontSize(context, "staff[")) {
+        return classification;
+    }
+    if (const auto classification =
+            staff_fields::classifyNoteAttachedItemsExpressionUpgradeLoss(context, "staff[")) {
+        return classification;
     }
     if (deferredRecoveryClassified() && context.category == Differs &&
         context.origin == "legacy-mus" && comparisonPathStartsWith(context.path, "staff[")) {

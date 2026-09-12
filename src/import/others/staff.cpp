@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include "import/support/enigma_text.h"
@@ -29,6 +30,7 @@ namespace
 {
 
 using StaffTarget = musx::dom::others::Staff;
+using StaffStyleTarget = musx::dom::others::StaffStyle;
 using FretInstrumentTarget = musx::dom::others::FretInstrument;
 
 enum class StaffRepeatDotFallback
@@ -57,8 +59,10 @@ struct StaffLegacySemantics
 {
     bool hasAlternateNotationProperties{};
     bool usesAggregateAlternateNotationItems{};
+    bool synthesizesAltHideSmartShapes{};
     bool usesBooleanHideMode{};
     bool hideNoteAttachedItems{};
+    bool noteShapeNotation{};
     std::optional<std::uint8_t> singleStringTabPitch;
     bool legacySingleStringTabForm{};
 };
@@ -156,6 +160,8 @@ void applyStaffAlternateNotationLegacyBehavior(StaffTarget &target)
 
 constexpr records::LegacyTag staffTag = records::packTag("IS");
 constexpr records::LegacyTag staffClass = 0x00e7;
+constexpr records::LegacyTag staffStyleTag = records::packTag("SY");
+constexpr records::LegacyTag staffStyleClass = 0x00e8;
 constexpr records::LegacyTag codaStaffAttributesTag = records::packTag("IA");
 constexpr records::LegacyTag legacyStaffFullNameTag = records::packTag("IN");
 constexpr records::LegacyTag legacyStaffAbbreviatedNameTag = records::packTag("in");
@@ -206,6 +212,112 @@ constexpr std::size_t autoNumberingSlot = 37;
 constexpr std::size_t instrumentUuidSlot = 40;
 constexpr std::size_t instrumentUuidBytes = 16;
 constexpr std::size_t finale2012StaffBytes = instrumentUuidSlot * 2 + instrumentUuidBytes;
+
+constexpr std::size_t staffStyleMetadataWords = 6;
+constexpr std::size_t staffStyleMetadataBytes = staffStyleMetadataWords * 2;
+constexpr std::size_t staffStyleNarrowNameBytes = 48;
+constexpr std::size_t staffStyleNarrowTrailerBytes =
+    staffStyleMetadataBytes + staffStyleNarrowNameBytes;
+constexpr std::size_t staffStyleLargestNarrowRecordBytes = 144;
+constexpr std::size_t staffStyleUnicodeNameBytes = 192;
+constexpr std::size_t staffStyleUnicodeTrailerBytes =
+    staffStyleMetadataBytes + staffStyleUnicodeNameBytes;
+constexpr std::size_t staffStyleSmallestUnicodeRecordBytes =
+    finale2012StaffBytes + staffStyleUnicodeTrailerBytes;
+constexpr std::size_t staffStyleFirstMaskSlot = 0;
+constexpr std::size_t staffStyleSecondMaskSlot = 1;
+constexpr std::size_t staffStyleThirdMaskSlot = 2;
+constexpr std::size_t staffStyleFlagsSlot = 5;
+constexpr std::uint16_t staffStyleAlternateNotationMask = 0x1000;
+
+struct StaffStyleMaskField
+{
+    const char *name;
+    bool StaffStyleTarget::Masks::*member;
+    std::size_t slot;
+    std::uint16_t bit;
+    bool includedByAlternateNotation{};
+};
+
+struct StaffStyleTrailerLayout
+{
+    std::size_t trailerBytes;
+    std::size_t nameBytes;
+    bool unicodeName;
+};
+
+constexpr auto staffStyleNegTimeMaskMember = &StaffStyleTarget::Masks::negTime;
+constexpr auto staffStyleNegTimePartsMaskMember = &StaffStyleTarget::Masks::negTimeParts;
+
+[[nodiscard]] std::optional<StaffStyleTrailerLayout> staffStyleTrailerLayout(
+    std::size_t recordBytes, const std::optional<SourceVersion> &version)
+{
+    if (recordBytes >= staffStyleSmallestUnicodeRecordBytes)
+        return StaffStyleTrailerLayout{staffStyleUnicodeTrailerBytes, staffStyleUnicodeNameBytes,
+                                       true};
+    if (recordBytes <= staffStyleLargestNarrowRecordBytes)
+        return StaffStyleTrailerLayout{staffStyleNarrowTrailerBytes, staffStyleNarrowNameBytes,
+                                       false};
+    return versions::storesUnicodeCodepoints(version)
+               ? std::optional{StaffStyleTrailerLayout{staffStyleUnicodeTrailerBytes,
+                                                       staffStyleUnicodeNameBytes, true}}
+               : std::optional{StaffStyleTrailerLayout{staffStyleNarrowTrailerBytes,
+                                                       staffStyleNarrowNameBytes, false}};
+}
+
+constexpr StaffStyleMaskField staffStyleMaskFields[] = {
+    {"floatNoteheadFont", &StaffStyleTarget::Masks::floatNoteheadFont, staffStyleFirstMaskSlot,
+     0x0001},
+    {"flatBeams", &StaffStyleTarget::Masks::flatBeams, staffStyleFirstMaskSlot, 0x0002},
+    {"notationStyle", &StaffStyleTarget::Masks::notationStyle, staffStyleFirstMaskSlot, 0x0004},
+    {"blankMeasureRest", &StaffStyleTarget::Masks::blankMeasureRest, staffStyleFirstMaskSlot,
+     0x0010},
+    {"noOptimize", &StaffStyleTarget::Masks::noOptimize, staffStyleFirstMaskSlot, 0x0020},
+    {"defaultClef", &StaffStyleTarget::Masks::defaultClef, staffStyleFirstMaskSlot, 0x0040},
+    {"staffType", &StaffStyleTarget::Masks::staffType, staffStyleFirstMaskSlot, 0x0080},
+    {"transposition", &StaffStyleTarget::Masks::transposition, staffStyleFirstMaskSlot, 0x0100},
+    {"blineBreak", &StaffStyleTarget::Masks::blineBreak, staffStyleFirstMaskSlot, 0x0200},
+    {"rbarBreak", &StaffStyleTarget::Masks::rbarBreak, staffStyleFirstMaskSlot, 0x0400},
+    {"negMnumb", &StaffStyleTarget::Masks::negMnumb, staffStyleFirstMaskSlot, 0x1000},
+    {"negRepeat", &StaffStyleTarget::Masks::negRepeat, staffStyleFirstMaskSlot, 0x2000},
+    {"negNameScore", &StaffStyleTarget::Masks::negNameScore, staffStyleFirstMaskSlot, 0x4000},
+    {"hideBarlines", &StaffStyleTarget::Masks::hideBarlines, staffStyleFirstMaskSlot, 0x8000},
+    {"fullName", &StaffStyleTarget::Masks::fullName, staffStyleSecondMaskSlot, 0x0001},
+    {"abrvName", &StaffStyleTarget::Masks::abrvName, staffStyleSecondMaskSlot, 0x0002},
+    {"floatKeys", &StaffStyleTarget::Masks::floatKeys, staffStyleSecondMaskSlot, 0x0004},
+    {"floatTime", &StaffStyleTarget::Masks::floatTime, staffStyleSecondMaskSlot, 0x0008},
+    {"hideRptBars", &StaffStyleTarget::Masks::hideRptBars, staffStyleSecondMaskSlot, 0x0010},
+    {"negKey", &StaffStyleTarget::Masks::negKey, staffStyleSecondMaskSlot, 0x0020},
+    {"negTime", staffStyleNegTimeMaskMember, staffStyleSecondMaskSlot, 0x0040},
+    {"negClef", &StaffStyleTarget::Masks::negClef, staffStyleSecondMaskSlot, 0x0080},
+    {"hideStaff", &StaffStyleTarget::Masks::hideStaff, staffStyleSecondMaskSlot, 0x0100},
+    {"noKey", &StaffStyleTarget::Masks::noKey, staffStyleSecondMaskSlot, 0x0200},
+    {"fullNamePos", &StaffStyleTarget::Masks::fullNamePos, staffStyleSecondMaskSlot, 0x0400},
+    {"abrvNamePos", &StaffStyleTarget::Masks::abrvNamePos, staffStyleSecondMaskSlot, 0x0800},
+    {"altNotation", &StaffStyleTarget::Masks::altNotation, staffStyleSecondMaskSlot,
+     staffStyleAlternateNotationMask},
+    {"showTies", &StaffStyleTarget::Masks::showTies, staffStyleSecondMaskSlot, 0x2000},
+    {"showDots", &StaffStyleTarget::Masks::showDots, staffStyleSecondMaskSlot, 0x4000},
+    {"showRests", &StaffStyleTarget::Masks::showRests, staffStyleSecondMaskSlot, 0x8000},
+    {"showStems", &StaffStyleTarget::Masks::showStems, staffStyleThirdMaskSlot, 0x0001},
+    {"hideChords", &StaffStyleTarget::Masks::hideChords, staffStyleThirdMaskSlot, 0x0002, true},
+    {"hideFretboards", &StaffStyleTarget::Masks::hideFretboards, staffStyleThirdMaskSlot, 0x0004,
+     true},
+    {"hideLyrics", &StaffStyleTarget::Masks::hideLyrics, staffStyleThirdMaskSlot, 0x0008},
+    {"showNameParts", &StaffStyleTarget::Masks::showNameParts, staffStyleThirdMaskSlot, 0x0010},
+    {"showNoteColors", &StaffStyleTarget::Masks::showNoteColors, staffStyleThirdMaskSlot, 0x0020},
+    {"hideStaffLines", &StaffStyleTarget::Masks::hideStaffLines, staffStyleThirdMaskSlot, 0x0040},
+    {"useNoteShapes", &StaffStyleTarget::Masks::useNoteShapes, staffStyleThirdMaskSlot, 0x0080},
+    {"hideKeySigsShowAccis", &StaffStyleTarget::Masks::hideKeySigsShowAccis,
+     staffStyleThirdMaskSlot, 0x0100},
+    {"redisplayLayerAccis", &StaffStyleTarget::Masks::redisplayLayerAccis, staffStyleThirdMaskSlot,
+     0x0200},
+    {"negTimeParts", staffStyleNegTimePartsMaskMember, staffStyleThirdMaskSlot, 0x0400},
+};
+
+constexpr std::uint16_t staffStyleCopyableBit = 0x0002;
+constexpr std::uint16_t staffStyleAddToMenuBit = 0x0004;
+constexpr std::uint16_t staffStyleExplicitControlsBit = 0x0001;
 
 constexpr StaffEfixField staffNoStemOffsetFinale27DefaultFields[] = {
     {"horzStemOffUp", &StaffTarget::horzStemOffUp, horizontalStemUpSlot},
@@ -420,46 +532,42 @@ void synthesizeLegacyStaffName(const ImportContext &context, StaffTarget &staff,
     block->wordWrap = true;
     staff.*nameMember = *blockNumber;
 
-    withReporting(
-        context.report,
-        [&]<typename Reporting>(Reporting &reporting)
-        {
-            const auto &row = rows.front();
-            const auto rawKey =
-                reporting.template instanceKey<BlockText>(musx::dom::SCORE_PARTID, *textNumber);
-            const auto blockKey =
-                reporting.template instanceKey<TextBlock>(staff.getSourcePartId(), *blockNumber);
-            const auto staffKey = reporting.template instanceKey<StaffTarget>(
-                staff.getSourcePartId(), staff.getCmper());
-            reporting.report().setInstanceOrigin(rawKey, Reporting::Origin::LegacyMus);
-            reporting.report().setInstanceOrigin(blockKey, Reporting::Origin::LegacyBehavior);
-            reporting.textField(rawKey, "text", converted);
-            reporting.report().setField(rawKey, "text",
-                                        {Reporting::Origin::LegacyMus, row.blockOffset,
-                                         row.decodedOffset,
-                                         static_cast<std::int64_t>(rawText->text.size()), tag});
-            reporting.report().setField(
-                staffKey,
-                nameMember == &StaffTarget::fullNameTextId ? "fullNameTextId" : "abbrvNameTextId",
-                {Reporting::Origin::LegacyBehavior, row.blockOffset, row.decodedOffset,
-                 *blockNumber, tag});
-            reporting.report().setField(blockKey, "textId",
-                                        {Reporting::Origin::LegacyBehavior, row.blockOffset,
-                                         row.decodedOffset, *textNumber, tag});
-            const auto behavior = [&](const char *field, std::int64_t value)
-            {
-                reporting.report().setField(blockKey, field,
-                                            {Reporting::Origin::LegacyBehavior, 0, 0, value});
-            };
-            behavior("lineSpacingPercentage", 100);
-            behavior("shapeId", 0);
-            behavior("newPos36", 1);
-            behavior("showShape", 1);
-            behavior("noExpandSingleWord", 0);
-            behavior("wordWrap", 1);
-            behavior("roundCorners", 0);
-            behavior("cornerRadius", 0);
-        });
+    withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
+        const auto &row = rows.front();
+        const auto rawKey =
+            reporting.template instanceKey<BlockText>(musx::dom::SCORE_PARTID, *textNumber);
+        const auto blockKey =
+            reporting.template instanceKey<TextBlock>(staff.getSourcePartId(), *blockNumber);
+        const auto staffKey =
+            reporting.template instanceKey<StaffTarget>(staff.getSourcePartId(), staff.getCmper());
+        reporting.report().setInstanceOrigin(rawKey, Reporting::Origin::LegacyMus);
+        reporting.report().setInstanceOrigin(blockKey, Reporting::Origin::LegacyBehavior);
+        reporting.textField(rawKey, "text", converted);
+        reporting.report().setField(rawKey, "text",
+                                    {Reporting::Origin::LegacyMus, row.blockOffset,
+                                     row.decodedOffset,
+                                     static_cast<std::int64_t>(rawText->text.size()), tag});
+        reporting.report().setField(staffKey,
+                                    nameMember == &StaffTarget::fullNameTextId ? "fullNameTextId"
+                                                                               : "abbrvNameTextId",
+                                    {Reporting::Origin::LegacyBehavior, row.blockOffset,
+                                     row.decodedOffset, *blockNumber, tag});
+        reporting.report().setField(blockKey, "textId",
+                                    {Reporting::Origin::LegacyBehavior, row.blockOffset,
+                                     row.decodedOffset, *textNumber, tag});
+        const auto behavior = [&](const char *field, std::int64_t value) {
+            reporting.report().setField(blockKey, field,
+                                        {Reporting::Origin::LegacyBehavior, 0, 0, value});
+        };
+        behavior("lineSpacingPercentage", 100);
+        behavior("shapeId", 0);
+        behavior("newPos36", 1);
+        behavior("showShape", 1);
+        behavior("noExpandSingleWord", 0);
+        behavior("wordWrap", 1);
+        behavior("roundCorners", 0);
+        behavior("cornerRadius", 0);
+    });
 
     context.document->getTexts()->add(BlockText::XmlNodeName, std::move(rawText));
     context.document->getOthers()->add(TextBlock::XmlNodeName, std::move(block));
@@ -628,13 +736,25 @@ void decodeStaffTransposition(const std::shared_ptr<StaffTarget> &target, std::u
     return result;
 }
 
-[[nodiscard]] StaffTarget::NotationStyle notationStyle(std::uint16_t flags)
+struct DecodedStaffNotation
 {
+    StaffTarget::NotationStyle notationStyle{};
+    bool useNoteShapes{};
+    bool noteShapeNotation{};
+};
+
+[[nodiscard]] DecodedStaffNotation decodeStaffNotation(std::uint16_t flags,
+                                                       bool usesLegacyNotationStyles)
+{
+    const auto useNoteShapes = bool(flags & useNoteShapesMask);
+    StaffTarget::NotationStyle notationStyle{};
     if (flags & percussionNotationMask)
-        return StaffTarget::NotationStyle::Percussion;
-    if (flags & tablatureNotationMask)
-        return StaffTarget::NotationStyle::Tablature;
-    return StaffTarget::NotationStyle::Standard;
+        notationStyle = StaffTarget::NotationStyle::Percussion;
+    else if (flags & tablatureNotationMask)
+        notationStyle = StaffTarget::NotationStyle::Tablature;
+    return {notationStyle, useNoteShapes,
+            usesLegacyNotationStyles && notationStyle == StaffTarget::NotationStyle::Standard &&
+                useNoteShapes};
 }
 
 [[nodiscard]] musx::dom::StemDirection stemDirection(std::uint16_t flags)
@@ -681,6 +801,90 @@ void reportStaffField(Reporting &reporting, const typename Reporting::InstanceKe
         key, Reporting::memberName(member),
         typename Reporting::FieldInfo{origin, row.blockOffset, row.decodedOffset + rowByteOffset,
                                       static_cast<std::int64_t>(value), source.identity});
+}
+
+void decodeStaffStyleTrailer(const ImportContext &context,
+                             const std::shared_ptr<StaffStyleTarget> &target,
+                             std::span<const std::uint8_t> payload, std::size_t staffPayloadBytes,
+                             const StaffStyleTrailerLayout &layout)
+{
+    target->masks = std::make_shared<StaffStyleTarget::Masks>(target);
+    const auto metadata = payload.subspan(staffPayloadBytes, staffStyleMetadataBytes);
+    const auto word = [&](std::size_t slot) {
+        return payloadWord(metadata, slot * 2, context.profile.byteOrder);
+    };
+    const auto alternateNotation = word(staffStyleSecondMaskSlot) & staffStyleAlternateNotationMask;
+    for (const auto &field : staffStyleMaskFields)
+        target->masks.get()->*field.member =
+            (word(field.slot) & field.bit) ||
+            (field.includedByAlternateNotation && alternateNotation);
+    target->masks.get()->*staffStyleNegTimePartsMaskMember =
+        target->masks.get()->*staffStyleNegTimeMaskMember;
+    const auto flags = word(staffStyleFlagsSlot);
+    target->copyable = (flags & staffStyleCopyableBit) ||
+                       (!(flags & staffStyleExplicitControlsBit) && alternateNotation);
+    // Without the low marker, menu inclusion uses the legacy implicit-on
+    // representation.
+    target->addToMenu =
+        !(flags & staffStyleExplicitControlsBit) || (flags & staffStyleAddToMenuBit);
+    const auto name =
+        payload.subspan(staffPayloadBytes + staffStyleMetadataBytes, layout.nameBytes);
+    target->styleName = text::normalizeLineBreaks(
+        layout.unicodeName
+            ? text::utf16LeToUtf8(name)
+            : text::toUtf8(payloadString(name, 0, name.size()), context.profile.platform));
+}
+
+[[nodiscard]] bool applyLegacyStaffStyleNoteShapeMasks(StaffStyleTarget &target,
+                                                       bool noteShapeNotation)
+{
+    if (!noteShapeNotation || !target.masks->notationStyle)
+        return false;
+    // The legacy source model groups Note Shapes with the notation styles. The
+    // modern model separates that Standard-notation case from the
+    // instrument-changing notation-style mask.
+    target.masks->notationStyle = false;
+    target.masks->useNoteShapes = true;
+    return true;
+}
+
+template <typename Reporting>
+void reportStaffStyleTrailer(Reporting &reporting, const StaffStyleTarget &target,
+                             const RecordFamilySource &source,
+                             std::span<const records::LegacyRow> rows,
+                             std::size_t staffPayloadBytes, bool adjustedNoteShapeMasks)
+{
+    const auto key = reporting.template instanceKey<StaffStyleTarget>(target.getSourcePartId(),
+                                                                      target.getCmper());
+    const auto metadataSlot = staffPayloadBytes / 2;
+    for (const auto &field : staffStyleMaskFields)
+    {
+        const auto member = std::string("masks->") + field.name;
+        if (field.member == staffStyleNegTimePartsMaskMember)
+        {
+            reporting.report().setField(key, Reporting::memberName(member.c_str()),
+                                        {Reporting::Origin::LegacyBehavior, 0, 0,
+                                         target.masks.get()->*staffStyleNegTimePartsMaskMember});
+            continue;
+        }
+        const auto isAdjustedNoteShapeMask =
+            adjustedNoteShapeMasks && (field.member == &StaffStyleTarget::Masks::notationStyle ||
+                                       field.member == &StaffStyleTarget::Masks::useNoteShapes);
+        const auto sourceSlot = isAdjustedNoteShapeMask ? staffStyleFirstMaskSlot
+                                : field.includedByAlternateNotation && target.masks->altNotation
+                                    ? staffStyleSecondMaskSlot
+                                    : field.slot;
+        reportStaffField(reporting, key, source, rows, member.c_str(), metadataSlot + sourceSlot,
+                         target.masks.get()->*field.member,
+                         isAdjustedNoteShapeMask ? Reporting::Origin::LegacyMusAdjusted
+                                                 : Reporting::Origin::LegacyMus);
+    }
+    reportStaffField(reporting, key, source, rows, "copyable", metadataSlot + staffStyleFlagsSlot,
+                     target.copyable);
+    reportStaffField(reporting, key, source, rows, "addToMenu", metadataSlot + staffStyleFlagsSlot,
+                     target.addToMenu);
+    reportStaffField(reporting, key, source, rows, "styleName",
+                     metadataSlot + staffStyleMetadataWords, target.styleName.size());
 }
 
 template <typename Reporting>
@@ -774,33 +978,26 @@ void synthesizeLegacySingleStringFretInstrument(const ImportContext &context,
     instrument->strings.push_back(std::move(string));
     staff->fretInstId = instrumentId;
 
-    withReporting(
-        context.report,
-        [&]<typename Reporting>(Reporting &reporting)
-        {
-            const auto staffKey = reporting.template instanceKey<StaffTarget>(
-                staff->getSourcePartId(), staff->getCmper());
-            const auto instrumentKey = reporting.template instanceKey<FretInstrumentTarget>(
-                musx::dom::SCORE_PARTID, instrumentId);
-            reporting.report().setField(staffKey, "fretInstId",
-                                        {Reporting::Origin::LegacyBehavior, row.blockOffset,
-                                         row.decodedOffset + pitchByteOffset, instrumentId,
-                                         sourceTag});
-            reporting.report().setInstanceOrigin(instrumentKey, Reporting::Origin::LegacyBehavior);
-            const auto stored = [&](std::string member, auto value)
-            {
-                reporting.report().setField(instrumentKey, std::move(member),
-                                            {Reporting::Origin::LegacyMus, row.blockOffset,
-                                             row.decodedOffset + pitchByteOffset, value,
-                                             sourceTag});
-            };
-            const auto behavior = [&](std::string member, auto value)
-            {
-                reporting.report().setField(instrumentKey, std::move(member),
-                                            {Reporting::Origin::LegacyBehavior, 0, 0, value});
-            };
-            reportFretInstrumentFields(*instrument, false, stored, behavior);
-        });
+    withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
+        const auto staffKey = reporting.template instanceKey<StaffTarget>(staff->getSourcePartId(),
+                                                                          staff->getCmper());
+        const auto instrumentKey = reporting.template instanceKey<FretInstrumentTarget>(
+            musx::dom::SCORE_PARTID, instrumentId);
+        reporting.report().setField(staffKey, "fretInstId",
+                                    {Reporting::Origin::LegacyBehavior, row.blockOffset,
+                                     row.decodedOffset + pitchByteOffset, instrumentId, sourceTag});
+        reporting.report().setInstanceOrigin(instrumentKey, Reporting::Origin::LegacyBehavior);
+        const auto stored = [&](std::string member, auto value) {
+            reporting.report().setField(instrumentKey, std::move(member),
+                                        {Reporting::Origin::LegacyMus, row.blockOffset,
+                                         row.decodedOffset + pitchByteOffset, value, sourceTag});
+        };
+        const auto behavior = [&](std::string member, auto value) {
+            reporting.report().setField(instrumentKey, std::move(member),
+                                        {Reporting::Origin::LegacyBehavior, 0, 0, value});
+        };
+        reportFretInstrumentFields(*instrument, false, stored, behavior);
+    });
 
     others.add(FretInstrumentTarget::XmlNodeName, std::move(instrument));
 }
@@ -811,36 +1008,31 @@ void reportStaffTransposition(Reporting &reporting, const StaffTarget &target,
                               const RecordFamilySource &source,
                               std::span<const records::LegacyRow> rows, std::size_t slot)
 {
-    if (!target.transposition)
-        return;
+    const auto transposition = target.transposition;
     reportStaffField(reporting, key, source, rows, "transposition.setToClef", slot,
-                     target.transposition->setToClef);
+                     transposition ? transposition->setToClef : false);
     reportStaffField(reporting, key, source, rows, "transposition.noSimplifyKey", slot,
-                     target.transposition->noSimplifyKey);
-    if (target.transposition->keysig)
-    {
-        reportStaffField(reporting, key, source, rows, "transposition.keysig.interval", slot,
-                         target.transposition->keysig->interval);
-        reportStaffField(reporting, key, source, rows, "transposition.keysig.adjust", slot,
-                         target.transposition->keysig->adjust);
-    }
-    if (target.transposition->chromatic)
-    {
-        reportStaffField(reporting, key, source, rows, "transposition.chromatic.alteration", slot,
-                         target.transposition->chromatic->alteration);
-        reportStaffField(reporting, key, source, rows, "transposition.chromatic.diatonic", slot,
-                         target.transposition->chromatic->diatonic);
-    }
+                     transposition ? transposition->noSimplifyKey : false);
+    const auto keysig = transposition ? transposition->keysig : nullptr;
+    reportStaffField(reporting, key, source, rows, "transposition.keysig.interval", slot,
+                     keysig ? keysig->interval : 0);
+    reportStaffField(reporting, key, source, rows, "transposition.keysig.adjust", slot,
+                     keysig ? keysig->adjust : 0);
+    const auto chromatic = transposition ? transposition->chromatic : nullptr;
+    reportStaffField(reporting, key, source, rows, "transposition.chromatic.alteration", slot,
+                     chromatic ? chromatic->alteration : 0);
+    reportStaffField(reporting, key, source, rows, "transposition.chromatic.diatonic", slot,
+                     chromatic ? chromatic->diatonic : 0);
 }
 
-template <typename Reporting>
-void reportMappedStaff(Reporting &reporting, const StaffTarget &target,
-                       const RecordFamilySource &source, std::span<const records::LegacyRow> rows,
+template <typename Reporting, typename Target>
+void reportMappedStaff(Reporting &reporting, const Target &target, const RecordFamilySource &source,
+                       std::span<const records::LegacyRow> rows,
                        std::span<const std::uint8_t> payload, ByteOrder byteOrder,
                        StaffLegacySemantics legacySemantics, bool adjustedFontSize)
 {
     const auto key =
-        reporting.template instanceKey<StaffTarget>(target.getSourcePartId(), target.getCmper());
+        reporting.template instanceKey<Target>(target.getSourcePartId(), target.getCmper());
     reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
 #define STAFF_MAPPED(member, slot)                                                                 \
     reportStaffField(reporting, key, source, rows, #member, slot, target.member)
@@ -855,8 +1047,14 @@ void reportMappedStaff(Reporting &reporting, const StaffTarget &target,
         STAFF_MAPPED(capoPos, tablaturePositionsSlot);
         STAFF_MAPPED(lowestFret, tablaturePositionsSlot);
     }
-    STAFF_MAPPED(notationStyle, primaryFlagsSlot);
-    STAFF_MAPPED(useNoteShapes, primaryFlagsSlot);
+    reportStaffField(reporting, key, source, rows, "notationStyle", primaryFlagsSlot,
+                     target.notationStyle,
+                     legacySemantics.noteShapeNotation ? Reporting::Origin::LegacyMusAdjusted
+                                                       : Reporting::Origin::LegacyMus);
+    reportStaffField(reporting, key, source, rows, "useNoteShapes", primaryFlagsSlot,
+                     target.useNoteShapes,
+                     legacySemantics.noteShapeNotation ? Reporting::Origin::LegacyMusAdjusted
+                                                       : Reporting::Origin::LegacyMus);
     STAFF_MAPPED(useNoteFont, primaryFlagsSlot);
     STAFF_MAPPED(defaultClef, clefsSlot);
     STAFF_MAPPED(transposedClef, clefsSlot);
@@ -890,10 +1088,23 @@ void reportMappedStaff(Reporting &reporting, const StaffTarget &target,
         STAFF_MAPPED(altLayer, altFlagsSlot);
         STAFF_MAPPED(altHideArtics, altFlagsSlot);
         STAFF_MAPPED(altHideLyrics, altFlagsSlot);
-        STAFF_MAPPED(altHideSmartShapes, altFlagsSlot);
+        reportStaffField(reporting, key, source, rows, "altHideSmartShapes", altFlagsSlot,
+                         target.altHideSmartShapes,
+                         legacySemantics.synthesizesAltHideSmartShapes
+                             ? Reporting::Origin::LegacyMusAdjusted
+                             : Reporting::Origin::LegacyMus);
         STAFF_MAPPED(altRhythmStemsUp, altFlagsSlot);
         STAFF_MAPPED(altSlashDots, altFlagsSlot);
-        STAFF_MAPPED(altHideExpressions, altFlagsSlot);
+        if (legacySemantics.usesAggregateAlternateNotationItems)
+        {
+            reporting.report().setField(
+                key, "altHideExpressions",
+                {Reporting::Origin::Finale27Default, 0, 0, target.altHideExpressions});
+        }
+        else
+        {
+            STAFF_MAPPED(altHideExpressions, altFlagsSlot);
+        }
         STAFF_MAPPED(altHideOtherNotes, altFlagsSlot);
         STAFF_MAPPED(altHideOtherArtics, altFlagsSlot);
     }
@@ -996,8 +1207,7 @@ void reportMappedStaff(Reporting &reporting, const StaffTarget &target,
     {
         STAFF_MAPPED(fretInstId, fretInstrumentSlot);
     }
-    const auto reportLong = [&](const char *member, std::size_t slot)
-    {
+    const auto reportLong = [&](const char *member, std::size_t slot) {
         if (wordCount >= slot + 2)
         {
             reportStaffField(reporting, key, source, rows, member, slot,
@@ -1041,11 +1251,11 @@ void reportMappedStaff(Reporting &reporting, const StaffTarget &target,
 #undef STAFF_MAPPED
 }
 
-template <typename Reporting>
-void reportRemainingStaffFields(Reporting &reporting, const StaffTarget &target)
+template <typename Reporting, typename Target>
+void reportRemainingStaffFields(Reporting &reporting, const Target &target)
 {
     const auto key =
-        reporting.template instanceKey<StaffTarget>(target.getSourcePartId(), target.getCmper());
+        reporting.template instanceKey<Target>(target.getSourcePartId(), target.getCmper());
 #define STAFF_UNMAPPED(member)                                                                     \
     reporting.unmappedField(key, #member, static_cast<std::int64_t>(target.member))
     STAFF_UNMAPPED(useNoteShapes);
@@ -1169,14 +1379,13 @@ void reportRemainingStaffFields(Reporting &reporting, const StaffTarget &target)
         transposition && transposition->chromatic ? transposition->chromatic->diatonic : 0);
 }
 
-template <typename Reporting>
-void reportStaffFallbacks(Reporting &reporting, const StaffTarget &target,
-                          const StaffTarget &defaults, StaffFallbackSelection selected)
+template <typename Reporting, typename Target>
+void reportStaffFallbacks(Reporting &reporting, const Target &target, const StaffTarget &defaults,
+                          StaffFallbackSelection selected)
 {
     const auto key =
-        reporting.template instanceKey<StaffTarget>(target.getSourcePartId(), target.getCmper());
-    const auto reportDefault = [&](const char *member, std::int64_t value)
-    {
+        reporting.template instanceKey<Target>(target.getSourcePartId(), target.getCmper());
+    const auto reportDefault = [&](const char *member, std::int64_t value) {
         reporting.report().setField(key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
     };
     if (selected.lineSpace)
@@ -1230,9 +1439,8 @@ void reportStaffFallbacks(Reporting &reporting, const StaffTarget &target,
         reportDefault("stemDirection", static_cast<std::int64_t>(target.stemDirection));
         if (target.notationStyle == StaffTarget::NotationStyle::Tablature)
         {
-            const auto reportBehaviorOrDefault =
-                [&](const char *member, bool value, bool defaultValue)
-            {
+            const auto reportBehaviorOrDefault = [&](const char *member, bool value,
+                                                     bool defaultValue) {
                 const auto origin = value == defaultValue ? Reporting::Origin::Finale27Default
                                                           : Reporting::Origin::LegacyBehavior;
                 reporting.report().setField(key, member, {origin, 0, 0, value});
@@ -1301,8 +1509,6 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
             const auto hideOtherAttachedItems = !(alt & altShowSmartShapesMask);
             target.altHideArtics = legacySemantics.hideNoteAttachedItems;
             target.altHideLyrics = legacySemantics.hideNoteAttachedItems;
-            target.altHideSmartShapes = legacySemantics.hideNoteAttachedItems;
-            target.altHideExpressions = legacySemantics.hideNoteAttachedItems;
             target.altHideOtherNotes = !(alt & altShowLyricsMask);
             target.altHideOtherArtics = hideOtherAttachedItems;
             target.altHideOtherLyrics = hideOtherAttachedItems;
@@ -1318,6 +1524,11 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
             target.altHideOtherArtics = !(alt & altShowOtherArticulationsMask);
             target.altHideExpressions = !(alt & altShowExpressionsMask);
         }
+        if (legacySemantics.synthesizesAltHideSmartShapes)
+        {
+            target.altHideSmartShapes = legacySemantics.hideNoteAttachedItems ||
+                                        target.calcAlternateNotationHidesEntries(target.altLayer);
+        }
     }
 
     target.noteFont = std::make_shared<musx::dom::FontInfo>(target.getDocument());
@@ -1327,12 +1538,14 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
     target.noteFont->setEnigmaStyles(sizeEffects & 0xffU);
 
     const auto primary = word(primaryFlagsSlot);
-    target.notationStyle = notationStyle(primary);
+    const auto notation = decodeStaffNotation(primary, !hasFinale2012StaffLayout(payload));
+    target.notationStyle = notation.notationStyle;
+    target.useNoteShapes = notation.useNoteShapes;
+    legacySemantics.noteShapeNotation = notation.noteShapeNotation;
     target.hideRepeatBottomDot = primary & hideRepeatBottomDotMask;
     target.flatBeams = primary & flatBeamsMask;
     target.hideFretboards = legacySemantics.hideNoteAttachedItems || (primary & hideFretboardsMask);
     target.blankMeasure = primary & blankMeasureMask;
-    target.useNoteShapes = primary & useNoteShapesMask;
     target.hideRepeatTopDot = primary & hideRepeatTopDotMask;
     target.useNoteFont = primary & useNoteFontMask;
     target.hideLyrics = primary & hideLyricsMask;
@@ -1458,8 +1671,9 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
     {
         target.fretInstId = word(fretInstrumentSlot);
     }
-    const auto decodeLong = [&](std::size_t slot)
-    { return payloadLong(payload, slot * 2, byteOrder, longOrder); };
+    const auto decodeLong = [&](std::size_t slot) {
+        return payloadLong(payload, slot * 2, byteOrder, longOrder);
+    };
     if (wordCount >= horizontalStemUpSlot + 2)
     {
         target.horzStemOffUp = decodeLong(horizontalStemUpSlot);
@@ -1508,10 +1722,12 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget> &targetP
 
 } // namespace
 
-void importStaff(const ImportContext &context)
+template <typename Target>
+void importStaffFamily(const ImportContext &context, records::LegacyTag fixedTag,
+                       records::LegacyTag classId)
 {
     const auto selected = selectRecordFamilySource(
-        context, context.index.getOthers(), context.index.getClassOthers(), staffTag, staffClass);
+        context, context.index.getOthers(), context.index.getClassOthers(), fixedTag, classId);
     if (!selected)
         return;
     const auto &source = *selected;
@@ -1520,11 +1736,34 @@ void importStaff(const ImportContext &context)
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty())
             continue;
-        const auto payload = collectRecordPayload(source, rows);
+        const auto recordPayload = collectRecordPayload(source, rows);
+        auto staffPayloadBytes = recordPayload.size();
+        std::optional<StaffStyleTrailerLayout> staffStyleLayout;
+        if constexpr (std::is_same_v<Target, StaffStyleTarget>)
+        {
+            staffStyleLayout =
+                staffStyleTrailerLayout(recordPayload.size(), context.profile.version);
+            if (!staffStyleLayout ||
+                recordPayload.size() < staffBaseBytes + staffStyleLayout->trailerBytes)
+            {
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Info,
+                     "StaffStyle " + std::to_string(staffId) +
+                         " is shorter than its base layout and trailer."});
+                continue;
+            }
+            staffPayloadBytes -= staffStyleLayout->trailerBytes;
+        }
+        const auto payload = std::span(recordPayload).first(staffPayloadBytes);
         auto target =
-            createOthersRecordTarget<StaffTarget>(context.document, source, rows.front(), staffId);
+            createOthersRecordTarget<Target>(context.document, source, rows.front(), staffId);
         if (!target)
             continue;
+
+        if constexpr (std::is_same_v<Target, StaffStyleTarget>)
+            decodeStaffStyleTrailer(context, target, recordPayload, staffPayloadBytes,
+                                    *staffStyleLayout);
+        bool adjustedNoteShapeMasks = false;
 
         target->autoNumbering = static_cast<StaffTarget::AutoNumberingStyle>(0);
         target->useAutoNumbering = false;
@@ -1536,6 +1775,13 @@ void importStaff(const ImportContext &context)
             .hasAlternateNotationProperties = hasAlternateNotationProperties,
             .usesAggregateAlternateNotationItems =
                 hasAlternateNotationProperties && !hasSecondAlternateNotationFlags(payload),
+            // Believed: Finale 2000-2008 derives this property from the notation
+            // type and aggregate note-attached-items control; Finale 2009 stores it
+            // independently.
+            .synthesizesAltHideSmartShapes =
+                hasAlternateNotationProperties &&
+                sourcePredatesVersion(context.profile, FormatEpoch::ZlibLegacy,
+                                      versions::finale2009),
             .usesBooleanHideMode =
                 !sixWordLayout && sourcePredatesVersion(context.profile, FormatEpoch::ZlibLegacy,
                                                         versions::finale2011)};
@@ -1548,8 +1794,9 @@ void importStaff(const ImportContext &context)
         {
             if (payload.size() < staffCodaWords * 2)
                 continue;
-            const auto codaWord = [&](std::size_t slot)
-            { return payloadWord(payload, slot * 2, context.profile.byteOrder); };
+            const auto codaWord = [&](std::size_t slot) {
+                return payloadWord(payload, slot * 2, context.profile.byteOrder);
+            };
             decodeStaffTransposition(target, codaWord(codaTranspositionSlot), true);
             const auto display = codaWord(codaDisplayFlagsSlot);
             // The uncompressed six-word layout moves the default clef to word zero;
@@ -1586,8 +1833,9 @@ void importStaff(const ImportContext &context)
             std::optional<std::int16_t> codaStaffLineValue;
             if (hasCodaAttributes)
             {
-                const auto attributeWord = [&](std::size_t slot)
-                { return payloadWord(codaAttributes, slot * 2, context.profile.byteOrder); };
+                const auto attributeWord = [&](std::size_t slot) {
+                    return payloadWord(codaAttributes, slot * 2, context.profile.byteOrder);
+                };
                 target->noteFont = std::make_shared<musx::dom::FontInfo>(target->getDocument());
                 const auto storedNoteFontId = attributeWord(codaNoteFontIdSlot);
                 target->noteFont->fontId = context.construction.assignFontId(storedNoteFontId);
@@ -1595,7 +1843,10 @@ void importStaff(const ImportContext &context)
                 target->noteFont->fontSize = sizeEffects >> 8U;
                 target->noteFont->setEnigmaStyles(sizeEffects & 0xffU);
                 const auto primary = attributeWord(codaPrimaryFlagsSlot);
-                target->useNoteShapes = primary & useNoteShapesMask;
+                const auto notation = decodeStaffNotation(primary, true);
+                target->notationStyle = notation.notationStyle;
+                target->useNoteShapes = notation.useNoteShapes;
+                legacySemantics.noteShapeNotation = notation.noteShapeNotation;
                 hasCodaStaffLineOverride = primary & codaStaffLineOverrideMask;
                 codaStaffLineValue =
                     static_cast<std::int16_t>(attributeWord(codaStaffLineValueSlot));
@@ -1632,7 +1883,6 @@ void importStaff(const ImportContext &context)
                 // Staff member; the signed high byte is the tablature-number offset.
                 target->vertTabNumOff =
                     static_cast<std::int16_t>(attributeWord(codaVerticalTabOffsetSlot) & 0xff00U);
-                target->notationStyle = notationStyle(primary);
                 target->useNoteFont = primary & useNoteFontMask;
                 if (target->notationStyle == StaffTarget::NotationStyle::Tablature)
                 {
@@ -1677,166 +1927,159 @@ void importStaff(const ImportContext &context)
                 target->topBarlineOffset = 2 * evpusPerSpace;
             }
             const auto adjustedFontSize = resolveStaffNoteFontSize(context, *target);
-            withReporting(
-                context.report,
-                [&]<typename Reporting>(Reporting &reporting)
+            withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
+                const auto key = reporting.template instanceKey<Target>(partId, staffId);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reportStaffField(reporting, key, source, rows, "defaultClef", defaultClefSlot,
+                                 target->defaultClef);
+                if (target->transposition && target->transposition->setToClef)
                 {
-                    const auto key = reporting.template instanceKey<StaffTarget>(partId, staffId);
-                    reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
-                    reportStaffField(reporting, key, source, rows, "defaultClef", defaultClefSlot,
-                                     target->defaultClef);
-                    if (target->transposition && target->transposition->setToClef)
-                    {
-                        reportStaffField(reporting, key, source, rows, "transposedClef",
-                                         codaTranspositionSlot, target->transposedClef);
-                    }
-                    reportStaffTransposition(reporting, *target, key, source, rows,
-                                             codaTranspositionSlot);
-                    reportStaffField(reporting, key, source, rows, "floatKeys",
-                                     codaDisplayFlagsSlot, target->floatKeys);
-                    reportStaffField(reporting, key, source, rows, "floatTime",
-                                     codaDisplayFlagsSlot, target->floatTime);
-                    reportStaffField(reporting, key, source, rows, "blineBreak",
-                                     codaDisplayFlagsSlot, target->blineBreak);
-                    reportStaffField(reporting, key, source, rows, "rbarBreak",
-                                     codaDisplayFlagsSlot, target->rbarBreak);
-                    reportStaffField(reporting, key, source, rows, "hideMeasNums",
-                                     codaDisplayFlagsSlot, target->hideMeasNums);
-                    reportStaffField(reporting, key, source, rows, "hideRepeats",
-                                     codaDisplayFlagsSlot, target->hideRepeats);
-                    reportStaffField(reporting, key, source, rows, "hideNameInScore",
-                                     codaDisplayFlagsSlot, target->hideNameInScore);
-                    reportStaffField(reporting, key, source, rows, "hideKeySigs",
-                                     codaDisplayFlagsSlot, target->hideKeySigs);
-                    reportStaffField(reporting, key, source, rows, "hideTimeSigs",
-                                     codaDisplayFlagsSlot, target->hideTimeSigs);
-                    reportStaffField(reporting, key, source, rows, "hideClefs",
-                                     codaDisplayFlagsSlot, target->hideClefs);
-                    if (combinesKeyControls)
-                    {
-                        const auto &codaStaffRow = rows.front();
-                        reporting.report().setField(
-                            key, "noKey",
-                            {Reporting::Origin::LegacyMusAdjusted, codaStaffRow.blockOffset,
-                             codaStaffRow.decodedOffset + codaDisplayFlagsSlot * 2, target->noKey,
-                             source.identity});
-                    }
-                    else
-                    {
-                        reporting.report().setField(
-                            key, "noKey",
-                            {Reporting::Origin::Finale27Default, 0, 0, target->noKey});
-                    }
-                    if (hasCodaStaffLineOverride)
-                    {
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "staffLines", codaStaffLineValueSlot,
-                                         target->staffLines.value_or(0));
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "customStaff", codaStaffLineValueSlot,
-                                         target->customStaff ? target->customStaff->size() : 0);
-                    }
-                    else
-                    {
-                        reporting.report().setField(key, "staffLines",
-                                                    {Reporting::Origin::LegacyBehavior, 0, 0, 5});
-                    }
-                    if (hasCenteredOneStaffLine)
-                    {
-                        reporting.report().setField(
-                            key, "botBarlineOffset",
-                            {Reporting::Origin::LegacyBehavior, 0, 0, target->botBarlineOffset});
-                        reporting.report().setField(
-                            key, "topBarlineOffset",
-                            {Reporting::Origin::LegacyBehavior, 0, 0, target->topBarlineOffset});
-                    }
-                    if (hasCodaStaffLineOverride && *codaStaffLineValue < 0)
-                    {
-                        const auto &row = codaAttributesRows.front();
-                        const auto decodedOffset = row.decodedOffset + codaStaffLineValueSlot * 2;
-                        const auto adjusted = [&](const char *member, std::int64_t value)
-                        {
-                            reporting.report().setField(key, member,
-                                                        {Reporting::Origin::LegacyMusAdjusted,
-                                                         row.blockOffset, decodedOffset, value,
-                                                         codaStaffAttributesTag});
-                        };
-                        adjusted("botBarlineOffset", target->botBarlineOffset);
-                        adjusted("topBarlineOffset", target->topBarlineOffset);
-                    }
-                    if (hasCodaAttributes)
-                    {
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "notationStyle", codaPrimaryFlagsSlot,
-                                         target->notationStyle);
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "useNoteShapes", codaPrimaryFlagsSlot,
-                                         target->useNoteShapes);
-                        const auto primary = payloadWord(codaAttributes, codaPrimaryFlagsSlot * 2,
-                                                         context.profile.byteOrder);
-                        if (target->notationStyle == StaffTarget::NotationStyle::Tablature &&
-                            !(primary & useNoteFontMask))
-                        {
-                            reporting.report().setField(
-                                key, "useNoteFont",
-                                {Reporting::Origin::LegacyBehavior, 0, 0, target->useNoteFont});
-                        }
-                        else
-                        {
-                            reportStaffField(reporting, key, codaAttributesSource,
-                                             codaAttributesRows, "useNoteFont",
-                                             codaPrimaryFlagsSlot, target->useNoteFont);
-                        }
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "blankMeasure", codaPrimaryFlagsSlot,
-                                         target->blankMeasure);
-                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
-                                         "vertTabNumOff", codaVerticalTabOffsetSlot,
-                                         target->vertTabNumOff);
-                        reportStaffFont(reporting, *target, key, codaAttributesSource,
-                                        codaAttributesRows, codaNoteFontIdSlot,
-                                        codaNoteFontSizeEffectsSlot, adjustedFontSize);
-                    }
-                    else
-                    {
-                        const auto reportDefault = [&](const char *member, std::int64_t value)
-                        {
-                            reporting.report().setField(
-                                key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
-                        };
-                        reportDefault("customStaff", 0);
-                        reportDefault("notationStyle",
-                                      static_cast<std::int64_t>(target->notationStyle));
-                        reportDefault("useNoteShapes", target->useNoteShapes);
-                        reportDefault("useNoteFont", target->useNoteFont);
-                        reportDefault("blankMeasure", target->blankMeasure);
-                        reporting.report().setField(
-                            key, "vertTabNumOff",
-                            {Reporting::Origin::LegacyBehavior, 0, 0, target->vertTabNumOff});
-                        reporting.report().setField(
-                            key, "noteFont.fontSize",
-                            {Reporting::Origin::Finale27Default, 0, 0, target->noteFont->fontSize});
-                    }
-                    reporting.report().setField(key, "autoNumbering",
-                                                {Reporting::Origin::LegacyBehavior, 0, 0,
-                                                 static_cast<std::int64_t>(target->autoNumbering)});
+                    reportStaffField(reporting, key, source, rows, "transposedClef",
+                                     codaTranspositionSlot, target->transposedClef);
+                }
+                reportStaffTransposition(reporting, *target, key, source, rows,
+                                         codaTranspositionSlot);
+                reportStaffField(reporting, key, source, rows, "floatKeys", codaDisplayFlagsSlot,
+                                 target->floatKeys);
+                reportStaffField(reporting, key, source, rows, "floatTime", codaDisplayFlagsSlot,
+                                 target->floatTime);
+                reportStaffField(reporting, key, source, rows, "blineBreak", codaDisplayFlagsSlot,
+                                 target->blineBreak);
+                reportStaffField(reporting, key, source, rows, "rbarBreak", codaDisplayFlagsSlot,
+                                 target->rbarBreak);
+                reportStaffField(reporting, key, source, rows, "hideMeasNums", codaDisplayFlagsSlot,
+                                 target->hideMeasNums);
+                reportStaffField(reporting, key, source, rows, "hideRepeats", codaDisplayFlagsSlot,
+                                 target->hideRepeats);
+                reportStaffField(reporting, key, source, rows, "hideNameInScore",
+                                 codaDisplayFlagsSlot, target->hideNameInScore);
+                reportStaffField(reporting, key, source, rows, "hideKeySigs", codaDisplayFlagsSlot,
+                                 target->hideKeySigs);
+                reportStaffField(reporting, key, source, rows, "hideTimeSigs", codaDisplayFlagsSlot,
+                                 target->hideTimeSigs);
+                reportStaffField(reporting, key, source, rows, "hideClefs", codaDisplayFlagsSlot,
+                                 target->hideClefs);
+                if (combinesKeyControls)
+                {
+                    const auto &codaStaffRow = rows.front();
                     reporting.report().setField(
-                        key, "useAutoNumbering",
-                        {Reporting::Origin::LegacyBehavior, 0, 0, target->useAutoNumbering});
-                    reportStaffAlternateNotationLegacyBehavior(reporting, *target, key);
-                });
+                        key, "noKey",
+                        {Reporting::Origin::LegacyMusAdjusted, codaStaffRow.blockOffset,
+                         codaStaffRow.decodedOffset + codaDisplayFlagsSlot * 2, target->noKey,
+                         source.identity});
+                }
+                else
+                {
+                    reporting.report().setField(
+                        key, "noKey", {Reporting::Origin::Finale27Default, 0, 0, target->noKey});
+                }
+                if (hasCodaStaffLineOverride)
+                {
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "staffLines", codaStaffLineValueSlot,
+                                     target->staffLines.value_or(0));
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "customStaff", codaStaffLineValueSlot,
+                                     target->customStaff ? target->customStaff->size() : 0);
+                }
+                else
+                {
+                    reporting.report().setField(key, "staffLines",
+                                                {Reporting::Origin::LegacyBehavior, 0, 0, 5});
+                }
+                if (hasCenteredOneStaffLine)
+                {
+                    reporting.report().setField(
+                        key, "botBarlineOffset",
+                        {Reporting::Origin::LegacyBehavior, 0, 0, target->botBarlineOffset});
+                    reporting.report().setField(
+                        key, "topBarlineOffset",
+                        {Reporting::Origin::LegacyBehavior, 0, 0, target->topBarlineOffset});
+                }
+                if (hasCodaStaffLineOverride && *codaStaffLineValue < 0)
+                {
+                    const auto &row = codaAttributesRows.front();
+                    const auto decodedOffset = row.decodedOffset + codaStaffLineValueSlot * 2;
+                    const auto adjusted = [&](const char *member, std::int64_t value) {
+                        reporting.report().setField(key, member,
+                                                    {Reporting::Origin::LegacyMusAdjusted,
+                                                     row.blockOffset, decodedOffset, value,
+                                                     codaStaffAttributesTag});
+                    };
+                    adjusted("botBarlineOffset", target->botBarlineOffset);
+                    adjusted("topBarlineOffset", target->topBarlineOffset);
+                }
+                if (hasCodaAttributes)
+                {
+                    const auto notationOrigin = legacySemantics.noteShapeNotation
+                                                    ? Reporting::Origin::LegacyMusAdjusted
+                                                    : Reporting::Origin::LegacyMus;
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "notationStyle", codaPrimaryFlagsSlot, target->notationStyle,
+                                     notationOrigin);
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "useNoteShapes", codaPrimaryFlagsSlot, target->useNoteShapes,
+                                     notationOrigin);
+                    const auto primary = payloadWord(codaAttributes, codaPrimaryFlagsSlot * 2,
+                                                     context.profile.byteOrder);
+                    if (target->notationStyle == StaffTarget::NotationStyle::Tablature &&
+                        !(primary & useNoteFontMask))
+                    {
+                        reporting.report().setField(
+                            key, "useNoteFont",
+                            {Reporting::Origin::LegacyBehavior, 0, 0, target->useNoteFont});
+                    }
+                    else
+                    {
+                        reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                         "useNoteFont", codaPrimaryFlagsSlot, target->useNoteFont);
+                    }
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "blankMeasure", codaPrimaryFlagsSlot, target->blankMeasure);
+                    reportStaffField(reporting, key, codaAttributesSource, codaAttributesRows,
+                                     "vertTabNumOff", codaVerticalTabOffsetSlot,
+                                     target->vertTabNumOff);
+                    reportStaffFont(reporting, *target, key, codaAttributesSource,
+                                    codaAttributesRows, codaNoteFontIdSlot,
+                                    codaNoteFontSizeEffectsSlot, adjustedFontSize);
+                }
+                else
+                {
+                    const auto reportDefault = [&](const char *member, std::int64_t value) {
+                        reporting.report().setField(
+                            key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
+                    };
+                    reportDefault("customStaff", 0);
+                    reportDefault("notationStyle",
+                                  static_cast<std::int64_t>(target->notationStyle));
+                    reportDefault("useNoteShapes", target->useNoteShapes);
+                    reportDefault("useNoteFont", target->useNoteFont);
+                    reportDefault("blankMeasure", target->blankMeasure);
+                    reporting.report().setField(
+                        key, "vertTabNumOff",
+                        {Reporting::Origin::LegacyBehavior, 0, 0, target->vertTabNumOff});
+                    reporting.report().setField(
+                        key, "noteFont.fontSize",
+                        {Reporting::Origin::Finale27Default, 0, 0, target->noteFont->fontSize});
+                }
+                reporting.report().setField(key, "autoNumbering",
+                                            {Reporting::Origin::LegacyBehavior, 0, 0,
+                                             static_cast<std::int64_t>(target->autoNumbering)});
+                reporting.report().setField(
+                    key, "useAutoNumbering",
+                    {Reporting::Origin::LegacyBehavior, 0, 0, target->useAutoNumbering});
+                reportStaffAlternateNotationLegacyBehavior(reporting, *target, key);
+            });
             if (legacySemantics.singleStringTabPitch)
             {
                 const auto pitch = *legacySemantics.singleStringTabPitch;
                 const auto row = codaAttributesRows.front();
                 const auto pitchByteOffset = codaVerticalTabOffsetSlot * 2 +
                                              (context.profile.byteOrder == ByteOrder::BigEndian);
-                context.pending.checks.push_back(
-                    [&context, target, pitch, row, pitchByteOffset]
-                    {
-                        synthesizeLegacySingleStringFretInstrument(
-                            context, target, pitch, row, codaStaffAttributesTag, pitchByteOffset);
-                    });
+                context.pending.checks.push_back([&context, target, pitch, row, pitchByteOffset] {
+                    synthesizeLegacySingleStringFretInstrument(
+                        context, target, pitch, row, codaStaffAttributesTag, pitchByteOffset);
+                });
             }
         }
         else
@@ -1845,19 +2088,18 @@ void importStaff(const ImportContext &context)
             {
                 context.report.diagnostics.push_back(
                     {musx::util::Logger::LogLevel::Info,
-                     "Staff " + std::to_string(staffId) + " is shorter than its base layout."});
+                     std::string(std::is_same_v<Target, StaffStyleTarget> ? "StaffStyle "
+                                                                          : "Staff ") +
+                         std::to_string(staffId) + " is shorter than its base layout."});
                 continue;
             }
             legacySemantics = decodeStaffBase(target, payload, context.profile, legacySemantics,
                                               context.construction);
             const auto adjustedFontSize = resolveStaffNoteFontSize(context, *target);
-            withReporting(context.report,
-                          [&]<typename Reporting>(Reporting &reporting)
-                          {
-                              reportMappedStaff(reporting, *target, source, rows, payload,
-                                                context.profile.byteOrder, legacySemantics,
-                                                adjustedFontSize);
-                          });
+            withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
+                reportMappedStaff(reporting, *target, source, rows, payload,
+                                  context.profile.byteOrder, legacySemantics, adjustedFontSize);
+            });
             if (legacySemantics.singleStringTabPitch)
             {
                 const auto pitch = *legacySemantics.singleStringTabPitch;
@@ -1866,18 +2108,22 @@ void importStaff(const ImportContext &context)
                 const auto pitchByteOffset = tablaturePositionsSlot * 2 +
                                              (context.profile.byteOrder == ByteOrder::BigEndian);
                 context.pending.checks.push_back(
-                    [&context, target, pitch, row, sourceTag, pitchByteOffset]
-                    {
+                    [&context, target, pitch, row, sourceTag, pitchByteOffset] {
                         synthesizeLegacySingleStringFretInstrument(context, target, pitch, row,
                                                                    sourceTag, pitchByteOffset);
                     });
             }
         }
-        if (usesParallelStaffNames(context.profile))
+        if constexpr (std::is_same_v<Target, StaffStyleTarget>)
         {
-            context.pending.checks.push_back(
-                [&context, target]
-                {
+            adjustedNoteShapeMasks =
+                applyLegacyStaffStyleNoteShapeMasks(*target, legacySemantics.noteShapeNotation);
+        }
+        if constexpr (std::is_same_v<Target, StaffTarget>)
+        {
+            if (usesParallelStaffNames(context.profile))
+            {
+                context.pending.checks.push_back([&context, target] {
                     text::EnigmaFontResolutionCache fontResolutionCache;
                     synthesizeLegacyStaffName(context, *target, legacyStaffFullNameTag,
                                               musx::dom::options::FontOptions::FontType::StaffNames,
@@ -1887,6 +2133,7 @@ void importStaff(const ImportContext &context)
                         musx::dom::options::FontOptions::FontType::AbbrvStaffNames,
                         &StaffTarget::abbrvNameTextId, fontResolutionCache);
                 });
+            }
         }
         resolveStaffRepeatDotFallback(*target, selectedDefaults);
         if (selectedDefaults.lineSpace || selectedDefaults.restOffsets ||
@@ -1898,22 +2145,32 @@ void importStaff(const ImportContext &context)
         {
             applyStaffFallbacks(*target, finale27StaffDefaults(context), selectedDefaults);
         }
-        withReporting(context.report,
-                      [&]<typename Reporting>(Reporting &reporting)
-                      {
-                          reportStaffFallbacks(reporting, *target, finale27StaffDefaults(context),
-                                               selectedDefaults);
-                          if (!hasStoredInstrumentUuid)
-                          {
-                              const auto key =
-                                  reporting.template instanceKey<StaffTarget>(partId, staffId);
-                              reporting.report().setField(
-                                  key, "instUuid", {Reporting::Origin::LegacyBehavior, 0, 0, 0});
-                          }
-                          reportRemainingStaffFields(reporting, *target);
-                      });
-        context.document->getOthers()->add(StaffTarget::XmlNodeName, std::move(target));
+        withReporting(context.report, [&]<typename Reporting>(Reporting &reporting) {
+            reportStaffFallbacks(reporting, *target, finale27StaffDefaults(context),
+                                 selectedDefaults);
+            if (!hasStoredInstrumentUuid)
+            {
+                const auto key = reporting.template instanceKey<Target>(partId, staffId);
+                reporting.report().setField(key, "instUuid",
+                                            {Reporting::Origin::LegacyBehavior, 0, 0, 0});
+            }
+            reportRemainingStaffFields(reporting, *target);
+            if constexpr (std::is_same_v<Target, StaffStyleTarget>)
+                reportStaffStyleTrailer(reporting, *target, source, rows, staffPayloadBytes,
+                                        adjustedNoteShapeMasks);
+        });
+        context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
     }
+}
+
+void importStaff(const ImportContext &context)
+{
+    importStaffFamily<StaffTarget>(context, staffTag, staffClass);
+}
+
+void importStaffStyles(const ImportContext &context)
+{
+    importStaffFamily<StaffStyleTarget>(context, staffStyleTag, staffStyleClass);
 }
 
 } // namespace others

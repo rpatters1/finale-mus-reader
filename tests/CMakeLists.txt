@@ -89,6 +89,7 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/surveyors/others/measure.cpp
     ../tools/coverage/surveyors/others/percussion_note_info.cpp
     ../tools/coverage/surveyors/others/staff.cpp
+    ../tools/coverage/surveyors/others/staff_style.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp
