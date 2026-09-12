@@ -3044,8 +3044,10 @@ TEST_CASE("Legacy aggregate Two-Bar Repeat StaffStyles lose visible articulation
     ImportReport report(FormatEpoch::UncompressedLegacy);
     const auto key =
         finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID, musx::dom::Cmper{6});
-    report.setField(key, "altHideOtherArtics", {ValueOrigin::LegacyMus, 10, 20, 0, 0x5359});
-    report.setField(key, "altHideOtherSmartShapes", {ValueOrigin::LegacyMus, 10, 20, 0, 0x5359});
+    report.setField(key, "altHideOtherArtics",
+                    {ValueOrigin::LegacyMus, 10, 20, 0, std::uint16_t{0x5359}});
+    report.setField(key, "altHideOtherSmartShapes",
+                    {ValueOrigin::LegacyMus, 10, 20, 0, std::uint16_t{0x5359}});
     const SourceVersion finale2004{.major = finale_mus_reader::versions::finale2004.major};
     const SourceVersion finale2007{.major = finale_mus_reader::versions::finale2007.major};
     const Value visible(false);
@@ -3317,10 +3319,11 @@ TEST_CASE("Finale 2009 beta legacy StaffStyle layouts are not compared", "[cover
         const auto instance = finale_mus_reader::instanceKey<StaffStyle>(musx::dom::SCORE_PARTID,
                                                                          musx::dom::Cmper{1});
         report.setField(instance, "altHideOtherArtics",
-                        {ValueOrigin::LegacyMus, 10, 20, 0, 0x00e8});
+                        {ValueOrigin::LegacyMus, 10, 20, 0, std::uint16_t{0x00e8}});
         report.setField(instance, "altHideOtherSmartShapes",
                         {ValueOrigin::LegacyMus, 10,
-                         aggregateLayout ? std::size_t{20} : std::size_t{22}, 0, 0x00e8});
+                         aggregateLayout ? std::size_t{20} : std::size_t{22}, 0,
+                         std::uint16_t{0x00e8}});
         ComparisonPreparationContext context{
             source, companion, transformations, FormatEpoch::ZlibLegacy, &version, &report};
         runComparisonPreparers(context);
