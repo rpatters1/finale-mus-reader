@@ -23,6 +23,7 @@ Do not read this directory recursively. Open the one file that matches your subj
 | Finale 1.x–2.6 evidence and the 1.8.7–3.0 correlation | [`early_versions.md`](early_versions.md) |
 | Graphic file locator selectors and conversion differences | [`file_path.md`](file_path.md) |
 | Fret record identities and layouts | [`fret_records.md`](fret_records.md) |
+| GFrameHold fixed prefix and legacy alternate-notation projection | [`gframe_hold.md`](gframe_hold.md) |
 | Graphic assignment layout | [`graphic_assignments.md`](graphic_assignments.md) |
 | Custom-key accidental symbol lists | [`key_symbol_list.md`](key_symbol_list.md) |
 | Layer attribute layout, release coverage, pre-2002 playback and spacing | [`layer_attributes.md`](layer_attributes.md) |

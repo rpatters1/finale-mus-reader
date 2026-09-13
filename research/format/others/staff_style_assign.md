@@ -4,8 +4,7 @@
 state.
 **Read when:** Working on `StaffStyleAssign`, selector `Sy`, class `0x00e9`, Staff `hasStyles`, or
 pre-Finale-2012 Staff Style splitting.
-**Confidence:** `confirmed` for the represented Finale 2000, 2003, and 2011 layouts; `open` for
-whether any source before Finale 2000 can contain this record family.
+**Confidence:** `confirmed` for the represented Finale 2000, 2003, and 2011 direct layouts.
 
 ## Identity and layout
 
@@ -32,9 +31,15 @@ and not constructed. **Confirmed** for both byte orders and all three represente
 
 After assignment import, `Staff::hasStyles` is recalculated from effective assignment presence for
 every source Staff and reported as `LegacyMusAdjusted`. Thus defining a Staff Style alone does not
-set the property. Pre-Finale-2000 alternate-notation records are not synthesized in this cycle, so
-their Staffs still report false until that later recovery pass. **Confirmed** for represented
-source assignments; the earlier synthesis is open work.
+set the property. **Confirmed** for represented direct and synthesized assignments.
+
+## Pre-Finale-2000 alternate notation
+
+Before Staff Styles existed, Finale stored alternate notation in the flags word of each
+`GFrameHold`. `importGFrameHolds` projects that removed field into the same canonical Staff Styles
+and full-measure assignments that a modern Finale upgrade creates. The source layout, values, and
+remaining `GFrameHold` scope are documented in
+[`../details/gframe_hold.md`](../details/gframe_hold.md).
 
 ## Upgrade behavior and remaining scope
 
@@ -59,8 +64,6 @@ This comparison does not infer an instrument from a generated UUID or divide par
 ranges into effective time segments. Unmatched complete ranges and any remaining effective-value
 differences stay visible for investigation.
 
-No represented source before Finale 2000 contains `Sy`, but its Finale 27 companion may contain
-Staff Styles and assignments synthesized from older alternate-notation records. Those objects
-remain companion-only deliberately. The later synthesis cycle is expected to remove that entire
-companion-only population. The decoder has no pre-Finale-2000 version exclusion: if an earlier
-`Sy` family is encountered, it remains visible for investigation rather than being discarded.
+No represented source before Finale 2000 contains `Sy`. The direct decoder has no early-version
+exclusion: if an earlier `Sy` family is encountered, it remains visible for investigation rather
+than being discarded.

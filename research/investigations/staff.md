@@ -579,7 +579,8 @@ measures 1–44, and the partial edit as a synthesized Slash Notation assignment
 The modern Staff alternate-notation properties therefore have no pre-Finale-2000 raw Staff source.
 Across the controlled and tracked companions, the compatible Staff defaults are `Normal`, layer 0,
 slash dots enabled, and every other alternate-notation boolean disabled. Recovery supplies those
-values as `LegacyBehavior`; recovery of `GF` and its synthesized style runs remains future work.
+values as `LegacyBehavior`. The subsequent `GF` layout and synthesis result are recorded in
+[`gframe_hold.md`](gframe_hold.md).
 
 Evidence: `tests/evidence/F98/F98-baseline.mus`,
 `tests/evidence/F98/F98-altnotation-full.mus`, and

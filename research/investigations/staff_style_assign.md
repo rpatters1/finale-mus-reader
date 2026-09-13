@@ -3,9 +3,9 @@
 **Covers:** Binary confirmation of Staff Style assignment rows, Staff `hasStyles` derivation,
 pre-Finale-2012 split assignments, and tracked recovery coverage.
 **Read when:** Revisiting selector `Sy`, assignment ranges, companion-only assignments, or Staff
-Style upgrade splitting.
+Style upgrade splitting. For the earlier `GF` source, read [`gframe_hold.md`](gframe_hold.md).
 **Confidence:** `confirmed` for controlled fixtures and the tracked-evidence results described
-here; `open` for source records before Finale 2000.
+here.
 
 ## Record reconstruction
 
@@ -37,24 +37,22 @@ Method: capture the instrumented Release reader over `tracked-evidence` and
 difference, and separate pre-Finale-2000 documents from a Finale 2011 document whose source
 assignment is retained while the companion adds identical-range assignments.
 
-Result: the 2026-09-12 tracked snapshot selected 326 occurrences representing 323 distinct source
-contents: 320 occurrences from `tracked-evidence` and 6 from
-`rpatters1-private-evidence`. Every source and every companion imported successfully. The five
-source assignments contribute 35 equal leaves. A single Finale 2011 source, identified publicly
-as `mus-2038f70a95ffb3cb`, retains its assignment and gains two assignments over the same Staff and
-range; their 14 leaves are `FinaleUpgradeNormalization`. The remaining 266 companion-only leaves
-are exactly 38 pre-Finale-2000 synthesized assignments. No StaffStyleAssign difference is
-unexpected. This is occurrence accounting: 35 equal + 14 normalized + 266 companion-only = 315
-leaves.
+Result: the refreshed 2026-09-12 tracked snapshot selected 326 occurrences: 320 from
+`tracked-evidence` and 6 from `rpatters1-private-evidence`. Every source and every companion
+imported successfully. StaffStyleAssign comparison has 181 equal leaves, 6 expected leaves, zero
+unexpected leaves, zero reader-only leaves, and 720 companion-only leaves. The controlled Finale
+98 Slash and Two Bar Repeats assignments align semantically with their companions. The former
+conclusion that `GF` required a two-row discriminator is superseded by the user-supplied values
+recorded in [`gframe_hold.md`](gframe_hold.md).
 
 The earlier one-shared-mask predicate recognized only one of the two Finale 2011 additions and was
 refuted by the fixture. The retained structural rule permits multiple split assignments and asks
 only that each added pre-Finale-2012 assignment duplicate a preserved source assignment's Staff
 and complete range while referring to a different style.
 
-The 38 older assignments remain intentionally visible as the next cycle's synthesis backlog. That
-cycle is expected to reduce StaffStyleAssign companion-only leaves to zero and to correct the
-associated pre-Finale-2000 Staff `hasStyles` values.
+The remaining companion-only population belongs to the broader pre-Finale-2012 upgrade problem;
+it is not evidence about the fixed `GF` flags word. No newly observed difference was classified
+during this cycle.
 
 ## Semantic assignment comparison
 

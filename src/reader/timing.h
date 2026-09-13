@@ -52,6 +52,7 @@ enum class Phase : std::size_t
     ImportFretboardDiagrams,
     ImportFretboardGroups,
     ImportFretboardStyles,
+    ImportGFrameHolds,
     ImportGraceNoteOptions,
     ImportKeySignatureOptions,
     ImportKeyAttributes,

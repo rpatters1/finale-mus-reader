@@ -269,6 +269,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveFlats, &details::importClefOctaveFlats),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveSharps, &details::importClefOctaveSharps),
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),
+        FINALE_MUS_READER_IMPORTER(ImportGFrameHolds, &details::importGFrameHolds),
         FINALE_MUS_READER_IMPORTER(ImportKeySymbolListElements, &details::importKeySymbolListElements),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),

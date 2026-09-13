@@ -3,6 +3,8 @@
 
 #include "class_test_support.h"
 
+#include <tuple>
+
 #include "coverage/registry.h"
 #include "coverage/surveyors/shared/staff_style_semantics.h"
 
@@ -23,7 +25,8 @@ struct StaffStyleAssignImportResult
 
 StaffStyleAssignImportResult
 importStaffStyleAssigns(const finale_mus_reader::container::ParsedContainer& parsed,
-                        bool addUnreportedAssignment = false)
+                        bool addUnreportedAssignment = false,
+                        std::optional<SourceVersion> sourceVersion = std::nullopt)
 {
     const auto index = LegacyRecordIndex::build(parsed);
     auto session = musx::factory::DocumentFactory::begin();
@@ -37,15 +40,38 @@ importStaffStyleAssigns(const finale_mus_reader::container::ParsedContainer& par
                                      musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{7});
     document->getOthers()->add(StaffStyle::XmlNodeName, std::move(style));
     auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto referenceDocument = referenceSession.getDocument();
+    auto referenceStaff =
+        std::make_shared<Staff>(referenceDocument, musx::dom::SCORE_PARTID,
+                                musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
+    referenceStaff->lineSpace = 24;
+    referenceStaff->dwRestOffset = -4;
+    referenceStaff->wRestOffset = -4;
+    referenceStaff->hRestOffset = -4;
+    referenceStaff->otherRestOffset = -4;
+    referenceStaff->stemReversal = -4;
+    referenceStaff->botRepeatDotOff = -5;
+    referenceStaff->topRepeatDotOff = -3;
+    referenceDocument->getOthers()->add(Staff::XmlNodeName, std::move(referenceStaff));
+    auto referenceFontOptions =
+        std::make_shared<musx::dom::options::FontOptions>(referenceDocument);
+    auto referenceNoteheadFont = std::make_shared<musx::dom::FontInfo>(referenceDocument);
+    referenceNoteheadFont->fontSize = 24;
+    referenceFontOptions->fontOptions.emplace(
+        musx::dom::options::FontOptions::FontType::Noteheads, std::move(referenceNoteheadFont));
+    referenceDocument->getOptions()->add(musx::dom::options::FontOptions::XmlNodeName,
+                                         std::move(referenceFontOptions));
     const auto reference = std::move(referenceSession).finish();
     ImportReport report(parsed.formatEpoch);
     finale_mus_reader::PendingReferences pending;
     SourceProfile profile(parsed.formatEpoch);
     profile.byteOrder = parsed.byteOrder;
+    profile.version = sourceVersion;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{index,     profile, noSource, document,
                                                    reference, report,  pending,  construction};
     finale_mus_reader::others::importStaffStyleAssignments(context);
+    finale_mus_reader::details::importGFrameHolds(context);
     if (addUnreportedAssignment) {
         auto assignment = std::make_shared<StaffStyleAssign>(
             document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
@@ -650,6 +676,214 @@ TEST_CASE("Controlled StaffStyleAssign fixtures recover their exact ranges")
     CHECK(assign2011->startEdu == 1024);
     CHECK(assign2011->endMeas == 2);
     CHECK(assign2011->endEdu == 2047);
+}
+
+TEST_CASE("Pre-Finale-2000 alternate notation ranges synthesize Staff Styles and assignments")
+{
+    using Notation = Staff::AlternateNotation;
+    struct Expected {
+        const char* fixture;
+        musx::dom::Cmper styleId;
+        Notation notation;
+        const char* styleName;
+        musx::dom::MeasCmper endMeas;
+        bool hidesAttachedItems;
+    };
+
+    for (const auto& expected : {
+             Expected{"evidence/F98/F98-altnotation-partial.mus", 2, Notation::SlashBeats,
+                      "Slash Notation", 3, false},
+             Expected{"evidence/F98/F98-altnotation-full.mus", 5, Notation::TwoBarRepeat,
+                      "Two Bar Repeats", 44, true},
+         }) {
+        const auto result = readFixture(expected.fixture);
+        const auto style = result.document->getOthers()->get<StaffStyle>(
+            musx::dom::SCORE_PARTID, expected.styleId);
+        REQUIRE(style);
+        REQUIRE(style->masks);
+        CHECK(style->styleName == expected.styleName);
+        CHECK(style->altNotation == expected.notation);
+        CHECK(style->copyable);
+        CHECK(style->addToMenu);
+        CHECK(style->masks->altNotation);
+        CHECK(style->masks->hideChords);
+        CHECK(style->masks->hideFretboards);
+        CHECK(style->hideChords == expected.hidesAttachedItems);
+        CHECK(style->hideFretboards == expected.hidesAttachedItems);
+
+        const auto assignment = result.document->getOthers()->get<StaffStyleAssign>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+        REQUIRE(assignment);
+        CHECK(assignment->styleId == expected.styleId);
+        CHECK(assignment->startMeas == 1);
+        CHECK(assignment->startEdu == 0);
+        CHECK(assignment->endMeas == expected.endMeas);
+        CHECK(assignment->endEdu == (std::numeric_limits<musx::dom::Edu>::max)());
+        CHECK(result.document->getOthers()
+                  ->getArray<StaffStyleAssign>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1})
+                  .size() == 1);
+        CHECK(result.document->getOthers()->getAllSources<StaffStyle>().size() == 6);
+
+        const auto staff = result.document->getOthers()->get<Staff>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+        REQUIRE(staff);
+        CHECK(staff->hasStyles);
+
+        const auto* styleType = result.report.findField<StaffStyle>(
+            "altNotation", musx::dom::SCORE_PARTID, expected.styleId);
+        REQUIRE(styleType);
+        CHECK(styleType->origin == ValueOrigin::LegacyMusAdjusted);
+        CHECK(styleType->sourceIdentity == finale_mus_reader::records::packTag("GF"));
+        const auto* assignmentStyle = result.report.findField<StaffStyleAssign>(
+            "styleId", musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+        REQUIRE(assignmentStyle);
+        CHECK(assignmentStyle->origin == ValueOrigin::LegacyMusAdjusted);
+        CHECK(assignmentStyle->sourceIdentity == finale_mus_reader::records::packTag("GF"));
+    }
+
+    const auto baseline = readFixture("evidence/F98/F98-baseline.mus");
+    constexpr std::pair<std::string_view, Notation> canonicalStyles[]{
+        {"Normal Notation", Notation::Normal},
+        {"Slash Notation", Notation::SlashBeats},
+        {"Rhythmic Notation", Notation::Rhythmic},
+        {"One Bar Repeats", Notation::OneBarRepeat},
+        {"Two Bar Repeats", Notation::TwoBarRepeat},
+        {"Blank Notation", Notation::Blank},
+    };
+    const auto styles = baseline.document->getOthers()->getAllSources<StaffStyle>();
+    REQUIRE(styles.size() == std::size(canonicalStyles));
+    for (std::size_t index = 0; index < std::size(canonicalStyles); ++index) {
+        const auto style = baseline.document->getOthers()->get<StaffStyle>(
+            musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(index + 1));
+        REQUIRE(style);
+        CHECK(style->styleName == canonicalStyles[index].first);
+        CHECK(style->altNotation == canonicalStyles[index].second);
+        CHECK(style->instUuid == musx::dom::uuid::BlankStaff);
+        CHECK(style->botRepeatDotOff == -5);
+        CHECK(style->topRepeatDotOff == -3);
+        CHECK(style->dwRestOffset == -4);
+        CHECK(style->wRestOffset == -4);
+        CHECK(style->hRestOffset == -4);
+        CHECK(style->otherRestOffset == -4);
+        CHECK(style->lineSpace == 24);
+        REQUIRE(style->noteFont);
+        CHECK(style->noteFont->fontSize == 24);
+        CHECK(style->stemReversal == -4);
+        REQUIRE(style->masks);
+        CHECK(style->masks->altNotation);
+        const auto* styleType = baseline.report.findField<StaffStyle>(
+            "altNotation", musx::dom::SCORE_PARTID,
+            static_cast<musx::dom::Cmper>(index + 1));
+        REQUIRE(styleType);
+        CHECK(styleType->origin == ValueOrigin::LegacyBehavior);
+        const auto* styleUuid = baseline.report.findField<StaffStyle>(
+            "instUuid", musx::dom::SCORE_PARTID,
+            static_cast<musx::dom::Cmper>(index + 1));
+        REQUIRE(styleUuid);
+        CHECK(styleUuid->origin == ValueOrigin::LegacyBehavior);
+        const auto* lineSpace = baseline.report.findField<StaffStyle>(
+            "lineSpace", musx::dom::SCORE_PARTID,
+            static_cast<musx::dom::Cmper>(index + 1));
+        REQUIRE(lineSpace);
+        CHECK(lineSpace->origin == ValueOrigin::Finale27Default);
+    }
+    CHECK(baseline.document->getOthers()->getAllSources<StaffStyleAssign>().empty());
+}
+
+TEST_CASE("Controlled GFrameHolds recover every legacy alternate notation")
+{
+    constexpr std::tuple<musx::dom::Cmper, musx::dom::MeasCmper, musx::dom::MeasCmper>
+        expectedAssignments[]{
+            {2, 2, 2},
+            {3, 3, 3},
+            {4, 4, 4},
+            {5, 5, 6},
+            {6, 7, 7},
+        };
+    constexpr std::pair<musx::dom::Cmper, std::int64_t> expectedRawTypes[]{
+        {2, 1},
+        {3, 2},
+        {4, 3},
+        {6, 6},
+    };
+
+    for (const auto fixture : {"evidence/F263/F263-altnotation.mus",
+                               "evidence/F372/F372-altnotation.mus",
+                               "evidence/F97/F97-altnotation.mus",
+                               "evidence/F98/F98-altnotation.mus"}) {
+        const auto result = readFixture(fixture);
+        const auto assignments = result.document->getOthers()->getArray<StaffStyleAssign>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
+        REQUIRE(assignments.size() == std::size(expectedAssignments));
+        for (std::size_t index = 0; index < std::size(expectedAssignments); ++index) {
+            const auto& [styleId, startMeas, endMeas] = expectedAssignments[index];
+            CHECK(assignments[index]->styleId == styleId);
+            CHECK(assignments[index]->startMeas == startMeas);
+            CHECK(assignments[index]->startEdu == 0);
+            CHECK(assignments[index]->endMeas == endMeas);
+            CHECK(assignments[index]->endEdu == (std::numeric_limits<musx::dom::Edu>::max)());
+        }
+        for (const auto& [styleId, rawType] : expectedRawTypes) {
+            const auto* field = result.report.findField<StaffStyle>(
+                "altNotation", musx::dom::SCORE_PARTID, styleId);
+            REQUIRE(field);
+            CHECK(field->origin == ValueOrigin::LegacyMusAdjusted);
+            CHECK(field->rawValue == rawType);
+            CHECK(field->sourceIdentity == finale_mus_reader::records::packTag("GF"));
+        }
+    }
+}
+
+TEST_CASE("Pre-Finale-2000 alternate notation selects presumed GFrameHold flags at Finale 98")
+{
+    const auto shortGFrameHold = importStaffStyleAssigns(
+        makeDetailContainer(FormatEpoch::CodaBanner, 4, 3, {9, 0, 0, 0, 0x1231}, "GF"));
+    const auto shortAssignment = shortGFrameHold.document->getOthers()->get<StaffStyleAssign>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper{4}, musx::dom::Inci{0});
+    REQUIRE(shortAssignment);
+    CHECK(shortAssignment->styleId == 2);
+    CHECK(shortAssignment->startMeas == 3);
+    CHECK(shortAssignment->endMeas == 3);
+
+    const auto repeatedCodaGFrameHold = importStaffStyleAssigns(makeDetailContainer(
+        FormatEpoch::CodaBanner, 4, 3, {9, 0x1231, 0, 0, 0, 9, 0x1231, 0, 0, 0}, "GF"));
+    CHECK(repeatedCodaGFrameHold.document->getOthers()->getAllSources<StaffStyleAssign>().empty());
+
+    const auto finale97GFrameHold = importStaffStyleAssigns(
+        makeDetailContainer(FormatEpoch::UncompressedLegacy, 4, 3,
+                            {9, 0x1232, 0, 0, 0x1231}, "GF"),
+        false, SourceVersion{.major = finale_mus_reader::versions::finale97.major});
+    const auto finale97Assignment = finale97GFrameHold.document->getOthers()->get<StaffStyleAssign>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper{4}, musx::dom::Inci{0});
+    REQUIRE(finale97Assignment);
+    CHECK(finale97Assignment->styleId == 2);
+
+    const auto finale98GFrameHold = importStaffStyleAssigns(
+        makeDetailContainer(FormatEpoch::UncompressedLegacy, 4, 3,
+                            {9, 0x1231, 0, 0, 0x1232}, "GF"),
+        false, SourceVersion{.major = finale_mus_reader::versions::finale98.major});
+    const auto finale98Assignment = finale98GFrameHold.document->getOthers()->get<StaffStyleAssign>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper{4}, musx::dom::Inci{0});
+    REQUIRE(finale98Assignment);
+    CHECK(finale98Assignment->styleId == 2);
+
+    for (const auto& [storedType, styleId, notation] : {
+             std::tuple{2, musx::dom::Cmper{3}, Staff::AlternateNotation::Rhythmic},
+             std::tuple{3, musx::dom::Cmper{4}, Staff::AlternateNotation::OneBarRepeat},
+             std::tuple{6, musx::dom::Cmper{6}, Staff::AlternateNotation::Blank},
+         }) {
+        const auto imported = importStaffStyleAssigns(makeDetailContainer(
+            FormatEpoch::CodaBanner, 4, 3,
+            {9, 0, 0, 0, static_cast<std::int16_t>(0x1230 | storedType)}, "GF"));
+        const auto style = imported.document->getOthers()->get<StaffStyle>(
+            musx::dom::SCORE_PARTID, styleId);
+        REQUIRE(style);
+        CHECK(style->altNotation == notation);
+        const auto storedAssignment = imported.document->getOthers()->get<StaffStyleAssign>(
+            musx::dom::SCORE_PARTID, musx::dom::Cmper{4}, musx::dom::Inci{0});
+        REQUIRE(storedAssignment);
+        CHECK(storedAssignment->styleId == styleId);
+    }
 }
 
 } // namespace

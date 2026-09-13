@@ -2958,10 +2958,11 @@ TEST_CASE("StaffStyle uses its Finale 2012 boundary for unrepresented record "
     CHECK(finale2012Report.diagnostics.front().message.find("shorter than") != std::string::npos);
 }
 
-TEST_CASE("StaffStyle remains absent when no source record exists")
+TEST_CASE("Direct-record StaffStyle remains absent when no source record exists")
 {
     using StaffStyle = musx::dom::others::StaffStyle;
-    for (const auto path : {"evidence/F100/F100-baseline.mus", "evidence/F97/F97-def-measrest.mus"})
+    for (const auto path : {"evidence/F2000/F2000-baseline.mus",
+                            "evidence/F2011/F2011-baseline.mus"})
     {
         const auto result = readFixture(path);
         CHECK(result.document->getOthers()->getAllSources<StaffStyle>().empty());

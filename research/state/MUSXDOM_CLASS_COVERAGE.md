@@ -49,7 +49,7 @@ Explanation added here has to be removed again.
     [x] TimeSignatureOptions                    time_signature_options.cpp
     [x] TupletOptions                           tuplet_options.cpp
 
-## others  (41 done, 5 partial, 47 to do, 93 total)
+## others  (43 done, 3 partial, 47 to do, 93 total)
 
     [x] AcciAmountFlats                         custom_keys.cpp
     [x] AcciAmountSharps                        custom_keys.cpp
@@ -116,7 +116,7 @@ Explanation added here has to be removed again.
     [x] SmartShapeCustomLine                    smart_shape_custom_lines.cpp
     [ ] SmartShapeMeasureAssign
     [ ] SplitMeasure
-    [~] Staff                                   staff.cpp                       pre-F2000 hasStyles synthesis pending
+    [x] Staff                                   staff.cpp
     [x] StaffListCategoryName                   staff_list.cpp
     [x] StaffListCategoryParts                  staff_list.cpp
     [x] StaffListCategoryScore                  staff_list.cpp
@@ -127,7 +127,7 @@ Explanation added here has to be removed again.
     [x] StaffListRepeatScoreForced              staff_list.cpp
     [ ] StaffPlayData
     [x] StaffStyle                              staff.cpp
-    [~] StaffStyleAssign                        staff_style_assign.cpp          pre-F2000 synthesis pending
+    [x] StaffStyleAssign                        staff_style_assign.cpp
     [ ] StaffSystem
     [ ] StaffUsed
     [ ] SystemLock
@@ -145,7 +145,7 @@ Explanation added here has to be removed again.
     [x] TonalCenterFlats                        custom_keys.cpp
     [x] TonalCenterSharps                       custom_keys.cpp
 
-## details  (5 done, 1 partial, 54 to do, 60 total)
+## details  (5 done, 2 partial, 53 to do, 60 total)
 
     [ ] AccidentalAlterations
     [ ] ArticulationAssign
@@ -180,7 +180,7 @@ Explanation added here has to be removed again.
     [ ] EntryPartFieldDetail
     [ ] EntrySize
     [x] FretboardDiagram                        fretboard_diagrams.cpp
-    [ ] GFrameHold
+    [~] GFrameHold                              gframe_hold.cpp                 only legacy alternate notation
     [ ] IndependentStaffDetails
     [x] KeySymbolListElement                    key_symbol_list.cpp
     [ ] LyricAssignChorus
