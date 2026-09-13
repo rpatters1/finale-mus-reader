@@ -691,10 +691,10 @@ TEST_CASE("Pre-Finale-2000 alternate notation ranges synthesize Staff Styles and
     };
 
     for (const auto& expected : {
-             Expected{"evidence/F98/F98-altnotation-partial.mus", 2, Notation::SlashBeats,
-                      "Slash Notation", 3, false},
-             Expected{"evidence/F98/F98-altnotation-full.mus", 5, Notation::TwoBarRepeat,
-                      "Two Bar Repeats", 44, true},
+             Expected{"evidence/F98/F98-altnotation-partial.mus", musx::dom::Cmper(2),
+                      Notation::SlashBeats, "Slash Notation", musx::dom::MeasCmper(3), false},
+             Expected{"evidence/F98/F98-altnotation-full.mus", musx::dom::Cmper(5),
+                      Notation::TwoBarRepeat, "Two Bar Repeats", musx::dom::MeasCmper(44), true},
          }) {
         const auto result = readFixture(expected.fixture);
         const auto style = result.document->getOthers()->get<StaffStyle>(
@@ -794,17 +794,17 @@ TEST_CASE("Controlled GFrameHolds recover every legacy alternate notation")
 {
     constexpr std::tuple<musx::dom::Cmper, musx::dom::MeasCmper, musx::dom::MeasCmper>
         expectedAssignments[]{
-            {2, 2, 2},
-            {3, 3, 3},
-            {4, 4, 4},
-            {5, 5, 6},
-            {6, 7, 7},
+            {musx::dom::Cmper(2), musx::dom::MeasCmper(2), musx::dom::MeasCmper(2)},
+            {musx::dom::Cmper(3), musx::dom::MeasCmper(3), musx::dom::MeasCmper(3)},
+            {musx::dom::Cmper(4), musx::dom::MeasCmper(4), musx::dom::MeasCmper(4)},
+            {musx::dom::Cmper(5), musx::dom::MeasCmper(5), musx::dom::MeasCmper(6)},
+            {musx::dom::Cmper(6), musx::dom::MeasCmper(7), musx::dom::MeasCmper(7)},
         };
     constexpr std::pair<musx::dom::Cmper, std::int64_t> expectedRawTypes[]{
-        {2, 1},
-        {3, 2},
-        {4, 3},
-        {6, 6},
+        {musx::dom::Cmper(2), std::int64_t(1)},
+        {musx::dom::Cmper(3), std::int64_t(2)},
+        {musx::dom::Cmper(4), std::int64_t(3)},
+        {musx::dom::Cmper(6), std::int64_t(6)},
     };
 
     for (const auto fixture : {"evidence/F263/F263-altnotation.mus",
