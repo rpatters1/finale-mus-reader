@@ -33,7 +33,7 @@ reading the file.
 |---|---|---|
 | options | [`format/options/`](format/options/index.md) | [`options/index.md`](format/options/index.md) for addressing, then the class file |
 | others | [`format/others/`](format/others/) | `bookmark`, `chord_suffix_elements`, `chord_suffix_playback`, `custom_keys`, `drum_staff`, `font_definitions`, `fret_records`, `graphic_assignments`, `layer_attributes`, `marking_category`, `measure`, `part_definitions`, `part_globals`, `percussion_note_info`, `shape_definitions`, `smart_shape_custom_lines`, `staff`, `staff_list`, `staff_style_assign`, `text_blocks` |
-| details | [`format/details/`](format/details/) | `custom_key_octaves`, `fretboard_diagrams`, `key_symbol_list`, `measure_graphic_assign`, `percussion_note_code` |
+| details | [`format/details/`](format/details/) | `custom_key_octaves`, `fretboard_diagrams`, `gframe_hold`, `key_symbol_list`, `measure_graphic_assign`, `percussion_note_code` |
 | texts | [`format/texts/`](format/texts/) | `text_pool` first, then `coda_texts`, `file_info_text`, `bookmark_text`, `expression_text` |
 
 Class-by-class implementation status: [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).

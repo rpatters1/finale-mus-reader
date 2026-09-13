@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "import/shared/staff_defaults.h"
 #include "import/support/enigma_text.h"
 #include "import/support/field_manifest.h"
 #include "import/support/legacy_font.h"
@@ -369,24 +370,6 @@ StaffFallbackSelection selectStaffFallbacks(bool sixWordLayout,
             .repeatDotOffsets = sixWordLayout || wordCount <= staffBaseWords
                                     ? StaffRepeatDotFallback::LegacyGeometry
                                     : StaffRepeatDotFallback::None};
-}
-
-const StaffTarget &finale27StaffDefaults(const ImportContext &context)
-{
-    const auto result =
-        context.referenceDocument->getOthers()->get<StaffTarget>(musx::dom::SCORE_PARTID, 1);
-    if (!result)
-        throw std::logic_error("Finale 27 reference is missing its standard Staff");
-    return *result;
-}
-
-int staffFinale27NoteheadFontSize(const ImportContext &context)
-{
-    const auto font = musx::dom::options::FontOptions::getFontInfoOrNull(
-        context.referenceDocument, musx::dom::options::FontOptions::FontType::Noteheads);
-    if (!font)
-        throw std::logic_error("Finale 27 reference is missing its notehead font default");
-    return font->fontSize;
 }
 
 bool resolveStaffNoteFontSize(const ImportContext &context, StaffTarget &target)
@@ -1915,7 +1898,7 @@ void importStaffFamily(const ImportContext &context, records::LegacyTag fixedTag
                 target->blankMeasure = defaults.blankMeasure;
                 target->vertTabNumOff = 0;
                 target->noteFont = std::make_shared<musx::dom::FontInfo>(target->getDocument());
-                target->noteFont->fontSize = staffFinale27NoteheadFontSize(context);
+                target->noteFont->fontSize = finale27NoteheadFontSize(context);
             }
             const auto hasCenteredOneStaffLine =
                 hasCodaStaffLineOverride && codaStaffLineValue == codaCenteredOneLineStaff;

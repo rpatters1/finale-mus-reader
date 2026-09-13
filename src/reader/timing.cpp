@@ -49,6 +49,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportFretboardDiagrams: return "fretboard_diagrams";
     case Phase::ImportFretboardGroups: return "fretboard_groups";
     case Phase::ImportFretboardStyles: return "fretboard_styles";
+    case Phase::ImportGFrameHolds: return "gframe_holds";
     case Phase::ImportGraceNoteOptions: return "grace_note_options";
     case Phase::ImportKeySignatureOptions: return "key_signature_options";
     case Phase::ImportKeyAttributes: return "key_attributes";

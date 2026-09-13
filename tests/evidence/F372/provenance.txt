@@ -330,3 +330,12 @@ F372-tieopts-ps.mus / .etf / .musx
     words 0 and 2 add to selector 22 word 4 for the two contour heights. For the short,
     medium, and long contours, the two fixed insets are selector 50 word 4 minus word 0
     and word 2 minus word 5. The tie-end fixed-inset conversion remains ambiguous.
+
+F372-altnotation.mus / .etf / .musx
+    sha256 22e626469c82b8f7663d1d218cdfac17ac63c8fac1f83c5e3fd162079fc51154 (.mus)
+    sha256 8bbe05cbc443dabb3e336874bc6bb1943e379d2a6fdc7510c790f65b7dfd7fc9 (.etf)
+    sha256 c09dc40cbaaf3db243cfaa627b6857c1ace96670a3eeb38df35ad67b59f605a1 (.musx)
+    Controlled eight-measure document with measures 1 and 8 left in Normal Notation. Measures
+    2, 3, 4, 5--6, and 7 respectively receive Slash Beats, Rhythmic, One-Bar Repeat, Two-Bar
+    Repeat, and Invisible Beats. The MUS and ETF contain one five-word `GF` row for each changed
+    measure; word 4 holds values 1, 2, 3, 4, 5, and 6 in measure order.

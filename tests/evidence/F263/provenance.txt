@@ -325,3 +325,12 @@ staffopts/F263-tabstaff-yoff29.mus / .etf / .musx
     sha256 27e89fd52e7ea059aa3ac68956c977f0483338d379a0f92cbd91a43a89220362 (.musx)
     From F263-tabstaff, changes only the high byte of `IA(1)` word 1 to 29. The companion writes
     `vertTabNumOff` as 7424, confirming the byte's signed Efix conversion.
+
+F263-altnotation.mus / .etf / .musx
+    sha256 15565fade249be351fff95eb95ac4f2fe13cdfd07b3d53d54170c4f99ccba8ab (.mus)
+    sha256 bab4c89fb8841da8026b48f6926755ec08aace78ebdc6f147a7d817327aac658 (.etf)
+    sha256 490e43373db756815736deb67547540751aebd221de0c2bf1bdb23fb4ef549ef (.musx)
+    Controlled eight-measure document with measures 1 and 8 left in Normal Notation. Measures
+    2, 3, 4, 5--6, and 7 respectively receive Slash Beats, Rhythmic, One-Bar Repeat, Two-Bar
+    Repeat, and Invisible Beats. The MUS and ETF contain one five-word `GF` row for each changed
+    measure; word 4 holds values 1, 2, 3, 4, 5, and 6 in measure order.

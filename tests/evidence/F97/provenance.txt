@@ -107,3 +107,13 @@ F97-def-measrest.etf
     ETF repeats it. Finale 97 is the first version whose UI exposes this setting.
     Finale uses the selected character only when it recognizes the glyph as a
     rest; otherwise it displays the whole-rest glyph.
+
+F97-altnotation.mus / .etf
+    sha256 MUS b926609c2495f2be0bdaf901221b81c8863509e1b6f8125aa4db5b1c6c8b6f9a
+    sha256 ETF 4c35ded2100fac78687658e0b5782253b6797a28e32b8ce72eb34218de2ec0ad
+-finale27/F97-altnotation.musx
+    sha256 ce945a692e9fc57cfc2363d7343a2dd47cd8135ff39ddf48a44ee361a45705eb
+    Eight-measure controlled fixture with normal notation in measures 1 and 8.
+    Measures 2--7 use Slash Beats, Rhythmic, One-Bar Repeat, Two-Bar Repeat for
+    two measures, and Invisible Beats. The six nonzero selectors occupy the low
+    nibble of GF word 4. The MUSX file is its Finale 27 companion.
