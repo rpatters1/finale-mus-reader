@@ -26,11 +26,9 @@ constexpr std::uint16_t courtesySelector = 44;
 // layouts. The locations of showKeyFirstSystemOnly and keyTimeSepar remain unlocated in
 // this layout, so they retain the baseline.
 const FieldMapping codaKeySignatureFields[] = {
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 1,
-        doKeyCancel),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 1, doKeyCancel),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 2, doCStart),
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 3,
-        redisplayOnModeChange),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 3, redisplayOnModeChange),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 0, keyFront),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 1, keyMid),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 2, keyBack),
@@ -40,50 +38,32 @@ const FieldMapping codaKeySignatureFields[] = {
 const FieldMapping fixedRowKeySignatureFields[] = {
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 1, doKeyCancel),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 2, doCStart),
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 3,
-        redisplayOnModeChange),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyBehaviorSelector, 0, 3, redisplayOnModeChange),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 0, keyFront),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 1, keyMid),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keySpacingSelector, 0, 2, keyBack),
     MUS_NUMERIC_WORD(KeySignatureOptionsTarget, accidentalSpacingSelector, 0, 4, acciAdd),
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, firstSystemSelector, 0, 2,
-        showKeyFirstSystemOnly),
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyTimeSpacingSelector, 0, 5,
-        keyTimeSepar),
-    MUS_NUMERIC_BIT(KeySignatureOptionsTarget, courtesySelector, 0, 3, 0,
-        cautionaryKeyChanges),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, firstSystemSelector, 0, 2, showKeyFirstSystemOnly),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, keyTimeSpacingSelector, 0, 5, keyTimeSepar),
+    MUS_NUMERIC_BIT(KeySignatureOptionsTarget, courtesySelector, 0, 3, 0, cautionaryKeyChanges),
 };
 
 const FieldMapping dclKeySignatureFields[] = {
-    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, simplifyKeySelector, 2, 1,
-        simplifyKeyHoldOctave),
+    MUS_NUMERIC_WORD(KeySignatureOptionsTarget, simplifyKeySelector, 2, 1, simplifyKeyHoldOctave),
 };
 
 const FieldMapping classKeySignatureFields[] = {
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector),
-        GLOBALS_CMPER, classWordOffset(1), doKeyCancel),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector),
-        GLOBALS_CMPER, classWordOffset(2), doCStart),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector),
-        GLOBALS_CMPER, classWordOffset(3), redisplayOnModeChange),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector),
-        GLOBALS_CMPER, classWordOffset(0), keyFront),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector),
-        GLOBALS_CMPER, classWordOffset(1), keyMid),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector),
-        GLOBALS_CMPER, classWordOffset(2), keyBack),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget,
-        numericGlobalClass(accidentalSpacingSelector), GLOBALS_CMPER,
-        classWordOffset(4), acciAdd),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(firstSystemSelector),
-        GLOBALS_CMPER, classWordOffset(2), showKeyFirstSystemOnly),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget,
-        numericGlobalClass(keyTimeSpacingSelector), GLOBALS_CMPER,
-        classWordOffset(5), keyTimeSepar),
-    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(simplifyKeySelector),
-        GLOBALS_CMPER, classWordOffset(13), simplifyKeyHoldOctave),
-    MUS_CLASS_BIT(KeySignatureOptionsTarget, numericGlobalClass(courtesySelector),
-        GLOBALS_CMPER, classWordOffset(3), 0, cautionaryKeyChanges),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector), GLOBALS_CMPER, classWordOffset(1), doKeyCancel),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector), GLOBALS_CMPER, classWordOffset(2), doCStart),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyBehaviorSelector), GLOBALS_CMPER, classWordOffset(3), redisplayOnModeChange),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector), GLOBALS_CMPER, classWordOffset(0), keyFront),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector), GLOBALS_CMPER, classWordOffset(1), keyMid),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keySpacingSelector), GLOBALS_CMPER, classWordOffset(2), keyBack),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(accidentalSpacingSelector), GLOBALS_CMPER, classWordOffset(4), acciAdd),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(firstSystemSelector), GLOBALS_CMPER, classWordOffset(2), showKeyFirstSystemOnly),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(keyTimeSpacingSelector), GLOBALS_CMPER, classWordOffset(5), keyTimeSepar),
+    MUS_CLASS_WORD(KeySignatureOptionsTarget, numericGlobalClass(simplifyKeySelector), GLOBALS_CMPER, classWordOffset(13), simplifyKeyHoldOctave),
+    MUS_CLASS_BIT(KeySignatureOptionsTarget, numericGlobalClass(courtesySelector), GLOBALS_CMPER, classWordOffset(3), 0, cautionaryKeyChanges),
 };
 
 const MappingTable& codaKeySignatureTable()
@@ -134,17 +114,17 @@ const MappingTable& dclKeySignatureTable()
 void applyKeySignatureLegacyBehavior(const ImportContext& context)
 {
     const auto pooled = context.document->getOptions()->get<KeySignatureOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<KeySignatureOptionsTarget>(pooled);
 
     target->doKeyCancelBetweenSharpsFlats = true;
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<KeySignatureOptionsTarget>(
-            "doKeyCancelBetweenSharpsFlats", 1);
+        reporting.template behaviorField<KeySignatureOptionsTarget>("doKeyCancelBetweenSharpsFlats", 1);
     });
 
-    if (context.profile.epoch == FormatEpoch::CodaBanner
-        || context.profile.epoch == FormatEpoch::UncompressedLegacy) {
+    if (context.profile.epoch == FormatEpoch::CodaBanner || context.profile.epoch == FormatEpoch::UncompressedLegacy) {
         target->simplifyKeyHoldOctave = false;
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
             reporting.template behaviorField<KeySignatureOptionsTarget>("simplifyKeyHoldOctave", 0);
@@ -163,9 +143,8 @@ void applyKeySignatureLegacyBehavior(const ImportContext& context)
 
 void importKeySignatureOptions(const ImportContext& context)
 {
-    applyMappingTables({&codaKeySignatureTable(), &fixedRowKeySignatureTable(),
-                           &dclKeySignatureTable(), &classKeySignatureTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&codaKeySignatureTable(), &fixedRowKeySignatureTable(), &dclKeySignatureTable(), &classKeySignatureTable()}, context.index,
+        context.profile, context.document, context.report);
     applyKeySignatureLegacyBehavior(context);
 }
 

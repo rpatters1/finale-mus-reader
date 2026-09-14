@@ -114,14 +114,10 @@ constexpr EpochMask fixedRowLyricEpochs = EpochMask::CodaBanner | EpochMask::Fix
 std::optional<LyricAlignJustify> lyricAlignment(std::int16_t stored)
 {
     switch (stored) {
-    case 1:
-        return LyricAlignJustify::Center;
-    case 2:
-        return LyricAlignJustify::Left;
-    case 3:
-        return LyricAlignJustify::Right;
-    default:
-        return std::nullopt;
+    case 1: return LyricAlignJustify::Center;
+    case 2: return LyricAlignJustify::Left;
+    case 3: return LyricAlignJustify::Right;
+    default: return std::nullopt;
     }
 }
 
@@ -179,8 +175,8 @@ constexpr LyricConnectType wordExtConnectOrder[] = {
     LyricConnectType::ZeroOffset,
 };
 
-constexpr const char* wordExtConnectNames[] = {"defaultStart", "defaultEnd", "systemStart",
-    "systemEnd", "dottedEnd", "durationEnd", "oneEntryEnd", "zeroLengthEnd", "zeroOffset"};
+constexpr const char* wordExtConnectNames[] = {
+    "defaultStart", "defaultEnd", "systemStart", "systemEnd", "dottedEnd", "durationEnd", "oneEntryEnd", "zeroLengthEnd", "zeroOffset"};
 
 // Each connection style is three words: the connection point, then the two offsets.
 constexpr std::size_t wordExtConnectWords = 3;
@@ -197,8 +193,7 @@ constexpr std::size_t earlyWordExtConnectCount = wordExtConnectCount - 1;
 ///
 /// The pinned baseline already switches smart hyphens on, so the earlier era needs no assertion
 /// of its own here -- only the gate.
-bool storesSmartLyricOptions(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesSmartLyricOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return readGlobalWords(index, profile, wordExtSelector).present;
 }
@@ -212,8 +207,7 @@ bool storesSmartLyricOptions(
 /// A shape marker is preferable to a version range wherever the record offers one: nothing then
 /// has to be inferred about which release a file came from. The edge-punctuation gate a few
 /// lines up has to be a version range only because its record does not change shape.
-bool storesAutoNumbering(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesAutoNumbering(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     const auto family = readGlobalWords(index, profile, autoNumberSelector);
     return family.present && family.words.size() > autoNumberFamilyWords;
@@ -223,8 +217,7 @@ bool storesAutoNumbering(
 /// @details Selector 67 is carried by the uncompressed, DCL and zlib epochs and by no
 /// Coda-banner document. Its presence decides, because @ref captureLyricOptions asserts a value
 /// when it is absent and the two must not be able to disagree.
-bool storesWordExtLineWidth(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesWordExtLineWidth(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return readGlobalWords(index, profile, wordExtLineWidthSelector).present;
 }
@@ -245,11 +238,9 @@ bool storesWordExtLineWidth(
 /// release does. The gate is framed inside the zlib epoch and bounded below, so a file whose
 /// version cannot be recovered reads as the earlier behavior -- the era every other epoch is in
 /// anyway, so it fails closed onto the answer that is right for all but two releases.
-bool storesEdgePunctuationSetting(
-    const records::LegacyRecordIndex&, const SourceProfile& profile)
+bool storesEdgePunctuationSetting(const records::LegacyRecordIndex&, const SourceProfile& profile)
 {
-    return sourceAtOrAfter(
-        profile, FormatEpoch::ZlibLegacy, versions::finale2011);
+    return sourceAtOrAfter(profile, FormatEpoch::ZlibLegacy, versions::finale2011);
 }
 
 // The maximum hyphen separation, in the two epochs whose selector 15 states it.
@@ -260,16 +251,14 @@ bool storesEdgePunctuationSetting(
 // separation of nothing. The baseline's 144 is the era's behavior, so it needs no assertion
 // either.
 const FieldMapping lyricHyphenFields[] = {
-    MUS_WORD(LyricTarget, "15", GLOBALS_CMPER, /*incidence*/ 0, hyphenSeparationSlot,
-        maxHyphenSeparation),
+    MUS_WORD(LyricTarget, "15", GLOBALS_CMPER, /*incidence*/ 0, hyphenSeparationSlot, maxHyphenSeparation),
 };
 
 // The word-extension line width, wherever selector 67 exists. This is the one scalar of the
 // class that varies from document to document, and it varies in all three epochs that carry
 // it.
 const FieldMapping lyricLineWidthFields[] = {
-    MUS_WORD(LyricTarget, "67", GLOBALS_CMPER, /*incidence*/ 0, wordExtLineWidthSlot,
-        wordExtLineWidth),
+    MUS_WORD(LyricTarget, "67", GLOBALS_CMPER, /*incidence*/ 0, wordExtLineWidthSlot, wordExtLineWidth),
 };
 
 // The Finale 2004 generation of smart-lyric settings. Every document seen stores the same
@@ -280,52 +269,40 @@ const FieldMapping lyricLineWidthFields[] = {
 // legacy order, `always, sometimes, never`. **Believed for `always` and `never`:** only
 // `sometimes` has been observed, so the other two positions rest on that enum's documentation.
 const FieldMapping smartLyricFields[] = {
-    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, smartHyphenStartSlot,
-        smartHyphenStart),
-    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtMinLengthSlot,
-        wordExtMinLength),
-    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtOffsetToNoteheadSlot,
-        wordExtOffsetToNotehead),
-    MUS_WORD(LyricTarget, "35", GLOBALS_CMPER, /*incidence*/ 0, smartHyphenSlot,
-        useSmartHyphens),
-    MUS_WORD(LyricTarget, "34", GLOBALS_CMPER, /*incidence*/ 0, smartWordExtSlot,
-        useSmartWordExtensions),
-    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtNeedUnderscoreSlot,
-        wordExtNeedUnderscore),
+    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, smartHyphenStartSlot, smartHyphenStart),
+    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtMinLengthSlot, wordExtMinLength),
+    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtOffsetToNoteheadSlot, wordExtOffsetToNotehead),
+    MUS_WORD(LyricTarget, "35", GLOBALS_CMPER, /*incidence*/ 0, smartHyphenSlot, useSmartHyphens),
+    MUS_WORD(LyricTarget, "34", GLOBALS_CMPER, /*incidence*/ 0, smartWordExtSlot, useSmartWordExtensions),
+    MUS_WORD(LyricTarget, "57", GLOBALS_CMPER, /*incidence*/ 0, wordExtNeedUnderscoreSlot, wordExtNeedUnderscore),
 };
 
 // Finale 2007 and later. The same logical words, reached through the shared numericGlobalClass
 // rule and addressed by byte offset in the coalesced payload. Both byte orders occur in this
 // era.
 const FieldMapping classLyricHyphenFields[] = {
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(hyphenSeparationSelector), GLOBALS_CMPER,
-        classWordOffset(hyphenSeparationSlot), maxHyphenSeparation),
+    MUS_CLASS_WORD(
+        LyricTarget, numericGlobalClass(hyphenSeparationSelector), GLOBALS_CMPER, classWordOffset(hyphenSeparationSlot), maxHyphenSeparation),
 };
 
 const FieldMapping classLyricLineWidthFields[] = {
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtLineWidthSelector), GLOBALS_CMPER,
-        classWordOffset(wordExtLineWidthSlot), wordExtLineWidth),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtLineWidthSelector), GLOBALS_CMPER, classWordOffset(wordExtLineWidthSlot), wordExtLineWidth),
 };
 
 const FieldMapping classSmartLyricFields[] = {
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER,
-        classWordOffset(smartHyphenStartSlot), smartHyphenStart),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER,
-        classWordOffset(wordExtMinLengthSlot), wordExtMinLength),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER,
-        classWordOffset(wordExtOffsetToNoteheadSlot), wordExtOffsetToNotehead),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(smartHyphenSelector), GLOBALS_CMPER,
-        classWordOffset(smartHyphenSlot), useSmartHyphens),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(smartWordExtSelector), GLOBALS_CMPER,
-        classWordOffset(smartWordExtSlot), useSmartWordExtensions),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER,
-        classWordOffset(wordExtNeedUnderscoreSlot), wordExtNeedUnderscore),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER, classWordOffset(smartHyphenStartSlot), smartHyphenStart),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER, classWordOffset(wordExtMinLengthSlot), wordExtMinLength),
+    MUS_CLASS_WORD(
+        LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER, classWordOffset(wordExtOffsetToNoteheadSlot), wordExtOffsetToNotehead),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(smartHyphenSelector), GLOBALS_CMPER, classWordOffset(smartHyphenSlot), useSmartHyphens),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(smartWordExtSelector), GLOBALS_CMPER, classWordOffset(smartWordExtSlot), useSmartWordExtensions),
+    MUS_CLASS_WORD(
+        LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER, classWordOffset(wordExtNeedUnderscoreSlot), wordExtNeedUnderscore),
 };
 
 const MappingTable& lyricHyphenTable()
 {
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::FixedRow,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<LyricTarget>,
@@ -339,8 +316,7 @@ const MappingTable& lyricLineWidthTable()
     // The presence test alone decides this one, as it must: the capture pass asserts a value
     // when the same test says the record is absent, so a mask that could disagree with it
     // would leave a document with neither a read value nor an assertion.
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = fixedRowLyricEpochs,
         .applies = &storesWordExtLineWidth,
         .targetKind = TargetKind::OptionsSingleton,
@@ -352,8 +328,7 @@ const MappingTable& lyricLineWidthTable()
 
 const MappingTable& smartLyricTable()
 {
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = fixedRowLyricEpochs,
         .applies = &storesSmartLyricOptions,
         .targetKind = TargetKind::OptionsSingleton,
@@ -365,8 +340,7 @@ const MappingTable& smartLyricTable()
 
 const MappingTable& classLyricHyphenTable()
 {
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -378,8 +352,7 @@ const MappingTable& classLyricHyphenTable()
 
 const MappingTable& classLyricLineWidthTable()
 {
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &storesWordExtLineWidth,
         .encoding = RecordEncoding::ClassRecord,
@@ -394,30 +367,27 @@ const MappingTable& classLyricLineWidthTable()
 // setting as the reverse of Finale's dialog, and so does the record: the word is set when
 // punctuation is *used* rather than ignored, which is why it needs no inversion on the way in.
 const FieldMapping classEdgePunctuationFields[] = {
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER,
-        classWordOffset(edgePunctuationSlot), lyricUseEdgePunctuation),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(wordExtSelector), GLOBALS_CMPER, classWordOffset(edgePunctuationSlot), lyricUseEdgePunctuation),
 };
 
 // Finale 2011 and later, selected by the record's own size rather than by a version. musxdom's
 // AutoNumberingAlign is in the legacy order, None then Align, so the type passes through as a
 // number, 0 being `None` and 1 `Align`.
 const FieldMapping classAutoNumberFields[] = {
-    MUS_CLASS_BIT(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER,
-        classWordOffset(autoNumberVersesSlot), 0, showAutoNumbersOnVerses),
-    MUS_CLASS_BIT(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER,
-        classWordOffset(autoNumberChorusesSlot), 0, showAutoNumbersOnChoruses),
-    MUS_CLASS_BIT(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER,
-        classWordOffset(autoNumberSectionsSlot), 0, showAutoNumbersOnSections),
-    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER,
-        classWordOffset(autoNumberTypeSlot), lyricAutoNumType),
+    MUS_CLASS_BIT(
+        LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER, classWordOffset(autoNumberVersesSlot), 0, showAutoNumbersOnVerses),
+    MUS_CLASS_BIT(
+        LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER, classWordOffset(autoNumberChorusesSlot), 0, showAutoNumbersOnChoruses),
+    MUS_CLASS_BIT(
+        LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER, classWordOffset(autoNumberSectionsSlot), 0, showAutoNumbersOnSections),
+    MUS_CLASS_WORD(LyricTarget, numericGlobalClass(autoNumberSelector), GLOBALS_CMPER, classWordOffset(autoNumberTypeSlot), lyricAutoNumType),
 };
 
 const MappingTable& classAutoNumberTable()
 {
     // The marker alone decides this one, and it must: the capture pass asserts the three
     // switches false when the same test says the record is the short one.
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &storesAutoNumbering,
         .encoding = RecordEncoding::ClassRecord,
@@ -433,8 +403,7 @@ const MappingTable& classEdgePunctuationTable()
     // The gate alone decides this one, and it must: the capture pass asserts the opposite when
     // the same test says the era has no setting, so a mask that could disagree with it would
     // leave a document with neither a read value nor an assertion.
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &storesEdgePunctuationSetting,
         .encoding = RecordEncoding::ClassRecord,
@@ -447,8 +416,7 @@ const MappingTable& classEdgePunctuationTable()
 
 const MappingTable& classSmartLyricTable()
 {
-    static const MappingTable table{
-        .reportPrefix = lyricReportPrefix,
+    static const MappingTable table{.reportPrefix = lyricReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &storesSmartLyricOptions,
         .encoding = RecordEncoding::ClassRecord,
@@ -460,17 +428,14 @@ const MappingTable& classSmartLyricTable()
 }
 
 template <typename Reporting>
-void reportLyricField(Reporting& reporting, const std::string& member,
-    typename Reporting::Origin origin, std::int64_t rawValue, std::size_t blockOffset = 0,
-    std::size_t decodedOffset = 0)
+void reportLyricField(Reporting& reporting, const std::string& member, typename Reporting::Origin origin, std::int64_t rawValue,
+    std::size_t blockOffset = 0, std::size_t decodedOffset = 0)
 {
-    reporting.report().setField(reporting.template instanceKey<LyricTarget>(), member,
-        {origin, blockOffset, decodedOffset, rawValue});
+    reporting.report().setField(reporting.template instanceKey<LyricTarget>(), member, {origin, blockOffset, decodedOffset, rawValue});
 }
 
 /// @brief The seeded style for one syllable position, created if the baseline lacked it.
-std::shared_ptr<LyricSyllableStyle> syllableStyleFor(
-    const std::shared_ptr<LyricTarget>& target, LyricSyllableType type)
+std::shared_ptr<LyricSyllableStyle> syllableStyleFor(const std::shared_ptr<LyricTarget>& target, LyricSyllableType type)
 {
     auto& slot = target->syllablePosStyles[type];
     if (!slot) {
@@ -480,8 +445,7 @@ std::shared_ptr<LyricSyllableStyle> syllableStyleFor(
 }
 
 /// @brief The seeded style for one word-extension connection, created if the baseline lacked it.
-std::shared_ptr<LyricConnectStyle> connectStyleFor(
-    const std::shared_ptr<LyricTarget>& target, LyricConnectType type)
+std::shared_ptr<LyricConnectStyle> connectStyleFor(const std::shared_ptr<LyricTarget>& target, LyricConnectType type)
 {
     auto& slot = target->wordExtConnectStyles[type];
     if (!slot) {
@@ -495,8 +459,8 @@ std::shared_ptr<LyricConnectStyle> connectStyleFor(
 /// can be expressed as field mappings; both are read here from the numeric global's whole word
 /// stream, which is one incidence family before Finale 2007 and one coalesced payload after.
 /// Runs before the scalar tables, whose gates then leave the asserted fields alone.
-void captureLyricOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+void captureLyricOptions(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile, const musx::dom::DocumentPtr& document, ImportReport& report)
 {
     const auto pooled = document->getOptions()->get<LyricTarget>();
     if (!pooled) {
@@ -513,33 +477,28 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     for (std::size_t position = 0; position < std::size(syllablePositionOrder); ++position) {
         const auto type = syllablePositionOrder[position];
         const auto style = syllableStyleFor(target, type);
-        const auto name = [&] {
-            return std::string("syllablePosStyles[") + syllablePositionNames[position] + ']';
-        };
+        const auto name = [&] { return std::string("syllablePosStyles[") + syllablePositionNames[position] + ']'; };
         if (syllable.present) {
             const auto first = position * syllablePositionWords;
             if (const auto align = lyricAlignment(wordAt(syllable.words, first))) {
                 style->align = *align;
                 withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportLyricField(reporting, name() + ".align", Reporting::Origin::LegacyMus,
-                        wordAt(syllable.words, first), syllable.blockOffset,
+                    reportLyricField(reporting, name() + ".align", Reporting::Origin::LegacyMus, wordAt(syllable.words, first), syllable.blockOffset,
                         syllable.decodedOffset);
                 });
             }
             if (const auto justify = lyricAlignment(wordAt(syllable.words, first + 1))) {
                 style->justify = *justify;
                 withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportLyricField(reporting, name() + ".justify", Reporting::Origin::LegacyMus,
-                        wordAt(syllable.words, first + 1), syllable.blockOffset,
-                        syllable.decodedOffset);
+                    reportLyricField(reporting, name() + ".justify", Reporting::Origin::LegacyMus, wordAt(syllable.words, first + 1),
+                        syllable.blockOffset, syllable.decodedOffset);
                 });
             }
-            const auto flags =
-                static_cast<std::uint16_t>(wordAt(syllable.words, first + 2));
+            const auto flags = static_cast<std::uint16_t>(wordAt(syllable.words, first + 2));
             style->on = (flags & (1U << syllablePositionOnBit)) != 0;
             withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                reportLyricField(reporting, name() + ".on", Reporting::Origin::LegacyMus,
-                    style->on ? 1 : 0, syllable.blockOffset, syllable.decodedOffset);
+                reportLyricField(
+                    reporting, name() + ".on", Reporting::Origin::LegacyMus, style->on ? 1 : 0, syllable.blockOffset, syllable.decodedOffset);
             });
         } else if (type != LyricSyllableType::Default) {
             // Before the selector exists the three optional positions are simply not applied,
@@ -547,9 +506,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
             // to the baseline would claim positioning the source never asked for. The
             // alignments are left alone, the baseline already carrying what the era did.
             style->on = false;
-            withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                reportLyricField(reporting, name() + ".on", Reporting::Origin::LegacyBehavior, 0);
-            });
+            withReporting(report,
+                [&]<typename Reporting>(Reporting& reporting) { reportLyricField(reporting, name() + ".on", Reporting::Origin::LegacyBehavior, 0); });
         }
     }
 
@@ -561,41 +519,33 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // six-word option. The minimum eight-style length keeps those bytes from being mistaken for
     // this table even if the epoch were ever misclassified.
     const auto connect = readGlobalWords(index, profile, wordExtConnectSelector);
-    const bool hasWordExtConnectTable = profile.epoch != FormatEpoch::CodaBanner
-        && connect.present
-        && connect.words.size() >= earlyWordExtConnectCount * wordExtConnectWords;
+    const bool hasWordExtConnectTable =
+        profile.epoch != FormatEpoch::CodaBanner && connect.present && connect.words.size() >= earlyWordExtConnectCount * wordExtConnectWords;
     if (hasWordExtConnectTable) {
-        const auto elementCount = connect.words.size() >= wordExtConnectCount * wordExtConnectWords
-            ? wordExtConnectCount
-            : earlyWordExtConnectCount;
+        const auto elementCount = connect.words.size() >= wordExtConnectCount * wordExtConnectWords ? wordExtConnectCount : earlyWordExtConnectCount;
         for (std::size_t element = 0; element < elementCount; ++element) {
             const auto type = wordExtConnectOrder[element];
             const auto style = connectStyleFor(target, type);
             const auto first = element * wordExtConnectWords;
-            const auto name = [&] {
-                return std::string("wordExtConnectStyles[") + wordExtConnectNames[element] + ']';
-            };
+            const auto name = [&] { return std::string("wordExtConnectStyles[") + wordExtConnectNames[element] + ']'; };
             const auto stored = wordAt(connect.words, first);
             const auto ordinal = stored - firstLegacyConnectIndex;
-            if (ordinal >= 0
-                && static_cast<std::size_t>(ordinal) < std::size(legacyConnectIndexOrder)) {
+            if (ordinal >= 0 && static_cast<std::size_t>(ordinal) < std::size(legacyConnectIndexOrder)) {
                 style->connectIndex = legacyConnectIndexOrder[ordinal];
                 withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportLyricField(reporting, name() + ".connectIndex",
-                        Reporting::Origin::LegacyMus, stored, connect.blockOffset,
-                        connect.decodedOffset);
+                    reportLyricField(
+                        reporting, name() + ".connectIndex", Reporting::Origin::LegacyMus, stored, connect.blockOffset, connect.decodedOffset);
                 });
             }
             style->xOffset = wordAt(connect.words, first + 1);
             style->yOffset = wordAt(connect.words, first + 2);
             withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-                reportLyricField(reporting, name() + ".xOffset", Reporting::Origin::LegacyMus,
-                    style->xOffset, connect.blockOffset, connect.decodedOffset);
-                reportLyricField(reporting, name() + ".yOffset", Reporting::Origin::LegacyMus,
-                    style->yOffset, connect.blockOffset, connect.decodedOffset);
+                reportLyricField(
+                    reporting, name() + ".xOffset", Reporting::Origin::LegacyMus, style->xOffset, connect.blockOffset, connect.decodedOffset);
+                reportLyricField(
+                    reporting, name() + ".yOffset", Reporting::Origin::LegacyMus, style->yOffset, connect.blockOffset, connect.decodedOffset);
             });
         }
-
     }
 
     // "Lift" and "Push" have homes of their own on selectors 29 and 30, word 5 of each, and
@@ -605,16 +555,16 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     if (lift.present) {
         target->wordExtVertOffset = wordAt(lift.words, wordExtOffsetSlot);
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(reporting, "wordExtVertOffset", Reporting::Origin::LegacyMus,
-                target->wordExtVertOffset, lift.blockOffset, lift.decodedOffset);
+            reportLyricField(
+                reporting, "wordExtVertOffset", Reporting::Origin::LegacyMus, target->wordExtVertOffset, lift.blockOffset, lift.decodedOffset);
         });
     }
     const auto push = readGlobalWords(index, profile, wordExtPushSelector);
     if (push.present) {
         target->wordExtHorzOffset = wordAt(push.words, wordExtOffsetSlot);
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(reporting, "wordExtHorzOffset", Reporting::Origin::LegacyMus,
-                target->wordExtHorzOffset, push.blockOffset, push.decodedOffset);
+            reportLyricField(
+                reporting, "wordExtHorzOffset", Reporting::Origin::LegacyMus, target->wordExtHorzOffset, push.blockOffset, push.decodedOffset);
         });
     }
 
@@ -637,8 +587,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     if (!storesWordExtLineWidth(index, profile)) {
         target->wordExtLineWidth = unstatedWordExtLineWidth;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(reporting, "wordExtLineWidth", Reporting::Origin::LegacyBehavior,
-                unstatedWordExtLineWidth);
+            reportLyricField(reporting, "wordExtLineWidth", Reporting::Origin::LegacyBehavior, unstatedWordExtLineWidth);
         });
     }
 
@@ -648,8 +597,7 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     if (!storesEdgePunctuationSetting(index, profile)) {
         target->lyricUseEdgePunctuation = true;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "lyricUseEdgePunctuation", Reporting::Origin::LegacyBehavior, 1);
+            reportLyricField(reporting, "lyricUseEdgePunctuation", Reporting::Origin::LegacyBehavior, 1);
         });
     }
 
@@ -680,7 +628,9 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         if (unicodeTail) {
             for (std::size_t word = punctuationTailWord; word < lyric.words.size(); ++word) {
                 const auto unit = static_cast<std::uint16_t>(lyric.words[word]);
-                if (unit == 0) break;
+                if (unit == 0) {
+                    break;
+                }
                 ++units;
                 if (unit >= 0xd800 && unit <= 0xdbff && word + 1 < lyric.words.size()) {
                     const auto low = static_cast<std::uint16_t>(lyric.words[word + 1]);
@@ -690,10 +640,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
                     }
                 }
             }
-            ignored = text::utf16ToUtf8(std::span(lyric.words).subspan(
-                (std::min)(punctuationTailWord, lyric.words.size())));
-        } else if (const auto* row = index.getClassOthers().get(
-                       numericGlobalClass(wordExtSelector), GLOBALS_CMPER, 0, 0)) {
+            ignored = text::utf16ToUtf8(std::span(lyric.words).subspan((std::min)(punctuationTailWord, lyric.words.size())));
+        } else if (const auto* row = index.getClassOthers().get(numericGlobalClass(wordExtSelector), GLOBALS_CMPER, 0, 0)) {
             // Bytes, so the payload is read directly rather than through the word stream the
             // rest of this class uses.
             const auto payload = index.getClassOthers().effectivePayloadOf(*row);
@@ -719,8 +667,8 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
         // stock list.
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
             reportLyricField(reporting, "lyricPunctuationToIgnore",
-                ignored.empty() ? Reporting::Origin::Finale27Default : Reporting::Origin::LegacyMus,
-                static_cast<std::int64_t>(units), lyric.blockOffset, lyric.decodedOffset);
+                ignored.empty() ? Reporting::Origin::Finale27Default : Reporting::Origin::LegacyMus, static_cast<std::int64_t>(units),
+                lyric.blockOffset, lyric.decodedOffset);
         });
     }
 
@@ -744,18 +692,15 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // rather than inherited.
     if (!storesSmartLyricOptions(index, profile)) {
         target->useSmartHyphens = false;
-        withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(reporting, "useSmartHyphens", Reporting::Origin::LegacyBehavior, 0);
-        });
+        withReporting(report,
+            [&]<typename Reporting>(Reporting& reporting) { reportLyricField(reporting, "useSmartHyphens", Reporting::Origin::LegacyBehavior, 0); });
         target->useSmartWordExtensions = false;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "useSmartWordExtensions", Reporting::Origin::LegacyBehavior, 0);
+            reportLyricField(reporting, "useSmartWordExtensions", Reporting::Origin::LegacyBehavior, 0);
         });
         target->wordExtNeedUnderscore = false;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "wordExtNeedUnderscore", Reporting::Origin::LegacyBehavior, 0);
+            reportLyricField(reporting, "wordExtNeedUnderscore", Reporting::Origin::LegacyBehavior, 0);
         });
     }
 
@@ -767,18 +712,15 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     if (!storesAutoNumbering(index, profile)) {
         target->showAutoNumbersOnVerses = false;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "showAutoNumbersOnVerses", Reporting::Origin::LegacyBehavior, 0);
+            reportLyricField(reporting, "showAutoNumbersOnVerses", Reporting::Origin::LegacyBehavior, 0);
         });
         target->showAutoNumbersOnChoruses = false;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "showAutoNumbersOnChoruses", Reporting::Origin::LegacyBehavior, 0);
+            reportLyricField(reporting, "showAutoNumbersOnChoruses", Reporting::Origin::LegacyBehavior, 0);
         });
         target->showAutoNumbersOnSections = false;
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportLyricField(
-                reporting, "showAutoNumbersOnSections", Reporting::Origin::LegacyBehavior, 0);
+            reportLyricField(reporting, "showAutoNumbersOnSections", Reporting::Origin::LegacyBehavior, 0);
         });
     }
 
@@ -795,15 +737,13 @@ void captureLyricOptions(const records::LegacyRecordIndex& index, const SourcePr
     // a fact about the formats, and that is what makes the value known rather than
     // synthesized.
     target->useAltHyphenFont = false;
-    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        reportLyricField(reporting, "useAltHyphenFont", Reporting::Origin::LegacyBehavior, 0);
-    });
+    withReporting(report,
+        [&]<typename Reporting>(Reporting& reporting) { reportLyricField(reporting, "useAltHyphenFont", Reporting::Origin::LegacyBehavior, 0); });
 
     // These members postdate every supported legacy layout. Their seeded values remain untouched;
     // musxdom creates the FontInfo placeholder after import.
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        reportLyricField(reporting, "hyphenChar", Reporting::Origin::MusxOnly,
-            static_cast<std::int64_t>(target->hyphenChar));
+        reportLyricField(reporting, "hyphenChar", Reporting::Origin::MusxOnly, static_cast<std::int64_t>(target->hyphenChar));
         reportLyricField(reporting, "altHyphenFont.fontId", Reporting::Origin::MusxOnly, 0);
         reportLyricField(reporting, "altHyphenFont.fontSize", Reporting::Origin::MusxOnly, 0);
         reportLyricField(reporting, "altHyphenFont.effects", Reporting::Origin::MusxOnly, 0);
@@ -818,10 +758,8 @@ void importLyricOptions(const ImportContext& context)
     // will read, and the table machinery leaves an already-reported field alone rather than
     // downgrading it to a synthesized default.
     captureLyricOptions(context.index, context.profile, context.document, context.report);
-    applyMappingTables({&lyricHyphenTable(), &lyricLineWidthTable(), &smartLyricTable(),
-                           &classLyricHyphenTable(), &classLyricLineWidthTable(),
-                           &classSmartLyricTable(), &classEdgePunctuationTable(),
-                           &classAutoNumberTable()},
+    applyMappingTables({&lyricHyphenTable(), &lyricLineWidthTable(), &smartLyricTable(), &classLyricHyphenTable(), &classLyricLineWidthTable(),
+                           &classSmartLyricTable(), &classEdgePunctuationTable(), &classAutoNumberTable()},
         context.index, context.profile, context.document, context.report);
 }
 

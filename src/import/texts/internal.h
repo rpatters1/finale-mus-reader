@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "import/support/legacy_mapping.h"
 #include "import/support/enigma_text.h"
+#include "import/support/legacy_mapping.h"
 
 namespace finale_mus_reader {
 namespace texts {
@@ -12,7 +12,6 @@ namespace texts {
 void importLaterTextPool(const ImportContext& context);
 void importHeaderFileInfoTexts(const ImportContext& context);
 void importCodaStoredTexts(const ImportContext& context);
-
 
 } // namespace texts
 } // namespace finale_mus_reader

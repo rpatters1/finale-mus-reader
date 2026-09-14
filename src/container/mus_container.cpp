@@ -56,15 +56,11 @@ std::uint16_t read16(const std::uint8_t* data, ByteOrder byteOrder)
 std::uint32_t read32(const std::uint8_t* data, ByteOrder byteOrder)
 {
     if (byteOrder == ByteOrder::BigEndian) {
-        return (static_cast<std::uint32_t>(data[0]) << 24U)
-            | (static_cast<std::uint32_t>(data[1]) << 16U)
-            | (static_cast<std::uint32_t>(data[2]) << 8U)
-            | data[3];
+        return (static_cast<std::uint32_t>(data[0]) << 24U) | (static_cast<std::uint32_t>(data[1]) << 16U)
+               | (static_cast<std::uint32_t>(data[2]) << 8U) | data[3];
     }
-    return data[0]
-        | (static_cast<std::uint32_t>(data[1]) << 8U)
-        | (static_cast<std::uint32_t>(data[2]) << 16U)
-        | (static_cast<std::uint32_t>(data[3]) << 24U);
+    return data[0] | (static_cast<std::uint32_t>(data[1]) << 8U) | (static_cast<std::uint32_t>(data[2]) << 16U)
+           | (static_cast<std::uint32_t>(data[3]) << 24U);
 }
 
 // Falls back to the customary offset when the field is absent or implausible, so a file
@@ -100,8 +96,7 @@ int appendBlastOutput(void* context, unsigned char* data, unsigned size)
     return 0;
 }
 
-std::optional<std::vector<std::uint8_t>> inflateDcl(
-    const std::uint8_t* data, std::size_t size)
+std::optional<std::vector<std::uint8_t>> inflateDcl(const std::uint8_t* data, std::size_t size)
 {
     if (size > UINT_MAX) {
         return std::nullopt;
@@ -114,16 +109,14 @@ std::optional<std::vector<std::uint8_t>> inflateDcl(
     // blast 1.3 lazily initializes shared decode tables without synchronization.
     static std::mutex blastMutex;
     std::lock_guard<std::mutex> lock(blastMutex);
-    const int result = blast(noMoreBlastInput, nullptr, appendBlastOutput, &output,
-        &remaining, &input);
+    const int result = blast(noMoreBlastInput, nullptr, appendBlastOutput, &output, &remaining, &input);
     if (result != 0 || output.exceededLimit) {
         return std::nullopt;
     }
     return output.bytes;
 }
 
-std::optional<std::vector<std::uint8_t>> inflateZlib(
-    const std::uint8_t* data, std::size_t size)
+std::optional<std::vector<std::uint8_t>> inflateZlib(const std::uint8_t* data, std::size_t size)
 {
     if (size > UINT_MAX) {
         return std::nullopt;
@@ -165,15 +158,12 @@ bool crcMatches(const std::vector<std::uint8_t>& bytes, std::uint32_t expected)
     return static_cast<std::uint32_t>(actual) == expected;
 }
 
-std::optional<ParsedContainer> tryUncompressed(
-    const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
+std::optional<ParsedContainer> tryUncompressed(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
 {
-    FINALE_MUS_READER_CONTAINER_ATTEMPT(containerAttempt,
-        timing::ContainerCandidate::Uncompressed, byteOrder == ByteOrder::BigEndian);
+    FINALE_MUS_READER_CONTAINER_ATTEMPT(containerAttempt, timing::ContainerCandidate::Uncompressed, byteOrder == ByteOrder::BigEndian);
     const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
-        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-            containerAttempt, timing::ContainerAttemptResult::InputBounds);
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::InputBounds);
         return std::nullopt;
     }
 
@@ -182,16 +172,14 @@ std::optional<ParsedContainer> tryUncompressed(
     std::size_t offset = bodyOffset;
     while (offset < size) {
         if (size - offset < 6) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Framing);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         const auto type = read16(data + offset, byteOrder);
         const auto storedSize32 = read32(data + offset + 2, byteOrder);
         const std::size_t storedSize = storedSize32;
         if (storedSize < 6 || storedSize > size - offset) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Framing);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         DecodedBlock block;
@@ -203,19 +191,16 @@ std::optional<ParsedContainer> tryUncompressed(
 
     constexpr std::array<std::uint16_t, 4> expectedTypes{1, 2, 3, 4};
     if (parsed.blocks.size() != expectedTypes.size()) {
-        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-            containerAttempt, timing::ContainerAttemptResult::Framing);
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
         return std::nullopt;
     }
     for (std::size_t index = 0; index < expectedTypes.size(); ++index) {
         if (parsed.blocks[index].info.type != expectedTypes[index]) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::FirstType);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::FirstType);
             return std::nullopt;
         }
     }
-    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-        containerAttempt, timing::ContainerAttemptResult::Accepted);
+    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Accepted);
     return parsed;
 }
 
@@ -238,16 +223,13 @@ bool isCompressedBlockType(std::uint16_t type, bool dcl)
     return type == 0x0016 || type == 0x0017 || type == 0x001a || type == 0x001b;
 }
 
-std::optional<ParsedContainer> tryCompressed(
-    const std::uint8_t* data, std::size_t size, ByteOrder byteOrder, bool dcl)
+std::optional<ParsedContainer> tryCompressed(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder, bool dcl)
 {
-    FINALE_MUS_READER_CONTAINER_ATTEMPT(containerAttempt,
-        dcl ? timing::ContainerCandidate::Dcl : timing::ContainerCandidate::Zlib,
-        byteOrder == ByteOrder::BigEndian);
+    FINALE_MUS_READER_CONTAINER_ATTEMPT(
+        containerAttempt, dcl ? timing::ContainerCandidate::Dcl : timing::ContainerCandidate::Zlib, byteOrder == ByteOrder::BigEndian);
     const auto bodyOffset = readBodyOffset(data, size, byteOrder);
     if (size < bodyOffset + 6) {
-        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-            containerAttempt, timing::ContainerAttemptResult::InputBounds);
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::InputBounds);
         return std::nullopt;
     }
 
@@ -255,22 +237,19 @@ std::optional<ParsedContainer> tryCompressed(
     parsed.byteOrder = byteOrder;
     const auto expectedFirstType = dcl ? std::uint16_t{0x000f} : std::uint16_t{0x001a};
     if (read16(data + bodyOffset, byteOrder) != expectedFirstType) {
-        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-            containerAttempt, timing::ContainerAttemptResult::FirstType);
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::FirstType);
         return std::nullopt;
     }
     std::size_t offset = bodyOffset;
     while (offset < size) {
         if (size - offset < 6) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Framing);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
         const auto type = read16(data + offset, byteOrder);
         const std::size_t storedSize = read32(data + offset + 2, byteOrder);
         if (storedSize < 6 || storedSize > size - offset) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Framing);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
 
@@ -278,16 +257,13 @@ std::optional<ParsedContainer> tryCompressed(
         block.info.type = type;
         block.info.sourceOffset = offset;
         block.info.storedSize = storedSize;
-        const bool isTerminal = dcl
-            ? (type == 0x0012 || type == 0x0013)
-            : (type == 0x0013 || type == 0x001d);
+        const bool isTerminal = dcl ? (type == 0x0012 || type == 0x0013) : (type == 0x0013 || type == 0x001d);
         if (storedSize == 6) {
             parsed.blocks.push_back(std::move(block));
             offset += storedSize;
             if (isTerminal) {
                 parsed.trailingByteCount = size - offset;
-                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                    containerAttempt, timing::ContainerAttemptResult::Accepted);
+                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Accepted);
                 return parsed;
             }
             continue;
@@ -304,27 +280,22 @@ std::optional<ParsedContainer> tryCompressed(
             offset += storedSize;
             if (isTerminal) {
                 parsed.trailingByteCount = size - offset;
-                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                    containerAttempt, timing::ContainerAttemptResult::Accepted);
+                FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Accepted);
                 return parsed;
             }
             continue;
         }
         if (storedSize < 10) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Framing);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Framing);
             return std::nullopt;
         }
 
         const auto expectedCrc = read32(data + offset + 6, byteOrder);
         const auto compressedSize = storedSize - 10;
         FINALE_MUS_READER_CONTAINER_DECOMPRESSION_BEGIN(containerAttempt, compressedSize);
-        auto decoded = dcl
-            ? inflateDcl(data + offset + 10, compressedSize)
-            : inflateZlib(data + offset + 10, compressedSize);
+        auto decoded = dcl ? inflateDcl(data + offset + 10, compressedSize) : inflateZlib(data + offset + 10, compressedSize);
         if (!decoded) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Inflate);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Inflate);
             // Verbose, not Error. This runs inside a speculative attempt: parse() tries
             // both byte orders and both codecs and keeps the first that works, so a
             // rejection here is ordinary format detection and is routinely followed by a
@@ -332,20 +303,16 @@ std::optional<ParsedContainer> tryCompressed(
             // document, which this cannot know. When every attempt fails the epoch stays
             // Unknown and the reader raises that as a warning in its own right.
             musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
-                std::string(dcl ? "DCL" : "zlib") + " decompression failed at MUS offset "
-                + std::to_string(offset));
+                std::string(dcl ? "DCL" : "zlib") + " decompression failed at MUS offset " + std::to_string(offset));
             return std::nullopt;
         }
-        FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(
-            containerAttempt, decoded->size());
+        FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(containerAttempt, decoded->size());
         if (!crcMatches(*decoded, expectedCrc)) {
-            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-                containerAttempt, timing::ContainerAttemptResult::Checksum);
+            FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Checksum);
             // Verbose for the same reason as the decompression rejection above: a wrong
             // speculative byte order can inflate to bytes that simply fail the checksum.
             musx::util::Logger::log(musx::util::Logger::LogLevel::Verbose,
-                std::string(dcl ? "DCL" : "zlib") + " checksum failed at MUS offset "
-                + std::to_string(offset));
+                std::string(dcl ? "DCL" : "zlib") + " checksum failed at MUS offset " + std::to_string(offset));
             return std::nullopt;
         }
         block.info.decodedSize = decoded->size();
@@ -357,12 +324,10 @@ std::optional<ParsedContainer> tryCompressed(
     }
 
     if (parsed.blocks.empty()) {
-        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-            containerAttempt, timing::ContainerAttemptResult::Incomplete);
+        FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Incomplete);
         return std::nullopt;
     }
-    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(
-        containerAttempt, timing::ContainerAttemptResult::Accepted);
+    FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(containerAttempt, timing::ContainerAttemptResult::Accepted);
     return parsed;
 }
 
@@ -383,8 +348,7 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
     // The pool prologue corroborates whichever order the banner selects: its page-size word
     // reads 0x200 in the right order and 0x0002 in the wrong one, and the record tags read as
     // text only in the right one. The loop below rejects a wrong order on the first pool.
-    const auto byteOrder =
-        codaBannerByteOrder(data, size).value_or(ByteOrder::BigEndian);
+    const auto byteOrder = codaBannerByteOrder(data, size).value_or(ByteOrder::BigEndian);
     parsed.byteOrder = byteOrder;
 
     std::size_t offset = defaultBodyOffset;
@@ -430,9 +394,7 @@ ParsedContainer parseCodaBanner(const std::uint8_t* data, std::size_t size)
 bool hasBannerSignature(const std::uint8_t* data, std::size_t size)
 {
     constexpr char signature[] = "ENIGMA BINARY FILE";
-    return size >= sizeof(signature)
-        && std::memcmp(data, signature, sizeof(signature) - 1) == 0
-        && data[sizeof(signature) - 1] == 0;
+    return size >= sizeof(signature) && std::memcmp(data, signature, sizeof(signature) - 1) == 0 && data[sizeof(signature) - 1] == 0;
 }
 
 // Files older than the signature open with a plain-text product banner instead, such as
@@ -470,8 +432,7 @@ std::optional<ByteOrder> codaBannerByteOrder(const std::uint8_t* data, std::size
 // what confirms the era: it reads 0x200 in the right order and 0x0002 in the wrong one.
 bool hasCodaBannerBody(const std::uint8_t* data, std::size_t size, ByteOrder byteOrder)
 {
-    return size >= defaultBodyOffset + 10
-        && read32(data + defaultBodyOffset + 4, byteOrder) == defaultBodyOffset;
+    return size >= defaultBodyOffset + 10 && read32(data + defaultBodyOffset + 4, byteOrder) == defaultBodyOffset;
 }
 
 } // namespace
@@ -505,8 +466,7 @@ ParsedContainer parse(const std::uint8_t* data, std::size_t size)
     // itself. That second word, not anything at the top of the file, is what confirms the era.
     // A file that satisfies neither check is not a Coda-banner document at all -- an
     // AppleDouble metadata artifact, for instance.
-    if (const auto byteOrder = codaBannerByteOrder(data, size);
-        byteOrder && hasCodaBannerBody(data, size, *byteOrder)) {
+    if (const auto byteOrder = codaBannerByteOrder(data, size); byteOrder && hasCodaBannerBody(data, size, *byteOrder)) {
         return parseCodaBanner(data, size);
     }
 

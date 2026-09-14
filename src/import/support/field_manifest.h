@@ -28,8 +28,7 @@ struct NarrowMusicSymbolSource
     std::size_t word;
 };
 
-enum class NarrowMusicSymbolEra
-{
+enum class NarrowMusicSymbolEra {
     Any,
     AfterCoda,
     Finale35AndLater,
@@ -38,8 +37,7 @@ enum class NarrowMusicSymbolEra
     ZlibOnly,
 };
 
-enum class SharedMusicSymbolEra
-{
+enum class SharedMusicSymbolEra {
     None,
     CodaOnly,
     PreZlib,
@@ -49,7 +47,7 @@ struct MusicSymbolOptionsField
 {
     std::string_view memberName;
     std::string_view leafName;
-    char32_t MusicSymbolOptionsTarget::*member;
+    char32_t MusicSymbolOptionsTarget::* member;
     MusicSymbolFontType fontType;
     std::optional<char32_t MusicSymbolOptionsTarget::*> sharedSource;
     SharedMusicSymbolEra sharedEra = SharedMusicSymbolEra::None;
@@ -64,8 +62,7 @@ std::span<const MusicSymbolOptionsField> musicSymbolOptionsFields();
 namespace others {
 
 template <typename Stored, typename Behavior>
-void reportFretInstrumentFields(const musx::dom::others::FretInstrument& target,
-    bool storedStructure, Stored&& stored, Behavior&& behavior)
+void reportFretInstrumentFields(const musx::dom::others::FretInstrument& target, bool storedStructure, Stored&& stored, Behavior&& behavior)
 {
     const auto structure = [&](std::string member, auto value) {
         if (storedStructure) {
@@ -79,8 +76,7 @@ void reportFretInstrumentFields(const musx::dom::others::FretInstrument& target,
     structure("speedyClef", target.speedyClef);
     for (std::size_t index = 0; index < target.strings.size(); ++index) {
         stored("strings[" + std::to_string(index) + "].pitch", target.strings[index]->pitch);
-        behavior(
-            "strings[" + std::to_string(index) + "].nutOffset", target.strings[index]->nutOffset);
+        behavior("strings[" + std::to_string(index) + "].nutOffset", target.strings[index]->nutOffset);
     }
     for (std::size_t index = 0; index < target.fretSteps.size(); ++index) {
         stored("fretSteps[" + std::to_string(index) + "]", target.fretSteps[index]);

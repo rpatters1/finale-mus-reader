@@ -68,8 +68,7 @@ constexpr std::size_t measureCompactBackSpaceExtraSlot = 3;
 constexpr std::uint16_t measureCompactPageBreakMask = 0x4000;
 
 constexpr std::size_t measureScorePayloadSize = 26;
-constexpr CompactPartLayout measureCompactLayouts[] = {
-    {measureScorePayloadSize, measureCompactPartPayloadSize}};
+constexpr CompactPartLayout measureCompactLayouts[] = {{measureScorePayloadSize, measureCompactPartPayloadSize}};
 
 // The first flag word (slot 4). Every bit below holds its position from Finale 1.0.0 through
 // Finale 2012 except @ref primaryNoBarlineMask, which the Coda-banner epoch uses for something else
@@ -166,8 +165,7 @@ constexpr std::uint16_t extendedPageBreakMask = 0x0800;
 /// @details An epoch gate: the Coda-banner epoch takes the early reading, Finale 3.0 and later
 /// the other. Nothing in the record states which, and the two are indistinguishable by shape --
 /// both are one six-word row.
-enum class MeasureFlagLayout : std::uint8_t
-{
+enum class MeasureFlagLayout : std::uint8_t {
     /// @brief Finale 1.0.0 through 2.6.
     Coda,
     /// @brief Finale 3.0 and later.
@@ -201,15 +199,9 @@ struct MeasureRecord
     std::vector<std::size_t> blockOffsets;
     std::vector<std::size_t> decodedOffsets;
 
-    [[nodiscard]] std::uint16_t word(std::size_t slot) const
-    {
-        return slot < words.size() ? words[slot] : 0;
-    }
+    [[nodiscard]] std::uint16_t word(std::size_t slot) const { return slot < words.size() ? words[slot] : 0; }
 
-    [[nodiscard]] std::int16_t signedWord(std::size_t slot) const
-    {
-        return static_cast<std::int16_t>(word(slot));
-    }
+    [[nodiscard]] std::int16_t signedWord(std::size_t slot) const { return static_cast<std::int16_t>(word(slot)); }
 };
 
 /// @brief Reads one measure's whole word stream, in whichever encoding the source uses.
@@ -217,8 +209,7 @@ struct MeasureRecord
 /// so they are taken as they stand; a class record is raw bytes and is normalized here. That is
 /// the same split every other collection decoder makes, and it is why this takes the record
 /// family rather than a pool.
-[[nodiscard]] MeasureRecord readMeasureRecord(const RecordFamilySource& source,
-    std::span<const records::LegacyRow> rows, ByteOrder byteOrder)
+[[nodiscard]] MeasureRecord readMeasureRecord(const RecordFamilySource& source, std::span<const records::LegacyRow> rows, ByteOrder byteOrder)
 {
     MeasureRecord result;
     for (const auto& row : rows) {
@@ -251,12 +242,12 @@ inline constexpr std::uint16_t invalidMeasureCmper = 0;
 {
     std::size_t result = 0;
     for (const auto cmper : source.pool->cmpersForTag(source.identity, musx::dom::SCORE_PARTID)) {
-        if (cmper == invalidMeasureCmper) continue;
+        if (cmper == invalidMeasureCmper) {
+            continue;
+        }
         std::size_t words = 0;
-        for (const auto& row : source.pool->getArray(source.identity, cmper, 0,
-                 musx::dom::SCORE_PARTID)) {
-            words += source.classRecords ? source.pool->effectivePayloadOf(row).size() / 2
-                                         : row.wordCount;
+        for (const auto& row : source.pool->getArray(source.identity, cmper, 0, musx::dom::SCORE_PARTID)) {
+            words += source.classRecords ? source.pool->effectivePayloadOf(row).size() / 2 : row.wordCount;
         }
         result = (std::max)(result, words);
     }
@@ -266,27 +257,27 @@ inline constexpr std::uint16_t invalidMeasureCmper = 0;
 /// @brief Reads the display time-signature record of one measure, if it has one.
 /// @details Only the six-word layout uses it; from Finale 2000 the measure record carries the
 /// display time signature itself, and no document of a later layout writes this record.
-[[nodiscard]] std::optional<MeasureRecord> readDisplayTimeSigRecord(const ImportContext& context,
-    const RecordFamilySource& source, const MeasureLayout& layout, std::uint16_t partId,
-    std::uint16_t cmper)
+[[nodiscard]] std::optional<MeasureRecord> readDisplayTimeSigRecord(
+    const ImportContext& context, const RecordFamilySource& source, const MeasureLayout& layout, std::uint16_t partId, std::uint16_t cmper)
 {
-    if (layout.hasDisplayTimeSig() || source.classRecords) return std::nullopt;
+    if (layout.hasDisplayTimeSig() || source.classRecords) {
+        return std::nullopt;
+    }
     const auto rows = source.pool->getArray(displayTimeSigTag, cmper, 0, partId);
-    if (rows.empty()) return std::nullopt;
+    if (rows.empty()) {
+        return std::nullopt;
+    }
     return readMeasureRecord(source, rows, context.profile.byteOrder);
 }
 
-[[nodiscard]] MeasureLayout measureLayoutOf(const ImportContext& context,
-    const RecordFamilySource& source)
+[[nodiscard]] MeasureLayout measureLayoutOf(const ImportContext& context, const RecordFamilySource& source)
 {
     const auto stored = measureStoredWordCount(source);
-    const auto slots = stored >= measureWordsFromFinale2005 ? measureWordsFromFinale2005
-        : stored >= measureWordsThroughFinale2004         ? measureWordsThroughFinale2004
-                                                   : measureWordsThroughFinale98;
-    const auto flags = context.profile.epoch == FormatEpoch::CodaBanner ? MeasureFlagLayout::Coda
-                                                                        : MeasureFlagLayout::Later;
-    return {slots, flags,
-        sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)};
+    const auto slots = stored >= measureWordsFromFinale2005      ? measureWordsFromFinale2005
+                       : stored >= measureWordsThroughFinale2004 ? measureWordsThroughFinale2004
+                                                                 : measureWordsThroughFinale98;
+    const auto flags = context.profile.epoch == FormatEpoch::CodaBanner ? MeasureFlagLayout::Coda : MeasureFlagLayout::Later;
+    return {slots, flags, sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)};
 }
 
 /// @brief One decoded member, with the word it came from and what that word held.
@@ -308,20 +299,17 @@ using DecodedMeasureFields = std::vector<DecodedMeasureField<Reporting>>;
 class MeasureDecoder
 {
 public:
-    MeasureDecoder(ImportReport& report, const MeasureRecord& record, const MeasureLayout& layout,
-        MeasureTarget& target, const MeasureRecord* displayRecord = nullptr)
-        : m_report(report), m_record(record), m_layout(layout), m_target(target),
-          m_display(displayRecord)
-    {
-    }
+    MeasureDecoder(ImportReport& report, const MeasureRecord& record, const MeasureLayout& layout, MeasureTarget& target,
+        const MeasureRecord* displayRecord = nullptr)
+        : m_report(report), m_record(record), m_layout(layout), m_target(target), m_display(displayRecord)
+    {}
 
     /// @brief The measure's display time-signature record, or null when it has none.
     [[nodiscard]] const MeasureRecord* display() const { return m_display; }
 
     /// @brief Assigns a member the record supplies, and records where it came from.
     template <typename Member, typename Value>
-    void stored(const char* name, Member& member, std::size_t slot, Value value,
-        std::int64_t rawValue)
+    void stored(const char* name, Member& member, std::size_t slot, Value value, std::int64_t rawValue)
     {
         member = value;
         noteStored(name, slot, rawValue, nullptr);
@@ -329,8 +317,7 @@ public:
 
     /// @brief Assigns a member another record supplies, so the report cites that record's offsets.
     template <typename Member, typename Value>
-    void storedFrom(const MeasureRecord& record, const char* name, Member& member,
-        std::size_t slot, Value value, std::int64_t rawValue)
+    void storedFrom(const MeasureRecord& record, const char* name, Member& member, std::size_t slot, Value value, std::int64_t rawValue)
     {
         member = value;
         noteStored(name, slot, rawValue, &record);
@@ -365,28 +352,24 @@ public:
 private:
     /// @brief Record where a member's value came from. Provenance is carried only in a build that
     /// can report it; the assignments that call these happen in every build.
-    void noteStored(const char* name, std::size_t slot, std::int64_t stored,
-        const MeasureRecord* from)
+    void noteStored(const char* name, std::size_t slot, std::int64_t stored, const MeasureRecord* from)
     {
         withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.state(m_fields).push_back(
-                {name, Reporting::Origin::LegacyMus, slot, stored, from});
+            reporting.state(m_fields).push_back({name, Reporting::Origin::LegacyMus, slot, stored, from});
         });
     }
 
     void noteBehavior(const char* name, std::int64_t value)
     {
         withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.state(m_fields).push_back(
-                {name, Reporting::Origin::LegacyBehavior, 0, value, nullptr});
+            reporting.state(m_fields).push_back({name, Reporting::Origin::LegacyBehavior, 0, value, nullptr});
         });
     }
 
     void noteUnmapped(const char* name, std::int64_t value)
     {
         withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.state(m_fields).push_back(
-                {name, Reporting::Origin::Unmapped, 0, value, nullptr});
+            reporting.state(m_fields).push_back({name, Reporting::Origin::Unmapped, 0, value, nullptr});
         });
     }
 
@@ -403,14 +386,10 @@ void decodeCommonWords(MeasureDecoder& decoder)
 {
     const auto& record = decoder.record();
     auto& target = decoder.target();
-    decoder.stored("width", target.width, measureWidthSlot, record.signedWord(measureWidthSlot),
-        record.signedWord(measureWidthSlot));
-    decoder.stored("globalKeySig->key", target.globalKeySig->key, measureKeySlot, record.word(measureKeySlot),
-        record.word(measureKeySlot));
-    decoder.stored("beats", target.beats, measureBeatsSlot, record.word(measureBeatsSlot),
-        record.word(measureBeatsSlot));
-    decoder.stored("divBeat", target.divBeat, measureDivBeatSlot, record.word(measureDivBeatSlot),
-        record.word(measureDivBeatSlot));
+    decoder.stored("width", target.width, measureWidthSlot, record.signedWord(measureWidthSlot), record.signedWord(measureWidthSlot));
+    decoder.stored("globalKeySig->key", target.globalKeySig->key, measureKeySlot, record.word(measureKeySlot), record.word(measureKeySlot));
+    decoder.stored("beats", target.beats, measureBeatsSlot, record.word(measureBeatsSlot), record.word(measureBeatsSlot));
+    decoder.stored("divBeat", target.divBeat, measureDivBeatSlot, record.word(measureDivBeatSlot), record.word(measureDivBeatSlot));
 }
 
 /// @brief Decodes the first flag word, whose bits hold their positions across every era.
@@ -421,26 +400,20 @@ void decodePrimaryFlags(MeasureDecoder& decoder)
     decoder.flag("breakWordExt", target.breakWordExt, measurePrimaryFlagsSlot, primaryBreakWordExtMask);
     decoder.flag("hideCaution", target.hideCaution, measurePrimaryFlagsSlot, primaryHideCautionMask);
     decoder.flag("hasSmartShape", target.hasSmartShape, measurePrimaryFlagsSlot, primaryHasSmartShapeMask);
-    decoder.flag("hasMeasNumbIndivPos", target.hasMeasNumbIndivPos, measurePrimaryFlagsSlot,
-        primaryMeasNumbIndivPosMask);
-    decoder.flag("allowSplitPoints", target.allowSplitPoints, measurePrimaryFlagsSlot,
-        primaryAllowSplitPointsMask);
-    decoder.flag("compositeNumerator", target.compositeNumerator, measurePrimaryFlagsSlot,
-        primaryCompositeNumeratorMask);
-    decoder.flag("compositeDenominator", target.compositeDenominator, measurePrimaryFlagsSlot,
-        primaryCompositeDenominatorMask);
-    decoder.flag("evenlyAcrossMeasure", target.evenlyAcrossMeasure, measurePrimaryFlagsSlot,
-        primaryEvenlyAcrossMeasureMask);
-    decoder.stored("positioningMode", target.positioningMode, measurePrimaryFlagsSlot,
-        positioningTypeOf(primary & primaryPositioningModeMask), primary);
+    decoder.flag("hasMeasNumbIndivPos", target.hasMeasNumbIndivPos, measurePrimaryFlagsSlot, primaryMeasNumbIndivPosMask);
+    decoder.flag("allowSplitPoints", target.allowSplitPoints, measurePrimaryFlagsSlot, primaryAllowSplitPointsMask);
+    decoder.flag("compositeNumerator", target.compositeNumerator, measurePrimaryFlagsSlot, primaryCompositeNumeratorMask);
+    decoder.flag("compositeDenominator", target.compositeDenominator, measurePrimaryFlagsSlot, primaryCompositeDenominatorMask);
+    decoder.flag("evenlyAcrossMeasure", target.evenlyAcrossMeasure, measurePrimaryFlagsSlot, primaryEvenlyAcrossMeasureMask);
+    decoder.stored(
+        "positioningMode", target.positioningMode, measurePrimaryFlagsSlot, positioningTypeOf(primary & primaryPositioningModeMask), primary);
 
     // The bit that later overrides a staff group's barline is how a Coda-banner measure says it
     // draws no barline at all, so it is not read as the override there.
     if (decoder.layout().flags == MeasureFlagLayout::Coda) {
         decoder.behavior("groupBarlineOverride", target.groupBarlineOverride, false);
     } else {
-        decoder.flag("groupBarlineOverride", target.groupBarlineOverride, measurePrimaryFlagsSlot,
-            primaryGroupBarlineOverrideMask);
+        decoder.flag("groupBarlineOverride", target.groupBarlineOverride, measurePrimaryFlagsSlot, primaryGroupBarlineOverrideMask);
     }
 
     // "Show Full Staff & Group Names" arrives with Finale 2011. The bit predates the setting and
@@ -466,14 +439,14 @@ void decodeShowModes(MeasureDecoder& decoder)
     const bool alwaysKey = (measure & secondaryAlwaysShowKeyMask) != 0;
     const bool alwaysTime = (measure & secondaryAlwaysShowTimeMask) != 0;
     decoder.stored("showKey", target.showKey, measurePrimaryFlagsSlot,
-        neverKey  ? MeasureTarget::ShowKeySigMode::Never
-            : alwaysKey ? MeasureTarget::ShowKeySigMode::Always
-                        : MeasureTarget::ShowKeySigMode::IfNeeded,
+        neverKey    ? MeasureTarget::ShowKeySigMode::Never
+        : alwaysKey ? MeasureTarget::ShowKeySigMode::Always
+                    : MeasureTarget::ShowKeySigMode::IfNeeded,
         primary);
     decoder.stored("showTime", target.showTime, measurePrimaryFlagsSlot,
-        neverTime  ? MeasureTarget::ShowTimeSigMode::Never
-            : alwaysTime ? MeasureTarget::ShowTimeSigMode::Always
-                         : MeasureTarget::ShowTimeSigMode::IfNeeded,
+        neverTime    ? MeasureTarget::ShowTimeSigMode::Never
+        : alwaysTime ? MeasureTarget::ShowTimeSigMode::Always
+                     : MeasureTarget::ShowTimeSigMode::IfNeeded,
         primary);
 }
 
@@ -489,12 +462,9 @@ void decodeLaterSecondaryFlags(MeasureDecoder& decoder)
     decoder.flag("hasOssia", target.hasOssia, measureSecondaryFlagsSlot, secondaryHasOssiaMask);
     decoder.flag("hasTextBlock", target.hasTextBlock, measureSecondaryFlagsSlot, secondaryHasTextBlockMask);
     decoder.stored("barlineType", target.barlineType, measureSecondaryFlagsSlot,
-        barlineTypeOf(static_cast<std::uint16_t>((measure & secondaryBarlineMask) >> secondaryBarlineShift)),
-        measure);
-    decoder.flag("forwardRepeatBar", target.forwardRepeatBar, measureSecondaryFlagsSlot,
-        secondaryForwardRepeatMask);
-    decoder.flag("backwardsRepeatBar", target.backwardsRepeatBar, measureSecondaryFlagsSlot,
-        secondaryBackwardRepeatMask);
+        barlineTypeOf(static_cast<std::uint16_t>((measure & secondaryBarlineMask) >> secondaryBarlineShift)), measure);
+    decoder.flag("forwardRepeatBar", target.forwardRepeatBar, measureSecondaryFlagsSlot, secondaryForwardRepeatMask);
+    decoder.flag("backwardsRepeatBar", target.backwardsRepeatBar, measureSecondaryFlagsSlot, secondaryBackwardRepeatMask);
     decoder.flag("hasEnding", target.hasEnding, measureSecondaryFlagsSlot, secondaryHasEndingMask);
     decoder.flag("hasTextRepeat", target.hasTextRepeat, measureSecondaryFlagsSlot, secondaryHasTextRepeatMask);
 }
@@ -522,22 +492,19 @@ void decodeCodaSecondaryFlags(MeasureDecoder& decoder)
     decoder.flag("beginNewSystem", target.beginNewSystem, measureSecondaryFlagsSlot, secondaryBeginNewSystemMask);
     decoder.flag("hasExpression", target.hasExpression, measureSecondaryFlagsSlot, codaHasExpressionMask);
     decoder.flag("breakMmRest", target.breakMmRest, measureSecondaryFlagsSlot,
-        static_cast<std::uint16_t>(codaBreakMmRestMask | codaDoubleBarlineMask
-            | codaFinalBarlineMask));
+        static_cast<std::uint16_t>(codaBreakMmRestMask | codaDoubleBarlineMask | codaFinalBarlineMask));
     decoder.flag("noMeasNum", target.noMeasNum, measureSecondaryFlagsSlot, secondaryNoMeasNumMask);
     decoder.flag("hasOssia", target.hasOssia, measureSecondaryFlagsSlot, secondaryHasOssiaMask);
     decoder.flag("hasTextBlock", target.hasTextBlock, measureSecondaryFlagsSlot, secondaryHasTextBlockMask);
     // The barline is spread across the two words: the first flag word says whether one is drawn at
     // all, and the measure word chooses between the two types that are not the normal one.
-    const auto barline = (primary & primaryNoBarlineMask) != 0 ? BarlineType::None
-        : (measure & codaFinalBarlineMask) != 0        ? BarlineType::Final
-        : (measure & codaDoubleBarlineMask) != 0       ? BarlineType::Double
-                                                       : BarlineType::Normal;
+    const auto barline = (primary & primaryNoBarlineMask) != 0    ? BarlineType::None
+                         : (measure & codaFinalBarlineMask) != 0  ? BarlineType::Final
+                         : (measure & codaDoubleBarlineMask) != 0 ? BarlineType::Double
+                                                                  : BarlineType::Normal;
     decoder.stored("barlineType", target.barlineType, measureSecondaryFlagsSlot, barline, measure);
-    decoder.flag("forwardRepeatBar", target.forwardRepeatBar, measureSecondaryFlagsSlot,
-        secondaryForwardRepeatMask);
-    decoder.flag("backwardsRepeatBar", target.backwardsRepeatBar, measureSecondaryFlagsSlot,
-        secondaryBackwardRepeatMask);
+    decoder.flag("forwardRepeatBar", target.forwardRepeatBar, measureSecondaryFlagsSlot, secondaryForwardRepeatMask);
+    decoder.flag("backwardsRepeatBar", target.backwardsRepeatBar, measureSecondaryFlagsSlot, secondaryBackwardRepeatMask);
     decoder.flag("hasEnding", target.hasEnding, measureSecondaryFlagsSlot, secondaryHasEndingMask);
     decoder.flag("hasTextRepeat", target.hasTextRepeat, measureSecondaryFlagsSlot, secondaryHasTextRepeatMask);
 }
@@ -556,16 +523,14 @@ void decodeDisplayAndSpacingWords(MeasureDecoder& decoder)
         // measure uses one, so a measure without the record has none rather than an absent value.
         if (const auto* display = decoder.display()) {
             const auto primary = display->word(measurePrimaryFlagsSlot);
-            decoder.storedFrom(*display, "dispBeats", target.dispBeats, measureBeatsSlot,
-                display->word(measureBeatsSlot), display->word(measureBeatsSlot));
-            decoder.storedFrom(*display, "dispDivbeat", target.dispDivbeat, measureDivBeatSlot,
-                display->word(measureDivBeatSlot), display->word(measureDivBeatSlot));
-            decoder.storedFrom(*display, "useDisplayTimesig", target.useDisplayTimesig,
-                measureBeatsSlot, true, 1);
-            decoder.storedFrom(*display, "compositeDispNumerator", target.compositeDispNumerator,
-                measurePrimaryFlagsSlot, (primary & primaryCompositeNumeratorMask) != 0, primary);
-            decoder.storedFrom(*display, "compositeDispDenominator",
-                target.compositeDispDenominator, measurePrimaryFlagsSlot,
+            decoder.storedFrom(
+                *display, "dispBeats", target.dispBeats, measureBeatsSlot, display->word(measureBeatsSlot), display->word(measureBeatsSlot));
+            decoder.storedFrom(*display, "dispDivbeat", target.dispDivbeat, measureDivBeatSlot, display->word(measureDivBeatSlot),
+                display->word(measureDivBeatSlot));
+            decoder.storedFrom(*display, "useDisplayTimesig", target.useDisplayTimesig, measureBeatsSlot, true, 1);
+            decoder.storedFrom(*display, "compositeDispNumerator", target.compositeDispNumerator, measurePrimaryFlagsSlot,
+                (primary & primaryCompositeNumeratorMask) != 0, primary);
+            decoder.storedFrom(*display, "compositeDispDenominator", target.compositeDispDenominator, measurePrimaryFlagsSlot,
                 (primary & primaryCompositeDenominatorMask) != 0, primary);
         } else {
             decoder.behavior("dispBeats", target.dispBeats, 0);
@@ -583,8 +548,7 @@ void decodeDisplayAndSpacingWords(MeasureDecoder& decoder)
         decoder.behavior("hasChord", target.hasChord, false);
         decoder.behavior("customBarShape", target.customBarShape, 0);
         decoder.behavior("customLeftBarShape", target.customLeftBarShape, 0);
-        decoder.behavior("leftBarlineType", target.leftBarlineType,
-            MeasureTarget::BarlineType::OptionsDefault);
+        decoder.behavior("leftBarlineType", target.leftBarlineType, MeasureTarget::BarlineType::OptionsDefault);
         decoder.behavior("pageBreak", target.pageBreak, false);
         decoder.behavior("frontSpaceExtra", target.frontSpaceExtra, 0);
         decoder.behavior("backSpaceExtra", target.backSpaceExtra, 0);
@@ -592,33 +556,27 @@ void decodeDisplayAndSpacingWords(MeasureDecoder& decoder)
     }
 
     const auto extendedFlags = record.word(measureExtendedFlagsSlot);
-    decoder.stored("dispBeats", target.dispBeats, measureDispBeatsSlot, record.word(measureDispBeatsSlot),
-        record.word(measureDispBeatsSlot));
-    decoder.stored("dispDivbeat", target.dispDivbeat, measureDispDivBeatSlot,
-        record.word(measureDispDivBeatSlot), record.word(measureDispDivBeatSlot));
-    decoder.stored("customBarShape", target.customBarShape, measureCustomBarShapeSlot,
-        record.word(measureCustomBarShapeSlot), record.word(measureCustomBarShapeSlot));
-    decoder.stored("customLeftBarShape", target.customLeftBarShape, measureCustomLeftBarShapeSlot,
-        record.word(measureCustomLeftBarShapeSlot), record.word(measureCustomLeftBarShapeSlot));
-    decoder.stored("frontSpaceExtra", target.frontSpaceExtra, measureFrontSpaceExtraSlot,
-        record.signedWord(measureFrontSpaceExtraSlot), record.signedWord(measureFrontSpaceExtraSlot));
+    decoder.stored("dispBeats", target.dispBeats, measureDispBeatsSlot, record.word(measureDispBeatsSlot), record.word(measureDispBeatsSlot));
+    decoder.stored(
+        "dispDivbeat", target.dispDivbeat, measureDispDivBeatSlot, record.word(measureDispDivBeatSlot), record.word(measureDispDivBeatSlot));
+    decoder.stored("customBarShape", target.customBarShape, measureCustomBarShapeSlot, record.word(measureCustomBarShapeSlot),
+        record.word(measureCustomBarShapeSlot));
+    decoder.stored("customLeftBarShape", target.customLeftBarShape, measureCustomLeftBarShapeSlot, record.word(measureCustomLeftBarShapeSlot),
+        record.word(measureCustomLeftBarShapeSlot));
+    decoder.stored("frontSpaceExtra", target.frontSpaceExtra, measureFrontSpaceExtraSlot, record.signedWord(measureFrontSpaceExtraSlot),
+        record.signedWord(measureFrontSpaceExtraSlot));
     decoder.flag("abbrvTime", target.abbrvTime, measureExtendedFlagsSlot, extendedAbbrvTimeMask);
-    decoder.flag("useDisplayTimesig", target.useDisplayTimesig, measureExtendedFlagsSlot,
-        extendedUseDisplayTimesigMask);
-    decoder.flag("compositeDispNumerator", target.compositeDispNumerator, measureExtendedFlagsSlot,
-        extendedCompositeDispNumeratorMask);
-    decoder.flag("compositeDispDenominator", target.compositeDispDenominator, measureExtendedFlagsSlot,
-        extendedCompositeDispDenominatorMask);
+    decoder.flag("useDisplayTimesig", target.useDisplayTimesig, measureExtendedFlagsSlot, extendedUseDisplayTimesigMask);
+    decoder.flag("compositeDispNumerator", target.compositeDispNumerator, measureExtendedFlagsSlot, extendedCompositeDispNumeratorMask);
+    decoder.flag("compositeDispDenominator", target.compositeDispDenominator, measureExtendedFlagsSlot, extendedCompositeDispDenominatorMask);
     decoder.flag("pageBreak", target.pageBreak, measureExtendedFlagsSlot, extendedPageBreakMask);
     decoder.flag("hasChord", target.hasChord, measureExtendedFlagsSlot, extendedHasChordMask);
     decoder.stored("leftBarlineType", target.leftBarlineType, measureExtendedFlagsSlot,
-        barlineTypeOf(
-            static_cast<std::uint16_t>((extendedFlags & extendedLeftBarlineMask) >> extendedLeftBarlineShift)),
-        extendedFlags);
+        barlineTypeOf(static_cast<std::uint16_t>((extendedFlags & extendedLeftBarlineMask) >> extendedLeftBarlineShift)), extendedFlags);
 
     if (decoder.layout().hasBackSpaceExtra()) {
-        decoder.stored("backSpaceExtra", target.backSpaceExtra, measureBackSpaceExtraSlot,
-            record.signedWord(measureBackSpaceExtraSlot), record.signedWord(measureBackSpaceExtraSlot));
+        decoder.stored("backSpaceExtra", target.backSpaceExtra, measureBackSpaceExtraSlot, record.signedWord(measureBackSpaceExtraSlot),
+            record.signedWord(measureBackSpaceExtraSlot));
     } else {
         decoder.behavior("backSpaceExtra", target.backSpaceExtra, 0);
     }
@@ -631,39 +589,34 @@ void decodeAbsentMembers(MeasureDecoder& decoder)
 {
     auto& target = decoder.target();
     decoder.behavior("globalKeySig->keyless", target.globalKeySig->keyless, false);
-    decoder.behavior("globalKeySig->hideKeySigShowAccis",
-        target.globalKeySig->hideKeySigShowAccis, false);
+    decoder.behavior("globalKeySig->hideKeySigShowAccis", target.globalKeySig->hideKeySigShowAccis, false);
 }
 
 /// @brief Reports one measure's decoded members, each at the offset its own word came from.
 template <typename Reporting>
-void reportMeasure(Reporting& reporting, const typename Reporting::InstanceKey& key,
-    const MeasureRecord& record, const ReportState<DecodedMeasureFields>& fields,
-    records::LegacyTag identity)
+void reportMeasure(Reporting& reporting, const typename Reporting::InstanceKey& key, const MeasureRecord& record,
+    const ReportState<DecodedMeasureFields>& fields, records::LegacyTag identity)
 {
     reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
     for (const auto& field : reporting.state(fields)) {
         // A field may come from a record other than the measure's own, and then it cites that
         // record's offsets and identity rather than the measure record's.
         const auto& from = field.record ? *field.record : record;
-        const bool located =
-            field.origin == Reporting::Origin::LegacyMus && field.slot < from.blockOffsets.size();
+        const bool located = field.origin == Reporting::Origin::LegacyMus && field.slot < from.blockOffsets.size();
         reporting.report().setField(key, reporting.memberName(field.member),
-            typename Reporting::FieldInfo{field.origin, located ? from.blockOffsets[field.slot] : 0,
-                located ? from.decodedOffsets[field.slot] : 0, field.stored,
-                located ? std::optional<std::uint16_t>{field.record ? displayTimeSigTag : identity}
-                        : std::nullopt});
+            typename Reporting::FieldInfo{field.origin, located ? from.blockOffsets[field.slot] : 0, located ? from.decodedOffsets[field.slot] : 0,
+                field.stored, located ? std::optional<std::uint16_t>{field.record ? displayTimeSigTag : identity} : std::nullopt});
     }
 }
 
 /// @brief Decodes one score measure into a new pooled object.
-void importOneMeasure(const ImportContext& context, const RecordFamilySource& source,
-    const MeasureLayout& layout, std::span<const records::LegacyRow> rows, std::uint16_t partId,
-    std::uint16_t cmper)
+void importOneMeasure(const ImportContext& context, const RecordFamilySource& source, const MeasureLayout& layout,
+    std::span<const records::LegacyRow> rows, std::uint16_t partId, std::uint16_t cmper)
 {
-    auto instance = createOthersRecordTarget<MeasureTarget>(
-        context.document, source, rows.front(), cmper);
-    if (!instance) return;
+    auto instance = createOthersRecordTarget<MeasureTarget>(context.document, source, rows.front(), cmper);
+    if (!instance) {
+        return;
+    }
     // musxdom guarantees the contained key signature only from its own integrity check, which
     // runs later than this. The decoder writes into it, so it has to exist first.
     if (!instance->globalKeySig) {
@@ -672,8 +625,7 @@ void importOneMeasure(const ImportContext& context, const RecordFamilySource& so
 
     const auto record = readMeasureRecord(source, rows, context.profile.byteOrder);
     const auto display = readDisplayTimeSigRecord(context, source, layout, partId, cmper);
-    MeasureDecoder decoder(
-        context.report, record, layout, *instance, display ? &*display : nullptr);
+    MeasureDecoder decoder(context.report, record, layout, *instance, display ? &*display : nullptr);
     decodeCommonWords(decoder);
     decodePrimaryFlags(decoder);
     decodeShowModes(decoder);
@@ -686,8 +638,7 @@ void importOneMeasure(const ImportContext& context, const RecordFamilySource& so
     decodeAbsentMembers(decoder);
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper),
-            record, decoder.fields(), source.identity);
+        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper), record, decoder.fields(), source.identity);
     });
     context.document->getOthers()->add(MeasureTarget::XmlNodeName, std::move(instance));
 }
@@ -697,23 +648,19 @@ void importOneMeasure(const ImportContext& context, const RecordFamilySource& so
 /// createOthersRecordTarget initialized it from the score instance the way a partially linked
 /// object is defined to be built. Only the four members the compact record carries are read here,
 /// and every other member keeps both the value and the provenance the score measure established.
-void importOneCompactPartMeasure(const ImportContext& context, const RecordFamilySource& source,
-    const MeasureLayout& layout, const records::LegacyRow& row, std::uint16_t partId,
-    std::uint16_t cmper, MeasureTarget& target)
+void importOneCompactPartMeasure(const ImportContext& context, const RecordFamilySource& source, const MeasureLayout& layout,
+    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper, MeasureTarget& target)
 {
     const auto record = readMeasureRecord(source, {&row, 1}, context.profile.byteOrder);
     MeasureDecoder decoder(context.report, record, layout, target);
     const auto flags = record.word(measureCompactFlagSlot);
-    decoder.stored("width", target.width, measureCompactWidthSlot, record.signedWord(measureCompactWidthSlot),
-        record.signedWord(measureCompactWidthSlot));
-    decoder.stored("positioningMode", target.positioningMode, measureCompactFlagSlot,
-        positioningTypeOf(flags & primaryPositioningModeMask), flags);
+    decoder.stored(
+        "width", target.width, measureCompactWidthSlot, record.signedWord(measureCompactWidthSlot), record.signedWord(measureCompactWidthSlot));
+    decoder.stored("positioningMode", target.positioningMode, measureCompactFlagSlot, positioningTypeOf(flags & primaryPositioningModeMask), flags);
     decoder.flag("pageBreak", target.pageBreak, measureCompactFlagSlot, measureCompactPageBreakMask);
-    decoder.stored("frontSpaceExtra", target.frontSpaceExtra, measureCompactFrontSpaceExtraSlot,
-        record.signedWord(measureCompactFrontSpaceExtraSlot),
+    decoder.stored("frontSpaceExtra", target.frontSpaceExtra, measureCompactFrontSpaceExtraSlot, record.signedWord(measureCompactFrontSpaceExtraSlot),
         record.signedWord(measureCompactFrontSpaceExtraSlot));
-    decoder.stored("backSpaceExtra", target.backSpaceExtra, measureCompactBackSpaceExtraSlot,
-        record.signedWord(measureCompactBackSpaceExtraSlot),
+    decoder.stored("backSpaceExtra", target.backSpaceExtra, measureCompactBackSpaceExtraSlot, record.signedWord(measureCompactBackSpaceExtraSlot),
         record.signedWord(measureCompactBackSpaceExtraSlot));
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
@@ -722,10 +669,8 @@ void importOneCompactPartMeasure(const ImportContext& context, const RecordFamil
         // provenance with them, offsets included: the part object holds them because the score
         // record supplied them. Copying the entries rather than re-deriving them is what keeps a
         // part object from reporting a value as unsourced that the score record plainly stated.
-        const auto scoreKey =
-            reporting.template instanceKey<MeasureTarget>(musx::dom::SCORE_PARTID, cmper);
-        if (const auto found = reporting.report().fields.find(scoreKey);
-            found != reporting.report().fields.end()) {
+        const auto scoreKey = reporting.template instanceKey<MeasureTarget>(musx::dom::SCORE_PARTID, cmper);
+        if (const auto found = reporting.report().fields.find(scoreKey); found != reporting.report().fields.end()) {
             reporting.report().fields[key] = found->second;
         }
         reportMeasure(reporting, key, record, decoder.fields(), source.identity);
@@ -733,19 +678,19 @@ void importOneCompactPartMeasure(const ImportContext& context, const RecordFamil
 }
 
 /// @brief Decodes one part's record, whichever of the two forms it takes.
-void importOnePartMeasure(const ImportContext& context, const RecordFamilySource& source,
-    const MeasureLayout& layout, std::span<const records::LegacyRow> rows, std::uint16_t partId,
-    std::uint16_t cmper)
+void importOnePartMeasure(const ImportContext& context, const RecordFamilySource& source, const MeasureLayout& layout,
+    std::span<const records::LegacyRow> rows, std::uint16_t partId, std::uint16_t cmper)
 {
-    auto instance = createOthersRecordTarget<MeasureTarget>(
-        context.document, source, rows.front(), cmper);
-    if (!instance) return;
+    auto instance = createOthersRecordTarget<MeasureTarget>(context.document, source, rows.front(), cmper);
+    if (!instance) {
+        return;
+    }
     if (!instance->globalKeySig) {
         instance->globalKeySig = std::make_shared<musx::dom::KeySignature>(context.document);
     }
     auto* target = instance.get();
-    const bool compact = rows.front().payloadSize == measureCompactPartPayloadSize
-        && instance->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial;
+    const bool compact =
+        rows.front().payloadSize == measureCompactPartPayloadSize && instance->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial;
     context.document->getOthers()->add(MeasureTarget::XmlNodeName, std::move(instance));
 
     if (compact) {
@@ -768,8 +713,7 @@ void importOnePartMeasure(const ImportContext& context, const RecordFamilySource
     decodeDisplayAndSpacingWords(decoder);
     decodeAbsentMembers(decoder);
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper),
-            record, decoder.fields(), source.identity);
+        reportMeasure(reporting, reporting.template instanceKey<MeasureTarget>(partId, cmper), record, decoder.fields(), source.identity);
     });
 }
 
@@ -777,20 +721,23 @@ void importOnePartMeasure(const ImportContext& context, const RecordFamilySource
 
 void importMeasures(const ImportContext& context)
 {
-    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
-        context.index.getClassOthers(), measureTag, measureClass, /*details*/ false,
-        measureCompactLayouts);
-    if (!source) return;
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), measureTag, measureClass,
+        /*details*/ false, measureCompactLayouts);
+    if (!source) {
+        return;
+    }
     const auto layout = measureLayoutOf(context, *source);
 
     // Score first, which @ref recordKeys guarantees, because a part record overlays the score
     // object of the same comparator and cannot be built before it exists.
     for (const auto [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
-        if (rows.empty()) continue;
+        if (rows.empty()) {
+            continue;
+        }
         if (cmper == invalidMeasureCmper) {
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-                "Measure record at comparator 0 is not a measure and was not imported."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Verbose, "Measure record at comparator 0 is not a measure and was not imported."});
             continue;
         }
         if (partId == musx::dom::SCORE_PARTID) {

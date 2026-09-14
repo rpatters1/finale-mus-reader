@@ -37,10 +37,8 @@ ClassComparison& classComparison(ComparisonResult& result, std::string_view clas
 using Leaves = ComparisonLeaves;
 constexpr std::size_t maximumExamplesPerRow = 20;
 
-const std::unordered_set<std::string> metadataKeys = {
-    "corpus_id", "status",        "epoch",       "saving_product", "source_version",
-    "header",    "warning_count", "diagnostics", "duration_ms",    "timings",
-    "companion", "finder_type",   "error"};
+const std::unordered_set<std::string> metadataKeys = {"corpus_id", "status", "epoch", "saving_product", "source_version", "header", "warning_count",
+    "diagnostics", "duration_ms", "timings", "companion", "finder_type", "error"};
 
 const std::unordered_set<std::string> excludedClasses = {"header", "relationships"};
 
@@ -56,110 +54,84 @@ bool endsWith(std::string_view value, std::string_view suffix)
 
 std::string_view trimWhitespace(std::string_view value)
 {
-    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())))
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front()))) {
         value.remove_prefix(1);
-    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())))
+    }
+    while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back()))) {
         value.remove_suffix(1);
+    }
     return value;
 }
 
 bool isNoncontentKey(std::string_view key)
 {
-    static const std::unordered_set<std::string> exact = {"origin",
-                                                          "index",
-                                                          "cmper",
-                                                          "part_id",
-                                                          "_report_match_key",
-                                                          "instruction_count",
-                                                          "value_count",
-                                                          "external_graphic_count",
-                                                          "undocumented_instruction_count",
-                                                          "effects_synthesized",
-                                                          "font_synthesized",
-                                                          "size_synthesized"};
-    return exact.contains(std::string(key)) || startsWith(key, "origin_") ||
-           endsWith(key, "_origin") || endsWith(key, "_block_offset") ||
-           endsWith(key, "_decoded_field_offset");
+    static const std::unordered_set<std::string> exact = {"origin", "index", "cmper", "part_id", "_report_match_key", "instruction_count",
+        "value_count", "external_graphic_count", "undocumented_instruction_count", "effects_synthesized", "font_synthesized", "size_synthesized"};
+    return exact.contains(std::string(key)) || startsWith(key, "origin_") || endsWith(key, "_origin") || endsWith(key, "_block_offset")
+           || endsWith(key, "_decoded_field_offset");
 }
 
 bool isExcludedPath(std::string_view path)
 {
-    static const std::vector<std::string> exact = {
-        "font_options.tuples",
-        "font_options.recovered_count",
-        "font_options.legacy_behavior_count",
-        "font_options.default_count",
-        "font_options.unmapped_count",
-        "font_options.musx_only_count",
-        "font_definitions.duplicate_nonzero_name_count",
-        "font_definitions.introduced_duplicate_nonzero_name_count",
-        "shape_instruction_lists.instruction_types"};
+    static const std::vector<std::string> exact = {"font_options.tuples", "font_options.recovered_count", "font_options.legacy_behavior_count",
+        "font_options.default_count", "font_options.unmapped_count", "font_options.musx_only_count", "font_definitions.duplicate_nonzero_name_count",
+        "font_definitions.introduced_duplicate_nonzero_name_count", "shape_instruction_lists.instruction_types"};
     for (const auto& item : exact) {
-        if (path == item || (startsWith(path, item) && path.size() > item.size() &&
-                             (path[item.size()] == '.' || path[item.size()] == '[')))
+        if (path == item || (startsWith(path, item) && path.size() > item.size() && (path[item.size()] == '.' || path[item.size()] == '['))) {
             return true;
+        }
     }
-    if (startsWith(path, "font_definitions.definitions[") && endsWith(path, ".name")) return true;
-    if (startsWith(path, "shape_defs[") &&
-        (endsWith(path, ".instruction_list") || endsWith(path, ".data_list")))
+    if (startsWith(path, "font_definitions.definitions[") && endsWith(path, ".name")) {
         return true;
+    }
+    if (startsWith(path, "shape_defs[") && (endsWith(path, ".instruction_list") || endsWith(path, ".data_list"))) {
+        return true;
+    }
     return false;
 }
 
 std::string listPartPrefix(const Value& item)
 {
     const auto* partId = item.find("part_id");
-    return partId && partId->isInteger() ? partIdentityPrefix(partId->asInteger())
-                                         : std::string{};
+    return partId && partId->isInteger() ? partIdentityPrefix(partId->asInteger()) : std::string{};
 }
 
-std::optional<std::pair<std::string, std::string>> ordinaryListKey(
-    const Value& item, bool matchCmperPairWithoutIncidence = false)
+std::optional<std::pair<std::string, std::string>> ordinaryListKey(const Value& item, bool matchCmperPairWithoutIncidence = false)
 {
-    if (!item.isObject()) return std::nullopt;
+    if (!item.isObject()) {
+        return std::nullopt;
+    }
     const auto integer = [&](std::string_view key) -> const Value* {
         const auto* value = item.find(key);
         return value && value->isInteger() ? value : nullptr;
     };
     const auto partPrefix = listPartPrefix(item);
     if (integer("entry_number") && integer("note_id")) {
-        return std::pair{"identity",
-                         partPrefix + "entry_number=" +
-                             std::to_string(integer("entry_number")->asInteger()) +
-                             ",note_id=" + std::to_string(integer("note_id")->asInteger())};
+        return std::pair{"identity", partPrefix + "entry_number=" + std::to_string(integer("entry_number")->asInteger())
+                                         + ",note_id=" + std::to_string(integer("note_id")->asInteger())};
     }
     if (integer("entry_number") && integer("inci")) {
-        return std::pair{"identity",
-                         partPrefix + "entry_number=" +
-                             std::to_string(integer("entry_number")->asInteger()) +
-                             ",inci=" + std::to_string(integer("inci")->asInteger())};
+        return std::pair{"identity", partPrefix + "entry_number=" + std::to_string(integer("entry_number")->asInteger())
+                                         + ",inci=" + std::to_string(integer("inci")->asInteger())};
     }
     if (integer("cmper1") && integer("cmper2") && integer("inci")) {
-        return std::pair{"identity",
-                         partPrefix + "cmper1=" +
-                             std::to_string(integer("cmper1")->asInteger()) +
-                             ",cmper2=" + std::to_string(integer("cmper2")->asInteger()) +
-                             ",inci=" + std::to_string(integer("inci")->asInteger())};
+        return std::pair{"identity", partPrefix + "cmper1=" + std::to_string(integer("cmper1")->asInteger()) + ",cmper2="
+                                         + std::to_string(integer("cmper2")->asInteger()) + ",inci=" + std::to_string(integer("inci")->asInteger())};
     }
     if (matchCmperPairWithoutIncidence && integer("cmper1") && integer("cmper2")) {
         return std::pair{"identity",
-                         partPrefix + "cmper1=" +
-                             std::to_string(integer("cmper1")->asInteger()) +
-                             ",cmper2=" + std::to_string(integer("cmper2")->asInteger())};
+            partPrefix + "cmper1=" + std::to_string(integer("cmper1")->asInteger()) + ",cmper2=" + std::to_string(integer("cmper2")->asInteger())};
     }
     if (integer("cmper") && integer("inci")) {
-        return std::pair{"identity", partPrefix + "cmper=" +
-                                         std::to_string(integer("cmper")->asInteger()) +
-                                         ",inci=" +
-                                         std::to_string(integer("inci")->asInteger())};
+        return std::pair{"identity",
+            partPrefix + "cmper=" + std::to_string(integer("cmper")->asInteger()) + ",inci=" + std::to_string(integer("inci")->asInteger())};
     }
     for (const auto key : {"cmper", "number", "index"}) {
         if (const auto* value = integer(key)) {
             if (partPrefix.empty()) {
                 return std::pair{std::string(key), std::to_string(value->asInteger())};
             }
-            return std::pair{"identity",
-                partPrefix + key + "=" + std::to_string(value->asInteger())};
+            return std::pair{"identity", partPrefix + key + "=" + std::to_string(value->asInteger())};
         }
     }
     return std::nullopt;
@@ -167,28 +139,29 @@ std::optional<std::pair<std::string, std::string>> ordinaryListKey(
 
 std::optional<std::pair<std::string, std::string>> listKey(std::string_view path, const Value& item)
 {
-    if (startsWith(path, "smart_shape_options.") && endsWith(path, "_connect_styles") &&
-        item.isObject()) {
+    if (startsWith(path, "smart_shape_options.") && endsWith(path, "_connect_styles") && item.isObject()) {
         if (const auto* type = item.find("type"); type && type->isInteger()) {
             return std::pair{"type", std::to_string(type->asInteger())};
         }
     }
     if (path == "font_definitions.definitions" && item.isObject()) {
         const auto partPrefix = listPartPrefix(item);
-        if (const auto* cmper = item.find("cmper");
-            cmper && cmper->isInteger() && cmper->asInteger() == 0) {
-            if (partPrefix.empty()) return std::pair{"cmper", "0"};
+        if (const auto* cmper = item.find("cmper"); cmper && cmper->isInteger() && cmper->asInteger() == 0) {
+            if (partPrefix.empty()) {
+                return std::pair{"cmper", "0"};
+            }
             return std::pair{"identity", partPrefix + "cmper=0"};
         }
         if (const auto* name = item.find("normalized_name"); name && name->isString()) {
             const auto normalized = canonicalFontName(name->asString());
-            if (partPrefix.empty()) return std::pair{"normalized_name", normalized};
+            if (partPrefix.empty()) {
+                return std::pair{"normalized_name", normalized};
+            }
             return std::pair{"identity", partPrefix + "normalized_name=" + normalized};
         }
     }
     if (item.isObject()) {
-        if (const auto* reportKey = item.find("_report_match_key");
-            reportKey && reportKey->isString()) {
+        if (const auto* reportKey = item.find("_report_match_key"); reportKey && reportKey->isString()) {
             return std::pair{"semantic", reportKey->asString()};
         }
     }
@@ -214,53 +187,56 @@ std::vector<std::string> listSegments(const Value::Array& items, std::string_vie
         const auto& [field, key] = *keys[index];
         const auto occurrence = ++seen[*keys[index]];
         const auto suffix = occurrence == 1 ? "" : "#" + std::to_string(occurrence);
-        if (field == "index" || field == "identity")
+        if (field == "index" || field == "identity") {
             result.push_back("[" + key + suffix + "]");
-        else
+        } else {
             result.push_back("[" + field + "=" + key + suffix + "]");
+        }
     }
     return result;
 }
 
-void collectLeaves(const Value& value, std::string path, std::string origin, bool includeOrigins,
-                   bool partObject, Leaves& result, std::set<std::string>* partLeaves)
+void collectLeaves(
+    const Value& value, std::string path, std::string origin, bool includeOrigins, bool partObject, Leaves& result, std::set<std::string>* partLeaves)
 {
     if (value.isObject()) {
         if (const auto* partId = value.find("part_id"); partId && partId->isInteger()) {
             partObject = partId->asInteger() != musx::dom::SCORE_PARTID;
         }
         if (includeOrigins) {
-            if (const auto* objectOrigin = value.find("origin");
-                objectOrigin && objectOrigin->isString())
+            if (const auto* objectOrigin = value.find("origin"); objectOrigin && objectOrigin->isString()) {
                 origin = objectOrigin->asString();
+            }
         }
         for (const auto& [key, child] : value.asObject()) {
-            if (metadataKeys.contains(key) || isNoncontentKey(key)) continue;
+            if (metadataKeys.contains(key) || isNoncontentKey(key)) {
+                continue;
+            }
             const auto childPath = path.empty() ? key : path + '.' + key;
-            if (isExcludedPath(childPath)) continue;
+            if (isExcludedPath(childPath)) {
+                continue;
+            }
             std::string childOrigin = origin;
             if (includeOrigins) {
                 const auto camelOrigin = originKeyForLeaf(key);
                 const auto suffixOrigin = key + "_origin";
-                if (const auto* camelFound = value.find(camelOrigin);
-                    camelFound && camelFound->isString()) {
+                if (const auto* camelFound = value.find(camelOrigin); camelFound && camelFound->isString()) {
                     childOrigin = camelFound->asString();
-                } else if (const auto* suffixFound = value.find(suffixOrigin);
-                           suffixFound && suffixFound->isString()) {
+                } else if (const auto* suffixFound = value.find(suffixOrigin); suffixFound && suffixFound->isString()) {
                     childOrigin = suffixFound->asString();
                 }
             }
-            collectLeaves(child, childPath, childOrigin, includeOrigins, partObject, result,
-                          partLeaves);
+            collectLeaves(child, childPath, childOrigin, includeOrigins, partObject, result, partLeaves);
         }
     } else if (value.isArray()) {
         const auto segments = listSegments(value.asArray(), path);
         for (std::size_t index = 0; index < value.asArray().size(); ++index) {
-            collectLeaves(value.asArray()[index], path + segments[index], origin, includeOrigins,
-                          partObject, result, partLeaves);
+            collectLeaves(value.asArray()[index], path + segments[index], origin, includeOrigins, partObject, result, partLeaves);
         }
     } else {
-        if (partObject && partLeaves) partLeaves->insert(path);
+        if (partObject && partLeaves) {
+            partLeaves->insert(path);
+        }
         result.insert_or_assign(std::move(path), std::pair{value, std::move(origin)});
     }
 }
@@ -271,20 +247,25 @@ std::string objectPrefix(std::string_view path)
     return end == std::string_view::npos ? std::string{} : std::string(path.substr(0, end + 1));
 }
 
-bool equalSurrounding(const Leaves& source, const Leaves& companion, std::string_view prefix,
-                      std::string_view excluded)
+bool equalSurrounding(const Leaves& source, const Leaves& companion, std::string_view prefix, std::string_view excluded)
 {
     std::set<std::string> paths;
-    for (const auto& [path, unused] : source)
-        if (startsWith(path, prefix) && path != excluded) paths.insert(path);
-    for (const auto& [path, unused] : companion)
-        if (startsWith(path, prefix) && path != excluded) paths.insert(path);
+    for (const auto& [path, unused] : source) {
+        if (startsWith(path, prefix) && path != excluded) {
+            paths.insert(path);
+        }
+    }
+    for (const auto& [path, unused] : companion) {
+        if (startsWith(path, prefix) && path != excluded) {
+            paths.insert(path);
+        }
+    }
     for (const auto& path : paths) {
         const auto sourceFound = source.find(path);
         const auto companionFound = companion.find(path);
-        if (sourceFound == source.end() || companionFound == companion.end() ||
-            sourceFound->second.first != companionFound->second.first)
+        if (sourceFound == source.end() || companionFound == companion.end() || sourceFound->second.first != companionFound->second.first) {
             return false;
+        }
     }
     return true;
 }
@@ -301,64 +282,69 @@ bool comparisonPathEndsWith(std::string_view path, std::string_view suffix)
     return endsWith(path, suffix);
 }
 
-bool comparisonEqualSurrounding(const ComparisonLeaves& source, const ComparisonLeaves& companion,
-                                std::string_view prefix, std::string_view excluded)
+bool comparisonEqualSurrounding(const ComparisonLeaves& source, const ComparisonLeaves& companion, std::string_view prefix, std::string_view excluded)
 {
     return equalSurrounding(source, companion, prefix, excluded);
 }
 
-ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion,
-                                  const musx::dom::DocumentPtr& sourceDocument,
-                                  const musx::dom::DocumentPtr& companionDocument,
-                                  FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
-                                  const SourceVersion* sourceVersion,
-                                  const ImportReport& sourceReport)
+ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion, const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument, FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
+    const ImportReport& sourceReport)
 {
     ComparisonResult result;
-    ComparisonPreparationContext preparation{
-        source, companion, result.transformations, sourceEpoch, sourceVersion, &sourceReport};
+    ComparisonPreparationContext preparation{source, companion, result.transformations, sourceEpoch, sourceVersion, &sourceReport};
     runComparisonPreparers(preparation);
     if (sourceEpoch == FormatEpoch::CodaBanner) {
-        comparison_text::realignCodaBlockTexts(
-            source, companion, sourceDocument, companionDocument, result);
-    } else if (sourcePredatesVersion(sourceEpoch, sourceVersion,
-                   FormatEpoch::UncompressedLegacy, versions::finale3_7)) {
-        comparison_text::realignPreFinale37StaffNameBlockTexts(
-            source, companion, sourceDocument, companionDocument, result);
+        comparison_text::realignCodaBlockTexts(source, companion, sourceDocument, companionDocument, result);
+    } else if (sourcePredatesVersion(sourceEpoch, sourceVersion, FormatEpoch::UncompressedLegacy, versions::finale3_7)) {
+        comparison_text::realignPreFinale37StaffNameBlockTexts(source, companion, sourceDocument, companionDocument, result);
     }
-    const auto textBlockReferents =
-        comparison_text::compareTextBlockReferents(sourceDocument, companionDocument);
+    const auto textBlockReferents = comparison_text::compareTextBlockReferents(sourceDocument, companionDocument);
     auto shapeSetFontPaths = comparisonFontReferencePaths(source);
     const auto companionShapeFontPaths = comparisonFontReferencePaths(companion);
     shapeSetFontPaths.insert(companionShapeFontPaths.begin(), companionShapeFontPaths.end());
     std::set<std::string> classes;
-    for (const auto& [name, unused] : source)
-        if (!excludedClasses.contains(name)) classes.insert(name);
-    for (const auto& [name, unused] : companion)
-        if (!excludedClasses.contains(name)) classes.insert(name);
+    for (const auto& [name, unused] : source) {
+        if (!excludedClasses.contains(name)) {
+            classes.insert(name);
+        }
+    }
+    for (const auto& [name, unused] : companion) {
+        if (!excludedClasses.contains(name)) {
+            classes.insert(name);
+        }
+    }
     Leaves sourceDocumentLeaves;
-    for (const auto& [name, value] : source)
+    for (const auto& [name, value] : source) {
         collectLeaves(value, name, {}, true, false, sourceDocumentLeaves, nullptr);
+    }
     Leaves companionDocumentLeaves;
-    for (const auto& [name, value] : companion)
+    for (const auto& [name, value] : companion) {
         collectLeaves(value, name, {}, false, false, companionDocumentLeaves, nullptr);
+    }
     for (const auto& className : classes) {
         const auto sourceClass = source.find(className);
         const auto companionClass = companion.find(className);
         Leaves sourceLeaves;
         Leaves companionLeaves;
         std::set<std::string> sourcePartLeaves;
-        if (sourceClass != source.end())
-            collectLeaves(sourceClass->second, className, {}, true, false, sourceLeaves,
-                          &sourcePartLeaves);
-        if (companionClass != companion.end())
-            collectLeaves(companionClass->second, className, {}, false, false, companionLeaves,
-                          nullptr);
+        if (sourceClass != source.end()) {
+            collectLeaves(sourceClass->second, className, {}, true, false, sourceLeaves, &sourcePartLeaves);
+        }
+        if (companionClass != companion.end()) {
+            collectLeaves(companionClass->second, className, {}, false, false, companionLeaves, nullptr);
+        }
         std::set<std::string> paths;
-        for (const auto& [path, unused] : sourceLeaves)
-            if (!isClassifierMetadataPath(path)) paths.insert(path);
-        for (const auto& [path, unused] : companionLeaves)
-            if (!isClassifierMetadataPath(path)) paths.insert(path);
+        for (const auto& [path, unused] : sourceLeaves) {
+            if (!isClassifierMetadataPath(path)) {
+                paths.insert(path);
+            }
+        }
+        for (const auto& [path, unused] : companionLeaves) {
+            if (!isClassifierMetadataPath(path)) {
+                paths.insert(path);
+            }
+        }
         auto& stats = classComparison(result, className);
         for (const auto& path : paths) {
             const auto sourceFound = sourceLeaves.find(path);
@@ -368,95 +354,72 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const bool fontReference = isComparisonFontReference(path, shapeSetFontPaths);
             std::string sourceFontIdentity;
             std::string companionFontIdentity;
-            if (inSource && inCompanion && fontReference && sourceFound->second.first.isInteger() &&
-                companionFound->second.first.isInteger()) {
-                sourceFontIdentity =
-                    comparisonFontIdentity(source, sourceFound->second.first.asInteger());
-                companionFontIdentity =
-                    comparisonFontIdentity(companion, companionFound->second.first.asInteger());
-                if (!sourceFontIdentity.empty() &&
-                    sameFontName(sourceFontIdentity, companionFontIdentity)) {
+            if (inSource && inCompanion && fontReference && sourceFound->second.first.isInteger() && companionFound->second.first.isInteger()) {
+                sourceFontIdentity = comparisonFontIdentity(source, sourceFound->second.first.asInteger());
+                companionFontIdentity = comparisonFontIdentity(companion, companionFound->second.first.asInteger());
+                if (!sourceFontIdentity.empty() && sameFontName(sourceFontIdentity, companionFontIdentity)) {
                     ++stats.same;
                     continue;
                 }
                 if (shapeSetFontPaths.contains(path)) {
                     ++stats.expected;
                     ++result.expected[DifferenceClassification::SetFontSubstitution];
-                    ++result.fontSubstitutions[
-                        (sourceFontIdentity.empty() ? "?" : sourceFontIdentity) + '\t' +
-                        (companionFontIdentity.empty() ? "?" : companionFontIdentity)];
+                    ++result.fontSubstitutions[(sourceFontIdentity.empty() ? "?" : sourceFontIdentity) + '\t'
+                                               + (companionFontIdentity.empty() ? "?" : companionFontIdentity)];
                     continue;
                 }
             }
             std::optional<bool> staffNameReferents;
-            if (inSource && inCompanion && sourceFound->second.first.isInteger() &&
-                companionFound->second.first.isInteger()) {
+            if (inSource && inCompanion && sourceFound->second.first.isInteger() && companionFound->second.first.isInteger()) {
                 staffNameReferents = comparison_text::compareStaffNameReferents(
-                    path, sourceFound->second.first.asInteger(),
-                    companionFound->second.first.asInteger(), sourceDocument, companionDocument);
+                    path, sourceFound->second.first.asInteger(), companionFound->second.first.asInteger(), sourceDocument, companionDocument);
                 if (staffNameReferents && *staffNameReferents) {
                     ++stats.same;
                     if (sourceFound->second.first != companionFound->second.first) {
-                        ++result.transformations[
-                            ComparisonTransformation::EquivalentTextBlockReferent];
+                        ++result.transformations[ComparisonTransformation::EquivalentTextBlockReferent];
                     }
                     continue;
                 }
             }
-            if (inSource && inCompanion && !fontReference &&
-                !staffNameReferents && sourceFound->second.first == companionFound->second.first) {
+            if (inSource && inCompanion && !fontReference && !staffNameReferents && sourceFound->second.first == companionFound->second.first) {
                 ++stats.same;
                 continue;
             }
-            if (inSource && inCompanion && startsWith(path, "staff_style[") &&
-                endsWith(path, ".style_name") && sourceFound->second.first.isString() &&
-                companionFound->second.first.isString() &&
-                trimWhitespace(sourceFound->second.first.asString()) ==
-                    trimWhitespace(companionFound->second.first.asString())) {
+            if (inSource && inCompanion && startsWith(path, "staff_style[") && endsWith(path, ".style_name") && sourceFound->second.first.isString()
+                && companionFound->second.first.isString()
+                && trimWhitespace(sourceFound->second.first.asString()) == trimWhitespace(companionFound->second.first.asString())) {
                 ++stats.same;
                 continue;
             }
-            if (inSource && inCompanion && endsWith(path, "font_name") &&
-                sourceFound->second.first.isString() && companionFound->second.first.isString() &&
-                sameFontName(sourceFound->second.first.asString(),
-                             companionFound->second.first.asString())) {
+            if (inSource && inCompanion && endsWith(path, "font_name") && sourceFound->second.first.isString()
+                && companionFound->second.first.isString()
+                && sameFontName(sourceFound->second.first.asString(), companionFound->second.first.asString())) {
                 ++stats.same;
                 continue;
             }
             const auto prefix = objectPrefix(path);
             const auto referent = textBlockReferents.find(prefix);
-            if (inSource && inCompanion && endsWith(path, ".text_id") &&
-                referent != textBlockReferents.end() &&
-                (referent->second == comparison_text::ReferentComparison::Matching ||
-                 referent->second == comparison_text::ReferentComparison::MatchingPageOnly)) {
+            if (inSource && inCompanion && endsWith(path, ".text_id") && referent != textBlockReferents.end()
+                && (referent->second == comparison_text::ReferentComparison::Matching
+                    || referent->second == comparison_text::ReferentComparison::MatchingPageOnly)) {
                 ++stats.same;
                 ++result.transformations[ComparisonTransformation::EquivalentTextBlockReferent];
                 continue;
             }
-            if (inSource && inCompanion && surveyorPool(className) == "texts" &&
-                endsWith(path, ".text") && sourceFound->second.first.isString() &&
-                companionFound->second.first.isString()) {
-                const auto comparison = comparison_text::compareText(
-                    className, path, sourceFound->second.first.asString(),
-                    companionFound->second.first.asString(), sourceDocument, companionDocument,
-                    comparison_text::isPartNameText(className, path, source, companion),
-                    comparison_text::isSynthesizedScoreNameText(className, path, source,
-                                                                companion));
-                if (comparison.equivalent &&
-                    comparison_text::hasSynthesizedTextState(source, className, path) &&
-                    sourceFound->second.first != companionFound->second.first) {
+            if (inSource && inCompanion && surveyorPool(className) == "texts" && endsWith(path, ".text") && sourceFound->second.first.isString()
+                && companionFound->second.first.isString()) {
+                const auto comparison =
+                    comparison_text::compareText(className, path, sourceFound->second.first.asString(), companionFound->second.first.asString(),
+                        sourceDocument, companionDocument, comparison_text::isPartNameText(className, path, source, companion),
+                        comparison_text::isSynthesizedScoreNameText(className, path, source, companion));
+                if (comparison.equivalent && comparison_text::hasSynthesizedTextState(source, className, path)
+                    && sourceFound->second.first != companionFound->second.first) {
                     ++stats.expected;
                     ++result.expected[DifferenceClassification::EnigmaTextDifference];
-                    ++result
-                          .textDifferences[className][TextDifferenceClassification::AddedFontInfo];
+                    ++result.textDifferences[className][TextDifferenceClassification::AddedFontInfo];
                     if (result.textExamples.size() < maximumExamplesPerRow) {
-                        result.textExamples.push_back(
-                            {path,
-                             sourceFound->second.first,
-                             companionFound->second.first,
-                             DifferenceClassification::EnigmaTextDifference,
-                             TextDifferenceClassification::AddedFontInfo,
-                             {}});
+                        result.textExamples.push_back({path, sourceFound->second.first, companionFound->second.first,
+                            DifferenceClassification::EnigmaTextDifference, TextDifferenceClassification::AddedFontInfo, {}});
                     }
                 } else if (comparison.equivalent) {
                     ++stats.same;
@@ -473,15 +436,10 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                         }
                         ++result.textDifferences[className][kind];
                         if (result.textExamples.size() < maximumExamplesPerRow) {
-                            result.textExamples.push_back(
-                                {path,
-                                 sourceFound->second.first,
-                                 companionFound->second.first,
-                                 kind == TextDifferenceClassification::Other
-                                     ? DifferenceClassification::Unexpected
-                                     : DifferenceClassification::EnigmaTextDifference,
-                                 kind,
-                                 {}});
+                            result.textExamples.push_back({path, sourceFound->second.first, companionFound->second.first,
+                                kind == TextDifferenceClassification::Other ? DifferenceClassification::Unexpected
+                                                                            : DifferenceClassification::EnigmaTextDifference,
+                                kind, {}});
                         }
                     }
                 }
@@ -494,17 +452,12 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const Value companionValue = inCompanion ? companionFound->second.first : Value{};
             const auto origin = inSource ? sourceFound->second.second : std::string{};
             const auto relatedDifference =
-                referent == textBlockReferents.end()
-                    ? RelatedDifference::None
-                    : referent->second == comparison_text::ReferentComparison::Matching
-                          ? RelatedDifference::MatchingTextBlockReferent
-                      : referent->second == comparison_text::ReferentComparison::MatchingPageOnly
-                          ? RelatedDifference::MatchingPageOnlyTextBlockReferent
-                          : RelatedDifference::RenumberedTextBlockReferent;
-            const DifferenceContext differenceContext{
-                path,         category,        origin,      sourceValue,     companionValue,
-                sourceLeaves, companionLeaves, sourceEpoch, sourceByteOrder, sourceVersion,
-                sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
+                referent == textBlockReferents.end()                                        ? RelatedDifference::None
+                : referent->second == comparison_text::ReferentComparison::Matching         ? RelatedDifference::MatchingTextBlockReferent
+                : referent->second == comparison_text::ReferentComparison::MatchingPageOnly ? RelatedDifference::MatchingPageOnlyTextBlockReferent
+                                                                                            : RelatedDifference::RenumberedTextBlockReferent;
+            const DifferenceContext differenceContext{path, category, origin, sourceValue, companionValue, sourceLeaves, companionLeaves, sourceEpoch,
+                sourceByteOrder, sourceVersion, sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
                 &companionDocumentLeaves, companionDocument.get()};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
@@ -516,12 +469,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const auto recordUnexpected = [&] {
                 ++stats.unexpected;
                 if (result.unexpectedExamples.size() < maximumExamplesPerRow) {
-                    result.unexpectedExamples.push_back({path,
-                                                         sourceValue,
-                                                         companionValue,
-                                                         DifferenceClassification::Unexpected,
-                                                         {},
-                                                         origin});
+                    result.unexpectedExamples.push_back({path, sourceValue, companionValue, DifferenceClassification::Unexpected, {}, origin});
                 }
             };
             if (classExpected == DifferenceClassification::Unexpected) {

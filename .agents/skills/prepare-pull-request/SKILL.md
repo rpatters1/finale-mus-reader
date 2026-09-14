@@ -29,8 +29,8 @@ mandatory local build at this boundary.
 
 ## Deliver the branch
 
-1. Inspect `git status --short`, the complete intended diff, and `git diff --check`. Preserve
-   unrelated worktree changes.
+1. Inspect `git status --short`, the complete intended diff, and `git diff --check`, and run
+   `python3 scripts/check_format.py`. Preserve unrelated worktree changes.
 2. Stage only the intended files and review the staged status and diff check.
 3. Commit and push only when authorized by the user. Never deliver directly from `main`.
 4. Open the pull request against the intended base branch and verify its URL, title, head, base,

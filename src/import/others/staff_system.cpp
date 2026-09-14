@@ -24,8 +24,7 @@ using StaffSystemTarget = musx::dom::others::StaffSystem;
 constexpr records::LegacyTag staffSystemTag = records::packTag("SS");
 constexpr records::LegacyTag systemScalingTag = records::packTag("SP");
 constexpr records::LegacyTag staffSystemClass = 0x00df;
-constexpr std::size_t staffSystemRowBytes =
-    records::otherWordCount * sizeof(std::uint16_t);
+constexpr std::size_t staffSystemRowBytes = records::otherWordCount * sizeof(std::uint16_t);
 constexpr std::size_t compactStaffSystemBytes = staffSystemRowBytes;
 constexpr std::size_t staffSystemBaseBytes = 24;
 constexpr std::size_t staffSystemExtendedBytes = 28;
@@ -58,20 +57,23 @@ enum class StaffSystemLayout {
     Expanded,
 };
 
-struct CompactSystemScaling {
+struct CompactSystemScaling
+{
     records::LegacyRow row;
     std::int16_t percent{};
     std::uint16_t flags{};
 };
 
-struct CompactStaffSystemEntry {
+struct CompactStaffSystemEntry
+{
     std::shared_ptr<StaffSystemTarget> target;
     records::LegacyRow row;
     std::int16_t storedTopOrDistance{};
     std::optional<CompactSystemScaling> scaling;
 };
 
-struct ExpandedStaffSystemEntry {
+struct ExpandedStaffSystemEntry
+{
     std::shared_ptr<StaffSystemTarget> target;
     std::vector<records::LegacyRow> rows;
     bool hasExtendedFields{};
@@ -82,50 +84,40 @@ struct ExpandedStaffSystemEntry {
     std::int16_t storedStaffHeight{};
 };
 
-struct StaffSystemMeasureRange {
+struct StaffSystemMeasureRange
+{
     musx::dom::Cmper last{};
     musx::dom::MeasCmper end{};
 };
 
-std::optional<StaffSystemMeasureRange> staffSystemMeasureRange(
-    const ImportContext& context)
+std::optional<StaffSystemMeasureRange> staffSystemMeasureRange(const ImportContext& context)
 {
     musx::dom::Cmper lastMeasure{};
     bool hasMeasure = false;
-    for (const auto& measure :
-         context.document->getOthers()->getArray<musx::dom::others::Measure>(
-             musx::dom::SCORE_PARTID)) {
+    for (const auto& measure : context.document->getOthers()->getArray<musx::dom::others::Measure>(musx::dom::SCORE_PARTID)) {
         hasMeasure = true;
         lastMeasure = (std::max)(lastMeasure, measure->getCmper());
     }
-    if (!hasMeasure) return std::nullopt;
+    if (!hasMeasure) {
+        return std::nullopt;
+    }
 
-    const auto maximumMeasure =
-        (std::numeric_limits<musx::dom::MeasCmper>::max)();
-    return StaffSystemMeasureRange{
-        lastMeasure, lastMeasure < static_cast<musx::dom::Cmper>(maximumMeasure)
-                         ? static_cast<musx::dom::MeasCmper>(lastMeasure + 1)
-                         : maximumMeasure};
+    const auto maximumMeasure = (std::numeric_limits<musx::dom::MeasCmper>::max)();
+    return StaffSystemMeasureRange{lastMeasure,
+        lastMeasure < static_cast<musx::dom::Cmper>(maximumMeasure) ? static_cast<musx::dom::MeasCmper>(lastMeasure + 1) : maximumMeasure};
 }
 
 template <typename Entry, typename Publish>
-void finishStaffSystemGrid(const ImportContext& context,
-                           std::vector<Entry> systems, Publish publish)
+void finishStaffSystemGrid(const ImportContext& context, std::vector<Entry> systems, Publish publish)
 {
-    std::sort(systems.begin(), systems.end(),
-              [](const auto& lhs, const auto& rhs) {
-                  return std::pair(lhs.target->getSourcePartId(),
-                                   lhs.target->getCmper()) <
-                         std::pair(rhs.target->getSourcePartId(),
-                                   rhs.target->getCmper());
-              });
+    std::sort(systems.begin(), systems.end(), [](const auto& lhs, const auto& rhs) {
+        return std::pair(lhs.target->getSourcePartId(), lhs.target->getCmper()) < std::pair(rhs.target->getSourcePartId(), rhs.target->getCmper());
+    });
 
     const auto measureRange = staffSystemMeasureRange(context);
     for (std::size_t begin = 0; begin < systems.size();) {
         std::size_t end = begin + 1;
-        while (end < systems.size() &&
-               systems[end].target->getSourcePartId() ==
-                   systems[begin].target->getSourcePartId()) {
+        while (end < systems.size() && systems[end].target->getSourcePartId() == systems[begin].target->getSourcePartId()) {
             ++end;
         }
 
@@ -136,10 +128,8 @@ void finishStaffSystemGrid(const ImportContext& context,
         musx::dom::MeasCmper previousStart{};
         while (retainedEnd < end) {
             const auto& target = *systems[retainedEnd].target;
-            if (target.getCmper() !=
-                    musx::dom::Cmper(retainedEnd - begin + 1) ||
-                target.startMeas == 0 || target.startMeas <= previousStart ||
-                (measureRange && target.startMeas > measureRange->last)) {
+            if (target.getCmper() != musx::dom::Cmper(retainedEnd - begin + 1) || target.startMeas == 0 || target.startMeas <= previousStart
+                || (measureRange && target.startMeas > measureRange->last)) {
                 break;
             }
             previousStart = target.startMeas;
@@ -149,9 +139,7 @@ void finishStaffSystemGrid(const ImportContext& context,
         for (std::size_t i = begin; i < retainedEnd; ++i) {
             auto& entry = systems[i];
             auto* next = i + 1 < retainedEnd ? &systems[i + 1] : nullptr;
-            entry.target->endMeas = next           ? next->target->startMeas
-                                    : measureRange ? measureRange->end
-                                                   : musx::dom::MeasCmper(0);
+            entry.target->endMeas = next ? next->target->startMeas : measureRange ? measureRange->end : musx::dom::MeasCmper(0);
             publish(entry, next);
         }
         begin = end;
@@ -159,141 +147,88 @@ void finishStaffSystemGrid(const ImportContext& context,
 }
 
 [[nodiscard]] const records::LegacyRow& staffSystemSourceRow(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
-    std::size_t byteOffset)
+    const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t byteOffset)
 {
     return rows[source.classRecords ? 0 : byteOffset / staffSystemRowBytes];
 }
 
 template <typename Reporting>
-void reportStaffSystemRowField(Reporting& reporting,
-                               const typename Reporting::InstanceKey& key,
-                               const records::LegacyRow& row,
-                               records::LegacyTag identity, const char* member,
-                               std::size_t byteOffset, std::int64_t value,
-                               typename Reporting::Origin origin)
+void reportStaffSystemRowField(Reporting& reporting, const typename Reporting::InstanceKey& key, const records::LegacyRow& row,
+    records::LegacyTag identity, const char* member, std::size_t byteOffset, std::int64_t value, typename Reporting::Origin origin)
 {
-    reporting.report().setField(
-        key, member,
-        typename Reporting::FieldInfo{origin, row.blockOffset,
-                                      row.decodedOffset + byteOffset, value,
-                                      identity});
+    reporting.report().setField(key, member, typename Reporting::FieldInfo{origin, row.blockOffset, row.decodedOffset + byteOffset, value, identity});
 }
 
 template <typename Reporting>
-void reportStaffSystemSourceField(Reporting& reporting,
-                                  const typename Reporting::InstanceKey& key,
-                                  const RecordFamilySource& source,
-                                  std::span<const records::LegacyRow> rows,
-                                  const char* member, std::size_t byteOffset,
-                                  std::int64_t value,
-                                  typename Reporting::Origin origin)
+void reportStaffSystemSourceField(Reporting& reporting, const typename Reporting::InstanceKey& key, const RecordFamilySource& source,
+    std::span<const records::LegacyRow> rows, const char* member, std::size_t byteOffset, std::int64_t value, typename Reporting::Origin origin)
 {
     const auto& row = staffSystemSourceRow(source, rows, byteOffset);
     reportStaffSystemRowField(
-        reporting, key, row, source.identity, member,
-        source.classRecords ? byteOffset : byteOffset % staffSystemRowBytes,
-        value, origin);
+        reporting, key, row, source.identity, member, source.classRecords ? byteOffset : byteOffset % staffSystemRowBytes, value, origin);
 }
 
-void reportStaffSystem(
-    const ImportContext& context, const RecordFamilySource& source,
-    std::span<const records::LegacyRow> rows, const StaffSystemTarget& target,
-    bool uncompressed, bool hasExtendedFields, bool hasStoredStaffHeight,
-    std::int16_t storedTop, musx::dom::MeasCmper storedEndMeas,
-    std::int32_t storedHorzPercent, std::int16_t storedStaffHeight)
+void reportStaffSystem(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
+    const StaffSystemTarget& target, bool uncompressed, bool hasExtendedFields, bool hasStoredStaffHeight, std::int16_t storedTop,
+    musx::dom::MeasCmper storedEndMeas, std::int32_t storedHorzPercent, std::int16_t storedStaffHeight)
 {
-    withReporting(context.report, [&]<typename Reporting>(
-                                      Reporting& reporting) {
-        const auto key = reporting.template instanceKey<StaffSystemTarget>(
-            target.getSourcePartId(), target.getCmper());
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<StaffSystemTarget>(target.getSourcePartId(), target.getCmper());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
-        const auto sourceField = [&](const char* member, std::size_t offset,
-                                     std::int64_t value) {
-            reportStaffSystemSourceField(reporting, key, source, rows, member,
-                                         offset, value,
-                                         Reporting::Origin::LegacyMus);
+        const auto sourceField = [&](const char* member, std::size_t offset, std::int64_t value) {
+            reportStaffSystemSourceField(reporting, key, source, rows, member, offset, value, Reporting::Origin::LegacyMus);
         };
 
         if (uncompressed) {
             reporting.unmappedField(key, "top", target.top);
         } else {
-            reportStaffSystemSourceField(reporting, key, source, rows, "top",
-                                         topOffset, storedTop,
-                                         Reporting::Origin::LegacyMus);
+            reportStaffSystemSourceField(reporting, key, source, rows, "top", topOffset, storedTop, Reporting::Origin::LegacyMus);
         }
         sourceField("left", leftOffset, target.left);
         sourceField("right", rightOffset, target.right);
         sourceField("bottom", bottomOffset, target.bottom);
         sourceField("startMeas", startMeasOffset, target.startMeas);
-        reportStaffSystemSourceField(reporting, key, source, rows, "endMeas",
-                                     endMeasOffset, storedEndMeas,
-                                     Reporting::Origin::LegacyMusAdjusted);
+        reportStaffSystemSourceField(reporting, key, source, rows, "endMeas", endMeasOffset, storedEndMeas, Reporting::Origin::LegacyMusAdjusted);
         sourceField("horzPercent", horzPercentOffset, storedHorzPercent);
         sourceField("ssysPercent", ssysPercentOffset, target.ssysPercent);
-        sourceField("distanceToPrev",
-                    uncompressed && target.getCmper() != 1
-                        ? topOffset
-                        : distanceToPrevOffset,
-                    target.distanceToPrev);
+        sourceField("distanceToPrev", uncompressed && target.getCmper() != 1 ? topOffset : distanceToPrevOffset, target.distanceToPrev);
         if (hasStoredStaffHeight) {
             sourceField("staffHeight", staffHeightOffset, storedStaffHeight);
         } else {
             reporting.report().setField(
-                key, "staffHeight",
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior,
-                                              0, 0, target.staffHeight});
+                key, "staffHeight", typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, target.staffHeight});
         }
 
         sourceField("noNames", flagsOffset, target.noNames);
         reporting.unmappedField(key, "hasStaffScaling", target.hasStaffScaling);
-        sourceField("placeEndSpaceBeforeBarline", flagsOffset,
-                    target.placeEndSpaceBeforeBarline);
+        sourceField("placeEndSpaceBeforeBarline", flagsOffset, target.placeEndSpaceBeforeBarline);
         sourceField("scaleVert", flagsOffset, target.scaleVert);
         sourceField("holdMargins", flagsOffset, target.holdMargins);
 
         if (hasExtendedFields) {
-            sourceField("extraStartSystemSpace", extraStartSystemSpaceOffset,
-                        target.extraStartSystemSpace);
-            sourceField("extraEndSystemSpace", extraEndSystemSpaceOffset,
-                        target.extraEndSystemSpace);
+            sourceField("extraStartSystemSpace", extraStartSystemSpaceOffset, target.extraStartSystemSpace);
+            sourceField("extraEndSystemSpace", extraEndSystemSpaceOffset, target.extraEndSystemSpace);
         } else {
             reporting.report().setField(
-                key, "extraStartSystemSpace",
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior,
-                                              0, 0,
-                                              target.extraStartSystemSpace});
-            reporting.report().setField(key, "extraEndSystemSpace",
-                                        typename Reporting::FieldInfo{
-                                            Reporting::Origin::LegacyBehavior,
-                                            0, 0, target.extraEndSystemSpace});
+                key, "extraStartSystemSpace", typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, target.extraStartSystemSpace});
+            reporting.report().setField(
+                key, "extraEndSystemSpace", typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, target.extraEndSystemSpace});
         }
     });
 }
 
-void reportCompactStaffSystem(
-    const ImportContext& context, const RecordFamilySource& source,
-    const records::LegacyRow& row, const StaffSystemTarget& target,
-    std::int16_t storedTopOrDistance,
-    const std::optional<CompactSystemScaling>& scaling)
+void reportCompactStaffSystem(const ImportContext& context, const RecordFamilySource& source, const records::LegacyRow& row,
+    const StaffSystemTarget& target, std::int16_t storedTopOrDistance, const std::optional<CompactSystemScaling>& scaling)
 {
-    withReporting(context.report, [&]<typename Reporting>(
-                                      Reporting& reporting) {
-        const auto key = reporting.template instanceKey<StaffSystemTarget>(
-            target.getSourcePartId(), target.getCmper());
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<StaffSystemTarget>(target.getSourcePartId(), target.getCmper());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto rows = std::span<const records::LegacyRow>(&row, 1);
-        const auto sourceField = [&](const char* member, std::size_t offset,
-                                     std::int64_t value) {
-            reportStaffSystemSourceField(reporting, key, source, rows, member,
-                                         offset, value,
-                                         Reporting::Origin::LegacyMus);
+        const auto sourceField = [&](const char* member, std::size_t offset, std::int64_t value) {
+            reportStaffSystemSourceField(reporting, key, source, rows, member, offset, value, Reporting::Origin::LegacyMus);
         };
         const auto behaviorField = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(
-                key, member,
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior,
-                                              0, 0, value});
+            reporting.report().setField(key, member, typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, value});
         };
 
         reporting.unmappedField(key, "top", target.top);
@@ -304,23 +239,19 @@ void reportCompactStaffSystem(
         reporting.unmappedField(key, "horzPercent", 0);
         if (scaling) {
             reportStaffSystemRowField(
-                reporting, key, scaling->row, systemScalingTag, "ssysPercent",
-                0, scaling->percent, Reporting::Origin::LegacyMus);
+                reporting, key, scaling->row, systemScalingTag, "ssysPercent", 0, scaling->percent, Reporting::Origin::LegacyMus);
         } else {
             behaviorField("ssysPercent", target.ssysPercent);
         }
         behaviorField("staffHeight", target.staffHeight);
         reporting.unmappedField(key, "noNames", target.noNames);
         reporting.unmappedField(key, "hasStaffScaling", target.hasStaffScaling);
-        reporting.unmappedField(key, "placeEndSpaceBeforeBarline",
-                                target.placeEndSpaceBeforeBarline);
+        reporting.unmappedField(key, "placeEndSpaceBeforeBarline", target.placeEndSpaceBeforeBarline);
         if (scaling) {
             reportStaffSystemRowField(
-                reporting, key, scaling->row, systemScalingTag, "scaleVert",
-                flagsOffset, target.scaleVert, Reporting::Origin::LegacyMus);
+                reporting, key, scaling->row, systemScalingTag, "scaleVert", flagsOffset, target.scaleVert, Reporting::Origin::LegacyMus);
             reportStaffSystemRowField(
-                reporting, key, scaling->row, systemScalingTag, "holdMargins",
-                flagsOffset, target.holdMargins, Reporting::Origin::LegacyMus);
+                reporting, key, scaling->row, systemScalingTag, "holdMargins", flagsOffset, target.holdMargins, Reporting::Origin::LegacyMus);
         } else {
             reporting.unmappedField(key, "scaleVert", target.scaleVert);
             behaviorField("holdMargins", target.holdMargins);
@@ -335,240 +266,178 @@ void reportCompactStaffSystem(
     });
 }
 
-std::optional<CompactSystemScaling> readCompactSystemScaling(
-    const ImportContext& context, musx::dom::Cmper partId,
-    musx::dom::Cmper systemId)
+std::optional<CompactSystemScaling> readCompactSystemScaling(const ImportContext& context, musx::dom::Cmper partId, musx::dom::Cmper systemId)
 {
-    const auto rows = context.index.getOthers().getArray(
-        systemScalingTag, systemId, 0, std::uint16_t(partId));
-    if (rows.empty()) return std::nullopt;
+    const auto rows = context.index.getOthers().getArray(systemScalingTag, systemId, 0, std::uint16_t(partId));
+    if (rows.empty()) {
+        return std::nullopt;
+    }
     if (rows.size() != 1 || rows.front().wordCount != records::otherWordCount) {
         context.report.diagnostics.push_back(
-            {musx::util::Logger::LogLevel::Info,
-             "Compact system scaling " + std::to_string(systemId) +
-                 " does not have its six-word layout."});
+            {musx::util::Logger::LogLevel::Info, "Compact system scaling " + std::to_string(systemId) + " does not have its six-word layout."});
         return std::nullopt;
     }
 
-    return CompactSystemScaling{
-        rows.front(), rows.front().words[0],
-        static_cast<std::uint16_t>(rows.front().words[5])};
+    return CompactSystemScaling{rows.front(), rows.front().words[0], static_cast<std::uint16_t>(rows.front().words[5])};
 }
 
-void finishCompactStaffSystems(const ImportContext& context,
-                               const RecordFamilySource& source,
-                               std::vector<CompactStaffSystemEntry> systems)
+void finishCompactStaffSystems(const ImportContext& context, const RecordFamilySource& source, std::vector<CompactStaffSystemEntry> systems)
 {
-    finishStaffSystemGrid(
-        context, std::move(systems),
-        [&](CompactStaffSystemEntry& entry,
-            const CompactStaffSystemEntry* next) {
-            auto& target = *entry.target;
-            reportCompactStaffSystem(context, source, entry.row, target,
-                                     entry.storedTopOrDistance, entry.scaling);
-            withReporting(
-                context.report, [&]<typename Reporting>(Reporting& reporting) {
-                    const auto key =
-                        reporting.template instanceKey<StaffSystemTarget>(
-                            target.getSourcePartId(), target.getCmper());
-                    if (next) {
-                        reporting.report().setField(
-                            key, "endMeas",
-                            typename Reporting::FieldInfo{
-                                Reporting::Origin::LegacyMusAdjusted,
-                                next->row.blockOffset,
-                                next->row.decodedOffset + startMeasOffset,
-                                target.endMeas, staffSystemTag});
-                    } else {
-                        reporting.report().setField(
-                            key, "endMeas",
-                            typename Reporting::FieldInfo{
-                                Reporting::Origin::LegacyMusAdjusted, 0, 0,
-                                target.endMeas});
-                    }
-                });
-            context.document->getOthers()->add(StaffSystemTarget::XmlNodeName,
-                                               entry.target);
+    finishStaffSystemGrid(context, std::move(systems), [&](CompactStaffSystemEntry& entry, const CompactStaffSystemEntry* next) {
+        auto& target = *entry.target;
+        reportCompactStaffSystem(context, source, entry.row, target, entry.storedTopOrDistance, entry.scaling);
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto key = reporting.template instanceKey<StaffSystemTarget>(target.getSourcePartId(), target.getCmper());
+            if (next) {
+                reporting.report().setField(key, "endMeas",
+                    typename Reporting::FieldInfo{Reporting::Origin::LegacyMusAdjusted, next->row.blockOffset,
+                        next->row.decodedOffset + startMeasOffset, target.endMeas, staffSystemTag});
+            } else {
+                reporting.report().setField(
+                    key, "endMeas", typename Reporting::FieldInfo{Reporting::Origin::LegacyMusAdjusted, 0, 0, target.endMeas});
+            }
         });
+        context.document->getOthers()->add(StaffSystemTarget::XmlNodeName, entry.target);
+    });
 }
 
-void importCompactStaffSystemFamily(const ImportContext& context,
-                                    const RecordFamilySource& source)
+void importCompactStaffSystemFamily(const ImportContext& context, const RecordFamilySource& source)
 {
     std::vector<CompactStaffSystemEntry> systems;
     for (const auto [partId, systemId] : recordKeys(source)) {
-        const auto rows =
-            source.pool->getArray(source.identity, systemId, 0, partId);
-        if (rows.empty()) continue;
+        const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
+        if (rows.empty()) {
+            continue;
+        }
         const auto payload = collectRecordPayload(source, rows);
         if (payload.size() != compactStaffSystemBytes) {
             context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info,
-                 "Compact staff system " + std::to_string(systemId) +
-                     " does not have its six-word layout."});
+                {musx::util::Logger::LogLevel::Info, "Compact staff system " + std::to_string(systemId) + " does not have its six-word layout."});
             continue;
         }
 
-        auto target = createOthersRecordTarget<StaffSystemTarget>(
-            context.document, source, rows.front(), systemId);
+        auto target = createOthersRecordTarget<StaffSystemTarget>(context.document, source, rows.front(), systemId);
         const auto signedWord = [&](std::size_t offset) {
-            return static_cast<std::int16_t>(
-                payloadWord(payload, offset, context.profile.byteOrder));
+            return static_cast<std::int16_t>(payloadWord(payload, offset, context.profile.byteOrder));
         };
         const auto storedTopOrDistance = signedWord(topOffset);
-        const auto scaling = readCompactSystemScaling(
-            context, musx::dom::Cmper(partId), systemId);
+        const auto scaling = readCompactSystemScaling(context, musx::dom::Cmper(partId), systemId);
         target->left = signedWord(leftOffset);
         target->right = signedWord(rightOffset);
         target->bottom = signedWord(bottomOffset);
-        target->startMeas = static_cast<musx::dom::MeasCmper>(
-            payloadWord(payload, startMeasOffset, context.profile.byteOrder));
+        target->startMeas = static_cast<musx::dom::MeasCmper>(payloadWord(payload, startMeasOffset, context.profile.byteOrder));
         target->ssysPercent = compactStaffSystemPercent;
         target->staffHeight = 4 * musx::dom::EFIX_PER_SPACE;
         target->holdMargins = true;
         if (scaling) {
             target->ssysPercent = scaling->percent;
             target->scaleVert = (scaling->flags & compactScaleVertMask) != 0;
-            target->holdMargins =
-                (scaling->flags & compactScalingHoldMarginsMask) != 0;
+            target->holdMargins = (scaling->flags & compactScalingHoldMarginsMask) != 0;
         }
-        if (systemId != 1) target->distanceToPrev = storedTopOrDistance;
+        if (systemId != 1) {
+            target->distanceToPrev = storedTopOrDistance;
+        }
 
         // Compact system top and staff-scaling presence depend on selecting and
         // normalizing the applicable StaffUsed array. Optimized systems and
         // special extraction use distinct arrays, so neither value is
         // synthesized until StaffUsed recovery can select one.
-        systems.push_back(
-            {std::move(target), rows.front(), storedTopOrDistance, scaling});
+        systems.push_back({std::move(target), rows.front(), storedTopOrDistance, scaling});
     }
 
     if (!systems.empty()) {
         context.pending.checks.push_back(
-            [&context, source, systems = std::move(systems)]() mutable {
-                finishCompactStaffSystems(context, source, std::move(systems));
-            });
+            [&context, source, systems = std::move(systems)]() mutable { finishCompactStaffSystems(context, source, std::move(systems)); });
     }
 }
 
-std::optional<StaffSystemLayout> selectStaffSystemLayout(
-    const RecordFamilySource& source)
+std::optional<StaffSystemLayout> selectStaffSystemLayout(const RecordFamilySource& source)
 {
     for (const auto [partId, systemId] : recordKeys(source)) {
-        const auto rows =
-            source.pool->getArray(source.identity, systemId, 0, partId);
-        if (rows.empty()) continue;
+        const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
+        if (rows.empty()) {
+            continue;
+        }
 
         // A StaffSystem family has one layout. The exact six-word compact row
         // is structurally disjoint from the expanded layout's twelve-word
         // prefix, so payload width selects the decoder without dating the file.
-        return collectRecordPayload(source, rows).size() ==
-                       compactStaffSystemBytes
-                   ? StaffSystemLayout::Compact
-                   : StaffSystemLayout::Expanded;
+        return collectRecordPayload(source, rows).size() == compactStaffSystemBytes ? StaffSystemLayout::Compact : StaffSystemLayout::Expanded;
     }
     return std::nullopt;
 }
 
-void finishExpandedStaffSystems(const ImportContext& context,
-                                const RecordFamilySource& source,
-                                bool uncompressed,
-                                std::vector<ExpandedStaffSystemEntry> systems)
+void finishExpandedStaffSystems(
+    const ImportContext& context, const RecordFamilySource& source, bool uncompressed, std::vector<ExpandedStaffSystemEntry> systems)
 {
-    finishStaffSystemGrid(
-        context, std::move(systems),
-        [&](ExpandedStaffSystemEntry& entry, const ExpandedStaffSystemEntry*) {
-            reportStaffSystem(context, source, entry.rows, *entry.target,
-                              uncompressed, entry.hasExtendedFields,
-                              entry.hasStoredStaffHeight, entry.storedTop,
-                              entry.storedEndMeas, entry.storedHorzPercent,
-                              entry.storedStaffHeight);
-            context.document->getOthers()->add(StaffSystemTarget::XmlNodeName,
-                                               entry.target);
-        });
+    finishStaffSystemGrid(context, std::move(systems), [&](ExpandedStaffSystemEntry& entry, const ExpandedStaffSystemEntry*) {
+        reportStaffSystem(context, source, entry.rows, *entry.target, uncompressed, entry.hasExtendedFields, entry.hasStoredStaffHeight,
+            entry.storedTop, entry.storedEndMeas, entry.storedHorzPercent, entry.storedStaffHeight);
+        context.document->getOthers()->add(StaffSystemTarget::XmlNodeName, entry.target);
+    });
 }
 
-void importStaffSystemFamily(const ImportContext& context,
-                             const RecordFamilySource& source)
+void importStaffSystemFamily(const ImportContext& context, const RecordFamilySource& source)
 {
     std::vector<ExpandedStaffSystemEntry> systems;
-    const bool uncompressed =
-        context.profile.epoch == FormatEpoch::UncompressedLegacy;
+    const bool uncompressed = context.profile.epoch == FormatEpoch::UncompressedLegacy;
     for (const auto [partId, systemId] : recordKeys(source)) {
-        const auto rows =
-            source.pool->getArray(source.identity, systemId, 0, partId);
-        if (rows.empty()) continue;
+        const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
+        if (rows.empty()) {
+            continue;
+        }
         const auto payload = collectRecordPayload(source, rows);
-        if (payload.size() < staffSystemBaseBytes ||
-            (payload.size() > staffSystemBaseBytes &&
-             payload.size() < staffSystemExtendedBytes)) {
+        if (payload.size() < staffSystemBaseBytes || (payload.size() > staffSystemBaseBytes && payload.size() < staffSystemExtendedBytes)) {
             context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info,
-                 "Staff system " + std::to_string(systemId) +
-                     " is shorter than a recognized layout."});
+                {musx::util::Logger::LogLevel::Info, "Staff system " + std::to_string(systemId) + " is shorter than a recognized layout."});
             continue;
         }
 
-        auto target = createOthersRecordTarget<StaffSystemTarget>(
-            context.document, source, rows.front(), systemId);
-        const auto word = [&](std::size_t offset) {
-            return payloadWord(payload, offset, context.profile.byteOrder);
-        };
-        const auto signedWord = [&](std::size_t offset) {
-            return static_cast<std::int16_t>(word(offset));
-        };
+        auto target = createOthersRecordTarget<StaffSystemTarget>(context.document, source, rows.front(), systemId);
+        const auto word = [&](std::size_t offset) { return payloadWord(payload, offset, context.profile.byteOrder); };
+        const auto signedWord = [&](std::size_t offset) { return static_cast<std::int16_t>(word(offset)); };
 
         const auto storedTop = signedWord(topOffset);
-        if (!uncompressed) target->top = storedTop;
+        if (!uncompressed) {
+            target->top = storedTop;
+        }
         target->left = signedWord(leftOffset);
         target->right = signedWord(rightOffset);
         target->bottom = signedWord(bottomOffset);
         target->startMeas = word(startMeasOffset);
-        const auto storedEndMeas =
-            static_cast<musx::dom::MeasCmper>(word(endMeasOffset));
-        const auto storedHorzPercent =
-            payloadLong(payload, horzPercentOffset, context.profile.byteOrder,
-                        LongWordOrder::HighFirst);
+        const auto storedEndMeas = static_cast<musx::dom::MeasCmper>(word(endMeasOffset));
+        const auto storedHorzPercent = payloadLong(payload, horzPercentOffset, context.profile.byteOrder, LongWordOrder::HighFirst);
         target->horzPercent = static_cast<double>(storedHorzPercent) / 100.0;
         target->ssysPercent = signedWord(ssysPercentOffset);
         target->distanceToPrev = signedWord(distanceToPrevOffset);
-        if (uncompressed && systemId != 1) target->distanceToPrev = storedTop;
+        if (uncompressed && systemId != 1) {
+            target->distanceToPrev = storedTop;
+        }
 
         const auto storedStaffHeight = signedWord(staffHeightOffset);
         const bool hasStoredStaffHeight = storedStaffHeight != 0;
-        target->staffHeight =
-            hasStoredStaffHeight
-                ? storedStaffHeight * staffHeightEfixPerLegacyUnit
-                : 4 * musx::dom::EFIX_PER_SPACE;
+        target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : 4 * musx::dom::EFIX_PER_SPACE;
 
         const auto flags = word(flagsOffset);
         target->noNames = (flags & noNamesMask) != 0;
-        target->placeEndSpaceBeforeBarline =
-            (flags & placeEndSpaceBeforeBarlineMask) != 0;
+        target->placeEndSpaceBeforeBarline = (flags & placeEndSpaceBeforeBarlineMask) != 0;
         target->scaleVert = (flags & scaleVertMask) != 0;
         target->holdMargins = (flags & holdMarginsMask) != 0;
 
-        const bool hasExtendedFields =
-            payload.size() >= staffSystemExtendedBytes;
+        const bool hasExtendedFields = payload.size() >= staffSystemExtendedBytes;
         if (hasExtendedFields) {
-            target->extraStartSystemSpace =
-                signedWord(extraStartSystemSpaceOffset);
+            target->extraStartSystemSpace = signedWord(extraStartSystemSpaceOffset);
             target->extraEndSystemSpace = signedWord(extraEndSystemSpaceOffset);
         }
 
-        systems.push_back(
-            {std::move(target),
-             std::vector<records::LegacyRow>(rows.begin(), rows.end()),
-             hasExtendedFields, hasStoredStaffHeight, storedTop, storedEndMeas,
-             storedHorzPercent, storedStaffHeight});
+        systems.push_back({std::move(target), std::vector<records::LegacyRow>(rows.begin(), rows.end()), hasExtendedFields, hasStoredStaffHeight,
+            storedTop, storedEndMeas, storedHorzPercent, storedStaffHeight});
     }
 
     if (!systems.empty()) {
-        context.pending.checks.push_back(
-            [&context, source, uncompressed,
-             systems = std::move(systems)]() mutable {
-                finishExpandedStaffSystems(context, source, uncompressed,
-                                           std::move(systems));
-            });
+        context.pending.checks.push_back([&context, source, uncompressed, systems = std::move(systems)]() mutable {
+            finishExpandedStaffSystems(context, source, uncompressed, std::move(systems));
+        });
     }
 }
 
@@ -576,16 +445,20 @@ void importStaffSystemFamily(const ImportContext& context,
 
 void importStaffSystems(const ImportContext& context)
 {
-    const auto source = selectRecordFamilySource(
-        context, context.index.getOthers(), context.index.getClassOthers(),
-        staffSystemTag, staffSystemClass);
-    if (!source) return;
+    const auto source =
+        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), staffSystemTag, staffSystemClass);
+    if (!source) {
+        return;
+    }
     const auto layout = selectStaffSystemLayout(*source);
-    if (!layout) return;
-    if (*layout == StaffSystemLayout::Compact)
+    if (!layout) {
+        return;
+    }
+    if (*layout == StaffSystemLayout::Compact) {
         importCompactStaffSystemFamily(context, *source);
-    else
+    } else {
         importStaffSystemFamily(context, *source);
+    }
 }
 
 }  // namespace others

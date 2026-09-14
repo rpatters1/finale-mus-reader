@@ -23,28 +23,23 @@ constexpr std::size_t fretboardStyleNameSize = 48;
 constexpr std::size_t fretboardStyleNumberTextOffset = 132;
 constexpr std::size_t fretboardStyleNumberTextSize = 24;
 
-void populateFretboardStyleFont(const ImportContext& context,
-    const std::span<const std::uint8_t> payload, std::size_t at,
-    std::shared_ptr<musx::dom::FontInfo>& target)
+void populateFretboardStyleFont(
+    const ImportContext& context, const std::span<const std::uint8_t> payload, std::size_t at, std::shared_ptr<musx::dom::FontInfo>& target)
 {
     target = std::make_shared<musx::dom::FontInfo>(context.document);
-    target->fontId = context.construction.assignFontId(
-        payloadWord(payload, at, context.profile.byteOrder));
-    target->fontSize = static_cast<std::int16_t>(
-        payloadWord(payload, at + 2, context.profile.byteOrder));
-    target->setEnigmaStyles(payloadWord(
-        payload, at + 4, context.profile.byteOrder));
+    target->fontId = context.construction.assignFontId(payloadWord(payload, at, context.profile.byteOrder));
+    target->fontSize = static_cast<std::int16_t>(payloadWord(payload, at + 2, context.profile.byteOrder));
+    target->setEnigmaStyles(payloadWord(payload, at + 4, context.profile.byteOrder));
 }
 
-void reportFretboardStyle(ImportReport& report, const FretboardStyleTarget& target,
-    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
+void reportFretboardStyle(
+    ImportReport& report, const FretboardStyleTarget& target, const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
 {
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<FretboardStyleTarget>(partId, cmper);
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto report = [&](std::string member, auto value) {
-            reporting.report().setField(key, std::move(member),
-                {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
+            reporting.report().setField(key, std::move(member), {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
         };
         report("showLastFret", target.showLastFret);
         report("rotate", target.rotate);
@@ -80,17 +75,24 @@ void reportFretboardStyle(ImportReport& report, const FretboardStyleTarget& targ
 
 void importFretboardStyles(const ImportContext& context)
 {
-    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
-        context.index.getClassOthers(), fretboardStyleTag, fretboardStyleClass);
-    if (!source) return;
+    const auto source =
+        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), fretboardStyleTag, fretboardStyleClass);
+    if (!source) {
+        return;
+    }
     for (const auto [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
-        if (rows.empty()) continue;
+        if (rows.empty()) {
+            continue;
+        }
         const auto payload = collectRecordPayload(*source, rows);
-        if (payload.size() < fretboardStyleRecordSize) continue;
-        auto target = createOthersRecordTarget<FretboardStyleTarget>(context.document, *source,
-                                                                     rows.front(), cmper);
-        if (!target) continue;
+        if (payload.size() < fretboardStyleRecordSize) {
+            continue;
+        }
+        auto target = createOthersRecordTarget<FretboardStyleTarget>(context.document, *source, rows.front(), cmper);
+        if (!target) {
+            continue;
+        }
         target->showLastFret = payloadWord(payload, 0, context.profile.byteOrder);
         target->rotate = payloadWord(payload, 2, context.profile.byteOrder);
         target->fingNumWhite = payloadWord(payload, 4, context.profile.byteOrder);
@@ -100,40 +102,25 @@ void importFretboardStyles(const ImportContext& context)
         target->barreShapeId = payloadWord(payload, 12, context.profile.byteOrder);
         target->customShapeId = payloadWord(payload, 14, context.profile.byteOrder);
         target->defNumFrets = payloadWord(payload, 16, context.profile.byteOrder);
-        target->stringGap = payloadLong(
-            payload, 18, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->fretGap = payloadLong(
-            payload, 22, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->stringWidth = payloadLong(
-            payload, 26, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->fretWidth = payloadLong(
-            payload, 30, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->nutWidth = payloadLong(
-            payload, 34, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->vertTextOff = payloadLong(
-            payload, 38, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->horzTextOff = payloadLong(
-            payload, 42, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->horzHandleOff = payloadLong(
-            payload, 46, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->vertHandleOff = payloadLong(
-            payload, 50, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->whiteout = payloadLong(
-            payload, 54, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->stringGap = payloadLong(payload, 18, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->fretGap = payloadLong(payload, 22, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->stringWidth = payloadLong(payload, 26, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->fretWidth = payloadLong(payload, 30, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->nutWidth = payloadLong(payload, 34, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertTextOff = payloadLong(payload, 38, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->horzTextOff = payloadLong(payload, 42, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->horzHandleOff = payloadLong(payload, 46, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertHandleOff = payloadLong(payload, 50, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->whiteout = payloadLong(payload, 54, context.profile.byteOrder, LongWordOrder::HighFirst);
         populateFretboardStyleFont(context, payload, 58, target->fretNumFont);
         populateFretboardStyleFont(context, payload, 64, target->fingNumFont);
-        target->horzFingNumOff = payloadLong(
-            payload, 70, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->vertFingNumOff = payloadLong(
-            payload, 74, context.profile.byteOrder, LongWordOrder::HighFirst);
-        target->name = text::toUtf8(payloadString(payload,
-            fretboardStyleNameOffset, fretboardStyleNameSize), context.profile.platform);
-        target->fretNumText = text::toUtf8(payloadString(payload,
-            fretboardStyleNumberTextOffset, fretboardStyleNumberTextSize),
-            context.profile.platform);
+        target->horzFingNumOff = payloadLong(payload, 70, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->vertFingNumOff = payloadLong(payload, 74, context.profile.byteOrder, LongWordOrder::HighFirst);
+        target->name = text::toUtf8(payloadString(payload, fretboardStyleNameOffset, fretboardStyleNameSize), context.profile.platform);
+        target->fretNumText =
+            text::toUtf8(payloadString(payload, fretboardStyleNumberTextOffset, fretboardStyleNumberTextSize), context.profile.platform);
         reportFretboardStyle(context.report, *target, rows.front(), partId, cmper);
-        context.document->getOthers()->add(FretboardStyleTarget::XmlNodeName,
-            std::move(target));
+        context.document->getOthers()->add(FretboardStyleTarget::XmlNodeName, std::move(target));
     }
 }
 

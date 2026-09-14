@@ -21,31 +21,37 @@ using StaffSurveyTarget = musx::dom::others::Staff;
 
 [[nodiscard]] bool companionOmitsStaffFromScrollView(const DifferenceContext& context)
 {
-    if (!context.companionDocument) return false;
+    if (!context.companionDocument) {
+        return false;
+    }
     const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
-    if (!staffId) return false;
-    return !context.companionDocument->getScrollViewStaves(musx::dom::SCORE_PARTID)
-                .getIndexForStaff(*staffId);
+    if (!staffId) {
+        return false;
+    }
+    return !context.companionDocument->getScrollViewStaves(musx::dom::SCORE_PARTID).getIndexForStaff(*staffId);
 }
 
 [[nodiscard]] bool sourceStaffUsesSixWordFallbacks(const DifferenceContext& context)
 {
     const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
-    if (!staffId) return false;
-    const auto* restOffset = context.sourceReport.findField<StaffSurveyTarget>(
-        "dwRestOffset", musx::dom::SCORE_PARTID, *staffId);
+    if (!staffId) {
+        return false;
+    }
+    const auto* restOffset = context.sourceReport.findField<StaffSurveyTarget>("dwRestOffset", musx::dom::SCORE_PARTID, *staffId);
     return restOffset && restOffset->origin == finale_mus_reader::ValueOrigin::Finale27Default;
 }
 
 [[nodiscard]] bool sourceStaffUsesSynthesizedFretInstrument(const DifferenceContext& context)
 {
-    if (!context.sourceValue.isInteger()) return false;
+    if (!context.sourceValue.isInteger()) {
+        return false;
+    }
     const auto fretInstId = context.sourceValue.asInteger();
     if (fretInstId <= 0 || fretInstId > (std::numeric_limits<musx::dom::Cmper>::max)()) {
         return false;
     }
-    const auto instance = finale_mus_reader::instanceKey<FretInstrumentSurveyTarget>(
-        musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(fretInstId));
+    const auto instance =
+        finale_mus_reader::instanceKey<FretInstrumentSurveyTarget>(musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(fretInstId));
     const auto* origin = context.sourceReport.findInstanceOrigin(instance);
     return origin && *origin == finale_mus_reader::ValueOrigin::LegacyBehavior;
 }
@@ -69,168 +75,133 @@ std::optional<DifferenceClassification> classifyStaffDifference(const Difference
     constexpr std::string_view breakTabLinesAtNotesSuffix = ".break_tab_lines_at_notes";
     const auto noneHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::None);
     const auto scoreHideMode = static_cast<std::int64_t>(StaffSurveyTarget::HideMode::Score);
-    if (const auto classification =
-            staff_fields::classifyDisabledNoteFontSize(context, "staff[")) {
+    if (const auto classification = staff_fields::classifyDisabledNoteFontSize(context, "staff[")) {
         return classification;
     }
-    if (const auto classification =
-            staff_fields::classifyNoteAttachedItemsExpressionUpgradeLoss(context, "staff[")) {
+    if (const auto classification = staff_fields::classifyNoteAttachedItemsExpressionUpgradeLoss(context, "staff[")) {
         return classification;
     }
-    if (deferredRecoveryClassified() && context.category == Differs &&
-        context.origin == "legacy-mus" && comparisonPathStartsWith(context.path, "staff[")) {
-        for (const auto suffix : {fullNameTextIdSuffix, abbrvNameTextIdSuffix, noteFontSizeSuffix,
-                 transpositionPresentSuffix, keysigPresentSuffix, keysigIntervalSuffix,
-                 keysigAdjustSuffix, hideMeasNumsSuffix, hideNameInScoreSuffix}) {
-            if (comparisonPathEndsWith(context.path, suffix) &&
-                companionOmitsStaffFromScrollView(context)) {
+    if (deferredRecoveryClassified() && context.category == Differs && context.origin == "legacy-mus"
+        && comparisonPathStartsWith(context.path, "staff[")) {
+        for (const auto suffix : {fullNameTextIdSuffix, abbrvNameTextIdSuffix, noteFontSizeSuffix, transpositionPresentSuffix, keysigPresentSuffix,
+                 keysigIntervalSuffix, keysigAdjustSuffix, hideMeasNumsSuffix, hideNameInScoreSuffix}) {
+            if (comparisonPathEndsWith(context.path, suffix) && companionOmitsStaffFromScrollView(context)) {
                 return DifferenceClassification::AwaitsDependentRecovery;
             }
         }
     }
-    if (context.category == Differs && context.origin == "legacy-mus" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, useNoteFontSuffix) && context.sourceValue.isBool() &&
-        context.companionValue.isBool() &&
-        context.sourceValue.asBool() != context.companionValue.asBool() &&
-        sourcePredatesVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
-        const auto objectPath =
-            context.path.substr(0, context.path.size() - useNoteFontSuffix.size());
-        const auto notationStyle =
-            comparisonIntegerLeaf(context.source, std::string(objectPath) + ".notation_style");
-        if (notationStyle ==
-                static_cast<std::int64_t>(StaffSurveyTarget::NotationStyle::Percussion) ||
-            notationStyle ==
-                static_cast<std::int64_t>(StaffSurveyTarget::NotationStyle::Tablature)) {
+    if (context.category == Differs && context.origin == "legacy-mus" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, useNoteFontSuffix) && context.sourceValue.isBool() && context.companionValue.isBool()
+        && context.sourceValue.asBool() != context.companionValue.asBool()
+        && sourcePredatesVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
+        const auto objectPath = context.path.substr(0, context.path.size() - useNoteFontSuffix.size());
+        const auto notationStyle = comparisonIntegerLeaf(context.source, std::string(objectPath) + ".notation_style");
+        if (notationStyle == static_cast<std::int64_t>(StaffSurveyTarget::NotationStyle::Percussion)
+            || notationStyle == static_cast<std::int64_t>(StaffSurveyTarget::NotationStyle::Tablature)) {
             return DifferenceClassification::FinaleUpgradeLoss;
         }
     }
-    if (context.category == Differs && context.origin == "legacy-behavior" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, fretInstIdSuffix) &&
-        sourceStaffUsesSynthesizedFretInstrument(context)) {
+    if (context.category == Differs && context.origin == "legacy-behavior" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, fretInstIdSuffix) && sourceStaffUsesSynthesizedFretInstrument(context)) {
         return DifferenceClassification::DifferentDefaults;
     }
-    if (context.category == Differs && context.origin == "finale27-default" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, breakTabLinesAtNotesSuffix)) {
+    if (context.category == Differs && context.origin == "finale27-default" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, breakTabLinesAtNotesSuffix)) {
         return DifferenceClassification::DifferentDefaults;
     }
-    if (context.category == Differs && context.origin == "unmapped" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, ".hide_key_sigs") &&
-        sourceStaffUsesSixWordFallbacks(context)) {
+    if (context.category == Differs && context.origin == "unmapped" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, ".hide_key_sigs") && sourceStaffUsesSixWordFallbacks(context)) {
         return DifferenceClassification::PossiblyUnrecoverable;
     }
-    if (deferredRecoveryClassified() && context.category == Differs &&
-        context.origin == "unmapped" && comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, ".has_styles")) {
+    if (deferredRecoveryClassified() && context.category == Differs && context.origin == "unmapped"
+        && comparisonPathStartsWith(context.path, "staff[") && comparisonPathEndsWith(context.path, ".has_styles")) {
         return DifferenceClassification::AwaitsDependentRecovery;
     }
-    if (deferredRecoveryClassified() && context.category == Differs &&
-        context.origin == "legacy-mus-adjusted" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool() &&
-        !context.sourceValue.asBool() && context.companionValue.isBool() &&
-        context.companionValue.asBool() &&
-        sourcePredatesVersion(context.epoch, context.sourceVersion,
-                              finale_mus_reader::FormatEpoch::UncompressedLegacy,
-                              finale_mus_reader::versions::finale2000)) {
+    if (deferredRecoveryClassified() && context.category == Differs && context.origin == "legacy-mus-adjusted"
+        && comparisonPathStartsWith(context.path, "staff[") && comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool()
+        && !context.sourceValue.asBool() && context.companionValue.isBool() && context.companionValue.asBool()
+        && sourcePredatesVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2000)) {
         return DifferenceClassification::AwaitsDependentRecovery;
     }
-    if (context.category == Differs && context.origin == "legacy-mus-adjusted" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool() &&
-        !context.sourceValue.asBool() && context.companionValue.isBool() &&
-        context.companionValue.asBool() &&
-        sourceAtOrAfter(context.epoch, context.sourceVersion,
-                        finale_mus_reader::FormatEpoch::UncompressedLegacy,
-                        finale_mus_reader::versions::finale2000)) {
+    if (context.category == Differs && context.origin == "legacy-mus-adjusted" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, ".has_styles") && context.sourceValue.isBool() && !context.sourceValue.asBool()
+        && context.companionValue.isBool() && context.companionValue.asBool()
+        && sourceAtOrAfter(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2000)) {
         const auto partId = staff_fields::partIdFromComparisonPath(context.path);
         const auto staffId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
-        if (context.sourceReport.staffStyleAssignmentAuditComplete && partId && staffId &&
-            !context.sourceReport.findStaffStyleAssignmentAudit(
-                *partId, static_cast<musx::dom::Cmper>(*staffId))) {
+        if (context.sourceReport.staffStyleAssignmentAuditComplete && partId && staffId
+            && !context.sourceReport.findStaffStyleAssignmentAudit(*partId, static_cast<musx::dom::Cmper>(*staffId))) {
             return DifferenceClassification::FinaleUpgradeSynthesis;
         }
     }
-    if (context.category == Differs && context.origin == "finale27-default" &&
-        comparisonPathStartsWith(context.path, "staff[")) {
-        for (const auto suffix : {".dw_rest_offset", ".w_rest_offset", ".h_rest_offset",
-                 ".other_rest_offset", ".stem_reversal"}) {
+    if (context.category == Differs && context.origin == "finale27-default" && comparisonPathStartsWith(context.path, "staff[")) {
+        for (const auto suffix : {".dw_rest_offset", ".w_rest_offset", ".h_rest_offset", ".other_rest_offset", ".stem_reversal"}) {
             if (comparisonPathEndsWith(context.path, suffix)) {
                 return DifferenceClassification::PossiblyUnrecoverable;
             }
         }
-        if (comparisonPathEndsWith(context.path, fretInstIdSuffix) &&
-            context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 &&
-            context.companionValue.isInteger()) {
+        if (comparisonPathEndsWith(context.path, fretInstIdSuffix) && context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0
+            && context.companionValue.isInteger()) {
             return DifferenceClassification::PossiblyUnrecoverable;
         }
     }
-    if (context.category == Differs && context.origin == "legacy-behavior" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, ".inst_uuid") &&
-        sourcePredatesVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
+    if (context.category == Differs && context.origin == "legacy-behavior" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, ".inst_uuid")
+        && sourcePredatesVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
         return DifferenceClassification::DifferentDefaults;
     }
-    if (context.category == Differs && context.origin == "legacy-behavior" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, hideKeySigsShowAccisSuffix) &&
-        context.sourceValue.isBool() && !context.sourceValue.asBool() &&
-        context.companionValue.isBool() && context.companionValue.asBool() &&
-        sourceIsBeta(context.sourceVersion) &&
-        sourceIsVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy,
-            finale_mus_reader::versions::finale2012)) {
+    if (context.category == Differs && context.origin == "legacy-behavior" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, hideKeySigsShowAccisSuffix) && context.sourceValue.isBool() && !context.sourceValue.asBool()
+        && context.companionValue.isBool() && context.companionValue.asBool() && sourceIsBeta(context.sourceVersion)
+        && sourceIsVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2012)) {
         return DifferenceClassification::BetaDiscrepancy;
     }
-    if (context.category == Differs && context.origin == "finale27-default" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() &&
-        context.companionValue.isInteger() && context.sourceValue.asInteger() == noneHideMode) {
+    if (context.category == Differs && context.origin == "finale27-default" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() && context.companionValue.isInteger()
+        && context.sourceValue.asInteger() == noneHideMode) {
         return DifferenceClassification::DifferentDefaults;
     }
-    if (context.category == Differs && context.origin == "legacy-mus" &&
-        comparisonPathStartsWith(context.path, "staff[") &&
-        comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() &&
-        context.companionValue.isInteger() && context.companionValue.asInteger() == scoreHideMode &&
-        sourcePredatesVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011)) {
+    if (context.category == Differs && context.origin == "legacy-mus" && comparisonPathStartsWith(context.path, "staff[")
+        && comparisonPathEndsWith(context.path, hideModeSuffix) && context.sourceValue.isInteger() && context.companionValue.isInteger()
+        && context.companionValue.asInteger() == scoreHideMode
+        && sourcePredatesVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011)) {
         return DifferenceClassification::DifferentDefaults;
     }
     return std::nullopt;
 }
 
-template <typename T> Value staffValue(T value)
+template <typename T>
+Value staffValue(T value)
 {
-    if constexpr (std::is_enum_v<T>)
+    if constexpr (std::is_enum_v<T>) {
         return Value(static_cast<std::int64_t>(value));
-    else
+    } else {
         return Value(value);
+    }
 }
 
-std::string staffOrigin(
-    const StaffSurveyTarget& staff, const SurveyContext& context, std::string_view member)
+std::string staffOrigin(const StaffSurveyTarget& staff, const SurveyContext& context, std::string_view member)
 {
     return fieldOrigin<StaffSurveyTarget>(context, member, staff);
 }
 
 template <typename T>
-void addStaffLeaf(Value::Object& object, const StaffSurveyTarget& staff,
-    const SurveyContext& context, std::string_view reportMember, std::string_view originMember,
-    std::string_view leaf, T value)
+void addStaffLeaf(Value::Object& object, const StaffSurveyTarget& staff, const SurveyContext& context, std::string_view reportMember,
+    std::string_view originMember, std::string_view leaf, T value)
 {
     object.emplace(std::string(leaf), staffValue(value));
-    object.emplace(
-        "origin_" + std::string(originMember), staffOrigin(staff, context, reportMember));
+    object.emplace("origin_" + std::string(originMember), staffOrigin(staff, context, reportMember));
 }
 
 template <typename T>
-void addStaffLeaf(Value::Object& object, const StaffSurveyTarget& staff,
-    const SurveyContext& context, std::string_view member, std::string_view leaf, T value)
+void addStaffLeaf(
+    Value::Object& object, const StaffSurveyTarget& staff, const SurveyContext& context, std::string_view member, std::string_view leaf, T value)
 {
     addStaffLeaf(object, staff, context, member, member, leaf, value);
 }
@@ -241,8 +212,7 @@ Value observeStaff(const StaffSurveyTarget& staff, const SurveyContext& context)
     result.emplace("cmper", staff.getCmper());
     result.emplace("part_id", staff.getSourcePartId());
     result.emplace("share_mode", static_cast<std::int64_t>(staff.getShareMode()));
-    const auto instance = finale_mus_reader::instanceKey<StaffSurveyTarget>(
-        staff.getSourcePartId(), staff.getCmper());
+    const auto instance = finale_mus_reader::instanceKey<StaffSurveyTarget>(staff.getSourcePartId(), staff.getCmper());
     if (const auto* origin = context.report.findInstanceOrigin(instance)) {
         result.emplace("origin", originName(*origin));
     }
@@ -256,7 +226,9 @@ Value observeStaff(const StaffSurveyTarget& staff, const SurveyContext& context)
     addStaffLeaf(result, staff, context, "staffLines", "staff_lines", staff.staffLines.value_or(0));
     Value::Array customStaff;
     if (staff.customStaff) {
-        for (const auto line : *staff.customStaff) customStaff.emplace_back(line);
+        for (const auto line : *staff.customStaff) {
+            customStaff.emplace_back(line);
+        }
     }
     result.emplace("custom_staff", std::move(customStaff));
     result.emplace("origin_customStaff", staffOrigin(staff, context, "customStaff"));
@@ -344,9 +316,8 @@ Value observeStaff(const StaffSurveyTarget& staff, const SurveyContext& context)
 
     Value::Object noteFont;
     const auto font = staff.noteFont;
-#define STAFF_FONT_LEAF(member, leaf)                                                              \
-    addStaffLeaf(noteFont, staff, context, "noteFont." #member, #member, #leaf,                    \
-        font ? font->member : decltype(font->member){})
+#define STAFF_FONT_LEAF(member, leaf) \
+    addStaffLeaf(noteFont, staff, context, "noteFont." #member, #member, #leaf, font ? font->member : decltype(font->member){})
     STAFF_FONT_LEAF(fontId, font_id);
     STAFF_FONT_LEAF(fontSize, font_size);
     STAFF_FONT_LEAF(bold, bold);
@@ -361,22 +332,20 @@ Value observeStaff(const StaffSurveyTarget& staff, const SurveyContext& context)
     Value::Object transposition;
     transposition.emplace("present", bool(staff.transposition));
     const auto trans = staff.transposition;
-    addStaffLeaf(transposition, staff, context, "transposition.setToClef", "setToClef",
-        "set_to_clef", trans ? trans->setToClef : false);
-    addStaffLeaf(transposition, staff, context, "transposition.noSimplifyKey", "noSimplifyKey",
-        "no_simplify_key", trans ? trans->noSimplifyKey : false);
+    addStaffLeaf(transposition, staff, context, "transposition.setToClef", "setToClef", "set_to_clef", trans ? trans->setToClef : false);
+    addStaffLeaf(
+        transposition, staff, context, "transposition.noSimplifyKey", "noSimplifyKey", "no_simplify_key", trans ? trans->noSimplifyKey : false);
     Value::Object keysig;
-    addStaffLeaf(keysig, staff, context, "transposition.keysig.interval", "interval", "interval",
-        trans && trans->keysig ? trans->keysig->interval : 0);
-    addStaffLeaf(keysig, staff, context, "transposition.keysig.adjust", "adjust", "adjust",
-        trans && trans->keysig ? trans->keysig->adjust : 0);
+    addStaffLeaf(
+        keysig, staff, context, "transposition.keysig.interval", "interval", "interval", trans && trans->keysig ? trans->keysig->interval : 0);
+    addStaffLeaf(keysig, staff, context, "transposition.keysig.adjust", "adjust", "adjust", trans && trans->keysig ? trans->keysig->adjust : 0);
     keysig.emplace("present", bool(trans && trans->keysig));
     transposition.emplace("keysig", std::move(keysig));
     Value::Object chromatic;
-    addStaffLeaf(chromatic, staff, context, "transposition.chromatic.alteration", "alteration",
-        "alteration", trans && trans->chromatic ? trans->chromatic->alteration : 0);
-    addStaffLeaf(chromatic, staff, context, "transposition.chromatic.diatonic", "diatonic",
-        "diatonic", trans && trans->chromatic ? trans->chromatic->diatonic : 0);
+    addStaffLeaf(chromatic, staff, context, "transposition.chromatic.alteration", "alteration", "alteration",
+        trans && trans->chromatic ? trans->chromatic->alteration : 0);
+    addStaffLeaf(chromatic, staff, context, "transposition.chromatic.diatonic", "diatonic", "diatonic",
+        trans && trans->chromatic ? trans->chromatic->diatonic : 0);
     chromatic.emplace("present", bool(trans && trans->chromatic));
     transposition.emplace("chromatic", std::move(chromatic));
     result.emplace("transposition", std::move(transposition));
@@ -387,7 +356,9 @@ Value observeStaffs(const SurveyContext& context)
 {
     Value::Array result;
     for (const auto& staff : sourceInstances<StaffSurveyTarget>(context)) {
-        if (staff->getCmper() == musx::dom::STUDIO_VIEW_STAFF_ID) continue;
+        if (staff->getCmper() == musx::dom::STUDIO_VIEW_STAFF_ID) {
+            continue;
+        }
         result.push_back(observeStaff(*staff, context));
     }
     return Value(std::move(result));

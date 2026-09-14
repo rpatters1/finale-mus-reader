@@ -36,25 +36,30 @@ constexpr std::uint16_t chordSuffixPrefixMinusMask = 0x0010;
 ChordSuffixElementTarget::Prefix chordSuffixPrefix(std::uint16_t flags)
 {
     using Prefix = ChordSuffixElementTarget::Prefix;
-    if (flags & chordSuffixPrefixFlatMask) return Prefix::Flat;
-    if (flags & chordSuffixPrefixSharpMask) return Prefix::Sharp;
-    if (flags & chordSuffixPrefixPlusMask) return Prefix::Plus;
-    if (flags & chordSuffixPrefixMinusMask) return Prefix::Minus;
+    if (flags & chordSuffixPrefixFlatMask) {
+        return Prefix::Flat;
+    }
+    if (flags & chordSuffixPrefixSharpMask) {
+        return Prefix::Sharp;
+    }
+    if (flags & chordSuffixPrefixPlusMask) {
+        return Prefix::Plus;
+    }
+    if (flags & chordSuffixPrefixMinusMask) {
+        return Prefix::Minus;
+    }
     return Prefix::None;
 }
 
-void reportChordSuffixElement(const ImportContext& context, const ChordSuffixElementTarget& target,
-    const RecordFamilySource& source, const records::LegacyRow& row, std::size_t tupleOffset,
-    bool wide)
+void reportChordSuffixElement(const ImportContext& context, const ChordSuffixElementTarget& target, const RecordFamilySource& source,
+    const records::LegacyRow& row, std::size_t tupleOffset, bool wide)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<ChordSuffixElementTarget>(
-            target.getSourcePartId(), target.getCmper(), target.getInci());
+        const auto key = reporting.template instanceKey<ChordSuffixElementTarget>(target.getSourcePartId(), target.getCmper(), target.getInci());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto report = [&](const char* member, std::size_t fieldOffset, auto value) {
-            reporting.report().setField(key, member,
-                {Reporting::Origin::LegacyMus, row.blockOffset,
-                    row.decodedOffset + tupleOffset + fieldOffset, value, source.identity});
+            reporting.report().setField(
+                key, member, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + tupleOffset + fieldOffset, value, source.identity});
         };
         const auto symbolOffset = std::size_t{0};
         const auto xOffset = wide ? std::size_t{4} : std::size_t{2};
@@ -83,72 +88,64 @@ void reportChordSuffixElement(const ImportContext& context, const ChordSuffixEle
 
 void importChordSuffixElements(const ImportContext& context)
 {
-    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
-        context.index.getClassOthers(), chordSuffixElementTag, chordSuffixElementClass);
-    if (!source) return;
+    const auto source =
+        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), chordSuffixElementTag, chordSuffixElementClass);
+    if (!source) {
+        return;
+    }
 
-    const bool wide = source->classRecords
-        && versions::storesUnicodeCodepoints(context.profile.version);
+    const bool wide = source->classRecords && versions::storesUnicodeCodepoints(context.profile.version);
     const auto stride = wide ? chordSuffixWideStride : chordSuffixNarrowTupleSize;
     for (const auto [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
-        if (rows.empty()) continue;
+        if (rows.empty()) {
+            continue;
+        }
         const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() % stride != 0) {
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "Chord suffix " + std::to_string(cmper)
-                    + " has an incomplete trailing element."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Info, "Chord suffix " + std::to_string(cmper) + " has an incomplete trailing element."});
         }
         for (std::size_t at = 0; at + stride <= payload.size(); at += stride) {
             const auto inci = static_cast<musx::dom::Inci>(at / stride);
             const auto& row = source->classRecords ? rows.front() : rows[inci];
             const auto rowOffset = source->classRecords ? at : 0;
-            auto target = createOthersRecordTarget<ChordSuffixElementTarget>(
-                context.document, *source, row, cmper, inci);
-            if (!target) continue;
+            auto target = createOthersRecordTarget<ChordSuffixElementTarget>(context.document, *source, row, cmper, inci);
+            if (!target) {
+                continue;
+            }
 
             std::uint16_t effects{};
             std::uint16_t flags{};
             if (wide) {
-                target->symbol = static_cast<char32_t>(payloadLong(payload, at,
-                    context.profile.byteOrder, LongWordOrder::HighFirst));
-                target->xdisp = static_cast<std::int16_t>(
-                    payloadWord(payload, at + 4, context.profile.byteOrder));
-                target->ydisp = static_cast<std::int16_t>(
-                    payloadWord(payload, at + 6, context.profile.byteOrder));
-                target->font->fontId = context.construction.assignFontId(
-                    payloadWord(payload, at + 8, context.profile.byteOrder));
-                target->font->fontSize = static_cast<std::int16_t>(
-                    payloadWord(payload, at + 10, context.profile.byteOrder));
+                target->symbol = static_cast<char32_t>(payloadLong(payload, at, context.profile.byteOrder, LongWordOrder::HighFirst));
+                target->xdisp = static_cast<std::int16_t>(payloadWord(payload, at + 4, context.profile.byteOrder));
+                target->ydisp = static_cast<std::int16_t>(payloadWord(payload, at + 6, context.profile.byteOrder));
+                target->font->fontId = context.construction.assignFontId(payloadWord(payload, at + 8, context.profile.byteOrder));
+                target->font->fontSize = static_cast<std::int16_t>(payloadWord(payload, at + 10, context.profile.byteOrder));
                 effects = payloadWord(payload, at + 12, context.profile.byteOrder);
                 flags = payloadWord(payload, at + 14, context.profile.byteOrder);
                 if (!std::all_of(payload.begin() + static_cast<std::ptrdiff_t>(at + chordSuffixWideTupleSize),
-                        payload.begin() + static_cast<std::ptrdiff_t>(at + stride),
-                        [](std::uint8_t value) { return value == 0; })) {
+                        payload.begin() + static_cast<std::ptrdiff_t>(at + stride), [](std::uint8_t value) { return value == 0; })) {
                     context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                        "Chord suffix " + std::to_string(cmper)
-                            + " has nonzero trailing words in a Finale 2012 element."});
+                        "Chord suffix " + std::to_string(cmper) + " has nonzero trailing words in a Finale 2012 element."});
                 }
             } else {
                 const auto storedSymbol = payloadWord(payload, at, context.profile.byteOrder);
-                target->xdisp = static_cast<std::int16_t>(
-                    payloadWord(payload, at + 2, context.profile.byteOrder));
-                target->ydisp = static_cast<std::int16_t>(
-                    payloadWord(payload, at + 4, context.profile.byteOrder));
+                target->xdisp = static_cast<std::int16_t>(payloadWord(payload, at + 2, context.profile.byteOrder));
+                target->ydisp = static_cast<std::int16_t>(payloadWord(payload, at + 4, context.profile.byteOrder));
                 const auto sizeFont = payloadWord(payload, at + 6, context.profile.byteOrder);
                 assignPackedFont(*target->font, context.construction, sizeFont);
                 effects = payloadWord(payload, at + 8, context.profile.byteOrder);
                 flags = payloadWord(payload, at + 10, context.profile.byteOrder);
                 target->symbol = text::codepointFromByte(
-                    static_cast<std::uint8_t>(storedSymbol), context.document,
-                    target->font->fontId, text::UnresolvedFontFallback::Symbol);
+                    static_cast<std::uint8_t>(storedSymbol), context.document, target->font->fontId, text::UnresolvedFontFallback::Symbol);
             }
             target->font->setEnigmaStyles(effects);
             target->isNumber = (flags & chordSuffixIsNumberMask) != 0;
             target->prefix = chordSuffixPrefix(flags);
             reportChordSuffixElement(context, *target, *source, row, rowOffset, wide);
-            context.document->getOthers()->add(
-                ChordSuffixElementTarget::XmlNodeName, std::move(target));
+            context.document->getOthers()->add(ChordSuffixElementTarget::XmlNodeName, std::move(target));
         }
     }
 }

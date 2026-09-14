@@ -13,23 +13,17 @@ namespace coverage {
 
 /// @brief Classifier metadata populated through FontDefinition::calcIsSymbolFont().
 inline constexpr std::string_view fontDefinitionIsSymbolField = "is_symbol";
-inline constexpr std::string_view keySymbolListElementsCoverageKey =
-    "key_symbol_list_elements";
+inline constexpr std::string_view keySymbolListElementsCoverageKey = "key_symbol_list_elements";
 
 bool isClassifierMetadataPath(std::string_view path);
-std::optional<DifferenceClassification>
-classifyFontDefinitionDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyFontDefinitionDifference(const DifferenceContext& context);
 
-std::optional<DifferenceClassification>
-classifyKeySymbolListDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyKeySymbolListDifference(const DifferenceContext& context);
 
-std::optional<DifferenceClassification>
-classifyMultimeasureRestOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyMultimeasureRestOptionsDifference(const DifferenceContext& context);
 
-std::optional<DifferenceClassification>
-classifyDoubleWholeSlashConversionLoss(const DifferenceContext& context);
-std::optional<DifferenceClassification>
-classifyVersionlessCodaSlashDefault(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyDoubleWholeSlashConversionLoss(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyVersionlessCodaSlashDefault(const DifferenceContext& context);
 
 inline constexpr std::string_view noteRestDrop8thLeaf = "drop8th_rest";
 inline constexpr std::string_view noteRestDrop16thLeaf = "drop16th_rest";
@@ -37,12 +31,9 @@ inline constexpr std::string_view noteRestDrop32ndLeaf = "drop32nd_rest";
 inline constexpr std::string_view noteRestDrop64thLeaf = "drop64th_rest";
 inline constexpr std::string_view noteRestDrop128thLeaf = "drop128th_rest";
 
-std::optional<DifferenceClassification>
-classifyNoteRestOptionsDifference(const DifferenceContext& context);
-std::optional<DifferenceClassification>
-classifyStemConnectionEncodingError(const DifferenceContext& context);
-std::optional<DifferenceClassification>
-classifyPageFormatOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyNoteRestOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyStemConnectionEncodingError(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyPageFormatOptionsDifference(const DifferenceContext& context);
 
 /// @brief Classifies the two companion differences this class is expected to produce.
 /// @details The part definition record does not carry `unlinkInsts`, so the source side leaves it
@@ -56,12 +47,9 @@ classifyPageFormatOptionsDifference(const DifferenceContext& context);
 /// load-bearing -- the score part alone, a null source value against a supplied companion one,
 /// era's-behavior provenance, and never the epoch that stores the member -- so that a recovered
 /// `nameId` that disagrees cannot pass as expected.
-std::optional<DifferenceClassification>
-classifyPartDefinitionDifference(const DifferenceContext& context);
-std::optional<DifferenceClassification>
-classifyTieOptionsDifference(const DifferenceContext& context);
-std::optional<DifferenceClassification>
-classifyCodaChordOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyPartDefinitionDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyTieOptionsDifference(const DifferenceContext& context);
+std::optional<DifferenceClassification> classifyCodaChordOptionsDifference(const DifferenceContext& context);
 
 } // namespace coverage
 } // namespace finale_mus_reader

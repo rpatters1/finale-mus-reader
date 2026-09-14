@@ -24,13 +24,16 @@ constexpr std::size_t expandedTupletPreferenceWords = 15;
 constexpr TupletOptionsTarget::NumberStyle tupletNumberStyle(std::int64_t value)
 {
     // The two note-bearing encodings name the opposite visual result in EnigmaXML.
-    if (value == 3) return TupletOptionsTarget::NumberStyle::RatioPlusBothNotes;
-    if (value == 4) return TupletOptionsTarget::NumberStyle::RatioPlusDenominatorNote;
+    if (value == 3) {
+        return TupletOptionsTarget::NumberStyle::RatioPlusBothNotes;
+    }
+    if (value == 4) {
+        return TupletOptionsTarget::NumberStyle::RatioPlusDenominatorNote;
+    }
     return static_cast<TupletOptionsTarget::NumberStyle>(value);
 }
 
-bool storesExpandedTupletPreferences(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesExpandedTupletPreferences(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     // The 15-word family is the format's own marker for the expanded layout. Earlier files
     // carry only the six-word prefix, if they carry selector 56 at all.
@@ -38,18 +41,17 @@ bool storesExpandedTupletPreferences(
     return words.present && words.words.size() >= expandedTupletPreferenceWords;
 }
 
-bool usesShortTupletPreferences(
-    const SourceProfile& profile, const GlobalSelectorWords& words)
+bool usesShortTupletPreferences(const SourceProfile& profile, const GlobalSelectorWords& words)
 {
-    if (!sourceMatches(profile, EpochMask::CodaBanner | EpochMask::Uncompressed)) return false;
+    if (!sourceMatches(profile, EpochMask::CodaBanner | EpochMask::Uncompressed)) {
+        return false;
+    }
     return words.present && words.words.size() == shortTupletPreferenceWords;
 }
 
-bool storesShortTupletPreferences(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesShortTupletPreferences(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    return usesShortTupletPreferences(
-        profile, readGlobalWords(index, profile, tupletPreferencesSelector));
+    return usesShortTupletPreferences(profile, readGlobalWords(index, profile, tupletPreferencesSelector));
 }
 
 bool sourceStoresFinale2005TupletPreferences(const SourceProfile& profile)
@@ -64,8 +66,7 @@ bool sourcePredatesFinale2005TupletPreferences(const SourceProfile& profile)
     return sourcePredatesVersion(profile, FormatEpoch::DclLegacy, versions::finale2005);
 }
 
-bool storesTupletLineWidth(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesTupletLineWidth(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return readGlobalWords(index, profile, tupletThicknessSelector).present;
 }
@@ -92,21 +93,17 @@ const FieldMapping fixedExpandedTupletFields[] = {
     MUS_NUMERIC_WORD(TupletOptionsTarget, tupletPreferencesSelector, 1, 0, tupOffY),
     MUS_NUMERIC_WORD(TupletOptionsTarget, tupletPreferencesSelector, 1, 1, brackOffX),
     MUS_NUMERIC_WORD(TupletOptionsTarget, tupletPreferencesSelector, 1, 2, brackOffY),
-    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3,
-        ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{0, 4}), nullptr, nullptr,
-        numStyle, tupletNumberStyle(value)),
-    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3,
-        ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{4, 3}), nullptr, nullptr,
-        posStyle, static_cast<TupletOptionsTarget::PositioningStyle>(value)),
+    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{0, 4}),
+        nullptr, nullptr, numStyle, tupletNumberStyle(value)),
+    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{4, 3}),
+        nullptr, nullptr, posStyle, static_cast<TupletOptionsTarget::PositioningStyle>(value)),
     MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 7, allowHorz),
-    MUS_NUMERIC_BIT(
-        TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 8, ignoreHorzNumOffset),
+    MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 8, ignoreHorzNumOffset),
     MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 9, breakBracket),
     MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 10, matchHooks),
     MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 11, useBottomNote),
-    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3,
-        ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{12, 2}), nullptr, nullptr,
-        brackStyle, static_cast<TupletOptionsTarget::BracketStyle>(value)),
+    MUS_NUMERIC_FIELD_AS_IF(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, ValueWidth::Word, LongWordOrder::HighFirst, (BitRange{12, 2}),
+        nullptr, nullptr, brackStyle, static_cast<TupletOptionsTarget::BracketStyle>(value)),
     MUS_NUMERIC_BIT(TupletOptionsTarget, tupletPreferencesSelector, 1, 3, 14, smartTuplet),
     MUS_NUMERIC_WORD(TupletOptionsTarget, tupletPreferencesSelector, 1, 4, leftHookLen),
     MUS_NUMERIC_WORD(TupletOptionsTarget, tupletPreferencesSelector, 1, 5, leftHookExt),
@@ -124,10 +121,8 @@ const FieldMapping fixedFinale2005TupletFields[] = {
 };
 
 const FieldMapping fixedTupletNumberOffsetFields[] = {
-    MUS_NUMERIC_WORD(TupletOptionsTarget, tupletNumberOffsetSelector, 0, 4,
-        tupNUpstemOffset),
-    MUS_NUMERIC_WORD(TupletOptionsTarget, tupletNumberOffsetSelector, 0, 5,
-        tupNDownstemOffset),
+    MUS_NUMERIC_WORD(TupletOptionsTarget, tupletNumberOffsetSelector, 0, 4, tupNUpstemOffset),
+    MUS_NUMERIC_WORD(TupletOptionsTarget, tupletNumberOffsetSelector, 0, 5, tupNDownstemOffset),
 };
 
 const FieldMapping fixedTupletLineWidthFields[] = {
@@ -135,75 +130,45 @@ const FieldMapping fixedTupletLineWidthFields[] = {
 };
 
 const FieldMapping classTupletPrefixFields[] = {
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(0), displayNumber),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(1), displayDuration),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(2), referenceNumber),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(3), referenceDuration),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(5), tupOffX),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(0), displayNumber),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(1), displayDuration),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(2), referenceNumber),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(3), referenceDuration),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(5), tupOffX),
 };
 
 const FieldMapping classExpandedTupletFields[] = {
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(6), tupOffY),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(7), brackOffX),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(8), brackOffY),
-    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget,
-        numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9),
-        0, 4, numStyle, tupletNumberStyle(value)),
-    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget,
-        numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9),
-        4, 3, posStyle, static_cast<TupletOptionsTarget::PositioningStyle>(value)),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 7, allowHorz),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 8, ignoreHorzNumOffset),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 9, breakBracket),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 10, matchHooks),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 11, useBottomNote),
-    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget,
-        numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9),
-        12, 2, brackStyle, static_cast<TupletOptionsTarget::BracketStyle>(value)),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(9), 14, smartTuplet),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(10), leftHookLen),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(11), leftHookExt),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(12), rightHookLen),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(13), rightHookExt),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(14), manualSlopeAdj),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(6), tupOffY),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(7), brackOffX),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(8), brackOffY),
+    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 0, 4, numStyle,
+        tupletNumberStyle(value)),
+    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 4, 3, posStyle,
+        static_cast<TupletOptionsTarget::PositioningStyle>(value)),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 7, allowHorz),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 8, ignoreHorzNumOffset),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 9, breakBracket),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 10, matchHooks),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 11, useBottomNote),
+    MUS_CLASS_SELECTED_BITS_AS(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 12, 2,
+        brackStyle, static_cast<TupletOptionsTarget::BracketStyle>(value)),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(9), 14, smartTuplet),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(10), leftHookLen),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(11), leftHookExt),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(12), rightHookLen),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(13), rightHookExt),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(14), manualSlopeAdj),
 };
 
 const FieldMapping classFinale2005TupletFields[] = {
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(4), 0, alwaysFlat),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(4), 1, fullDura),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(4), 2, metricCenter),
-    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector),
-        GLOBALS_CMPER, classWordOffset(4), 3, avoidStaff),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletNumberOffsetSelector),
-        GLOBALS_CMPER, classWordOffset(4), tupNUpstemOffset),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletNumberOffsetSelector),
-        GLOBALS_CMPER, classWordOffset(5), tupNDownstemOffset),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletThicknessSelector),
-        GLOBALS_CMPER, classWordOffset(0), tupLineWidth),
-    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletSlopeSelector),
-        GLOBALS_CMPER, classWordOffset(5), tupMaxSlope),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(4), 0, alwaysFlat),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(4), 1, fullDura),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(4), 2, metricCenter),
+    MUS_CLASS_BIT(TupletOptionsTarget, numericGlobalClass(tupletPreferencesSelector), GLOBALS_CMPER, classWordOffset(4), 3, avoidStaff),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletNumberOffsetSelector), GLOBALS_CMPER, classWordOffset(4), tupNUpstemOffset),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletNumberOffsetSelector), GLOBALS_CMPER, classWordOffset(5), tupNDownstemOffset),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletThicknessSelector), GLOBALS_CMPER, classWordOffset(0), tupLineWidth),
+    MUS_CLASS_WORD(TupletOptionsTarget, numericGlobalClass(tupletSlopeSelector), GLOBALS_CMPER, classWordOffset(5), tupMaxSlope),
 };
 
 const MappingTable& fixedTupletPrefixTable()
@@ -333,40 +298,40 @@ void applyAutoBracketStyle(const ImportContext& context)
     constexpr std::size_t primaryFlagsWord = 9;
     constexpr std::uint16_t secondaryAutoBracket = 0x0010;
     constexpr std::uint16_t primaryAutoBracket = 0x8000;
-    if (!words.present || words.words.size() <= primaryFlagsWord) return;
+    if (!words.present || words.words.size() <= primaryFlagsWord) {
+        return;
+    }
 
     const auto primary = static_cast<std::uint16_t>(words.words[primaryFlagsWord]);
-    auto style = (primary & primaryAutoBracket) != 0
-        ? TupletOptionsTarget::AutoBracketStyle::UnbeamedOnly
-        : TupletOptionsTarget::AutoBracketStyle::Always;
-    if (sourceStoresFinale2005TupletPreferences(context.profile)
-        && (primary & primaryAutoBracket) != 0
-        && (static_cast<std::uint16_t>(words.words[secondaryFlagsWord])
-            & secondaryAutoBracket) != 0) {
+    auto style =
+        (primary & primaryAutoBracket) != 0 ? TupletOptionsTarget::AutoBracketStyle::UnbeamedOnly : TupletOptionsTarget::AutoBracketStyle::Always;
+    if (sourceStoresFinale2005TupletPreferences(context.profile) && (primary & primaryAutoBracket) != 0
+        && (static_cast<std::uint16_t>(words.words[secondaryFlagsWord]) & secondaryAutoBracket) != 0) {
         style = TupletOptionsTarget::AutoBracketStyle::NeverBeamSide;
     }
 
     const auto pooled = context.document->getOptions()->get<TupletOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     std::const_pointer_cast<TupletOptionsTarget>(pooled)->autoBracketStyle = style;
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.report().setField(reporting.template instanceKey<TupletOptionsTarget>(),
-            "autoBracketStyle",
-            {Reporting::Origin::LegacyMus, words.blockOffset,
-                words.decodedOffset + primaryFlagsWord * sizeof(std::int16_t), readAs(style)});
+        reporting.report().setField(reporting.template instanceKey<TupletOptionsTarget>(), "autoBracketStyle",
+            {Reporting::Origin::LegacyMus, words.blockOffset, words.decodedOffset + primaryFlagsWord * sizeof(std::int16_t), readAs(style)});
     });
 }
 
 void applyUnstoredTupletBehavior(const ImportContext& context)
 {
     const auto pooled = context.document->getOptions()->get<TupletOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<TupletOptionsTarget>(pooled);
     const auto reportBehavior = [&](const char* member, auto& destination, auto value) {
         destination = value;
-        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template behaviorField<TupletOptionsTarget>(member, readAs(value));
-        });
+        withReporting(context.report,
+            [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<TupletOptionsTarget>(member, readAs(value)); });
     };
 
     if (sourcePredatesFinale2005TupletPreferences(context.profile)) {
@@ -375,15 +340,14 @@ void applyUnstoredTupletBehavior(const ImportContext& context)
     }
 
     const auto words = readGlobalWords(context.index, context.profile, tupletPreferencesSelector);
-    const bool codaWithoutPreferences = context.profile.epoch == FormatEpoch::CodaBanner
-        && !words.present;
-    if (!codaWithoutPreferences
-        && !usesShortTupletPreferences(context.profile, words)) return;
+    const bool codaWithoutPreferences = context.profile.epoch == FormatEpoch::CodaBanner && !words.present;
+    if (!codaWithoutPreferences && !usesShortTupletPreferences(context.profile, words)) {
+        return;
+    }
 
     // The pre-expanded layout cannot store these later appearance controls. Its behavior differs
     // from the modern baseline only for the values listed here.
-    reportBehavior("autoBracketStyle", target->autoBracketStyle,
-        TupletOptionsTarget::AutoBracketStyle::Always);
+    reportBehavior("autoBracketStyle", target->autoBracketStyle, TupletOptionsTarget::AutoBracketStyle::Always);
     reportBehavior("tupOffY", target->tupOffY, musx::dom::Evpu{});
     reportBehavior("numStyle", target->numStyle, TupletOptionsTarget::NumberStyle::Nothing);
     reportBehavior("posStyle", target->posStyle, TupletOptionsTarget::PositioningStyle::Manual);
@@ -402,10 +366,11 @@ void reportUnmappedTupletFields(const ImportContext& context)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto target = context.document->getOptions()->get<TupletOptionsTarget>();
-        if (!target) return;
+        if (!target) {
+            return;
+        }
         const auto key = reporting.template instanceKey<TupletOptionsTarget>();
-#define FINALE_MUS_READER_UNMAPPED_TUPLET(member)                                                  \
-    reporting.unmappedField(key, #member, readAs(target->member))
+#define FINALE_MUS_READER_UNMAPPED_TUPLET(member) reporting.unmappedField(key, #member, readAs(target->member))
         FINALE_MUS_READER_UNMAPPED_TUPLET(displayNumber);
         FINALE_MUS_READER_UNMAPPED_TUPLET(displayDuration);
         FINALE_MUS_READER_UNMAPPED_TUPLET(referenceNumber);
@@ -445,11 +410,8 @@ void reportUnmappedTupletFields(const ImportContext& context)
 
 void importTupletOptions(const ImportContext& context)
 {
-    applyMappingTables({&fixedTupletPrefixTable(), &fixedExpandedTupletTable(),
-                           &shortTupletAlwaysFlatTable(), &shortUncompressedTupletTable(),
-                           &fixedFinale2005TupletTable(),
-                           &fixedTupletNumberOffsetTable(), &fixedTupletLineWidthTable(),
-                           &classTupletPrefixTable(),
+    applyMappingTables({&fixedTupletPrefixTable(), &fixedExpandedTupletTable(), &shortTupletAlwaysFlatTable(), &shortUncompressedTupletTable(),
+                           &fixedFinale2005TupletTable(), &fixedTupletNumberOffsetTable(), &fixedTupletLineWidthTable(), &classTupletPrefixTable(),
                            &classExpandedTupletTable(), &classFinale2005TupletTable()},
         context.index, context.profile, context.document, context.report);
     applyAutoBracketStyle(context);

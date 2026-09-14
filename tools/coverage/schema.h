@@ -28,8 +28,7 @@ inline std::string originKeyForLeaf(std::string_view leaf)
         if (character == '_') {
             uppercase = true;
         } else if (uppercase) {
-            result.push_back(
-                static_cast<char>(std::toupper(static_cast<unsigned char>(character))));
+            result.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(character))));
             uppercase = false;
         } else {
             result.push_back(character);
@@ -54,10 +53,12 @@ constexpr auto field(std::string_view name, Accessor accessor)
 namespace detail {
 
 template <typename T>
-struct IsOptional : std::false_type {};
+struct IsOptional : std::false_type
+{};
 
 template <typename T>
-struct IsOptional<std::optional<T>> : std::true_type {};
+struct IsOptional<std::optional<T>> : std::true_type
+{};
 
 template <typename T>
 Value schemaValue(T&& value)
@@ -83,8 +84,7 @@ Value schemaValue(T&& value)
 }
 
 template <typename Object, typename Accessor>
-decltype(auto) fieldValue(const Object& object, const SurveyContext& context,
-    const Accessor& accessor)
+decltype(auto) fieldValue(const Object& object, const SurveyContext& context, const Accessor& accessor)
 {
     if constexpr (std::invocable<Accessor, const Object&, const SurveyContext&>) {
         return std::invoke(accessor, object, context);
@@ -100,10 +100,8 @@ template <typename Object, typename... Fields>
 Value observe(const Object& object, const SurveyContext& context, const Fields&... fields)
 {
     Value::Object result;
-    (result.emplace(std::string(fields.name),
-         detail::schemaValue(detail::fieldValue(object, context, fields.accessor))), ...);
-    InstanceKey instance{typeid(Object), musx::dom::SCORE_PARTID, std::nullopt,
-        std::nullopt, std::nullopt};
+    (result.emplace(std::string(fields.name), detail::schemaValue(detail::fieldValue(object, context, fields.accessor))), ...);
+    InstanceKey instance{typeid(Object), musx::dom::SCORE_PARTID, std::nullopt, std::nullopt, std::nullopt};
     if constexpr (std::is_base_of_v<musx::dom::OthersBase, Object>) {
         instance.partId = object.getSourcePartId();
         instance.cmper1 = object.getCmper();
@@ -122,8 +120,7 @@ Value observe(const Object& object, const SurveyContext& context, const Fields&.
     } else if constexpr (std::is_base_of_v<musx::dom::TextsBase, Object>) {
         instance.cmper1 = object.getTextNumber();
     }
-    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Object> ||
-                  std::is_base_of_v<musx::dom::DetailsBase, Object>) {
+    if constexpr (std::is_base_of_v<musx::dom::OthersBase, Object> || std::is_base_of_v<musx::dom::DetailsBase, Object>) {
         result.emplace("part_id", detail::schemaValue(object.getSourcePartId()));
         result.emplace("share_mode", detail::schemaValue(object.getShareMode()));
     }
@@ -153,16 +150,14 @@ auto sourceInstances(const SurveyContext& context)
 }
 
 template <typename Class>
-std::string fieldOrigin(const SurveyContext& context, std::string_view member,
-    std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
+std::string fieldOrigin(const SurveyContext& context, std::string_view member, std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
 {
     const auto instance = instanceKey<Class>(musx::dom::SCORE_PARTID, cmper1);
     return originName(context.report.fieldProvenance(instance, member).origin);
 }
 
 template <typename Class>
-std::string fieldOrigin(const SurveyContext& context, std::string_view member,
-    const InstanceKey& instance)
+std::string fieldOrigin(const SurveyContext& context, std::string_view member, const InstanceKey& instance)
 {
     return originName(context.report.fieldProvenance(instance, member).origin);
 }
@@ -171,31 +166,27 @@ template <typename Class>
 std::string fieldOrigin(const SurveyContext& context, std::string_view member, const Class& value)
 {
     if constexpr (std::is_base_of_v<musx::dom::OthersBase, Class>) {
-        return fieldOrigin<Class>(
-            context, member,
-            instanceKey<Class>(value.getSourcePartId(), value.getCmper(), value.getInci()));
+        return fieldOrigin<Class>(context, member, instanceKey<Class>(value.getSourcePartId(), value.getCmper(), value.getInci()));
     } else if constexpr (std::is_base_of_v<musx::dom::EntryDetailsBase, Class>) {
         const auto entryNumber = value.getEntryNumber();
         return fieldOrigin<Class>(context, member,
-            instanceKey<Class>(value.getSourcePartId(),
-                static_cast<musx::dom::Cmper>(entryNumber >> 16U), value.getInci(),
+            instanceKey<Class>(value.getSourcePartId(), static_cast<musx::dom::Cmper>(entryNumber >> 16U), value.getInci(),
                 static_cast<musx::dom::Cmper>(entryNumber)));
     } else {
         static_assert(std::is_base_of_v<musx::dom::DetailsBase, Class>);
-        return fieldOrigin<Class>(context, member,
-                                  instanceKey<Class>(value.getSourcePartId(), value.getCmper1(),
-                                                     value.getInci(), value.getCmper2()));
+        return fieldOrigin<Class>(
+            context, member, instanceKey<Class>(value.getSourcePartId(), value.getCmper1(), value.getInci(), value.getCmper2()));
     }
 }
 
 template <typename Class>
-const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_view member,
-    std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
+const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_view member, std::optional<musx::dom::Cmper> cmper1 = std::nullopt)
 {
-    const auto instance = InstanceKey{typeid(Class), musx::dom::SCORE_PARTID,
-        cmper1, std::nullopt, std::nullopt};
+    const auto instance = InstanceKey{typeid(Class), musx::dom::SCORE_PARTID, cmper1, std::nullopt, std::nullopt};
     const auto foundInstance = context.report.textFields.find(instance);
-    if (foundInstance == context.report.textFields.end()) return nullptr;
+    if (foundInstance == context.report.textFields.end()) {
+        return nullptr;
+    }
     const auto foundField = foundInstance->second.find(std::string(member));
     return foundField == foundInstance->second.end() ? nullptr : &foundField->second;
 }
@@ -203,9 +194,7 @@ const TextFieldInfo* textFieldInfo(const SurveyContext& context, std::string_vie
 template <typename Class>
 constexpr auto originField(std::string_view name, std::string_view member)
 {
-    return field(name, [member](const Class&, const SurveyContext& context) {
-        return fieldOrigin<Class>(context, member);
-    });
+    return field(name, [member](const Class&, const SurveyContext& context) { return fieldOrigin<Class>(context, member); });
 }
 
 } // namespace coverage

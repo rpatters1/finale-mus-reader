@@ -9,13 +9,13 @@
 namespace finale_mus_reader {
 namespace detail {
 
-struct ReaderResources {
+struct ReaderResources
+{
     text::SymbolFontNames symbolFontNames;
     percussion::MappingTables percussionMappings;
 };
 
-[[nodiscard]] ReaderResources
-prepareReaderResources(const ReaderOptions &options, XmlParser parseXml);
+[[nodiscard]] ReaderResources prepareReaderResources(const ReaderOptions& options, XmlParser parseXml);
 
 } // namespace detail
 } // namespace finale_mus_reader

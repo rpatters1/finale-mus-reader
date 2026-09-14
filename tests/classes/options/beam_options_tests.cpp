@@ -27,45 +27,36 @@ musx::dom::DocumentPtr makeBeamOptionsDocument()
     return std::move(session).finish();
 }
 
-std::shared_ptr<const BeamOptionsTarget> importBeamOptions(
-    const finale_mus_reader::container::ParsedContainer& parsed,
-    FormatEpoch epoch, ImportReport& report,
-    finale_mus_reader::VersionBound version = finale_mus_reader::versions::finale2004)
+std::shared_ptr<const BeamOptionsTarget> importBeamOptions(const finale_mus_reader::container::ParsedContainer& parsed, FormatEpoch epoch,
+    ImportReport& report, finale_mus_reader::VersionBound version = finale_mus_reader::versions::finale2004)
 {
     const auto document = makeBeamOptionsDocument();
     const auto reference = makeBeamOptionsDocument();
-    auto profile = profileFor(epoch == FormatEpoch::ZlibLegacy ? 12 : version.major,
-        epoch == FormatEpoch::ZlibLegacy ? 0 : version.minor);
+    auto profile = profileFor(epoch == FormatEpoch::ZlibLegacy ? 12 : version.major, epoch == FormatEpoch::ZlibLegacy ? 0 : version.minor);
     profile.epoch = epoch;
     profile.byteOrder = parsed.byteOrder;
-    if (epoch == FormatEpoch::CodaBanner) profile.version.reset();
+    if (epoch == FormatEpoch::CodaBanner) {
+        profile.version.reset();
+    }
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
-    const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
-        profile, noSource, document, reference, report, pending, construction};
+    const finale_mus_reader::ImportContext context{
+        LegacyRecordIndex::build(parsed), profile, noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importBeamOptions(context);
     return document->getOptions()->get<BeamOptionsTarget>();
 }
 
-void verifyRecoveredBeamOptions(
-    const BeamOptionsTarget& options, const ImportReport& report)
+void verifyRecoveredBeamOptions(const BeamOptionsTarget& options, const ImportReport& report)
 {
-    expectMapping(options.beamStubLength == 17 && options.maxSlope == 23
-            && options.beamSepar == 29 && options.maxFromMiddle == 31
-            && options.beamingStyle == BeamOptionsTarget::FlattenStyle::AlwaysFlat
-            && options.extendBeamsOverRests && options.incRestsInFourGroups
-            && options.beamFourEighthsInCommonTime
-            && options.beamThreeEighthsInCommonTime
-            && options.dispHalfStemsOnRests && options.oldFinaleRestBeams
-            && options.spanSpace
-            && options.extendSecBeamsOverRests && options.beamWidth == 0x12345,
+    expectMapping(options.beamStubLength == 17 && options.maxSlope == 23 && options.beamSepar == 29 && options.maxFromMiddle == 31
+                      && options.beamingStyle == BeamOptionsTarget::FlattenStyle::AlwaysFlat && options.extendBeamsOverRests
+                      && options.incRestsInFourGroups && options.beamFourEighthsInCommonTime && options.beamThreeEighthsInCommonTime
+                      && options.dispHalfStemsOnRests && options.oldFinaleRestBeams && options.spanSpace && options.extendSecBeamsOverRests
+                      && options.beamWidth == 0x12345,
         "BeamOptions did not recover its stored geometry and behavior");
-    expectMapping(field(report, "options.beamOptions.beamingStyle").origin
-                == ValueOrigin::LegacyMus
-            && field(report, "options.beamOptions.beamWidth").origin
-                == ValueOrigin::LegacyMus
-            && field(report, "options.beamOptions.oldFinaleRestBeams").origin
-                == ValueOrigin::LegacyMus,
+    expectMapping(field(report, "options.beamOptions.beamingStyle").origin == ValueOrigin::LegacyMus
+                      && field(report, "options.beamOptions.beamWidth").origin == ValueOrigin::LegacyMus
+                      && field(report, "options.beamOptions.oldFinaleRestBeams").origin == ValueOrigin::LegacyMus,
         "BeamOptions reported an incorrect field origin");
 }
 
@@ -77,11 +68,9 @@ TEST_CASE("Beam options recover the packed fixed-row layout", "[class]")
         {GLOBALS_CMPER, "41", {1, 0x01fb, 0, 0, 0, 0}},
         {GLOBALS_CMPER, "62", {0, 0, 0, 0, 1, 0x2345}},
     };
-    for (const auto epoch : {
-             FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+    for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         ImportReport report(epoch);
-        verifyRecoveredBeamOptions(
-            *importBeamOptions(makeContainer(rows, epoch), epoch, report), report);
+        verifyRecoveredBeamOptions(*importBeamOptions(makeContainer(rows, epoch), epoch, report), report);
     }
 }
 
@@ -95,9 +84,7 @@ TEST_CASE("Beam options recover class records in either byte order", "[class]")
     };
     for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
         ImportReport report(FormatEpoch::ZlibLegacy);
-        verifyRecoveredBeamOptions(
-            *importBeamOptions(makeClassContainer(rows, byteOrder),
-                FormatEpoch::ZlibLegacy, report), report);
+        verifyRecoveredBeamOptions(*importBeamOptions(makeClassContainer(rows, byteOrder), FormatEpoch::ZlibLegacy, report), report);
     }
 }
 
@@ -113,48 +100,30 @@ TEST_CASE("Early beam layouts recover stored fields and assert era behavior", "[
         {GLOBALS_CMPER, "62", {0, 0, 0, 0, 1, 0x2345}},
     };
     ImportReport laterReport(FormatEpoch::UncompressedLegacy);
-    const auto later = importBeamOptions(
-        makeContainer(laterUnitRows, FormatEpoch::UncompressedLegacy),
-        FormatEpoch::UncompressedLegacy, laterReport,
+    const auto later = importBeamOptions(makeContainer(laterUnitRows, FormatEpoch::UncompressedLegacy), FormatEpoch::UncompressedLegacy, laterReport,
         finale_mus_reader::versions::finale3_7);
-    expectMapping(later->beamStubLength == 17 && later->maxSlope == 23
-            && later->beamSepar == 29 && later->maxFromMiddle == 31
-            && later->beamingStyle
-                == BeamOptionsTarget::FlattenStyle::OnExtremeNote
-            && later->extendBeamsOverRests && later->extendSecBeamsOverRests
-            && later->dispHalfStemsOnRests
-            && later->beamWidth == 0x12345 && later->oldFinaleRestBeams
-            && later->spanSpace && !later->beamFourEighthsInCommonTime,
+    expectMapping(later->beamStubLength == 17 && later->maxSlope == 23 && later->beamSepar == 29 && later->maxFromMiddle == 31
+                      && later->beamingStyle == BeamOptionsTarget::FlattenStyle::OnExtremeNote && later->extendBeamsOverRests
+                      && later->extendSecBeamsOverRests && later->dispHalfStemsOnRests && later->beamWidth == 0x12345 && later->oldFinaleRestBeams
+                      && later->spanSpace && !later->beamFourEighthsInCommonTime,
         "The early BeamOptions layout did not recover stored fields and behavior");
-    expectMapping(field(laterReport, "options.beamOptions.maxSlope").origin
-                == ValueOrigin::LegacyMus
-            && field(laterReport, "options.beamOptions.oldFinaleRestBeams").origin
-                == ValueOrigin::LegacyBehavior
-            && field(laterReport, "options.beamOptions.extendBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(laterReport, "options.beamOptions.extendSecBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(laterReport, "options.beamOptions.dispHalfStemsOnRests").origin
-                == ValueOrigin::LegacyMus
-            && field(laterReport,
-                   "options.beamOptions.beamFourEighthsInCommonTime").origin
-                == ValueOrigin::LegacyMus,
+    expectMapping(field(laterReport, "options.beamOptions.maxSlope").origin == ValueOrigin::LegacyMus
+                      && field(laterReport, "options.beamOptions.oldFinaleRestBeams").origin == ValueOrigin::LegacyBehavior
+                      && field(laterReport, "options.beamOptions.extendBeamsOverRests").origin == ValueOrigin::LegacyMus
+                      && field(laterReport, "options.beamOptions.extendSecBeamsOverRests").origin == ValueOrigin::LegacyMus
+                      && field(laterReport, "options.beamOptions.dispHalfStemsOnRests").origin == ValueOrigin::LegacyMus
+                      && field(laterReport, "options.beamOptions.beamFourEighthsInCommonTime").origin == ValueOrigin::LegacyMus,
         "The early BeamOptions layout reported incorrect origins");
 
     auto earlyUnitRows = laterUnitRows;
     earlyUnitRows.push_back({GLOBALS_CMPER, "40", {1, 2, 3, 4, 5, 6}});
     earlyUnitRows[6] = {GLOBALS_CMPER, "62", {0, 0, 0, 0, 0, 30000}};
     ImportReport earlyReport(FormatEpoch::CodaBanner);
-    const auto early = importBeamOptions(
-        makeContainer(earlyUnitRows, FormatEpoch::CodaBanner),
-        FormatEpoch::CodaBanner, earlyReport);
-    expectMapping(early->maxSlope == 23 * musx::dom::EVPU_PER_STAFF_POSITION
-            && early->maxFromMiddle == 31 * musx::dom::EVPU_PER_STAFF_POSITION
-            && early->beamWidth == 768 && early->oldFinaleRestBeams
-            && early->spanSpace,
+    const auto early = importBeamOptions(makeContainer(earlyUnitRows, FormatEpoch::CodaBanner), FormatEpoch::CodaBanner, earlyReport);
+    expectMapping(early->maxSlope == 23 * musx::dom::EVPU_PER_STAFF_POSITION && early->maxFromMiddle == 31 * musx::dom::EVPU_PER_STAFF_POSITION
+                      && early->beamWidth == 768 && early->oldFinaleRestBeams && early->spanSpace,
         "The early BeamOptions measurements were not converted to musxdom units");
-    expectMapping(field(earlyReport, "options.beamOptions.maxSlope").origin
-            == ValueOrigin::LegacyMusAdjusted,
+    expectMapping(field(earlyReport, "options.beamOptions.maxSlope").origin == ValueOrigin::LegacyMusAdjusted,
         "The pre-Finale-3.5 BeamOptions conversion reported an incorrect origin");
 }
 
@@ -165,20 +134,14 @@ TEST_CASE("Finale 3.7 beam-rest switch populates both modern options", "[class]"
     const auto baselineOptions = baseline.document->getOptions()->get<BeamOptionsTarget>();
     const auto changedOptions = changed.document->getOptions()->get<BeamOptionsTarget>();
 
-    expect(!baselineOptions->extendBeamsOverRests
-            && !baselineOptions->extendSecBeamsOverRests,
+    expect(!baselineOptions->extendBeamsOverRests && !baselineOptions->extendSecBeamsOverRests,
         "The clear Finale 3.7 beam-rest switch was not recovered");
-    expect(changedOptions->extendBeamsOverRests
-            && changedOptions->extendSecBeamsOverRests,
+    expect(changedOptions->extendBeamsOverRests && changedOptions->extendSecBeamsOverRests,
         "The set Finale 3.7 beam-rest switch did not populate both modern options");
-    expect(field(changed, "options.beamOptions.extendBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(changed, "options.beamOptions.extendSecBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && !baselineOptions->beamFourEighthsInCommonTime
-            && field(baseline,
-                   "options.beamOptions.beamFourEighthsInCommonTime").origin
-                == ValueOrigin::LegacyMus,
+    expect(field(changed, "options.beamOptions.extendBeamsOverRests").origin == ValueOrigin::LegacyMus
+               && field(changed, "options.beamOptions.extendSecBeamsOverRests").origin == ValueOrigin::LegacyMus
+               && !baselineOptions->beamFourEighthsInCommonTime
+               && field(baseline, "options.beamOptions.beamFourEighthsInCommonTime").origin == ValueOrigin::LegacyMus,
         "The Finale 3.7 beam-rest switch reported an incorrect origin");
 }
 
@@ -189,19 +152,13 @@ TEST_CASE("Finale 97 beam-rest switch populates both modern options", "[class]")
     const auto baselineOptions = baseline.document->getOptions()->get<BeamOptionsTarget>();
     const auto changedOptions = changed.document->getOptions()->get<BeamOptionsTarget>();
 
-    expect(!baselineOptions->extendBeamsOverRests
-            && !baselineOptions->extendSecBeamsOverRests,
+    expect(!baselineOptions->extendBeamsOverRests && !baselineOptions->extendSecBeamsOverRests,
         "The clear Finale 97 beam-rest switch was not recovered");
-    expect(changedOptions->extendBeamsOverRests
-            && changedOptions->extendSecBeamsOverRests
-            && baselineOptions->incRestsInFourGroups
-            && changedOptions->incRestsInFourGroups,
+    expect(changedOptions->extendBeamsOverRests && changedOptions->extendSecBeamsOverRests && baselineOptions->incRestsInFourGroups
+               && changedOptions->incRestsInFourGroups,
         "The set Finale 97 beam-rest switch did not populate both modern options");
-    expect(field(changed, "options.beamOptions.extendBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(changed,
-                   "options.beamOptions.extendSecBeamsOverRests").origin
-                == ValueOrigin::LegacyMus,
+    expect(field(changed, "options.beamOptions.extendBeamsOverRests").origin == ValueOrigin::LegacyMus
+               && field(changed, "options.beamOptions.extendSecBeamsOverRests").origin == ValueOrigin::LegacyMus,
         "The Finale 97 beam-rest switch reported an incorrect origin");
 }
 
@@ -212,28 +169,15 @@ TEST_CASE("Finale 98 ignores its nonpersistent four-groups switch", "[class]")
     const auto noFourEighths = readFixture("evidence/F98/F98-beams-no4-8thcommon.mus");
     const auto baselineOptions = baseline.document->getOptions()->get<BeamOptionsTarget>();
     const auto restOptions = includeRests.document->getOptions()->get<BeamOptionsTarget>();
-    const auto fourEighthsOptions
-        = noFourEighths.document->getOptions()->get<BeamOptionsTarget>();
+    const auto fourEighthsOptions = noFourEighths.document->getOptions()->get<BeamOptionsTarget>();
 
-    expect(baselineOptions->beamFourEighthsInCommonTime
-            && !baselineOptions->incRestsInFourGroups
-            && restOptions->beamFourEighthsInCommonTime
-            && !restOptions->incRestsInFourGroups
-            && !fourEighthsOptions->beamFourEighthsInCommonTime
-            && !fourEighthsOptions->incRestsInFourGroups,
+    expect(baselineOptions->beamFourEighthsInCommonTime && !baselineOptions->incRestsInFourGroups && restOptions->beamFourEighthsInCommonTime
+               && !restOptions->incRestsInFourGroups && !fourEighthsOptions->beamFourEighthsInCommonTime && !fourEighthsOptions->incRestsInFourGroups,
         "The Finale 98 beam switches did not reproduce reload behavior");
-    expect(field(baseline,
-               "options.beamOptions.beamFourEighthsInCommonTime").origin
-                == ValueOrigin::LegacyMus
-            && field(baseline,
-                   "options.beamOptions.incRestsInFourGroups").origin
-                == ValueOrigin::LegacyBehavior
-            && field(includeRests,
-                   "options.beamOptions.incRestsInFourGroups").origin
-                == ValueOrigin::LegacyBehavior
-            && field(noFourEighths,
-                   "options.beamOptions.beamFourEighthsInCommonTime").origin
-                == ValueOrigin::LegacyMus,
+    expect(field(baseline, "options.beamOptions.beamFourEighthsInCommonTime").origin == ValueOrigin::LegacyMus
+               && field(baseline, "options.beamOptions.incRestsInFourGroups").origin == ValueOrigin::LegacyBehavior
+               && field(includeRests, "options.beamOptions.incRestsInFourGroups").origin == ValueOrigin::LegacyBehavior
+               && field(noFourEighths, "options.beamOptions.beamFourEighthsInCommonTime").origin == ValueOrigin::LegacyMus,
         "The Finale 98 beam switches reported incorrect origins");
 }
 
@@ -244,12 +188,9 @@ TEST_CASE("Finale 3.7 beamed-rest half-stem switch is source owned", "[class]")
     const auto baselineOptions = baseline.document->getOptions()->get<BeamOptionsTarget>();
     const auto changedOptions = changed.document->getOptions()->get<BeamOptionsTarget>();
 
-    expect(!baselineOptions->dispHalfStemsOnRests,
-        "The clear Finale 3.7 half-stem switch was not recovered");
-    expect(changedOptions->dispHalfStemsOnRests,
-        "The set Finale 3.7 half-stem switch was not recovered");
-    expect(field(changed, "options.beamOptions.dispHalfStemsOnRests").origin
-            == ValueOrigin::LegacyMus,
+    expect(!baselineOptions->dispHalfStemsOnRests, "The clear Finale 3.7 half-stem switch was not recovered");
+    expect(changedOptions->dispHalfStemsOnRests, "The set Finale 3.7 half-stem switch was not recovered");
+    expect(field(changed, "options.beamOptions.dispHalfStemsOnRests").origin == ValueOrigin::LegacyMus,
         "The Finale 3.7 half-stem switch reported an incorrect origin");
 }
 
@@ -262,31 +203,18 @@ TEST_CASE("Finale 2.6.3 stores its two exposed beam options", "[class]")
     const auto restOptions = includeRests.document->getOptions()->get<BeamOptionsTarget>();
     const auto flatOptions = flatBeams.document->getOptions()->get<BeamOptionsTarget>();
 
-    expect(!baselineOptions->extendBeamsOverRests
-            && !baselineOptions->extendSecBeamsOverRests,
+    expect(!baselineOptions->extendBeamsOverRests && !baselineOptions->extendSecBeamsOverRests,
         "The clear Finale 2.6.3 beam-rest switch was not recovered");
-    expect(restOptions->extendBeamsOverRests
-            && restOptions->extendSecBeamsOverRests,
+    expect(restOptions->extendBeamsOverRests && restOptions->extendSecBeamsOverRests,
         "The set Finale 2.6.3 beam-rest switch did not populate both modern options");
-    expect(flatOptions->beamingStyle == BeamOptionsTarget::FlattenStyle::AlwaysFlat,
-        "The Finale 2.6.3 flat-beam switch was not recovered");
-    expect(baselineOptions->beamFourEighthsInCommonTime
-            && restOptions->beamFourEighthsInCommonTime
-            && flatOptions->beamFourEighthsInCommonTime,
+    expect(flatOptions->beamingStyle == BeamOptionsTarget::FlattenStyle::AlwaysFlat, "The Finale 2.6.3 flat-beam switch was not recovered");
+    expect(baselineOptions->beamFourEighthsInCommonTime && restOptions->beamFourEighthsInCommonTime && flatOptions->beamFourEighthsInCommonTime,
         "Finale 2.6.3 did not retain the accepted later four-eighths default");
-    expect(field(includeRests, "options.beamOptions.extendBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(includeRests,
-                   "options.beamOptions.extendSecBeamsOverRests").origin
-                == ValueOrigin::LegacyMus
-            && field(flatBeams, "options.beamOptions.beamingStyle").origin
-                == ValueOrigin::LegacyMus
-            && field(flatBeams,
-                   "options.beamOptions.beamFourEighthsInCommonTime").origin
-                == ValueOrigin::Finale27Default
-            && field(flatBeams,
-                   "options.beamOptions.dispHalfStemsOnRests").origin
-                == ValueOrigin::Finale27Default,
+    expect(field(includeRests, "options.beamOptions.extendBeamsOverRests").origin == ValueOrigin::LegacyMus
+               && field(includeRests, "options.beamOptions.extendSecBeamsOverRests").origin == ValueOrigin::LegacyMus
+               && field(flatBeams, "options.beamOptions.beamingStyle").origin == ValueOrigin::LegacyMus
+               && field(flatBeams, "options.beamOptions.beamFourEighthsInCommonTime").origin == ValueOrigin::Finale27Default
+               && field(flatBeams, "options.beamOptions.dispHalfStemsOnRests").origin == ValueOrigin::Finale27Default,
         "The Finale 2.6.3 beam options reported incorrect origins");
 }
 

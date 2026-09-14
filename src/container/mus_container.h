@@ -20,7 +20,9 @@ struct DecodedBlock
 
 struct ParsedContainer
 {
-    explicit ParsedContainer(FormatEpoch epoch) : formatEpoch(epoch) {}
+    explicit ParsedContainer(FormatEpoch epoch)
+        : formatEpoch(epoch)
+    {}
 
     FormatEpoch formatEpoch;
     ByteOrder byteOrder = ByteOrder::Unknown;

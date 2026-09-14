@@ -13,8 +13,8 @@
 #include <zlib.h>
 
 #include "embedded_default.h"
-#include "musx/dom/Others.h"
 #include "musx/dom/Options.h"
+#include "musx/dom/Others.h"
 
 namespace finale_mus_reader {
 namespace defaults {
@@ -32,10 +32,8 @@ struct EmbeddedBaseline
     const char* name;
 };
 
-constexpr EmbeddedBaseline macOSBaseline{
-    generated::macosDefaultGzip, 0, 91059, "macOS"};
-constexpr EmbeddedBaseline windowsBaseline{
-    generated::windowsDefaultGzip, 0, 86844, "Windows"};
+constexpr EmbeddedBaseline macOSBaseline{generated::macosDefaultGzip, 0, 91059, "macOS"};
+constexpr EmbeddedBaseline windowsBaseline{generated::windowsDefaultGzip, 0, 86844, "Windows"};
 
 EmbeddedBaseline selectBaseline(SourcePlatform platform)
 {
@@ -81,8 +79,7 @@ std::string inflateDefault(const EmbeddedBaseline& baseline)
     const bool valid = result == Z_STREAM_END && stream.avail_in == 0;
     inflateEnd(&stream);
     if (!valid || output.size() != baseline.expectedXmlSize) {
-        throw std::runtime_error(std::string("Embedded Finale 27 ") + baseline.name
-            + " default failed integrity validation");
+        throw std::runtime_error(std::string("Embedded Finale 27 ") + baseline.name + " default failed integrity validation");
     }
     return output;
 }
@@ -94,8 +91,7 @@ const std::string& defaultXml(SourcePlatform platform)
     return platform == SourcePlatform::Windows ? windows : macOS;
 }
 
-musx::xml::XmlElementPtr requireChild(
-    const musx::xml::XmlElementPtr& parent, const std::string& nodeName)
+musx::xml::XmlElementPtr requireChild(const musx::xml::XmlElementPtr& parent, const std::string& nodeName)
 {
     auto child = parent->getFirstChildElement(nodeName);
     if (!child) {
@@ -104,8 +100,7 @@ musx::xml::XmlElementPtr requireChild(
     return child;
 }
 
-std::size_t countAccepted(
-    const musx::xml::XmlElementPtr& parent, const musx::factory::NodeFilter& filter)
+std::size_t countAccepted(const musx::xml::XmlElementPtr& parent, const musx::factory::NodeFilter& filter)
 {
     std::size_t result = 0;
     for (auto child = parent->getFirstChildElement(); child; child = child->getNextSibling()) {
@@ -118,29 +113,24 @@ std::size_t countAccepted(
 
 } // namespace
 
-ParsedDefaultDocument parseDefault(
-    XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform)
+ParsedDefaultDocument parseDefault(XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform)
 {
     // The baseline seeds exactly the modern layer range; musxdom names its size.
     constexpr auto expectedLayerAttributes = static_cast<std::size_t>(musx::dom::MAX_LAYERS);
 
     ParsedDefaultDocument result;
-    result.platform = platform == SourcePlatform::Windows
-        ? SourcePlatform::Windows : SourcePlatform::MacOS;
+    result.platform = platform == SourcePlatform::Windows ? SourcePlatform::Windows : SourcePlatform::MacOS;
     const auto& xml = defaultXml(result.platform);
     result.xmlDocument = parseXml(xml.data(), xml.size());
     result.referenceDocument = parseDocument(xml.data(), xml.size());
     if (!result.referenceDocument) {
         throw std::runtime_error("Embedded default did not produce a reference document");
     }
-    if (!result.referenceDocument->getOptions()
-        || !result.referenceDocument->getOptions()
-                ->get<musx::dom::options::FontOptions>()) {
+    if (!result.referenceDocument->getOptions() || !result.referenceDocument->getOptions()->get<musx::dom::options::FontOptions>()) {
         throw std::runtime_error("Embedded default reference is missing FontOptions");
     }
     if (!result.referenceDocument->getOthers()
-        || result.referenceDocument->getOthers()
-                ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).empty()) {
+        || result.referenceDocument->getOthers()->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).empty()) {
         throw std::runtime_error("Embedded default reference is missing font definitions");
     }
     const auto root = result.xmlDocument ? result.xmlDocument->getRootElement() : nullptr;
@@ -157,8 +147,7 @@ ParsedDefaultDocument parseDefault(
     // source instead, and completed from the separately owned reference document.
     result.optionsFilter = [](const musx::xml::XmlElementPtr& node) {
         const auto name = node->getTagName();
-        return name != musx::dom::options::FontOptions::XmlNodeName
-            && name != musx::dom::options::ClefOptions::XmlNodeName;
+        return name != musx::dom::options::FontOptions::XmlNodeName && name != musx::dom::options::ClefOptions::XmlNodeName;
     };
     // This allowlist is what keeps the fallback measures, staves, entries, text, parts,
     // and layouts of the baseline out of an imported document.
@@ -166,8 +155,7 @@ ParsedDefaultDocument parseDefault(
         return node->getTagName() == musx::dom::others::LayerAttributes::XmlNodeName;
     };
     if (countAccepted(result.others, result.optionLikeOthersFilter) != expectedLayerAttributes) {
-        throw std::runtime_error("Embedded default must contain exactly "
-            + std::to_string(expectedLayerAttributes) + " layer attributes");
+        throw std::runtime_error("Embedded default must contain exactly " + std::to_string(expectedLayerAttributes) + " layer attributes");
     }
     return result;
 }

@@ -60,8 +60,7 @@ struct PhysicalConnection
 };
 
 /// @brief Reads one connection out of a flat word stream, in either element width.
-PhysicalConnection decodeElement(
-    const std::vector<std::int16_t>& words, std::size_t first, std::size_t elementWords)
+PhysicalConnection decodeElement(const std::vector<std::int16_t>& words, std::size_t first, std::size_t elementWords)
 {
     // The wide element is the narrow one with the symbol promoted to a long, so every field
     // after the symbol shifts by exactly one word. Expressing it as an offset keeps the two
@@ -69,9 +68,7 @@ PhysicalConnection decodeElement(
     const std::size_t shift = elementWords == wideElementWords ? 1 : 0;
     PhysicalConnection result;
     result.fontComparator = static_cast<std::uint16_t>(wordAt(words, first));
-    result.symbol = shift == 0
-        ? narrowCodepoint(wordAt(words, first + 1))
-        : wideCodepoint(wordAt(words, first + 1), wordAt(words, first + 2));
+    result.symbol = shift == 0 ? narrowCodepoint(wordAt(words, first + 1)) : wideCodepoint(wordAt(words, first + 1), wordAt(words, first + 2));
     result.symbolIsCodepoint = shift != 0;
     result.upStemVert = wordAt(words, first + 2 + shift);
     result.downStemVert = wordAt(words, first + 3 + shift);
@@ -80,12 +77,11 @@ PhysicalConnection decodeElement(
     return result;
 }
 
-void reportConnectionField(ImportReport& report, std::size_t index, const char* member,
-    std::int64_t rawValue, std::size_t blockOffset, std::size_t decodedOffset)
+void reportConnectionField(
+    ImportReport& report, std::size_t index, const char* member, std::int64_t rawValue, std::size_t blockOffset, std::size_t decodedOffset)
 {
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.report().setField(reporting.template instanceKey<StemOptionsTarget>(),
-            "stemConnections[" + std::to_string(index) + "]." + member,
+        reporting.report().setField(reporting.template instanceKey<StemOptionsTarget>(), "stemConnections[" + std::to_string(index) + "]." + member,
             {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, rawValue});
     });
 }
@@ -96,43 +92,32 @@ void reportConnectionField(ImportReport& report, std::size_t index, const char* 
 /// music font is a symbol font and its byte is a glyph number that survives unchanged, which is
 /// what every connection in every sampled document uses; a connection pointed at a text font is
 /// the case that makes the difference visible.
-void insertRecoveredConnection(const musx::dom::DocumentPtr& document,
-    const std::shared_ptr<StemOptionsTarget>& target,
-    const PhysicalConnection& stored, bool adjustmentsAreEvpu,
-    std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report,
+void insertRecoveredConnection(const musx::dom::DocumentPtr& document, const std::shared_ptr<StemOptionsTarget>& target,
+    const PhysicalConnection& stored, bool adjustmentsAreEvpu, std::size_t blockOffset, std::size_t decodedOffset, ImportReport& report,
     musx::factory::ConstructionContext& construction)
 {
     const auto index = target->stemConnections.size();
-    const auto toEfix = [adjustmentsAreEvpu](std::int16_t stored) {
-        return adjustmentsAreEvpu
-            ? musx::dom::Efix(stored * efixPerEvpu) : musx::dom::Efix(stored);
-    };
+    const auto toEfix = [adjustmentsAreEvpu](
+                            std::int16_t stored) { return adjustmentsAreEvpu ? musx::dom::Efix(stored * efixPerEvpu) : musx::dom::Efix(stored); };
     auto connection = std::make_shared<StemConnection>();
     connection->fontId = construction.assignFontId(musx::dom::Cmper(stored.fontComparator));
-    connection->symbol = stored.symbolIsCodepoint
-        ? static_cast<char32_t>(stored.symbol)
-        : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol),
-            document, connection->fontId, text::UnresolvedFontFallback::Symbol);
+    connection->symbol = stored.symbolIsCodepoint ? static_cast<char32_t>(stored.symbol)
+                                                  : text::codepointFromByte(static_cast<std::uint8_t>(stored.symbol), document, connection->fontId,
+                                                        text::UnresolvedFontFallback::Symbol);
     connection->upStemVert = toEfix(stored.upStemVert);
     connection->downStemVert = toEfix(stored.downStemVert);
     connection->upStemHorz = toEfix(stored.upStemHorz);
     connection->downStemHorz = toEfix(stored.downStemHorz);
     target->stemConnections.push_back(std::move(connection));
 
-    reportConnectionField(
-        report, index, "fontId", stored.fontComparator, blockOffset, decodedOffset);
-    reportConnectionField(report, index, "symbol",
-        static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
+    reportConnectionField(report, index, "fontId", stored.fontComparator, blockOffset, decodedOffset);
+    reportConnectionField(report, index, "symbol", static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
     // The raw stored words, not the assigned Efix. A pre-Finale-3.5 value is scaled on the
     // way in, and the report is the only place the original Evpu number survives.
-    reportConnectionField(report, index, "upStemVert", stored.upStemVert,
-        blockOffset, decodedOffset);
-    reportConnectionField(report, index, "downStemVert", stored.downStemVert,
-        blockOffset, decodedOffset);
-    reportConnectionField(report, index, "upStemHorz", stored.upStemHorz,
-        blockOffset, decodedOffset);
-    reportConnectionField(report, index, "downStemHorz", stored.downStemHorz,
-        blockOffset, decodedOffset);
+    reportConnectionField(report, index, "upStemVert", stored.upStemVert, blockOffset, decodedOffset);
+    reportConnectionField(report, index, "downStemVert", stored.downStemVert, blockOffset, decodedOffset);
+    reportConnectionField(report, index, "upStemHorz", stored.upStemHorz, blockOffset, decodedOffset);
+    reportConnectionField(report, index, "downStemHorz", stored.downStemHorz, blockOffset, decodedOffset);
 }
 
 // One staff position is one half space, so the pre-3.5 lengths convert through musxdom's own
@@ -145,12 +130,10 @@ const FieldMapping stemScalarFields[] = {
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, stemLength),
     MUS_WORD(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, shortStemLength),
     MUS_WORD(StemOptionsTarget, "21", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, revStemAdj),
-    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5,
-        stemWidth),
-    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, stemOffset),
-    MUS_WORD(StemOptionsTarget, "31", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
-        useStemConnections),
+    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5, stemWidth),
+    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{},
+        nullptr, stemOffset),
+    MUS_WORD(StemOptionsTarget, "31", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, useStemConnections),
 };
 
 // The packed spelling of the flag, for the fixed-row eras that have one.
@@ -170,16 +153,12 @@ const FieldMapping packedStemFlagFields[] = {
 // The connection switch keeps its later location and needs no scaling.
 const FieldMapping earlyStemScalarFields[] = {
     MUS_BITS_AS(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4,
-        /*firstBit*/ 0, /*bitCount*/ 0, stemLength,
-        static_cast<musx::dom::Evpu>(value * evpuPerStaffPosition)),
+        /*firstBit*/ 0, /*bitCount*/ 0, stemLength, static_cast<musx::dom::Evpu>(value* evpuPerStaffPosition)),
     MUS_BITS_AS(StemOptionsTarget, "20", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
-        /*firstBit*/ 0, /*bitCount*/ 0, shortStemLength,
-        static_cast<musx::dom::Evpu>(value * evpuPerStaffPosition)),
+        /*firstBit*/ 0, /*bitCount*/ 0, shortStemLength, static_cast<musx::dom::Evpu>(value* evpuPerStaffPosition)),
     MUS_BITS_AS(StemOptionsTarget, "21", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2,
-        /*firstBit*/ 0, /*bitCount*/ 0, revStemAdj,
-        static_cast<musx::dom::Evpu>(value * evpuPerStaffPosition)),
-    MUS_WORD(StemOptionsTarget, "31", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
-        useStemConnections),
+        /*firstBit*/ 0, /*bitCount*/ 0, revStemAdj, static_cast<musx::dom::Evpu>(value* evpuPerStaffPosition)),
+    MUS_WORD(StemOptionsTarget, "31", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, useStemConnections),
 };
 
 // Selector 41 word 1 holds the reverse-stemming flag in every era, but not in the same bit --
@@ -198,30 +177,25 @@ const FieldMapping loneStemFlagFields[] = {
 // its own two layouts below, so the epoch alone keeps those distinct without depending on a
 // version that its Windows documents do not state.
 const FieldMapping earlyStemSizeFields[] = {
-    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5,
-        stemWidth),
-    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, stemOffset),
+    MUS_NUMERIC_WORD(StemOptionsTarget, codaMigratedPointSizeSelector, /*incidence*/ 0, /*slot*/ 5, stemWidth),
+    MUS_NUMERIC_FIELD(StemOptionsTarget, stemOffsetSelector, /*incidence*/ 0, /*slot*/ 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{},
+        nullptr, stemOffset),
 };
 
 // The original Coda layout stores point measurements as single-precision values. A later
 // Coda layout copies them into ten-thousandths fields on selectors 64 and 65; selector 64's
 // presence selects that representation, and the later fields are authoritative when present.
 const FieldMapping codaFloatStemSizeFields[] = {
-    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemSizeSelector, 0, 4,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemSizeSelector, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
         stemWidth, legacyPointsToEfix(legacySinglePrecision(value))),
-    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemOffsetSelector, 0, 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaStemOffsetSelector, 0, 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
         stemOffset, legacyPointsToEfix(legacySinglePrecision(value))),
 };
 
 const FieldMapping codaMigratedStemSizeFields[] = {
-    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaMigratedPointSizeSelector, 0, 5,
-        ValueWidth::Word, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
-        stemWidth, legacyTenThousandthsPointToEfix(value)),
-    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, stemOffsetSelector, 0, 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, codaMigratedPointSizeSelector, 0, 5, ValueWidth::Word, LongWordOrder::HighFirst, BitRange{}, nullptr,
+        nullptr, stemWidth, legacyTenThousandthsPointToEfix(value)),
+    MUS_NUMERIC_FIELD_AS_IF(StemOptionsTarget, stemOffsetSelector, 0, 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
         stemOffset, legacyTenThousandthsPointToEfix(value)),
 };
 
@@ -232,20 +206,17 @@ const FieldMapping classStemScalarFields[] = {
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(20), GLOBALS_CMPER, classWordOffset(4), stemLength),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(20), GLOBALS_CMPER, classWordOffset(5), shortStemLength),
     MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(2), revStemAdj),
-    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector),
-        GLOBALS_CMPER, classWordOffset(5), stemWidth),
-    MUS_CLASS_LONG(StemOptionsTarget, numericGlobalClass(stemOffsetSelector), GLOBALS_CMPER, classWordOffset(0),
-        LongWordOrder::HighFirst, stemOffset),
-    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(31), GLOBALS_CMPER, classWordOffset(5),
-        useStemConnections),
+    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector), GLOBALS_CMPER, classWordOffset(5), stemWidth),
+    MUS_CLASS_LONG(
+        StemOptionsTarget, numericGlobalClass(stemOffsetSelector), GLOBALS_CMPER, classWordOffset(0), LongWordOrder::HighFirst, stemOffset),
+    MUS_CLASS_WORD(StemOptionsTarget, numericGlobalClass(31), GLOBALS_CMPER, classWordOffset(5), useStemConnections),
     MUS_CLASS_BIT(StemOptionsTarget, numericGlobalClass(41), GLOBALS_CMPER, classWordOffset(1),
         /*bit*/ 2, noReverseStems),
 };
 
 const MappingTable& stemScalarsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::FixedRow,
         .applies = &storesFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
@@ -257,8 +228,7 @@ const MappingTable& stemScalarsTable()
 
 const MappingTable& earlyStemScalarsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner | EpochMask::Uncompressed,
         .applies = &storesPreFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
@@ -270,8 +240,7 @@ const MappingTable& earlyStemScalarsTable()
 
 const MappingTable& loneStemFlagTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner | EpochMask::Uncompressed,
         .applies = &storesLoneStemFlagLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -283,8 +252,7 @@ const MappingTable& loneStemFlagTable()
 
 const MappingTable& packedStemFlagTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::FixedRow,
         .applies = &storesPackedBeamFlagLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -296,8 +264,7 @@ const MappingTable& packedStemFlagTable()
 
 const MappingTable& earlyStemSizesTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::Uncompressed,
         .applies = &storesPreFinale35StemAndBeamUnits,
         .targetKind = TargetKind::OptionsSingleton,
@@ -309,8 +276,7 @@ const MappingTable& earlyStemSizesTable()
 
 const MappingTable& codaFloatStemSizesTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner,
         .applies = &storesCodaFloatPointSizes,
         .targetKind = TargetKind::OptionsSingleton,
@@ -322,8 +288,7 @@ const MappingTable& codaFloatStemSizesTable()
 
 const MappingTable& codaMigratedStemSizesTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::CodaBanner,
         .applies = &storesCodaMigratedPointSizes,
         .targetKind = TargetKind::OptionsSingleton,
@@ -335,8 +300,7 @@ const MappingTable& codaMigratedStemSizesTable()
 
 const MappingTable& classStemScalarsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "options.stemOptions",
+    static const MappingTable table{.reportPrefix = "options.stemOptions",
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -348,9 +312,8 @@ const MappingTable& classStemScalarsTable()
 
 } // namespace
 
-void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report,
-    musx::factory::ConstructionContext& construction)
+void captureStemOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile, const musx::dom::DocumentPtr& document,
+    ImportReport& report, musx::factory::ConstructionContext& construction)
 {
     const auto pooled = document->getOptions()->get<StemOptionsTarget>();
     if (!pooled) {
@@ -366,8 +329,7 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
     // collection is the honest result for a source that stores none.
     target->stemConnections.clear();
 
-    const bool wide = sourceMatches(profile, EpochMask::Zlib)
-        && versions::storesUnicodeCodepoints(profile.version);
+    const bool wide = sourceMatches(profile, EpochMask::Zlib) && versions::storesUnicodeCodepoints(profile.version);
     const std::size_t elementWords = wide ? wideElementWords : narrowElementWords;
 
     const auto family = readGlobalWords(index, profile, stemConnectionSelector);
@@ -379,15 +341,15 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
         // document is known; see @ref wideCodepoint. Rather than rely on that absence, the case
         // announces itself when it arrives -- if the order is the other way the symbols are not
         // slightly off but nonsense.
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "This document uses the Finale 2012 stem-connection layout in big-endian "
-            "order, an untested combination; the symbol's word order is unverified "
-            "for it."});
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Warning, "This document uses the Finale 2012 stem-connection layout in big-endian "
+                                                    "order, an untested combination; the symbol's word order is unverified "
+                                                    "for it."});
     }
 
     if (!family.present) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "This document stores no stem-connection table, so it has no stem connections."});
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Verbose, "This document stores no stem-connection table, so it has no stem connections."});
         return;
     }
 
@@ -417,18 +379,17 @@ void captureStemOptions(const records::LegacyRecordIndex& index, const SourcePro
             // before it are already kept. Warning would report a fully usable document as
             // though something in it were broken.
             const auto recoveredCount = target->stemConnections.size();
-            report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "Stem connections stopped at index " + std::to_string(recoveredCount)
-                + ": symbol " + std::to_string(stored.symbol) + " is not a Unicode codepoint "
-                  "(stale default-table bytes); " + std::to_string(recoveredCount)
-                + " kept."});
-            reportConnectionField(report, target->stemConnections.size(), "symbol",
-                static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
+            report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, "Stem connections stopped at index " + std::to_string(recoveredCount)
+                                                                                  + ": symbol " + std::to_string(stored.symbol)
+                                                                                  + " is not a Unicode codepoint "
+                                                                                    "(stale default-table bytes); "
+                                                                                  + std::to_string(recoveredCount) + " kept."});
+            reportConnectionField(
+                report, target->stemConnections.size(), "symbol", static_cast<std::int64_t>(stored.symbol), blockOffset, decodedOffset);
             break;
         }
-        insertRecoveredConnection(document, target, stored,
-            storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report,
-            construction);
+        insertRecoveredConnection(
+            document, target, stored, storesPreFinale35StemAndBeamUnits(index, profile), blockOffset, decodedOffset, report, construction);
     }
 }
 
@@ -439,12 +400,9 @@ void importStemOptions(const ImportContext& context)
     // by whichever of the four tables this file's era matches; the other three still report
     // their fields, so a document from an era a table does not cover shows its supported
     // fields sitting at their synthesized defaults rather than not at all.
-    captureStemOptions(context.index, context.profile, context.document, context.report,
-        context.construction);
-    applyMappingTables({&earlyStemScalarsTable(), &codaFloatStemSizesTable(),
-                           &codaMigratedStemSizesTable(), &earlyStemSizesTable(),
-                           &stemScalarsTable(), &loneStemFlagTable(), &packedStemFlagTable(),
-                           &classStemScalarsTable()},
+    captureStemOptions(context.index, context.profile, context.document, context.report, context.construction);
+    applyMappingTables({&earlyStemScalarsTable(), &codaFloatStemSizesTable(), &codaMigratedStemSizesTable(), &earlyStemSizesTable(),
+                           &stemScalarsTable(), &loneStemFlagTable(), &packedStemFlagTable(), &classStemScalarsTable()},
         context.index, context.profile, context.document, context.report);
 }
 

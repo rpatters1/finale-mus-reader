@@ -34,28 +34,21 @@ void testAugmentationDotOptionsLegacyFlippedStemPositioning()
         auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{
-            index, profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importAugmentationDotOptions(context);
         return document->getOptions()->get<Target>();
     };
 
-    const auto expectLegacyBehavior = [](const auto& options, const ImportReport& report,
-                                        const char* label, bool codaBanner) {
-        expectMapping(!options->useLegacyFlippedStemPositioning,
-            std::string(label).append(" did not force false"));
-        expectMapping(field(report, "options.augmentationDotOptions.useLegacyFlippedStemPositioning")
-                .origin == ValueOrigin::LegacyBehavior,
+    const auto expectLegacyBehavior = [](const auto& options, const ImportReport& report, const char* label, bool codaBanner) {
+        expectMapping(!options->useLegacyFlippedStemPositioning, std::string(label).append(" did not force false"));
+        expectMapping(field(report, "options.augmentationDotOptions.useLegacyFlippedStemPositioning").origin == ValueOrigin::LegacyBehavior,
             std::string(label).append(" did not report LegacyBehavior"));
-        expectMapping(field(report,
-                             "options.augmentationDotOptions.useLegacyFlippedStemPositioning").rawValue
-                == 0,
+        expectMapping(field(report, "options.augmentationDotOptions.useLegacyFlippedStemPositioning").rawValue == 0,
             std::string(label).append(" did not report the legacy-flipped-stem value"));
 
-        expectMapping(options->adjMultipleVoices != codaBanner,
-            std::string(label).append(" applied the wrong multiple-voice behavior"));
+        expectMapping(options->adjMultipleVoices != codaBanner, std::string(label).append(" applied the wrong multiple-voice behavior"));
         expectMapping(field(report, "options.augmentationDotOptions.adjMultipleVoices").origin
-                == (codaBanner ? ValueOrigin::LegacyBehavior : ValueOrigin::Finale27Default),
+                          == (codaBanner ? ValueOrigin::LegacyBehavior : ValueOrigin::Finale27Default),
             std::string(label).append(" reported the wrong multiple-voice origin"));
     };
 
@@ -92,8 +85,7 @@ void testAugmentationDotOptionsLegacyFlippedStemPositioning()
 void testCodaAugmentationDotOffset()
 {
     using Target = musx::dom::options::AugmentationDotOptions;
-    const auto parsed = makeContainer(
-        {{GLOBALS_CMPER, "21", {4, 13, 18, 6, 4, 4}}}, FormatEpoch::CodaBanner);
+    const auto parsed = makeContainer({{GLOBALS_CMPER, "21", {4, 13, 18, 6, 4, 4}}}, FormatEpoch::CodaBanner);
     auto profile = profileFor(2, 6);
     profile.epoch = FormatEpoch::CodaBanner;
     profile.version.reset();
@@ -102,43 +94,34 @@ void testCodaAugmentationDotOffset()
     ImportReport report(FormatEpoch::CodaBanner);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
-    const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed), profile,
-        noSource, document, reference, report, pending, construction};
+    const finale_mus_reader::ImportContext context{
+        LegacyRecordIndex::build(parsed), profile, noSource, document, reference, report, pending, construction};
 
     finale_mus_reader::options::importAugmentationDotOptions(context);
 
     const auto options = document->getOptions()->get<Target>();
-    expectMapping(options->dotOffset == 13,
-        "The Coda epoch did not recover dotOffset from selector 21 word 1");
-    expectMapping(field(report, "options.augmentationDotOptions.dotOffset").origin
-                == ValueOrigin::LegacyMus
-            && field(report, "options.augmentationDotOptions.dotOffset").rawValue == 13,
+    expectMapping(options->dotOffset == 13, "The Coda epoch did not recover dotOffset from selector 21 word 1");
+    expectMapping(field(report, "options.augmentationDotOptions.dotOffset").origin == ValueOrigin::LegacyMus
+                      && field(report, "options.augmentationDotOptions.dotOffset").rawValue == 13,
         "The Coda dot offset reported incorrect source provenance");
-    expectMapping(options->dotUpFlagOffset == 7 && options->dotNoteOffset == 9
-            && options->dotLift == 10,
+    expectMapping(options->dotUpFlagOffset == 7 && options->dotNoteOffset == 9 && options->dotLift == 10,
         "The Coda dot-offset mapping disturbed unresolved augmentation-dot fields");
 }
 
 void testCodaAugmentationDotOffsetFixture()
 {
     using musx::dom::options::AugmentationDotOptions;
-    const auto result = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-        / "evidence/F263/F263-dotoff-13.mus");
+    const auto result =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F263/F263-dotoff-13.mus");
     const auto options = result.document->getOptions()->get<AugmentationDotOptions>();
-    expect(options && options->dotOffset == 13,
-        "The controlled Finale 2.6.3 augmentation-dot offset was not recovered");
+    expect(options && options->dotOffset == 13, "The controlled Finale 2.6.3 augmentation-dot offset was not recovered");
 
     const auto& source = field(result, "options.augmentationDotOptions.dotOffset");
-    expect(source.origin == ValueOrigin::LegacyMus && source.rawValue == 13
-            && source.blockOffset == 0x208 && source.decodedOffset == 0x22d0,
+    expect(source.origin == ValueOrigin::LegacyMus && source.rawValue == 13 && source.blockOffset == 0x208 && source.decodedOffset == 0x22d0,
         "The Finale 2.6.3 dot offset reported the wrong selector-row provenance");
-    expect(field(result, "options.augmentationDotOptions.dotUpFlagOffset").origin
-                == ValueOrigin::Finale27Default
-            && field(result, "options.augmentationDotOptions.dotNoteOffset").origin
-                == ValueOrigin::Finale27Default
-            && field(result, "options.augmentationDotOptions.dotLift").origin
-                == ValueOrigin::Finale27Default,
+    expect(field(result, "options.augmentationDotOptions.dotUpFlagOffset").origin == ValueOrigin::Finale27Default
+               && field(result, "options.augmentationDotOptions.dotNoteOffset").origin == ValueOrigin::Finale27Default
+               && field(result, "options.augmentationDotOptions.dotLift").origin == ValueOrigin::Finale27Default,
         "The single located Coda augmentation-dot field widened into unresolved words");
 }
 
@@ -147,8 +130,7 @@ TEST_CASE("Coda augmentation-dot offset", "[class][reader]")
     testCodaAugmentationDotOffsetFixture();
 }
 
-TEST_CASE("Augmentation-dot options apply legacy flipped-stem positioning as LegacyBehavior",
-    "[class]")
+TEST_CASE("Augmentation-dot options apply legacy flipped-stem positioning as LegacyBehavior", "[class]")
 {
     testAugmentationDotOptionsLegacyFlippedStemPositioning();
 }

@@ -21,8 +21,7 @@ constexpr std::string_view bannerSignature = "ENIGMA BINARY FILE";
 std::string fixedString(const std::uint8_t* data, std::size_t size)
 {
     const auto* end = std::find(data, data + size, std::uint8_t{0});
-    return std::string(reinterpret_cast<const char*>(data),
-        static_cast<std::size_t>(end - data));
+    return std::string(reinterpret_cast<const char*>(data), static_cast<std::size_t>(end - data));
 }
 
 SourcePlatform parsePlatform(const std::string& platform)
@@ -39,12 +38,9 @@ SourcePlatform parsePlatform(const std::string& platform)
 musx::dom::header::Platform toDomPlatform(SourcePlatform platform)
 {
     switch (platform) {
-    case SourcePlatform::MacOS:
-        return musx::dom::header::Platform::Mac;
-    case SourcePlatform::Windows:
-        return musx::dom::header::Platform::Windows;
-    case SourcePlatform::Unknown:
-        return musx::dom::header::Platform::Other;
+    case SourcePlatform::MacOS: return musx::dom::header::Platform::Mac;
+    case SourcePlatform::Windows: return musx::dom::header::Platform::Windows;
+    case SourcePlatform::Unknown: return musx::dom::header::Platform::Other;
     }
     return musx::dom::header::Platform::Other;
 }
@@ -63,12 +59,10 @@ SourceVersion decodeVersionValue(std::uint32_t value)
 
 SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
 {
-    const auto bigEndian = (static_cast<std::uint32_t>(raw[0]) << 24U)
-        | (static_cast<std::uint32_t>(raw[1]) << 16U)
-        | (static_cast<std::uint32_t>(raw[2]) << 8U) | raw[3];
-    const auto littleEndian = (static_cast<std::uint32_t>(raw[3]) << 24U)
-        | (static_cast<std::uint32_t>(raw[2]) << 16U)
-        | (static_cast<std::uint32_t>(raw[1]) << 8U) | raw[0];
+    const auto bigEndian = (static_cast<std::uint32_t>(raw[0]) << 24U) | (static_cast<std::uint32_t>(raw[1]) << 16U)
+                           | (static_cast<std::uint32_t>(raw[2]) << 8U) | raw[3];
+    const auto littleEndian = (static_cast<std::uint32_t>(raw[3]) << 24U) | (static_cast<std::uint32_t>(raw[2]) << 16U)
+                              | (static_cast<std::uint32_t>(raw[1]) << 8U) | raw[0];
 
     if (byteOrder == ByteOrder::LittleEndian) {
         return decodeVersionValue(littleEndian);
@@ -82,8 +76,7 @@ SourceVersion decodeVersion(const std::uint8_t* raw, ByteOrder byteOrder)
     // reads big-endian as major 15 and passes, concealing the correct 3.0.1. Callers that can
     // know the order must set it; this exists so a header can still be described without one.
     const auto candidate = decodeVersionValue(bigEndian);
-    return candidate.major <= maximumFinaleMajorVersion
-        ? candidate : decodeVersionValue(littleEndian);
+    return candidate.major <= maximumFinaleMajorVersion ? candidate : decodeVersionValue(littleEndian);
 }
 
 void applyVersion(const SourceVersion& decoded, musx::dom::header::FinaleVersion& version)
@@ -98,14 +91,12 @@ void applyVersion(const SourceVersion& decoded, musx::dom::header::FinaleVersion
     }
 }
 
-void populateVersion(
-    const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
+void populateVersion(const std::uint8_t* raw, ByteOrder byteOrder, musx::dom::header::FinaleVersion& version)
 {
     applyVersion(decodeVersion(raw, byteOrder), version);
 }
 
-musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data,
-    std::size_t dateOffset, std::size_t tupleOffset, ByteOrder byteOrder)
+musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data, std::size_t dateOffset, std::size_t tupleOffset, ByteOrder byteOrder)
 {
     musx::dom::header::FileInfo info;
     const int month = data[dateOffset + 1];
@@ -123,8 +114,7 @@ musx::dom::header::FileInfo parseFileInfo(const std::uint8_t* data,
     return info;
 }
 
-bool describeCodaBannerIdentity(
-    const std::uint8_t* data, std::size_t size, ImportReport& report)
+bool describeCodaBannerIdentity(const std::uint8_t* data, std::size_t size, ImportReport& report)
 {
     const auto parsed = banner::parse(data, size);
     if (!parsed.isPreSignature() || parsed.offset != 0) {
@@ -153,9 +143,8 @@ bool describeCodaBannerIdentity(
 
 bool hasBanner(const std::uint8_t* data, std::size_t size)
 {
-    return size > bannerSignature.size()
-        && std::memcmp(data, bannerSignature.data(), bannerSignature.size()) == 0
-        && data[bannerSignature.size()] == 0;
+    return size > bannerSignature.size() && std::memcmp(data, bannerSignature.data(), bannerSignature.size()) == 0
+           && data[bannerSignature.size()] == 0;
 }
 
 void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportReport& report)
@@ -171,8 +160,7 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     report.savingProduct = parsed.product;
     const auto modifiedPlatform = parsePlatform(fixedString(data + 0x09a, 4));
     const auto createdPlatform = parsePlatform(fixedString(data + 0x074, 4));
-    report.sourcePlatform = modifiedPlatform != SourcePlatform::Unknown
-        ? modifiedPlatform : createdPlatform;
+    report.sourcePlatform = modifiedPlatform != SourcePlatform::Unknown ? modifiedPlatform : createdPlatform;
 
     const auto modified = decodeVersion(data + 0x092, report.byteOrder);
     const auto created = decodeVersion(data + 0x06c, report.byteOrder);
@@ -183,20 +171,17 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
     if (selected.major <= maximumFinaleMajorVersion) {
         report.sourceVersion = selected;
     } else {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,"Recovered Finale major version "
-            + std::to_string(selected.major) + " is outside the valid range 0-"
-            + std::to_string(maximumFinaleMajorVersion)
-            + "; version-gated mappings are skipped."});
+        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
+            "Recovered Finale major version " + std::to_string(selected.major) + " is outside the valid range 0-"
+                + std::to_string(maximumFinaleMajorVersion) + "; version-gated mappings are skipped."});
     }
 }
 
-musx::dom::header::HeaderPtr recover(
-    const std::uint8_t* data, std::size_t size, const ImportReport& report)
+musx::dom::header::HeaderPtr recover(const std::uint8_t* data, std::size_t size, const ImportReport& report)
 {
     auto result = std::make_shared<musx::dom::header::Header>();
-    result->wordOrder = report.byteOrder == ByteOrder::BigEndian
-        ? musx::dom::header::WordOrder::BigEndian
-        : musx::dom::header::WordOrder::LittleEndian;
+    result->wordOrder =
+        report.byteOrder == ByteOrder::BigEndian ? musx::dom::header::WordOrder::BigEndian : musx::dom::header::WordOrder::LittleEndian;
     if (report.sourcePlatform == SourcePlatform::MacOS) {
         result->textEncoding = musx::dom::header::TextEncoding::Mac;
     } else if (report.sourcePlatform == SourcePlatform::Windows) {

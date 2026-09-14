@@ -26,33 +26,35 @@ std::optional<std::size_t> chordSuffixPlaybackValueIndex(std::string_view path)
         return std::nullopt;
     }
     const auto begin = path.find(marker, prefix.size());
-    if (begin == std::string_view::npos) return std::nullopt;
+    if (begin == std::string_view::npos) {
+        return std::nullopt;
+    }
     const auto digitsBegin = begin + marker.size();
     const auto digitsEnd = path.size() - suffix.size();
     std::size_t index{};
-    const auto [end, error] =
-        std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, index);
-    if (error != std::errc{} || end != path.data() + digitsEnd) return std::nullopt;
+    const auto [end, error] = std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, index);
+    if (error != std::errc{} || end != path.data() + digitsEnd) {
+        return std::nullopt;
+    }
     return index;
 }
 
-std::optional<DifferenceClassification>
-classifyChordSuffixPlaybackDifference(const DifferenceContext& context)
+std::optional<DifferenceClassification> classifyChordSuffixPlaybackDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
     constexpr std::size_t logicalValueLimit = 64;
     constexpr std::size_t paddedValueCount = 66;
-    if (context.origin != "legacy-mus" || !sourceIsBeta(context.sourceVersion) ||
-        !sourceIsVersion(context.epoch, context.sourceVersion,
-                         finale_mus_reader::FormatEpoch::ZlibLegacy,
-                         finale_mus_reader::versions::finale2008)) {
+    if (context.origin != "legacy-mus" || !sourceIsBeta(context.sourceVersion)
+        || !sourceIsVersion(
+            context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2008)) {
         return std::nullopt;
     }
     const auto index = chordSuffixPlaybackValueIndex(context.path);
-    if (!index) return std::nullopt;
-    if (context.category == Differs && *index >= logicalValueLimit &&
-        *index < paddedValueCount &&
-        context.companionValue.isInteger() && context.companionValue.asInteger() == 0) {
+    if (!index) {
+        return std::nullopt;
+    }
+    if (context.category == Differs && *index >= logicalValueLimit && *index < paddedValueCount && context.companionValue.isInteger()
+        && context.companionValue.asInteger() == 0) {
         return DifferenceClassification::BetaDiscrepancy;
     }
     if (context.category == ReaderOnly && *index >= paddedValueCount) {
@@ -74,17 +76,12 @@ Value observeChordSuffixPlayback(const SurveyContext& ctx)
                 {"origin", fieldOrigin<Target>(ctx, member, *playback)},
             });
         }
-        result.emplace_back(observe(
-            *playback, ctx,
-            field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field("values", [values = std::move(values)](const Target&) {
-                return Value(values);
-            })));
+        result.emplace_back(observe(*playback, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("values", [values = std::move(values)](const Target&) { return Value(values); })));
     }
     return result;
 }
 
-COVERAGE_CLASS("others", "chord_suffix_playback", observeChordSuffixPlayback,
-               classifyChordSuffixPlaybackDifference);
+COVERAGE_CLASS("others", "chord_suffix_playback", observeChordSuffixPlayback, classifyChordSuffixPlaybackDifference);
 
 } // namespace

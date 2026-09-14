@@ -14,7 +14,10 @@
 namespace finale_mus_reader::coverage {
 
 std::string jsonString(std::string_view value);
-inline const char* jsonBool(bool value) { return value ? "true" : "false"; }
+inline const char* jsonBool(bool value)
+{
+    return value ? "true" : "false";
+}
 
 const char* originName(ValueOrigin origin);
 const char* epochName(FormatEpoch epoch);

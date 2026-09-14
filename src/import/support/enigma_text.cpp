@@ -54,13 +54,9 @@ constexpr EffectName effectNames[] = {
     {"hidden", musx::dom::FontInfo::EnigmaStyleHidden},
 };
 
-constexpr std::uint16_t supportedEffectMask =
-    musx::dom::FontInfo::EnigmaStyleBold
-    | musx::dom::FontInfo::EnigmaStyleItalic
-    | musx::dom::FontInfo::EnigmaStyleUnderline
-    | musx::dom::FontInfo::EnigmaStyleStrikeout
-    | musx::dom::FontInfo::EnigmaStyleAbsolute
-    | musx::dom::FontInfo::EnigmaStyleHidden;
+constexpr std::uint16_t supportedEffectMask = musx::dom::FontInfo::EnigmaStyleBold | musx::dom::FontInfo::EnigmaStyleItalic
+                                              | musx::dom::FontInfo::EnigmaStyleUnderline | musx::dom::FontInfo::EnigmaStyleStrikeout
+                                              | musx::dom::FontInfo::EnigmaStyleAbsolute | musx::dom::FontInfo::EnigmaStyleHidden;
 
 constexpr std::uint16_t normalizeEffectMask(std::uint16_t effects)
 {
@@ -88,8 +84,7 @@ bool canEmbedEnigmaFontName(std::string_view name)
     return parenthesisDepth == 0;
 }
 
-std::string spellResolvedEnigmaFontCommand(
-    std::string_view command, Cmper font, std::string_view name)
+std::string spellResolvedEnigmaFontCommand(std::string_view command, Cmper font, std::string_view name)
 {
     if (!canEmbedEnigmaFontName(name)) {
         return "^fontid(" + std::to_string(font) + ')';
@@ -253,19 +248,16 @@ bool isCommandNameByte(std::uint8_t value)
 }
 
 /// @brief Returns the opening parenthesis after optional command whitespace.
-std::optional<std::size_t> parenthesizedArgumentOpen(
-    std::string_view text, std::size_t afterName)
+std::optional<std::size_t> parenthesizedArgumentOpen(std::string_view text, std::size_t afterName)
 {
     while (afterName < text.size() && isSpace(text[afterName])) {
         ++afterName;
     }
-    return (afterName < text.size() && text[afterName] == '(')
-        ? std::optional<std::size_t>(afterName) : std::nullopt;
+    return (afterName < text.size() && text[afterName] == '(') ? std::optional<std::size_t>(afterName) : std::nullopt;
 }
 
 /// @brief Returns one past a balanced parenthesized argument, or nothing if it is incomplete.
-std::optional<std::size_t> parenthesizedArgumentEnd(
-    std::string_view text, std::size_t open)
+std::optional<std::size_t> parenthesizedArgumentEnd(std::string_view text, std::size_t open)
 {
     if (open >= text.size() || text[open] != '(') {
         return std::nullopt;
@@ -302,11 +294,8 @@ class RecordConverter
 {
 public:
     RecordConverter(std::span<const std::uint8_t> body, const EnigmaTextSource& source)
-        : m_body(body), m_source(source),
-          m_font(source.initialFont
-                  ? std::optional<Cmper>(source.initialFont->fontId) : std::nullopt)
-    {
-    }
+        : m_body(body), m_source(source), m_font(source.initialFont ? std::optional<Cmper>(source.initialFont->fontId) : std::nullopt)
+    {}
 
     ConvertedEnigmaText run()
     {
@@ -336,8 +325,7 @@ public:
             bool sizeWasSynthesized = false;
             bool effectsWereSynthesized = false;
             m_result.text = initializeEnigmaTextFontState(
-                std::move(m_result.text), *m_source.initialFont, &fontWasSynthesized,
-                &sizeWasSynthesized, &effectsWereSynthesized);
+                std::move(m_result.text), *m_source.initialFont, &fontWasSynthesized, &sizeWasSynthesized, &effectsWereSynthesized);
             m_result.fontWasSynthesized = fontWasSynthesized;
             m_result.sizeWasSynthesized = sizeWasSynthesized;
             m_result.effectsWereSynthesized = effectsWereSynthesized;
@@ -371,8 +359,7 @@ private:
     std::optional<std::string_view> argumentsAt(std::size_t start, std::size_t& end) const
     {
         end = start;
-        const std::string_view body(
-            reinterpret_cast<const char*>(m_body.data()), m_body.size());
+        const std::string_view body(reinterpret_cast<const char*>(m_body.data()), m_body.size());
         const auto argumentEnd = parenthesizedArgumentEnd(body, start);
         if (!argumentEnd) {
             return std::nullopt;
@@ -403,8 +390,7 @@ private:
         while (at < m_body.size() && m_body[at] == ' ') {
             ++at;
         }
-        if (at >= m_body.size() || m_body[at] != '^'
-            || commandNameAt(at + 1) != effectCommand) {
+        if (at >= m_body.size() || m_body[at] != '^' || commandNameAt(at + 1) != effectCommand) {
             return false;
         }
         m_effectGap.append(at - m_at, ' ');
@@ -422,10 +408,8 @@ private:
         if (commandNameAt(m_at + 1) != effectCommand) {
             return false;
         }
-        const std::string_view body(
-            reinterpret_cast<const char*>(m_body.data()), m_body.size());
-        const auto open = parenthesizedArgumentOpen(
-            body, m_at + 1 + effectCommand.size());
+        const std::string_view body(reinterpret_cast<const char*>(m_body.data()), m_body.size());
+        const auto open = parenthesizedArgumentOpen(body, m_at + 1 + effectCommand.size());
         if (!open) {
             return false;
         }
@@ -446,8 +430,8 @@ private:
             m_effects = 0;
             return true;
         }
-        const auto found = std::find_if(std::begin(effectNames), std::end(effectNames),
-            [&](const EffectName& entry) { return entry.name == *arguments; });
+        const auto found =
+            std::find_if(std::begin(effectNames), std::end(effectNames), [&](const EffectName& entry) { return entry.name == *arguments; });
         if (found == std::end(effectNames)) {
             rememberUnreadEffect(m_result.unknownEffectNames, std::string(*arguments));
             return true;
@@ -468,8 +452,7 @@ private:
         }
         const auto name = commandNameAt(m_at + 1);
         if (!name.empty()) {
-            const std::string_view body(
-                reinterpret_cast<const char*>(m_body.data()), m_body.size());
+            const std::string_view body(reinterpret_cast<const char*>(m_body.data()), m_body.size());
             const auto afterName = m_at + 1 + name.size();
             const auto open = parenthesizedArgumentOpen(body, afterName);
             std::size_t end = 0;
@@ -506,13 +489,11 @@ private:
         if (m_source.utf8) {
             // Only U+0080 to U+00FF can be a command code, so only these two lead bytes can
             // introduce one.
-            if ((first != 0xc2 && first != 0xc3) || start + 1 >= m_body.size()
-                || (m_body[start + 1] & 0xc0U) != 0x80U) {
+            if ((first != 0xc2 && first != 0xc3) || start + 1 >= m_body.size() || (m_body[start + 1] & 0xc0U) != 0x80U) {
                 return std::nullopt;
             }
             end = start + 2;
-            return static_cast<std::uint8_t>(
-                ((first & 0x1fU) << 6U) | (m_body[start + 1] & 0x3fU));
+            return static_cast<std::uint8_t>(((first & 0x1fU) << 6U) | (m_body[start + 1] & 0x3fU));
         }
         if (first < 0x80) {
             return std::nullopt;
@@ -564,10 +545,9 @@ private:
         if (!code) {
             return false;
         }
-        const auto found = std::find_if(std::begin(commandCodes), std::end(commandCodes),
-            [&](const CommandCode& entry) { return entry.code == *code; });
-        const auto argument = found != std::end(commandCodes)
-            ? argumentAt(afterCode, found->digits) : std::nullopt;
+        const auto found =
+            std::find_if(std::begin(commandCodes), std::end(commandCodes), [&](const CommandCode& entry) { return entry.code == *code; });
+        const auto argument = found != std::end(commandCodes) ? argumentAt(afterCode, found->digits) : std::nullopt;
         if (found == std::end(commandCodes) || (found->digits > 0 && !argument)) {
             // Either no spelling is known for this code, or its argument is not the width
             // recorded for it. Either way the command cannot be stated, and
@@ -598,11 +578,9 @@ private:
     }
 
     /// @brief Passes a spelled-out command through, resolving a font reference on the way.
-    void emitTextCommand(
-        std::string_view name, std::string_view arguments, bool hasArguments)
+    void emitTextCommand(std::string_view name, std::string_view arguments, bool hasArguments)
     {
-        if (name == "font" || name == "Font" || name == "fontid" || name == "fontMus"
-            || name == "fontTxt" || name == "fontNum") {
+        if (name == "font" || name == "Font" || name == "fontid" || name == "fontMus" || name == "fontTxt" || name == "fontNum") {
             emitFontCommand(name, arguments);
             return;
         }
@@ -621,10 +599,7 @@ private:
         }
     }
 
-    void emitNfx(std::uint16_t effects)
-    {
-        m_result.text.append("^nfx(" + std::to_string(normalizeEffectMask(effects)) + ")");
-    }
+    void emitNfx(std::uint16_t effects) { m_result.text.append("^nfx(" + std::to_string(normalizeEffectMask(effects)) + ")"); }
 
     void emitFontCommand(std::string_view name, std::string_view arguments)
     {
@@ -648,8 +623,7 @@ private:
         // its comparator outright, `Font` followed by digits is the same thing under Finale's
         // own convention for a font it knows only by id, and anything else is a name musxdom
         // matches back to a definition.
-        const auto resolved = name == "fontid"
-            ? readDecimal(spelled) : resolveFont(spelled, packedCharset);
+        const auto resolved = name == "fontid" ? readDecimal(spelled) : resolveFont(spelled, packedCharset);
         if (!resolved) {
             // Nothing in the document answers to this name, so the name is all there is to
             // keep. There is no comparator to fall back to either. musxdom resolves it the
@@ -665,8 +639,7 @@ private:
         }
         // `^font`, `^Font` and `^fontid` all say the same thing, so they converge on one
         // spelling; the three categorized commands say something more and keep theirs.
-        const auto isCategorized
-            = name == "fontMus" || name == "fontTxt" || name == "fontNum";
+        const auto isCategorized = name == "fontMus" || name == "fontTxt" || name == "fontNum";
         emitResolvedFont(isCategorized ? name : std::string_view("font"), *resolved);
     }
 
@@ -693,8 +666,7 @@ private:
     /// @brief The name the document gives a comparator, or nothing when it names none.
     std::optional<std::string> fontNameFor(Cmper font) const
     {
-        const auto definition = m_source.document->getOthers()
-            ->get<FontDefinitionSource>(musx::dom::SCORE_PARTID, font);
+        const auto definition = m_source.document->getOthers()->get<FontDefinitionSource>(musx::dom::SCORE_PARTID, font);
         if (!definition || definition->name.empty()) {
             return std::nullopt;
         }
@@ -709,8 +681,7 @@ private:
     {
         constexpr std::size_t maximumComparatorDigits = 5;
         if (digits.empty() || digits.size() > maximumComparatorDigits
-            || !std::all_of(digits.begin(), digits.end(),
-                [](char value) { return value >= '0' && value <= '9'; })) {
+            || !std::all_of(digits.begin(), digits.end(), [](char value) { return value >= '0' && value <= '9'; })) {
             return std::nullopt;
         }
         const auto value = std::stoul(std::string(digits));
@@ -732,8 +703,7 @@ private:
         return readDecimal(spelled.substr(idPrefix.size()));
     }
 
-    std::optional<Cmper> resolveFont(
-        std::string_view spelled, std::optional<std::uint16_t> packedCharset = std::nullopt) const
+    std::optional<Cmper> resolveFont(std::string_view spelled, std::optional<std::uint16_t> packedCharset = std::nullopt) const
     {
         if (const auto byId = fontIdFromSpelling(spelled)) {
             return byId;
@@ -742,12 +712,10 @@ private:
         if (m_source.fontResolutionCache) {
             auto& resolved = m_source.fontResolutionCache->fontIdsByName;
             if (const auto cached = resolved.find(name); cached != resolved.end()) {
-                FINALE_MUS_READER_TIMING_INCREMENT(
-                    timing::Counter::TextFontResolutionCacheHits, 1);
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextFontResolutionCacheHits, 1);
                 return cached->second;
             }
-            FINALE_MUS_READER_TIMING_INCREMENT(
-                timing::Counter::TextFontResolutionCacheMisses, 1);
+            FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextFontResolutionCacheMisses, 1);
             const auto font = resolveFontName(name);
             resolved.emplace(name, font);
             return font;
@@ -770,8 +738,7 @@ private:
     }
 
     /// @brief Converts text that belongs to a command, such as a font name.
-    std::string convertCommandText(
-        std::string_view raw, std::optional<std::uint16_t> packedCharset = std::nullopt) const
+    std::string convertCommandText(std::string_view raw, std::optional<std::uint16_t> packedCharset = std::nullopt) const
     {
         if (m_source.utf8) {
             return std::string(raw);
@@ -785,14 +752,12 @@ private:
             return;
         }
         FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextLiteralRuns, 1);
-        FINALE_MUS_READER_TIMING_INCREMENT(
-            timing::Counter::TextLiteralBytes, m_literal.size());
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextLiteralBytes, m_literal.size());
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLiteralEncoding);
         if (m_source.utf8) {
             m_result.text.append(m_literal);
         } else if (m_font) {
-            m_result.text.append(toUtf8(
-                m_literal, m_source.document, *m_font, UnresolvedFontFallback::Text));
+            m_result.text.append(toUtf8(m_literal, m_source.document, *m_font, UnresolvedFontFallback::Text));
         } else {
             m_result.text.append(toUtf8(m_literal, m_source.platform));
         }
@@ -833,8 +798,7 @@ private:
 } // namespace
 
 std::string initializeEnigmaTextFontState(
-    std::string value, const musx::dom::FontInfo& defaultFont,
-    bool* fontWasSynthesized, bool* sizeWasSynthesized, bool* effectsWereSynthesized)
+    std::string value, const musx::dom::FontInfo& defaultFont, bool* fontWasSynthesized, bool* sizeWasSynthesized, bool* effectsWereSynthesized)
 {
     // A literal byte, including whitespace, ends the initial command run. Missing settings
     // are inserted before it so the first content is interpreted under one complete state;
@@ -846,22 +810,19 @@ std::string initializeEnigmaTextFontState(
     while (at < value.size() && value[at] == '^') {
         const auto nameStart = at + 1;
         auto nameEnd = nameStart;
-        while (nameEnd < value.size()
-            && isCommandNameByte(static_cast<std::uint8_t>(value[nameEnd]))) {
+        while (nameEnd < value.size() && isCommandNameByte(static_cast<std::uint8_t>(value[nameEnd]))) {
             ++nameEnd;
         }
         if (nameEnd == nameStart || nameEnd >= value.size()) {
             break;
         }
         const auto open = parenthesizedArgumentOpen(value, nameEnd);
-        const auto commandEnd = open
-            ? parenthesizedArgumentEnd(value, *open) : std::nullopt;
+        const auto commandEnd = open ? parenthesizedArgumentEnd(value, *open) : std::nullopt;
         if (!commandEnd) {
             break;
         }
         const std::string_view name(value.data() + nameStart, nameEnd - nameStart);
-        hasFont = hasFont || name == "font" || name == "Font" || name == "fontid"
-            || name == "fontMus" || name == "fontTxt" || name == "fontNum";
+        hasFont = hasFont || name == "font" || name == "Font" || name == "fontid" || name == "fontMus" || name == "fontTxt" || name == "fontNum";
         hasSize = hasSize || name == "size";
         hasEffects = hasEffects || name == "nfx";
         at = *commandEnd;
@@ -873,27 +834,31 @@ std::string initializeEnigmaTextFontState(
 
     std::string completedInitial;
     if (!hasFont) {
-        if (fontWasSynthesized) *fontWasSynthesized = true;
+        if (fontWasSynthesized) {
+            *fontWasSynthesized = true;
+        }
         // A name survives document-local comparator renumbering. A name that cannot fit the
         // command argument syntax retains its already-resolved comparator instead.
-        completedInitial = spellResolvedEnigmaFontCommand(
-            "font", defaultFont.fontId, defaultFont.getName());
+        completedInitial = spellResolvedEnigmaFontCommand("font", defaultFont.fontId, defaultFont.getName());
     }
     completedInitial.append(value, 0, at);
     if (!hasSize) {
-        if (sizeWasSynthesized) *sizeWasSynthesized = true;
+        if (sizeWasSynthesized) {
+            *sizeWasSynthesized = true;
+        }
         completedInitial += "^size(" + std::to_string(defaultFont.fontSize) + ')';
     }
     if (!hasEffects) {
-        if (effectsWereSynthesized) *effectsWereSynthesized = true;
+        if (effectsWereSynthesized) {
+            *effectsWereSynthesized = true;
+        }
         completedInitial += "^nfx(" + std::to_string(defaultFont.getEnigmaStyles()) + ')';
     }
     value.replace(0, at, completedInitial);
     return value;
 }
 
-ConvertedEnigmaText toModernEnigmaText(
-    std::span<const std::uint8_t> body, const EnigmaTextSource& source)
+ConvertedEnigmaText toModernEnigmaText(std::span<const std::uint8_t> body, const EnigmaTextSource& source)
 {
     return RecordConverter(body, source).run();
 }

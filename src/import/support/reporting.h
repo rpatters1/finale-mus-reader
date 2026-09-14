@@ -84,7 +84,9 @@ public:
     using InstanceKey = finale_mus_reader::InstanceKey;
     using TextFieldInfo = finale_mus_reader::TextFieldInfo;
 
-    explicit ReportWriter(ImportReport& report) : m_report(report) {}
+    explicit ReportWriter(ImportReport& report)
+        : m_report(report)
+    {}
     ImportReport& report() const { return m_report; }
 
     template <typename T, typename... Keys>
@@ -127,29 +129,24 @@ public:
     template <typename T>
     void defaultField(std::string member, std::int64_t value)
     {
-        m_report.setField(
-            instanceKey<T>(), std::move(member), {Origin::Finale27Default, 0, 0, value});
+        m_report.setField(instanceKey<T>(), std::move(member), {Origin::Finale27Default, 0, 0, value});
     }
 
     template <typename T>
     void behaviorField(std::string member, std::int64_t value)
     {
-        m_report.setField(
-            instanceKey<T>(), std::move(member), {Origin::LegacyBehavior, 0, 0, value});
+        m_report.setField(instanceKey<T>(), std::move(member), {Origin::LegacyBehavior, 0, 0, value});
     }
 
-    void textField(const InstanceKey& instance, std::string member, bool fontWasSynthesized,
-        bool sizeWasSynthesized, bool effectsWereSynthesized)
+    void textField(const InstanceKey& instance, std::string member, bool fontWasSynthesized, bool sizeWasSynthesized, bool effectsWereSynthesized)
     {
-        m_report.setTextField(instance, std::move(member),
-            {fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
+        m_report.setTextField(instance, std::move(member), {fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized});
     }
 
     template <typename ConvertedText>
     void textField(const InstanceKey& instance, std::string member, const ConvertedText& converted)
     {
-        textField(instance, std::move(member), converted.fontWasSynthesized,
-            converted.sizeWasSynthesized, converted.effectsWereSynthesized);
+        textField(instance, std::move(member), converted.fontWasSynthesized, converted.sizeWasSynthesized, converted.effectsWereSynthesized);
     }
 
     /// @brief Converts a C++ member path to a report path, replacing arrows with dots.

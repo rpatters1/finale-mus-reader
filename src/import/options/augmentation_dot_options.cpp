@@ -25,30 +25,22 @@ const FieldMapping fixedRowAugmentationDotFields[] = {
     MUS_WORD(AugmentationDotTarget, "21", GLOBALS_CMPER, 0, 1, dotOffset),
     MUS_WORD(AugmentationDotTarget, "68", GLOBALS_CMPER, 0, 0, dotNoteOffset),
     MUS_WORD(AugmentationDotTarget, "68", GLOBALS_CMPER, 0, 1, dotLift),
-    MUS_WORD_AS_IF(AugmentationDotTarget, "27", GLOBALS_CMPER, 0, 0, nullptr, adjMultipleVoices,
-        value != 0),
+    MUS_WORD_AS_IF(AugmentationDotTarget, "27", GLOBALS_CMPER, 0, 0, nullptr, adjMultipleVoices, value != 0),
 };
 
 const FieldMapping classAugmentationDotFields[] = {
-    MUS_CLASS_WORD(
-        AugmentationDotTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(0), dotUpFlagOffset),
-    MUS_CLASS_WORD(
-        AugmentationDotTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(1), dotOffset),
-    MUS_CLASS_WORD(
-        AugmentationDotTarget, numericGlobalClass(68), GLOBALS_CMPER, classWordOffset(0), dotNoteOffset),
-    MUS_CLASS_WORD(
-        AugmentationDotTarget, numericGlobalClass(68), GLOBALS_CMPER, classWordOffset(1), dotLift),
-    MUS_CLASS_WORD_AS_IF(
-        AugmentationDotTarget, numericGlobalClass(27), GLOBALS_CMPER, classWordOffset(0),
-        nullptr, adjMultipleVoices, value != 0),
+    MUS_CLASS_WORD(AugmentationDotTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(0), dotUpFlagOffset),
+    MUS_CLASS_WORD(AugmentationDotTarget, numericGlobalClass(21), GLOBALS_CMPER, classWordOffset(1), dotOffset),
+    MUS_CLASS_WORD(AugmentationDotTarget, numericGlobalClass(68), GLOBALS_CMPER, classWordOffset(0), dotNoteOffset),
+    MUS_CLASS_WORD(AugmentationDotTarget, numericGlobalClass(68), GLOBALS_CMPER, classWordOffset(1), dotLift),
+    MUS_CLASS_WORD_AS_IF(AugmentationDotTarget, numericGlobalClass(27), GLOBALS_CMPER, classWordOffset(0), nullptr, adjMultipleVoices, value != 0),
 };
 
 const MappingTable& codaAugmentationDotTable()
 {
     // Only dotOffset has a located Coda-era source. The other selector meanings remain
     // unresolved and therefore retain their seeded values or explicit legacy behavior.
-    static const MappingTable table{
-        .reportPrefix = augmentationDotReportPrefix,
+    static const MappingTable table{.reportPrefix = augmentationDotReportPrefix,
         .epochs = EpochMask::CodaBanner,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<AugmentationDotTarget>,
@@ -59,8 +51,7 @@ const MappingTable& codaAugmentationDotTable()
 
 const MappingTable& fixedRowAugmentationDotTable()
 {
-    static const MappingTable table{
-        .reportPrefix = augmentationDotReportPrefix,
+    static const MappingTable table{.reportPrefix = augmentationDotReportPrefix,
         .epochs = EpochMask::FixedRow,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<AugmentationDotTarget>,
@@ -71,8 +62,7 @@ const MappingTable& fixedRowAugmentationDotTable()
 
 const MappingTable& classAugmentationDotTable()
 {
-    static const MappingTable table{
-        .reportPrefix = augmentationDotReportPrefix,
+    static const MappingTable table{.reportPrefix = augmentationDotReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -86,9 +76,8 @@ const MappingTable& classAugmentationDotTable()
 
 void importAugmentationDotOptions(const ImportContext& context)
 {
-    applyMappingTables({&codaAugmentationDotTable(), &fixedRowAugmentationDotTable(),
-                           &classAugmentationDotTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&codaAugmentationDotTable(), &fixedRowAugmentationDotTable(), &classAugmentationDotTable()}, context.index, context.profile,
+        context.document, context.report);
 
     const auto pooled = context.document->getOptions()->get<AugmentationDotTarget>();
     if (!pooled) {
@@ -98,15 +87,13 @@ void importAugmentationDotOptions(const ImportContext& context)
 
     if (sourceMatches(context.profile, EpochMask::CodaBanner)) {
         target->adjMultipleVoices = false;
-        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template behaviorField<AugmentationDotTarget>("adjMultipleVoices", 0);
-        });
+        withReporting(context.report,
+            [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<AugmentationDotTarget>("adjMultipleVoices", 0); });
     }
 
     target->useLegacyFlippedStemPositioning = false;
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<AugmentationDotTarget>(
-            "useLegacyFlippedStemPositioning", 0);
+        reporting.template behaviorField<AugmentationDotTarget>("useLegacyFlippedStemPositioning", 0);
     });
 }
 

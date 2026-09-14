@@ -40,39 +40,54 @@ struct Filters
 
 bool identityMatches(const Filters& filters, const records::LegacyRow& row)
 {
-    if (filters.identity && row.tag != *filters.identity) return false;
-    if (filters.cmper && row.cmper1 != *filters.cmper) return false;
+    if (filters.identity && row.tag != *filters.identity) {
+        return false;
+    }
+    if (filters.cmper && row.cmper1 != *filters.cmper) {
+        return false;
+    }
     return true;
 }
 
 void dumpPool(const char* name, const records::LegacyRowPool& pool, const Filters& filters)
 {
-    if (!filters.pool.empty() && filters.pool != name) return;
+    if (!filters.pool.empty() && filters.pool != name) {
+        return;
+    }
     std::printf("=== %s (%zu rows) ===\n", name, pool.size());
     // The pool has no public iteration, so walk the identities it reports.
     for (std::uint32_t identity = 0; identity <= 0xffffU; ++identity) {
         const auto tag = static_cast<records::LegacyTag>(identity);
-        if (filters.identity && tag != *filters.identity) continue;
+        if (filters.identity && tag != *filters.identity) {
+            continue;
+        }
         for (const auto partId : pool.partIdsForTag(tag)) {
-            if (filters.partId && partId != *filters.partId) continue;
-            for (const auto cmper : pool.cmpersForTag(tag, partId)) {
-            if (filters.cmper && cmper != *filters.cmper) continue;
-            for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper, partId)) {
-                const auto rows = pool.getArray(tag, cmper, cmper2, partId);
-                for (const auto& row : rows) {
-                    if (!identityMatches(filters, row)) continue;
-                    std::printf("%-4s 0x%04x part=%-4u cmper=%-6u cmper2=%-6u inci=%-4u words=[",
-                        records::tagText(tag).c_str(), tag, row.partId, row.cmper1, row.cmper2,
-                        row.inci);
-                    for (std::uint8_t i = 0; i < row.wordCount; ++i) {
-                        std::printf("%s%6d", i ? " " : "", row.words[i]);
-                    }
-                    std::printf("] bytes=");
-                    const auto bytes = pool.payloadOf(row);
-                    for (const auto byte : bytes) std::printf("%02x", byte);
-                    std::printf(" block=0x%zx decoded=0x%zx\n", row.blockOffset, row.decodedOffset);
-                }
+            if (filters.partId && partId != *filters.partId) {
+                continue;
             }
+            for (const auto cmper : pool.cmpersForTag(tag, partId)) {
+                if (filters.cmper && cmper != *filters.cmper) {
+                    continue;
+                }
+                for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper, partId)) {
+                    const auto rows = pool.getArray(tag, cmper, cmper2, partId);
+                    for (const auto& row : rows) {
+                        if (!identityMatches(filters, row)) {
+                            continue;
+                        }
+                        std::printf("%-4s 0x%04x part=%-4u cmper=%-6u cmper2=%-6u inci=%-4u words=[", records::tagText(tag).c_str(), tag, row.partId,
+                            row.cmper1, row.cmper2, row.inci);
+                        for (std::uint8_t i = 0; i < row.wordCount; ++i) {
+                            std::printf("%s%6d", i ? " " : "", row.words[i]);
+                        }
+                        std::printf("] bytes=");
+                        const auto bytes = pool.payloadOf(row);
+                        for (const auto byte : bytes) {
+                            std::printf("%02x", byte);
+                        }
+                        std::printf(" block=0x%zx decoded=0x%zx\n", row.blockOffset, row.decodedOffset);
+                    }
+                }
             }
         }
     }
@@ -83,9 +98,8 @@ void dumpPool(const char* name, const records::LegacyRowPool& pool, const Filter
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        std::fprintf(stderr,
-            "usage: record_dump <file> [--tag=XX|--class=0xNNNN] [--cmper=N] [--part=N]"
-            " [--pool=others|details|class]\n");
+        std::fprintf(stderr, "usage: record_dump <file> [--tag=XX|--class=0xNNNN] [--cmper=N] [--part=N]"
+                             " [--pool=others|details|class]\n");
         return 2;
     }
 
@@ -120,8 +134,9 @@ int main(int argc, char** argv)
     // order the container settled on. Guessing it from the header outside this tool is what
     // made an earlier probe read four little-endian files as big-endian.
     std::printf("epoch=%d byteOrder=%s\n", static_cast<int>(parsed.formatEpoch),
-        parsed.byteOrder == ByteOrder::BigEndian ? "big"
-            : parsed.byteOrder == ByteOrder::LittleEndian ? "little" : "unknown");
+        parsed.byteOrder == ByteOrder::BigEndian      ? "big"
+        : parsed.byteOrder == ByteOrder::LittleEndian ? "little"
+                                                      : "unknown");
     const auto index = records::LegacyRecordIndex::build(parsed);
     dumpPool("others", index.getOthers(), filters);
     dumpPool("details", index.getDetails(), filters);

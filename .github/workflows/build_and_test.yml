@@ -17,6 +17,25 @@ permissions:
   contents: read
 
 jobs:
+  codestyle:
+    name: Code style / clang-format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install clang-format
+        run: pip install clang-format==19.1.6
+
+      - name: Verify formatting
+        run: python scripts/check_format.py
+
   build-and-test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}

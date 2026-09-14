@@ -30,8 +30,7 @@ inline constexpr int windowsAnsiCharset = 0;
 inline constexpr int windowsDefaultCharset = 1;
 
 /// @brief What bytes using a font absent from the document are known to represent.
-enum class UnresolvedFontFallback
-{
+enum class UnresolvedFontFallback {
     Text,
     Symbol,
 };
@@ -50,8 +49,7 @@ enum class UnresolvedFontFallback
 ///
 /// Symbol fonts are not special-cased. `calcIsSymbolFont` describes how character codes in
 /// text *set in* that font map to glyphs; the font's own name is ordinary platform text.
-std::string toUtf8(std::string_view source,
-    musx::dom::others::FontDefinition::CharacterSetBank bank, int charsetVal);
+std::string toUtf8(std::string_view source, musx::dom::others::FontDefinition::CharacterSetBank bank, int charsetVal);
 
 /// @brief Converts legacy text through a packed font character set.
 /// @details The high nibble names the bank and the low twelve bits name its character set.
@@ -82,8 +80,8 @@ std::string utf16LeToUtf8(std::span<const std::uint8_t> source);
 /// @details A resolved font determines whether its bytes are text or glyph numbers. If the
 /// font is absent, @p unresolvedFontFallback supplies that fact. Text uses the source
 /// platform's default encoding; symbol bytes retain their numeric glyph values.
-std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
+std::string toUtf8(
+    std::string_view source, const musx::dom::DocumentPtr& document, musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
 
 /// @brief Whether a byte is ASCII whitespace, for whichever integral or character type it
 /// arrives as (`char`, `unsigned char`, `std::uint8_t`, and so on).
@@ -110,8 +108,8 @@ bool isSpace(T ch)
 std::string normalizeLineBreaks(std::string source);
 
 /// @brief Converts one legacy font character to the code point musxdom stores.
-char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
+char32_t codepointFromByte(
+    std::uint8_t stored, const musx::dom::DocumentPtr& document, musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback);
 
 } // namespace text
 } // namespace finale_mus_reader

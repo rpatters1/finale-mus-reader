@@ -45,12 +45,10 @@ constexpr std::array flagOptionsDefaultDifferenceLeaves{
 bool isFlagOptionsLeaf(std::string_view path, std::string_view leaf)
 {
     constexpr std::string_view prefix = "flag_options.";
-    return path.size() == prefix.size() + leaf.size() &&
-        path.starts_with(prefix) && path.ends_with(leaf);
+    return path.size() == prefix.size() + leaf.size() && path.starts_with(prefix) && path.ends_with(leaf);
 }
 
-std::optional<DifferenceClassification>
-classifyFlagOptionsDifference(const DifferenceContext& context)
+std::optional<DifferenceClassification> classifyFlagOptionsDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
     if (context.category == Differs && context.origin == "finale27-default") {
@@ -67,39 +65,26 @@ Value observeFlagOptions(const SurveyContext& ctx)
 {
     using Target = musx::dom::options::FlagOptions;
     const auto options = ctx.document->getOptions()->get<Target>();
-    if (!options) return {};
-    auto result = observe(*options, ctx,
-        field("straight_flags", &Target::straightFlags),
-        field(flagOptionsUpHAdjLeaf, &Target::upHAdj),
-        field("down_h_adj", &Target::downHAdj),
-        field(flagOptionsUpHAdj2Leaf, &Target::upHAdj2),
-        field("down_h_adj2", &Target::downHAdj2),
-        field(flagOptionsUpHAdj16Leaf, &Target::upHAdj16),
-        field("down_h_adj16", &Target::downHAdj16),
-        field(flagOptionsEighthFlagHoistLeaf, &Target::eighthFlagHoist),
-        field("st_up_h_adj", &Target::stUpHAdj),
-        field("st_down_h_adj", &Target::stDownHAdj),
-        field(flagOptionsUpVAdjLeaf, &Target::upVAdj),
-        field(flagOptionsDownVAdjLeaf, &Target::downVAdj),
-        field(flagOptionsUpVAdj2Leaf, &Target::upVAdj2),
-        field(flagOptionsDownVAdj2Leaf, &Target::downVAdj2),
-        field(flagOptionsUpVAdj16Leaf, &Target::upVAdj16),
-        field(flagOptionsDownVAdj16Leaf, &Target::downVAdj16),
-        field("st_up_v_adj", &Target::stUpVAdj),
-        field(flagOptionsStDownVAdjLeaf, &Target::stDownVAdj),
-        field(flagOptionsFlagSpacingLeaf, &Target::flagSpacing),
-        field(flagOptionsSecondaryGroupAdjLeaf, &Target::secondaryGroupAdj));
-    for (const auto* member : {"straightFlags", "upHAdj", "downHAdj", "upHAdj2",
-             "downHAdj2", "upHAdj16", "downHAdj16", "eighthFlagHoist", "stUpHAdj",
-             "stDownHAdj", "upVAdj", "downVAdj", "upVAdj2", "downVAdj2", "upVAdj16",
-             "downVAdj16", "stUpVAdj", "stDownVAdj", "flagSpacing", "secondaryGroupAdj"}) {
-        result.asObject().emplace(std::string("origin_") + member,
-            fieldOrigin<Target>(ctx, member));
+    if (!options) {
+        return {};
+    }
+    auto result = observe(*options, ctx, field("straight_flags", &Target::straightFlags), field(flagOptionsUpHAdjLeaf, &Target::upHAdj),
+        field("down_h_adj", &Target::downHAdj), field(flagOptionsUpHAdj2Leaf, &Target::upHAdj2), field("down_h_adj2", &Target::downHAdj2),
+        field(flagOptionsUpHAdj16Leaf, &Target::upHAdj16), field("down_h_adj16", &Target::downHAdj16),
+        field(flagOptionsEighthFlagHoistLeaf, &Target::eighthFlagHoist), field("st_up_h_adj", &Target::stUpHAdj),
+        field("st_down_h_adj", &Target::stDownHAdj), field(flagOptionsUpVAdjLeaf, &Target::upVAdj), field(flagOptionsDownVAdjLeaf, &Target::downVAdj),
+        field(flagOptionsUpVAdj2Leaf, &Target::upVAdj2), field(flagOptionsDownVAdj2Leaf, &Target::downVAdj2),
+        field(flagOptionsUpVAdj16Leaf, &Target::upVAdj16), field(flagOptionsDownVAdj16Leaf, &Target::downVAdj16),
+        field("st_up_v_adj", &Target::stUpVAdj), field(flagOptionsStDownVAdjLeaf, &Target::stDownVAdj),
+        field(flagOptionsFlagSpacingLeaf, &Target::flagSpacing), field(flagOptionsSecondaryGroupAdjLeaf, &Target::secondaryGroupAdj));
+    for (const auto* member :
+        {"straightFlags", "upHAdj", "downHAdj", "upHAdj2", "downHAdj2", "upHAdj16", "downHAdj16", "eighthFlagHoist", "stUpHAdj", "stDownHAdj",
+            "upVAdj", "downVAdj", "upVAdj2", "downVAdj2", "upVAdj16", "downVAdj16", "stUpVAdj", "stDownVAdj", "flagSpacing", "secondaryGroupAdj"}) {
+        result.asObject().emplace(std::string("origin_") + member, fieldOrigin<Target>(ctx, member));
     }
     return result;
 }
 
-COVERAGE_CLASS("options", "flag_options", observeFlagOptions,
-    classifyFlagOptionsDifference);
+COVERAGE_CLASS("options", "flag_options", observeFlagOptions, classifyFlagOptionsDifference);
 
 } // namespace

@@ -111,8 +111,14 @@ constexpr std::uint32_t ssLineUnicodeCharSlot(std::uint32_t slot)
 // word stream, so a logical slot is already its absolute word index; the zlib class payload
 // states the same stream by byte. Only the wide layout needs to distinguish the Char parameter
 // block from everything else, so the earlier encodings supply the same function twice.
-constexpr std::uint32_t ssLineRowWord(std::uint32_t slot) { return slot; }
-constexpr std::uint32_t ssLineNarrowByte(std::uint32_t slot) { return classWordOffset(slot); }
+constexpr std::uint32_t ssLineRowWord(std::uint32_t slot)
+{
+    return slot;
+}
+constexpr std::uint32_t ssLineNarrowByte(std::uint32_t slot)
+{
+    return classWordOffset(slot);
+}
 constexpr std::uint32_t ssLineWideByte(std::uint32_t slot)
 {
     return classWordOffset(ssLineUnicodeSlot(slot));
@@ -167,8 +173,7 @@ bool ssLineIsDashed(const void* instance)
 
 bool ssLineCapIsArrowhead(CustomLine::LineCapType cap)
 {
-    return cap == CustomLine::LineCapType::ArrowheadPreset
-        || cap == CustomLine::LineCapType::ArrowheadCustom;
+    return cap == CustomLine::LineCapType::ArrowheadPreset || cap == CustomLine::LineCapType::ArrowheadCustom;
 }
 
 bool ssLineStartIsArrowhead(const void* instance)
@@ -178,8 +183,7 @@ bool ssLineStartIsArrowhead(const void* instance)
 
 bool ssLineStartIsHook(const void* instance)
 {
-    return static_cast<const CustomLine*>(instance)->lineCapStartType
-        == CustomLine::LineCapType::Hook;
+    return static_cast<const CustomLine*>(instance)->lineCapStartType == CustomLine::LineCapType::Hook;
 }
 
 bool ssLineEndIsArrowhead(const void* instance)
@@ -189,8 +193,7 @@ bool ssLineEndIsArrowhead(const void* instance)
 
 bool ssLineEndIsHook(const void* instance)
 {
-    return static_cast<const CustomLine*>(instance)->lineCapEndType
-        == CustomLine::LineCapType::Hook;
+    return static_cast<const CustomLine*>(instance)->lineCapEndType == CustomLine::LineCapType::Hook;
 }
 
 /// @brief Creates one line style with all three parameter blocks allocated.
@@ -200,11 +203,12 @@ bool ssLineEndIsHook(const void* instance)
 /// @ref ssLineFinalize drops the two the record does not select, so the finished
 /// object carries exactly the block its line style names, as musxdom documents.
 MappingTarget createSmartShapeCustomLine(
-    const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
-    const records::LegacyRow& row, std::uint16_t cmper)
+    const musx::dom::DocumentPtr& document, const RecordFamilySource& source, const records::LegacyRow& row, std::uint16_t cmper)
 {
     auto instance = createOthersRecordTarget<CustomLine>(document, source, row, cmper);
-    if (!instance) return {};
+    if (!instance) {
+        return {};
+    }
     instance->charParams = std::make_shared<CustomLine::CharParams>(instance);
     instance->solidParams = std::make_shared<CustomLine::SolidParams>(instance);
     instance->dashedParams = std::make_shared<CustomLine::DashedParams>(instance);
@@ -223,8 +227,7 @@ MappingTarget createSmartShapeCustomLine(
 /// From Finale 2012 the record stores a code point outright and there is nothing to decode.
 /// @ref versions::storesUnicodeCodepoints is the same question the wide table's gate asks, so
 /// the two cannot disagree about where that boundary falls.
-void ssLineFinalize(void* instance, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document)
+void ssLineFinalize(void* instance, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
 {
     auto* line = static_cast<CustomLine*>(instance);
     if (line->lineStyle != CustomLine::LineStyle::Char) {
@@ -243,8 +246,7 @@ void ssLineFinalize(void* instance, const SourceProfile& profile,
     // strength of a font that is not there would be a guess, where the byte is what the file
     // actually holds and stays recoverable.
     line->charParams->lineChar = text::codepointFromByte(
-        static_cast<std::uint8_t>(line->charParams->lineChar),
-        document, line->charParams->font->fontId, text::UnresolvedFontFallback::Symbol);
+        static_cast<std::uint8_t>(line->charParams->lineChar), document, line->charParams->font->fontId, text::UnresolvedFontFallback::Symbol);
 }
 
 // The layout is one fact stated in three addressings, so the row list is written once here
@@ -254,72 +256,47 @@ void ssLineFinalize(void* instance, const SourceProfile& profile,
 // Row order carries meaning: a row whose destination exists only for some records tests a
 // field of the same record, and the machinery applies rows in this order, so every such row
 // follows the row that reads the slot deciding it.
-#define SS_LINE_FIELD_LIST \
-    SS_LINE_ENUM(ssLineStyleSlot, lineStyle, ssLineStyleFromRaw(value)), \
-    SS_LINE_CHAR, \
-    SS_LINE_CHAR_WORD(ssLineFontIdSlot, charParams->font->fontId), \
-    SS_LINE_CHAR_WORD(ssLineFontSizeSlot, charParams->font->fontSize), \
-    /* The style mask is decoded by musxdom, which owns what its bits mean. */ \
-    SS_LINE_CHAR_SET(ssLineFontEfxSlot, charParams->font, effects, setEnigmaStyles, \
-        std::uint16_t), \
-    SS_LINE_CHAR_WORD(ssLineBaselineShiftSlot, charParams->baselineShiftEms), \
-    SS_LINE_WORD_IF(ssLineWidthSlot, &ssLineIsSolid, solidParams->lineWidth), \
-    SS_LINE_WORD_IF(ssLineWidthSlot, &ssLineIsDashed, dashedParams->lineWidth), \
-    SS_LINE_WORD_IF(ssLineDashOnSlot, &ssLineIsDashed, dashedParams->dashOn), \
-    SS_LINE_WORD_IF(ssLineDashOffSlot, &ssLineIsDashed, dashedParams->dashOff), \
-    SS_LINE_ENUM(ssLineCapStartTypeSlot, lineCapStartType, ssLineCapFromRaw(value)), \
-    SS_LINE_ENUM(ssLineCapEndTypeSlot, lineCapEndType, ssLineCapFromRaw(value)), \
-    SS_LINE_WORD_IF(ssLineCapStartValueSlot, &ssLineStartIsArrowhead, lineCapStartArrowId), \
-    SS_LINE_WORD_IF(ssLineCapStartValueSlot, &ssLineStartIsHook, lineCapStartHookLength), \
-    SS_LINE_WORD_IF(ssLineCapEndValueSlot, &ssLineEndIsArrowhead, lineCapEndArrowId), \
-    SS_LINE_WORD_IF(ssLineCapEndValueSlot, &ssLineEndIsHook, lineCapEndHookLength), \
-    SS_LINE_BIT(ssLineFlagsSlot, ssLineMakeHorzBit, makeHorz), \
-    SS_LINE_BIT(ssLineFlagsSlot, ssLineAfterLeftStartTextBit, lineAfterLeftStartText), \
-    SS_LINE_BIT(ssLineFlagsSlot, ssLineBeforeRightEndTextBit, lineBeforeRightEndText), \
-    SS_LINE_BIT(ssLineFlagsSlot, ssLineAfterLeftContTextBit, lineAfterLeftContText), \
-    SS_LINE_WORD(ssLineLeftStartTextSlot, leftStartRawTextId), \
-    SS_LINE_WORD(ssLineLeftContTextSlot, leftContRawTextId), \
-    SS_LINE_WORD(ssLineRightEndTextSlot, rightEndRawTextId), \
-    SS_LINE_WORD(ssLineCenterFullTextSlot, centerFullRawTextId), \
-    SS_LINE_WORD(ssLineCenterAbbrTextSlot, centerAbbrRawTextId), \
-    SS_LINE_WORD(ssLineLeftStartXSlot, leftStartX), \
-    SS_LINE_WORD(ssLineLeftStartYSlot, leftStartY), \
-    SS_LINE_WORD(ssLineLeftContXSlot, leftContX), \
-    SS_LINE_WORD(ssLineLeftContYSlot, leftContY), \
-    SS_LINE_WORD(ssLineRightEndXSlot, rightEndX), \
-    SS_LINE_WORD(ssLineRightEndYSlot, rightEndY), \
-    SS_LINE_WORD(ssLineCenterFullXSlot, centerFullX), \
-    SS_LINE_WORD(ssLineCenterFullYSlot, centerFullY), \
-    SS_LINE_WORD(ssLineCenterAbbrXSlot, centerAbbrX), \
-    SS_LINE_WORD(ssLineCenterAbbrYSlot, centerAbbrY), \
-    SS_LINE_WORD(ssLineStartXSlot, lineStartX), \
-    SS_LINE_WORD(ssLineStartYSlot, lineStartY), \
-    SS_LINE_WORD(ssLineEndXSlot, lineEndX), \
-    SS_LINE_WORD(ssLineEndYSlot, lineEndY), \
-    SS_LINE_WORD(ssLineContXSlot, lineContX)
+#define SS_LINE_FIELD_LIST                                                                                                                          \
+    SS_LINE_ENUM(ssLineStyleSlot, lineStyle, ssLineStyleFromRaw(value)), SS_LINE_CHAR,                                                              \
+        SS_LINE_CHAR_WORD(ssLineFontIdSlot, charParams->font->fontId),                                                                              \
+        SS_LINE_CHAR_WORD(                                                                                                                          \
+            ssLineFontSizeSlot, charParams->font->fontSize),    /* The style mask is decoded by musxdom, which owns what its bits mean. */             \
+        SS_LINE_CHAR_SET(ssLineFontEfxSlot, charParams->font, effects, setEnigmaStyles, std::uint16_t),                                             \
+        SS_LINE_CHAR_WORD(ssLineBaselineShiftSlot, charParams->baselineShiftEms),                                                                   \
+        SS_LINE_WORD_IF(ssLineWidthSlot, &ssLineIsSolid, solidParams->lineWidth),                                                                   \
+        SS_LINE_WORD_IF(ssLineWidthSlot, &ssLineIsDashed, dashedParams->lineWidth),                                                                 \
+        SS_LINE_WORD_IF(ssLineDashOnSlot, &ssLineIsDashed, dashedParams->dashOn),                                                                   \
+        SS_LINE_WORD_IF(ssLineDashOffSlot, &ssLineIsDashed, dashedParams->dashOff),                                                                 \
+        SS_LINE_ENUM(ssLineCapStartTypeSlot, lineCapStartType, ssLineCapFromRaw(value)),                                                            \
+        SS_LINE_ENUM(ssLineCapEndTypeSlot, lineCapEndType, ssLineCapFromRaw(value)),                                                                \
+        SS_LINE_WORD_IF(ssLineCapStartValueSlot, &ssLineStartIsArrowhead, lineCapStartArrowId),                                                     \
+        SS_LINE_WORD_IF(ssLineCapStartValueSlot, &ssLineStartIsHook, lineCapStartHookLength),                                                       \
+        SS_LINE_WORD_IF(ssLineCapEndValueSlot, &ssLineEndIsArrowhead, lineCapEndArrowId),                                                           \
+        SS_LINE_WORD_IF(ssLineCapEndValueSlot, &ssLineEndIsHook, lineCapEndHookLength), SS_LINE_BIT(ssLineFlagsSlot, ssLineMakeHorzBit, makeHorz),  \
+        SS_LINE_BIT(ssLineFlagsSlot, ssLineAfterLeftStartTextBit, lineAfterLeftStartText),                                                          \
+        SS_LINE_BIT(ssLineFlagsSlot, ssLineBeforeRightEndTextBit, lineBeforeRightEndText),                                                          \
+        SS_LINE_BIT(ssLineFlagsSlot, ssLineAfterLeftContTextBit, lineAfterLeftContText), SS_LINE_WORD(ssLineLeftStartTextSlot, leftStartRawTextId), \
+        SS_LINE_WORD(ssLineLeftContTextSlot, leftContRawTextId), SS_LINE_WORD(ssLineRightEndTextSlot, rightEndRawTextId),                           \
+        SS_LINE_WORD(ssLineCenterFullTextSlot, centerFullRawTextId), SS_LINE_WORD(ssLineCenterAbbrTextSlot, centerAbbrRawTextId),                   \
+        SS_LINE_WORD(ssLineLeftStartXSlot, leftStartX), SS_LINE_WORD(ssLineLeftStartYSlot, leftStartY),                                             \
+        SS_LINE_WORD(ssLineLeftContXSlot, leftContX), SS_LINE_WORD(ssLineLeftContYSlot, leftContY), SS_LINE_WORD(ssLineRightEndXSlot, rightEndX),   \
+        SS_LINE_WORD(ssLineRightEndYSlot, rightEndY), SS_LINE_WORD(ssLineCenterFullXSlot, centerFullX),                                             \
+        SS_LINE_WORD(ssLineCenterFullYSlot, centerFullY), SS_LINE_WORD(ssLineCenterAbbrXSlot, centerAbbrX),                                         \
+        SS_LINE_WORD(ssLineCenterAbbrYSlot, centerAbbrY), SS_LINE_WORD(ssLineStartXSlot, lineStartX), SS_LINE_WORD(ssLineStartYSlot, lineStartY),   \
+        SS_LINE_WORD(ssLineEndXSlot, lineEndX), SS_LINE_WORD(ssLineEndYSlot, lineEndY), SS_LINE_WORD(ssLineContXSlot, lineContX)
 
 // Fixed rows, Finale 2000 through 2006. The character is one word, narrowed to its low byte
 // because a source may store it either zero- or sign-extended.
-#define SS_LINE_WORD(slot, member) \
-    MUS_WORD(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), member)
-#define SS_LINE_WORD_IF(slot, applies, member) \
-    MUS_WORD_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), \
-        applies, member)
-#define SS_LINE_BIT(slot, bitIndex, member) \
-    MUS_BIT(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), \
-        bitIndex, member)
+#define SS_LINE_WORD(slot, member) MUS_WORD(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), member)
+#define SS_LINE_WORD_IF(slot, applies, member) MUS_WORD_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), applies, member)
+#define SS_LINE_BIT(slot, bitIndex, member) MUS_BIT(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), bitIndex, member)
 #define SS_LINE_ENUM(slot, member, conversion) \
-    MUS_BITS_AS(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), \
-        0, 0, member, conversion)
-#define SS_LINE_CHAR_WORD(slot, member) \
-    MUS_WORD_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), \
-        &ssLineIsChar, member)
+    MUS_BITS_AS(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), 0, 0, member, conversion)
+#define SS_LINE_CHAR_WORD(slot, member) MUS_WORD_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), &ssLineIsChar, member)
 #define SS_LINE_CHAR_SET(slot, owner, field, setter, Stored) \
-    MUS_SET_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), \
-        &ssLineIsChar, owner, field, setter, Stored)
-#define SS_LINE_CHAR \
-    MUS_WORD_AS_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, \
-        ssLineRowWord(ssLineCharSlot), &ssLineIsChar, charParams->lineChar, \
+    MUS_SET_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(slot), &ssLineIsChar, owner, field, setter, Stored)
+#define SS_LINE_CHAR                                                                                                                       \
+    MUS_WORD_AS_IF(CustomLine, SS_LINE_TAG_TEXT, CMPER_FROM_TARGET, 0, ssLineRowWord(ssLineCharSlot), &ssLineIsChar, charParams->lineChar, \
         narrowCodepoint(static_cast<std::int16_t>(value)))
 
 const FieldMapping ssLineFixedRowFields[] = {SS_LINE_FIELD_LIST};
@@ -334,25 +311,15 @@ const FieldMapping ssLineFixedRowFields[] = {SS_LINE_FIELD_LIST};
 
 // Class records, Finale 2007 through 2011: the same word stream addressed by byte, and the
 // same one-word character.
-#define SS_LINE_WORD(slot, member) \
-    MUS_CLASS_WORD(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), member)
-#define SS_LINE_WORD_IF(slot, applies, member) \
-    MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), \
-        applies, member)
-#define SS_LINE_BIT(slot, bitIndex, member) \
-    MUS_CLASS_BIT(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), \
-        bitIndex, member)
-#define SS_LINE_ENUM(slot, member, conversion) \
-    MUS_CLASS_BITS_AS(CustomLine, ssLineClass, ssLineNarrowByte(slot), 0, 0, member, conversion)
-#define SS_LINE_CHAR_WORD(slot, member) \
-    MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), \
-        &ssLineIsChar, member)
+#define SS_LINE_WORD(slot, member) MUS_CLASS_WORD(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), member)
+#define SS_LINE_WORD_IF(slot, applies, member) MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), applies, member)
+#define SS_LINE_BIT(slot, bitIndex, member) MUS_CLASS_BIT(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), bitIndex, member)
+#define SS_LINE_ENUM(slot, member, conversion) MUS_CLASS_BITS_AS(CustomLine, ssLineClass, ssLineNarrowByte(slot), 0, 0, member, conversion)
+#define SS_LINE_CHAR_WORD(slot, member) MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), &ssLineIsChar, member)
 #define SS_LINE_CHAR_SET(slot, owner, field, setter, Stored) \
-    MUS_CLASS_SET_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), \
-        &ssLineIsChar, owner, field, setter, Stored)
-#define SS_LINE_CHAR \
-    MUS_CLASS_WORD_AS_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, \
-        ssLineNarrowByte(ssLineCharSlot), &ssLineIsChar, charParams->lineChar, \
+    MUS_CLASS_SET_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(slot), &ssLineIsChar, owner, field, setter, Stored)
+#define SS_LINE_CHAR                                                                                                                        \
+    MUS_CLASS_WORD_AS_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineNarrowByte(ssLineCharSlot), &ssLineIsChar, charParams->lineChar, \
         narrowCodepoint(static_cast<std::int16_t>(value)))
 
 const FieldMapping ssLineNarrowClassFields[] = {SS_LINE_FIELD_LIST};
@@ -368,25 +335,15 @@ const FieldMapping ssLineNarrowClassFields[] = {SS_LINE_FIELD_LIST};
 // Class records from Finale 2012, where the character became a 32-bit codepoint across two
 // words and shifted everything after it. The low half comes first, which is the same word
 // order @ref wideCodepoint states for the passes that read a word stream directly.
-#define SS_LINE_WORD(slot, member) \
-    MUS_CLASS_WORD(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), member)
-#define SS_LINE_WORD_IF(slot, applies, member) \
-    MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), \
-        applies, member)
-#define SS_LINE_BIT(slot, bitIndex, member) \
-    MUS_CLASS_BIT(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), \
-        bitIndex, member)
-#define SS_LINE_ENUM(slot, member, conversion) \
-    MUS_CLASS_BITS_AS(CustomLine, ssLineClass, ssLineWideByte(slot), 0, 0, member, conversion)
-#define SS_LINE_CHAR_WORD(slot, member) \
-    MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideCharByte(slot), \
-        &ssLineIsChar, member)
+#define SS_LINE_WORD(slot, member) MUS_CLASS_WORD(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), member)
+#define SS_LINE_WORD_IF(slot, applies, member) MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), applies, member)
+#define SS_LINE_BIT(slot, bitIndex, member) MUS_CLASS_BIT(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideByte(slot), bitIndex, member)
+#define SS_LINE_ENUM(slot, member, conversion) MUS_CLASS_BITS_AS(CustomLine, ssLineClass, ssLineWideByte(slot), 0, 0, member, conversion)
+#define SS_LINE_CHAR_WORD(slot, member) MUS_CLASS_WORD_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideCharByte(slot), &ssLineIsChar, member)
 #define SS_LINE_CHAR_SET(slot, owner, field, setter, Stored) \
-    MUS_CLASS_SET_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideCharByte(slot), \
-        &ssLineIsChar, owner, field, setter, Stored)
-#define SS_LINE_CHAR \
-    MUS_CLASS_LONG_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, \
-        ssLineWideCharByte(ssLineCharSlot), LongWordOrder::LowFirst, &ssLineIsChar, \
+    MUS_CLASS_SET_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideCharByte(slot), &ssLineIsChar, owner, field, setter, Stored)
+#define SS_LINE_CHAR                                                                                                                          \
+    MUS_CLASS_LONG_IF(CustomLine, ssLineClass, CMPER_FROM_TARGET, ssLineWideCharByte(ssLineCharSlot), LongWordOrder::LowFirst, &ssLineIsChar, \
         charParams->lineChar)
 
 const FieldMapping ssLineWideClassFields[] = {SS_LINE_FIELD_LIST};
@@ -406,8 +363,7 @@ const FieldMapping ssLineWideClassFields[] = {SS_LINE_FIELD_LIST};
 // stated and none is needed.
 const MappingTable& ssLineFixedRowTable()
 {
-    static const MappingTable table{
-        .reportPrefix = ssLineReportPrefix,
+    static const MappingTable table{.reportPrefix = ssLineReportPrefix,
         .epochs = EpochMask::FixedRow,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = ssLineTag,
@@ -425,8 +381,7 @@ const MappingTable& ssLineFixedRowTable()
 // says Finale 2012.
 const MappingTable& ssLineNarrowClassTable()
 {
-    static const MappingTable table{
-        .reportPrefix = ssLineReportPrefix,
+    static const MappingTable table{.reportPrefix = ssLineReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OthersFromRecords,
@@ -441,11 +396,9 @@ const MappingTable& ssLineNarrowClassTable()
 const MappingTable& ssLineWideClassTable()
 {
     static constexpr auto sourceHasWideCharacters = [](const SourceProfile& profile) {
-        return sourceAtOrAfter(profile, FormatEpoch::ZlibLegacy,
-            versions::finale2012);
+        return sourceAtOrAfter(profile, FormatEpoch::ZlibLegacy, versions::finale2012);
     };
-    static const MappingTable table{
-        .reportPrefix = ssLineReportPrefix,
+    static const MappingTable table{.reportPrefix = ssLineReportPrefix,
         .epochs = EpochMask::Zlib,
         .sourceApplies = sourceHasWideCharacters,
         .encoding = RecordEncoding::ClassRecord,
@@ -465,23 +418,19 @@ void importSmartShapeCustomLines(const ImportContext& context)
     // These tables construct only the custom lines stored by the source. Smart Shape options
     // independently request the baseline lines required by formats that predate this class;
     // deferred reference resolution adds those after every source-owned pool has been read.
-    applyMappingTables({&ssLineFixedRowTable(), &ssLineNarrowClassTable(),
-                           &ssLineWideClassTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&ssLineFixedRowTable(), &ssLineNarrowClassTable(), &ssLineWideClassTable()}, context.index, context.profile, context.document,
+        context.report);
 
     // Every font comparator this import leaves in the document must be registered, or
     // musxdom supplies no placeholder definition for it and `FontInfo::getName` throws. Only
     // a Char line has a font, and only after the tables have settled which lines those are.
-    for (const auto& line : context.document->getOthers()
-             ->getArray<CustomLine>(musx::dom::SCORE_PARTID)) {
+    for (const auto& line : context.document->getOthers()->getArray<CustomLine>(musx::dom::SCORE_PARTID)) {
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.report().setInstanceOrigin(reporting.template instanceKey<CustomLine>(
-                                                     musx::dom::SCORE_PARTID, line->getCmper()),
-                Reporting::Origin::LegacyMus);
+            reporting.report().setInstanceOrigin(
+                reporting.template instanceKey<CustomLine>(musx::dom::SCORE_PARTID, line->getCmper()), Reporting::Origin::LegacyMus);
         });
         if (line->charParams) {
-            line->charParams->font->fontId = context.construction.assignFontId(
-                line->charParams->font->fontId);
+            line->charParams->font->fontId = context.construction.assignFontId(line->charParams->font->fontId);
         }
     }
 }

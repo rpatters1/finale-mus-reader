@@ -46,15 +46,13 @@ musx::dom::DocumentPtr makeMmRestDocument()
 void testMmRestEarlyLayoutMarker()
 {
     using MmRest = musx::dom::options::MultimeasureRestOptions;
-    const auto runImport = [](const std::vector<SyntheticRow>& rows,
-                               const SourceProfile& profile, ImportReport& report) {
+    const auto runImport = [](const std::vector<SyntheticRow>& rows, const SourceProfile& profile, ImportReport& report) {
         const auto document = makeMmRestDocument();
         const auto reference = makeMmRestDocument();
         const auto index = LegacyRecordIndex::build(makeContainer(rows));
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{
-            index, profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importMultimeasureRestOptions(context);
         return document->getOptions()->get<MmRest>();
     };
@@ -76,22 +74,17 @@ void testMmRestEarlyLayoutMarker()
     for (const auto& profile : {profileFor(3, 0), profileFor(3, 2), profileFor(15, 0), coda}) {
         ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(early, profile, report);
-        expectMapping(options->measWidth == 320 && options->numAdjY == -20
-                && options->shapeDef == 5,
+        expectMapping(options->measWidth == 320 && options->numAdjY == -20 && options->shapeDef == 5,
             "The early multimeasure-rest layout was not read from its own slots");
-        expectMapping(options->numStart == 2 && options->useSymsThreshold == 9
-                && options->symSpacing == 48,
+        expectMapping(options->numStart == 2 && options->useSymsThreshold == 9 && options->symSpacing == 48,
             "The early layout disturbed a field the baseline supplies");
         // The three the baseline gets wrong for this era, plus the Finale 27 option no legacy
         // era has at all.
-        expectMapping(options->startAdjust == 0 && options->endAdjust == 0
-                && !options->autoUpdateMmRests && !options->noHorizontalStretch,
+        expectMapping(options->startAdjust == 0 && options->endAdjust == 0 && !options->autoUpdateMmRests && !options->noHorizontalStretch,
             "An early document inherited a value its era cannot have stated");
-        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin
-                == ValueOrigin::LegacyBehavior,
+        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin == ValueOrigin::LegacyBehavior,
             "An asserted early value was not reported as era behavior");
-        expectMapping(field(report, "options.multimeasureRestOptions.symSpacing").origin
-                == ValueOrigin::Finale27Default,
+        expectMapping(field(report, "options.multimeasureRestOptions.symSpacing").origin == ValueOrigin::Finale27Default,
             "An early field the baseline supplies was claimed as read");
         // These documents recover shape 5 and define no shapes at all, which is the ordinary
         // Finale case rather than a fault: hundreds of corpus documents name an H-bar shape
@@ -99,8 +92,7 @@ void testMmRestEarlyLayoutMarker()
         // filtering for real problems does not see several hundred false ones.
         expectMapping(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
                           [](const finale_mus_reader::Diagnostic& entry) {
-                              return entry.level == musx::util::Logger::LogLevel::Info
-                                  && entry.message.find("H-bar") != std::string::npos;
+                              return entry.level == musx::util::Logger::LogLevel::Info && entry.message.find("H-bar") != std::string::npos;
                           }),
             "A multimeasure-rest H-bar naming an undefined shape was not noted at Info");
     }
@@ -108,30 +100,24 @@ void testMmRestEarlyLayoutMarker()
     // The same reader on the two-incidence record, including under versions that predate the
     // boundary and under the Coda-banner epoch. Whatever a file claims to be, the record it
     // carries is what decides: the epoch mask says only that these are 16-byte rows.
-    for (const auto& profile :
-            {profileFor(3, 0), profileFor(3, 5), profileFor(15, 0), coda}) {
+    for (const auto& profile : {profileFor(3, 0), profileFor(3, 5), profileFor(15, 0), coda}) {
         ImportReport report(FormatEpoch::UncompressedLegacy);
         const auto options = runImport(later, profile, report);
-        expectMapping(options->measWidth == 216 && options->numAdjY == -20
-                && options->shapeDef == 5 && options->numStart == 3
-                && options->useSymsThreshold == 11,
+        expectMapping(options->measWidth == 216 && options->numAdjY == -20 && options->shapeDef == 5 && options->numStart == 3
+                          && options->useSymsThreshold == 11,
             "The later multimeasure-rest layout was not read from its own slots");
-        expectMapping(options->symSpacing == 60 && options->numAdjX == -4
-                && options->startAdjust == 12 && options->endAdjust == -12
-                && options->useSymbols,
+        expectMapping(
+            options->symSpacing == 60 && options->numAdjX == -4 && options->startAdjust == 12 && options->endAdjust == -12 && options->useSymbols,
             "The later layout's second incidence was not read");
-        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin
-                == ValueOrigin::LegacyMus,
+        expectMapping(field(report, "options.multimeasureRestOptions.startAdjust").origin == ValueOrigin::LegacyMus,
             "A recovered H-bar adjustment was reported as era behavior");
         // Asserted in every era, not only the early one, because no legacy format has it.
         expectMapping(!options->noHorizontalStretch
-                && field(report, "options.multimeasureRestOptions.noHorizontalStretch").origin
-                    == ValueOrigin::LegacyBehavior,
+                          && field(report, "options.multimeasureRestOptions.noHorizontalStretch").origin == ValueOrigin::LegacyBehavior,
             "A later-layout document inherited the baseline's horizontal-stretch setting");
         // Selector 83 is still absent, which is what a Finale 3.5 or 3.7 document looks like.
-        expectMapping(!options->autoUpdateMmRests
-                && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin
-                    == ValueOrigin::LegacyBehavior,
+        expectMapping(
+            !options->autoUpdateMmRests && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin == ValueOrigin::LegacyBehavior,
             "A document without selector 83 kept the baseline's automatic-update setting");
     }
 
@@ -140,19 +126,15 @@ void testMmRestEarlyLayoutMarker()
     auto withUpdate = later;
     withUpdate.push_back({GLOBALS_CMPER, "83", {0, 0, 1, 0, 1, 0}});
     const auto options = runImport(withUpdate, profileFor(5, 0), report);
-    expectMapping(options->autoUpdateMmRests
-            && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin
-                == ValueOrigin::LegacyMus,
+    expectMapping(options->autoUpdateMmRests && field(report, "options.multimeasureRestOptions.autoUpdateMmRests").origin == ValueOrigin::LegacyMus,
         "The automatic-update word was not read from selector 83");
-
 }
 
 void testMultimeasureRestRecovery()
 {
     using MmRest = musx::dom::options::MultimeasureRestOptions;
     const auto read = [](const char* relative) {
-        return Reader::readWithReport<TestXmlDocument>(
-            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+        return Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     struct Expected
     {
@@ -171,40 +153,27 @@ void testMultimeasureRestRecovery()
     // other, which is what shows the pair is read rather than guessed. Read through the later
     // table, the Finale 2.6.3 fixture would report a shape of 0 and a number adjustment of 24.
     const Expected fixtures[] = {
-        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner,
-            360, 12, 0, 0, 0, false, false},
-        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner,
-            320, -28, 1, 0, 0, false, false},
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner, 360, 12, 0, 0, 0, false, false},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner, 320, -28, 1, 0, 0, false, false},
         // The later fixed-row layout, across both epochs that carry it. Finale 3.7.2 has the
         // two-incidence record but no selector 83 at all, and Finale 97 is the one tracked
         // fixture that sets the character-rest-style flag.
-        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy,
-            360, -12, 1, 0, 0, false, false},
-        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy,
-            216, -28, 1, 0, 0, true, false},
-        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy,
-            360, -12, 1, 0, 0, false, false},
-        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy,
-            360, -12, 1, 0, 0, false, false},
+        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy, 360, -12, 1, 0, 0, false, false},
+        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy, 216, -28, 1, 0, 0, true, false},
+        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy, 360, -12, 1, 0, 0, false, false},
+        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy, 360, -12, 1, 0, 0, false, false},
         // The zlib era in both byte orders. Finale 2012 is the fixture that exercises the
         // second row through the class encoding: it is the only one whose H-bar adjustments
         // are not zero, and reading them from the wrong offsets would leave them so.
-        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy,
-            360, -12, 1, 0, 0, false, true},
-        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy,
-            360, -32, 1, 30, -30, false, true},
+        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy, 360, -12, 1, 0, 0, false, true},
+        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy, 360, -32, 1, 30, -30, false, true},
     };
     for (const auto& fixture : fixtures) {
         const auto result = read(fixture.path);
-        expect(result.report.formatEpoch == fixture.epoch,
-            std::string("The fixture for ") + fixture.era + " is not the expected epoch");
+        expect(result.report.formatEpoch == fixture.epoch, std::string("The fixture for ") + fixture.era + " is not the expected epoch");
         const auto mmRest = result.document->getOptions()->get<MmRest>();
-        expect(static_cast<bool>(mmRest),
-            std::string("No multimeasure rest options for ") + fixture.era);
-        const auto wrong = [&](const char* name) {
-            return std::string("The multimeasure rest ") + name + " was wrong for "
-                + fixture.era;
-        };
+        expect(static_cast<bool>(mmRest), std::string("No multimeasure rest options for ") + fixture.era);
+        const auto wrong = [&](const char* name) { return std::string("The multimeasure rest ") + name + " was wrong for " + fixture.era; };
         expect(mmRest->measWidth == fixture.measWidth, wrong("measure width"));
         expect(mmRest->numAdjY == fixture.numAdjY, wrong("vertical number adjustment"));
         expect(mmRest->shapeDef == fixture.shapeDef, wrong("H-bar shape"));
@@ -215,15 +184,12 @@ void testMultimeasureRestRecovery()
         // "Stretch Horizontally" arrived with Finale 27, so no legacy era can state it and
         // every fixture must report it as known-false rather than as a synthesized default.
         expect(!mmRest->noHorizontalStretch, wrong("horizontal stretch flag"));
-        expect(field(result, "options.multimeasureRestOptions.noHorizontalStretch").origin
-                == ValueOrigin::LegacyBehavior,
+        expect(field(result, "options.multimeasureRestOptions.noHorizontalStretch").origin == ValueOrigin::LegacyBehavior,
             wrong("horizontal stretch provenance"));
         // Three values no document in either corpus varies, and every companion agrees with
         // the pinned baseline on all three. The early era does not store them at all, so this
         // also checks that its shorter record leaves them alone rather than reading past it.
-        expect(mmRest->numStart == 2 && mmRest->useSymsThreshold == 9
-                && mmRest->symSpacing == 48 && mmRest->numAdjX == 0,
-            wrong("unvaried group"));
+        expect(mmRest->numStart == 2 && mmRest->useSymsThreshold == 9 && mmRest->symSpacing == 48 && mmRest->numAdjX == 0, wrong("unvaried group"));
     }
 
     // Provenance separates the two fixed-row layouts where the values cannot. Finale 3.7.2
@@ -231,44 +197,43 @@ void testMultimeasureRestRecovery()
     // to read them from, so they are asserted as era behavior rather than claimed as read or
     // left at the baseline's 30 and -30.
     const auto f263 = read("evidence/F263/F263-baseline.mus");
-    for (const char* target : {"options.multimeasureRestOptions.startAdjust",
-             "options.multimeasureRestOptions.endAdjust",
+    for (const char* target : {"options.multimeasureRestOptions.startAdjust", "options.multimeasureRestOptions.endAdjust",
              "options.multimeasureRestOptions.autoUpdateMmRests"}) {
-        expect(field(f263, target).origin == ValueOrigin::LegacyBehavior,
-            std::string("A Coda-era field the source cannot state was not reported as era "
-                        "behavior: ")
-                + target);
+        expect(
+            field(f263, target).origin == ValueOrigin::LegacyBehavior, std::string("A Coda-era field the source cannot state was not reported as era "
+                                                                                   "behavior: ")
+                                                                           + target);
     }
-    expect(field(f263, "options.multimeasureRestOptions.numAdjY").origin
-                == ValueOrigin::LegacyMus
-            && field(f263, "options.multimeasureRestOptions.numAdjY").rawValue == -28,
+    expect(field(f263, "options.multimeasureRestOptions.numAdjY").origin == ValueOrigin::LegacyMus
+               && field(f263, "options.multimeasureRestOptions.numAdjY").rawValue == -28,
         "The Coda-era number adjustment was not reported as read from slot 4");
-    expect(field(f263, "options.multimeasureRestOptions.symSpacing").origin
-            == ValueOrigin::Finale27Default,
+    expect(field(f263, "options.multimeasureRestOptions.symSpacing").origin == ValueOrigin::Finale27Default,
         "A Coda-era field the source does not store was claimed as read");
 
     const auto f372 = read("evidence/F372/F372-baseline.mus");
-    expect(field(f372, "options.multimeasureRestOptions.startAdjust").origin
-            == ValueOrigin::LegacyMus,
+    expect(field(f372, "options.multimeasureRestOptions.startAdjust").origin == ValueOrigin::LegacyMus,
         "The Finale 3.7.2 start adjustment was not read from its second incidence");
     // Selector 83 arrives with Finale 97, so a 3.7.2 document states nothing about automatic
     // updating and must not inherit the baseline's switched-on value.
-    expect(field(f372, "options.multimeasureRestOptions.autoUpdateMmRests").origin
-            == ValueOrigin::LegacyBehavior,
+    expect(field(f372, "options.multimeasureRestOptions.autoUpdateMmRests").origin == ValueOrigin::LegacyBehavior,
         "A Finale 3.7.2 document claimed an automatic-update setting its era has no record for");
     const auto f97 = read("evidence/F97/Fin97-baseline.mus");
-    expect(field(f97, "options.multimeasureRestOptions.autoUpdateMmRests").origin
-            == ValueOrigin::LegacyMus,
+    expect(field(f97, "options.multimeasureRestOptions.autoUpdateMmRests").origin == ValueOrigin::LegacyMus,
         "The Finale 97 automatic-update word was not read from selector 83");
     // Word 2 of that record is also set in most later documents and is not this flag. Reading
     // it instead would switch automatic updating on for the whole Finale 97 to 2006 corpus.
-    expect(!f97.document->getOptions()->get<MmRest>()->autoUpdateMmRests,
-        "The Finale 97 automatic-update flag was read from the wrong word");
+    expect(!f97.document->getOptions()->get<MmRest>()->autoUpdateMmRests, "The Finale 97 automatic-update flag was read from the wrong word");
 }
 
-TEST_CASE("Multimeasure rest recovery", "[class][reader]") { testMultimeasureRestRecovery(); }
+TEST_CASE("Multimeasure rest recovery", "[class][reader]")
+{
+    testMultimeasureRestRecovery();
+}
 
-TEST_CASE("Multimeasure rest layout marker", "[class]") { testMmRestEarlyLayoutMarker(); }
+TEST_CASE("Multimeasure rest layout marker", "[class]")
+{
+    testMmRestEarlyLayoutMarker();
+}
 
 TEST_CASE("Finale normalizes a zero multimeasure-rest number threshold", "[coverage]")
 {
@@ -277,12 +242,10 @@ TEST_CASE("Finale normalizes a zero multimeasure-rest number threshold", "[cover
     const Value one(1);
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
-    DifferenceContext context{"mmrest_options.num_start", DifferenceCategory::Differs, "legacy-mus",
-        zero, one, leaves, leaves, finale_mus_reader::FormatEpoch::UncompressedLegacy,
-        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    DifferenceContext context{"mmrest_options.num_start", DifferenceCategory::Differs, "legacy-mus", zero, one, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
 
-    REQUIRE(classifyMultimeasureRestOptionsDifference(context) ==
-            DifferenceClassification::FinaleUpgradeNormalization);
+    REQUIRE(classifyMultimeasureRestOptionsDifference(context) == DifferenceClassification::FinaleUpgradeNormalization);
 
     context.origin = "finale27-default";
     REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(context));
@@ -290,9 +253,8 @@ TEST_CASE("Finale normalizes a zero multimeasure-rest number threshold", "[cover
     context.path = "mmrest_options.use_syms_threshold";
     REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(context));
 
-    const DifferenceContext reverse{"mmrest_options.num_start", DifferenceCategory::Differs,
-        "legacy-mus", one, zero, leaves, leaves, finale_mus_reader::FormatEpoch::UncompressedLegacy,
-        finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
+    const DifferenceContext reverse{"mmrest_options.num_start", DifferenceCategory::Differs, "legacy-mus", one, zero, leaves, leaves,
+        finale_mus_reader::FormatEpoch::UncompressedLegacy, finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
     REQUIRE_FALSE(classifyMultimeasureRestOptionsDifference(reverse));
 }
 

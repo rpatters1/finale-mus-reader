@@ -33,13 +33,16 @@ void censusPool(const char* poolName, const records::LegacyRowPool& pool)
     for (std::uint32_t identity = 0; identity <= 0xffffU; ++identity) {
         const auto tag = static_cast<records::LegacyTag>(identity);
         const auto rows = pool.getArray(tag, globalsCmper);
-        if (rows.empty()) continue;
+        if (rows.empty()) {
+            continue;
+        }
         std::size_t bytes = 0;
-        for (const auto& row : rows) bytes += row.payloadSize;
+        for (const auto& row : rows) {
+            bytes += row.payloadSize;
+        }
         // Print both spellings: a pre-2007 identity reads as two characters, a
         // 2007+ class id reads as a number, and neither alone is unambiguous.
-        std::printf(" %s/%s(0x%04x)x%zu=%zub", poolName,
-            records::tagText(tag).c_str(), tag, rows.size(), bytes);
+        std::printf(" %s/%s(0x%04x)x%zu=%zub", poolName, records::tagText(tag).c_str(), tag, rows.size(), bytes);
     }
 }
 
@@ -59,7 +62,9 @@ int main(int argc, char** argv)
 
     std::string path;
     while (std::getline(list, path)) {
-        if (path.empty()) continue;
+        if (path.empty()) {
+            continue;
+        }
         std::ifstream in(path, std::ios::binary);
         std::vector<std::uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
         if (data.empty()) {

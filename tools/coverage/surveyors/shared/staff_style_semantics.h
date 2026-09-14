@@ -27,8 +27,7 @@ constexpr std::string_view transpositionMaskSuffix = ".masks.transposition";
 constexpr std::string_view fullNameMaskSuffix = ".masks.full_name";
 constexpr std::string_view abrvNameMaskSuffix = ".masks.abrv_name";
 constexpr std::string_view classifierMaskPrefix = "_classifier_masks.";
-constexpr std::string_view classifierAggregateOtherAttachedItems =
-    "_classifier_aggregate_other_attached_items";
+constexpr std::string_view classifierAggregateOtherAttachedItems = "_classifier_aggregate_other_attached_items";
 constexpr std::string_view classifierAssignmentCount = "_classifier_assignment_count";
 
 struct InstrumentMask
@@ -37,55 +36,41 @@ struct InstrumentMask
     std::string_view valueSuffix;
 };
 
-constexpr InstrumentMask instrumentOnlyMasks[] = {
-    {notationStyleMaskSuffix, ".notation_style"},
-    {defaultClefMaskSuffix, ".default_clef"},
-    {showNoteColorsMaskSuffix, ".show_note_colors"},
-    {hideKeySigsShowAccisMaskSuffix, ".hide_key_sigs_show_accis"}};
+constexpr InstrumentMask instrumentOnlyMasks[] = {{notationStyleMaskSuffix, ".notation_style"}, {defaultClefMaskSuffix, ".default_clef"},
+    {showNoteColorsMaskSuffix, ".show_note_colors"}, {hideKeySigsShowAccisMaskSuffix, ".hide_key_sigs_show_accis"}};
 
-constexpr std::string_view instrumentRequiredSharedMasks[] = {
-    staffTypeMaskSuffix, transpositionMaskSuffix, fullNameMaskSuffix, abrvNameMaskSuffix};
+constexpr std::string_view instrumentRequiredSharedMasks[] = {staffTypeMaskSuffix, transpositionMaskSuffix, fullNameMaskSuffix, abrvNameMaskSuffix};
 
 inline bool isInstrumentMask(std::string_view suffix)
 {
-    return std::ranges::any_of(instrumentOnlyMasks,
-                               [&](const auto& field) { return suffix == field.maskSuffix; }) ||
-           std::ranges::find(instrumentRequiredSharedMasks, suffix) !=
-               std::ranges::end(instrumentRequiredSharedMasks);
+    return std::ranges::any_of(instrumentOnlyMasks, [&](const auto& field) { return suffix == field.maskSuffix; })
+           || std::ranges::find(instrumentRequiredSharedMasks, suffix) != std::ranges::end(instrumentRequiredSharedMasks);
 }
 
-inline bool hasActiveMask(const ComparisonLeaves& leaves, std::string_view prefix,
-                          std::string_view suffix)
+inline bool hasActiveMask(const ComparisonLeaves& leaves, std::string_view prefix, std::string_view suffix)
 {
     const auto found = leaves.find(std::string(prefix) + std::string(suffix));
     return found != leaves.end() && found->second.first.isBool() && found->second.first.asBool();
 }
 
-inline bool hasActiveInstrumentMask(const ComparisonLeaves& leaves, std::string_view prefix,
-                                    std::string_view maskSuffix,
-                                    std::string_view maskContainer = "masks.")
+inline bool hasActiveInstrumentMask(
+    const ComparisonLeaves& leaves, std::string_view prefix, std::string_view maskSuffix, std::string_view maskContainer = "masks.")
 {
     constexpr std::string_view maskPrefix = ".masks.";
-    return maskSuffix.starts_with(maskPrefix) &&
-           hasActiveMask(leaves, prefix,
-                         "." + std::string(maskContainer) +
-                             std::string(maskSuffix.substr(maskPrefix.size())));
+    return maskSuffix.starts_with(maskPrefix)
+           && hasActiveMask(leaves, prefix, "." + std::string(maskContainer) + std::string(maskSuffix.substr(maskPrefix.size())));
 }
 
-inline bool hasAnyInstrumentOnlyMask(const ComparisonLeaves& leaves, std::string_view prefix,
-                                     std::string_view maskContainer = "masks.")
+inline bool hasAnyInstrumentOnlyMask(const ComparisonLeaves& leaves, std::string_view prefix, std::string_view maskContainer = "masks.")
 {
-    return std::ranges::any_of(instrumentOnlyMasks, [&](const auto& field) {
-        return hasActiveInstrumentMask(leaves, prefix, field.maskSuffix, maskContainer);
-    });
+    return std::ranges::any_of(
+        instrumentOnlyMasks, [&](const auto& field) { return hasActiveInstrumentMask(leaves, prefix, field.maskSuffix, maskContainer); });
 }
 
-inline bool hasAllRequiredInstrumentMasks(const ComparisonLeaves& leaves, std::string_view prefix,
-                                          std::string_view maskContainer = "masks.")
+inline bool hasAllRequiredInstrumentMasks(const ComparisonLeaves& leaves, std::string_view prefix, std::string_view maskContainer = "masks.")
 {
-    return std::ranges::all_of(instrumentRequiredSharedMasks, [&](const auto suffix) {
-        return hasActiveInstrumentMask(leaves, prefix, suffix, maskContainer);
-    });
+    return std::ranges::all_of(
+        instrumentRequiredSharedMasks, [&](const auto suffix) { return hasActiveInstrumentMask(leaves, prefix, suffix, maskContainer); });
 }
 
 struct ValueMask
@@ -130,32 +115,24 @@ constexpr ValueMask valueMasks[] = {
     {".hide_key_sigs_show_accis", hideKeySigsShowAccisMaskSuffix},
 };
 
-constexpr std::string_view tablatureOnlyValueSuffixes[] = {
-    ".capo_pos",
-    ".lowest_fret",
-    ".vert_tab_num_off",
-    ".show_tab_clef_all_sys",
-    ".use_tab_letters",
-    ".break_tab_lines_at_notes",
-    ".hide_tuplets",
-    ".fret_inst_id"};
+constexpr std::string_view tablatureOnlyValueSuffixes[] = {".capo_pos", ".lowest_fret", ".vert_tab_num_off", ".show_tab_clef_all_sys",
+    ".use_tab_letters", ".break_tab_lines_at_notes", ".hide_tuplets", ".fret_inst_id"};
 
 inline bool isTablatureOnlyValue(std::string_view relativePath)
 {
-    return std::ranges::find(tablatureOnlyValueSuffixes, relativePath) !=
-           std::ranges::end(tablatureOnlyValueSuffixes);
+    return std::ranges::find(tablatureOnlyValueSuffixes, relativePath) != std::ranges::end(tablatureOnlyValueSuffixes);
 }
 
 inline void removeInactiveTablatureValues(Value::Object& style)
 {
     const auto notation = style.find("notation_style");
-    if (notation != style.end() && notation->second.isInteger() &&
-        notation->second.asInteger() ==
-            static_cast<std::int64_t>(SurveyTarget::NotationStyle::Tablature)) {
+    if (notation != style.end() && notation->second.isInteger()
+        && notation->second.asInteger() == static_cast<std::int64_t>(SurveyTarget::NotationStyle::Tablature)) {
         return;
     }
-    for (const auto suffix : tablatureOnlyValueSuffixes)
+    for (const auto suffix : tablatureOnlyValueSuffixes) {
         style.erase(std::string(suffix.substr(1)));
+    }
 }
 
 inline std::optional<std::string_view> maskForValue(std::string_view relativePath)
@@ -166,69 +143,59 @@ inline std::optional<std::string_view> maskForValue(std::string_view relativePat
     if (relativePath == ".notation_style" || isTablatureOnlyValue(relativePath)) {
         return notationStyleMaskSuffix;
     }
-    if (relativePath == ".staff_lines" || relativePath == ".custom_staff" ||
-        comparisonPathStartsWith(relativePath, ".custom_staff[") || relativePath == ".line_space" ||
-        relativePath == ".top_barline_offset" || relativePath == ".bot_barline_offset" ||
-        relativePath == ".dw_rest_offset" || relativePath == ".w_rest_offset" ||
-        relativePath == ".h_rest_offset" || relativePath == ".other_rest_offset" ||
-        relativePath == ".bot_repeat_dot_off" || relativePath == ".top_repeat_dot_off" ||
-        relativePath == ".stem_reversal" || relativePath == ".hide_repeat_bottom_dot" ||
-        relativePath == ".hide_repeat_top_dot") {
+    if (relativePath == ".staff_lines" || relativePath == ".custom_staff" || comparisonPathStartsWith(relativePath, ".custom_staff[")
+        || relativePath == ".line_space" || relativePath == ".top_barline_offset" || relativePath == ".bot_barline_offset"
+        || relativePath == ".dw_rest_offset" || relativePath == ".w_rest_offset" || relativePath == ".h_rest_offset"
+        || relativePath == ".other_rest_offset" || relativePath == ".bot_repeat_dot_off" || relativePath == ".top_repeat_dot_off"
+        || relativePath == ".stem_reversal" || relativePath == ".hide_repeat_bottom_dot" || relativePath == ".hide_repeat_top_dot") {
         return staffTypeMaskSuffix;
     }
-    if (relativePath == ".transposed_clef" ||
-        comparisonPathStartsWith(relativePath, ".transposition.")) {
+    if (relativePath == ".transposed_clef" || comparisonPathStartsWith(relativePath, ".transposition.")) {
         return transpositionMaskSuffix;
     }
-    if (relativePath == ".alt_notation" || relativePath == ".alt_layer" ||
-        comparisonPathStartsWith(relativePath, ".alt_hide_") ||
-        relativePath == ".alt_rhythm_stems_up" || relativePath == ".alt_slash_dots") {
+    if (relativePath == ".alt_notation" || relativePath == ".alt_layer" || comparisonPathStartsWith(relativePath, ".alt_hide_")
+        || relativePath == ".alt_rhythm_stems_up" || relativePath == ".alt_slash_dots") {
         return ".masks.alt_notation";
     }
-    if (relativePath == ".hide_stems" || relativePath == ".stem_direction" ||
-        relativePath == ".hide_beams" || relativePath == ".stem_start_from_staff" ||
-        relativePath == ".stems_fixed_end" || relativePath == ".stems_fixed_start" ||
-        relativePath == ".horz_stem_off_up" || relativePath == ".horz_stem_off_down" ||
-        relativePath == ".vert_stem_start_off_up" || relativePath == ".vert_stem_start_off_down" ||
-        relativePath == ".vert_stem_end_off_up" || relativePath == ".vert_stem_end_off_down") {
+    if (relativePath == ".hide_stems" || relativePath == ".stem_direction" || relativePath == ".hide_beams"
+        || relativePath == ".stem_start_from_staff" || relativePath == ".stems_fixed_end" || relativePath == ".stems_fixed_start"
+        || relativePath == ".horz_stem_off_up" || relativePath == ".horz_stem_off_down" || relativePath == ".vert_stem_start_off_up"
+        || relativePath == ".vert_stem_start_off_down" || relativePath == ".vert_stem_end_off_up" || relativePath == ".vert_stem_end_off_down") {
         return ".masks.show_stems";
     }
     for (const auto& mapping : valueMasks) {
-        if (relativePath == mapping.valueSuffix)
+        if (relativePath == mapping.valueSuffix) {
             return mapping.maskSuffix;
+        }
     }
     return std::nullopt;
 }
 
-inline bool usesAggregateOtherAttachedItems(const finale_mus_reader::ImportReport& report,
-                                            musx::dom::Cmper cmper)
+inline bool usesAggregateOtherAttachedItems(const finale_mus_reader::ImportReport& report, musx::dom::Cmper cmper)
 {
-    const auto instance =
-        finale_mus_reader::instanceKey<SurveyTarget>(musx::dom::SCORE_PARTID, cmper);
+    const auto instance = finale_mus_reader::instanceKey<SurveyTarget>(musx::dom::SCORE_PARTID, cmper);
     const auto fields = report.fields.find(instance);
-    if (fields == report.fields.end())
+    if (fields == report.fields.end()) {
         return false;
+    }
     const auto articulations = fields->second.find("altHideOtherArtics");
     const auto smartShapes = fields->second.find("altHideOtherSmartShapes");
-    return articulations != fields->second.end() && smartShapes != fields->second.end() &&
-           articulations->second.blockOffset == smartShapes->second.blockOffset &&
-           articulations->second.decodedOffset == smartShapes->second.decodedOffset &&
-           articulations->second.sourceIdentity == smartShapes->second.sourceIdentity;
+    return articulations != fields->second.end() && smartShapes != fields->second.end()
+           && articulations->second.blockOffset == smartShapes->second.blockOffset
+           && articulations->second.decodedOffset == smartShapes->second.decodedOffset
+           && articulations->second.sourceIdentity == smartShapes->second.sourceIdentity;
 }
 
 inline Value::Object observe(const SurveyTarget& style, const SurveyContext& context)
 {
     auto object = staff_fields::observeStaffLike(style, context);
-    staff_fields::addStaffLikeLeaf(object, style, context, "styleName", "style_name",
-                                   style.styleName);
+    staff_fields::addStaffLikeLeaf(object, style, context, "styleName", "style_name", style.styleName);
     staff_fields::addStaffLikeLeaf(object, style, context, "copyable", "copyable", style.copyable);
-    staff_fields::addStaffLikeLeaf(object, style, context, "addToMenu", "add_to_menu",
-                                   style.addToMenu);
+    staff_fields::addStaffLikeLeaf(object, style, context, "addToMenu", "add_to_menu", style.addToMenu);
 
     Value::Object masks;
-#define STAFF_STYLE_SEMANTIC_MASK_LEAF(member, leaf)                                               \
-    staff_fields::addStaffLikeLeaf(masks, style, context, "masks." #member, #member, #leaf,        \
-                                   style.masks ? style.masks->member : false)
+#define STAFF_STYLE_SEMANTIC_MASK_LEAF(member, leaf) \
+    staff_fields::addStaffLikeLeaf(masks, style, context, "masks." #member, #member, #leaf, style.masks ? style.masks->member : false)
     STAFF_STYLE_SEMANTIC_MASK_LEAF(floatNoteheadFont, float_notehead_font);
     STAFF_STYLE_SEMANTIC_MASK_LEAF(useNoteShapes, use_note_shapes);
     STAFF_STYLE_SEMANTIC_MASK_LEAF(flatBeams, flat_beams);
@@ -278,38 +245,36 @@ inline Value::Object observe(const SurveyTarget& style, const SurveyContext& con
 inline bool activeMask(const Value::Object& style, std::string_view maskSuffix)
 {
     constexpr std::string_view prefix = ".masks.";
-    if (!maskSuffix.starts_with(prefix))
+    if (!maskSuffix.starts_with(prefix)) {
         return false;
+    }
     const auto* masks = [&]() -> const Value* {
         const auto found = style.find("masks");
         return found == style.end() ? nullptr : &found->second;
     }();
-    if (!masks || !masks->isObject())
+    if (!masks || !masks->isObject()) {
         return false;
+    }
     const auto* mask = masks->find(maskSuffix.substr(prefix.size()));
     return mask && mask->isBool() && mask->asBool();
 }
 
-inline void addCanonicalPatchLeaf(Value::Object& result, std::string path, const Value& value,
-                                  const Value::Object& parent, std::string_view leaf)
+inline void addCanonicalPatchLeaf(Value::Object& result, std::string path, const Value& value, const Value::Object& parent, std::string_view leaf)
 {
     const auto key = path.substr(1);
     result.insert_or_assign(key, value);
-    if (const auto origin = parent.find(originKeyForLeaf(leaf));
-        origin != parent.end() && origin->second.isString()) {
+    if (const auto origin = parent.find(originKeyForLeaf(leaf)); origin != parent.end() && origin->second.isString()) {
         result.insert_or_assign(key + "_origin", origin->second);
     }
 }
 
-inline void collectActiveValues(const Value& value, std::string path, const Value::Object& style,
-                                Value::Object& result, const Value::Object* parent = nullptr,
-                                std::string_view leaf = {})
+inline void collectActiveValues(const Value& value, std::string path, const Value::Object& style, Value::Object& result,
+    const Value::Object* parent = nullptr, std::string_view leaf = {})
 {
     if (value.isObject()) {
         for (const auto& [key, child] : value.asObject()) {
-            if (key == "masks" || key == "style_name" || key == "copyable" ||
-                key == "add_to_menu" || key == "cmper" || key == "part_id" || key == "share_mode" ||
-                key == "origin" || key.starts_with("origin_")) {
+            if (key == "masks" || key == "style_name" || key == "copyable" || key == "add_to_menu" || key == "cmper" || key == "part_id"
+                || key == "share_mode" || key == "origin" || key.starts_with("origin_")) {
                 continue;
             }
             collectActiveValues(child, path + "." + key, style, result, &value.asObject(), key);
@@ -317,23 +282,25 @@ inline void collectActiveValues(const Value& value, std::string path, const Valu
         return;
     }
     const auto mask = maskForValue(path);
-    if (mask && activeMask(style, *mask) && parent)
+    if (mask && activeMask(style, *mask) && parent) {
         addCanonicalPatchLeaf(result, std::move(path), value, *parent, leaf);
+    }
 }
 
-inline Value::Object canonicalPatch(const Value::Object& style,
-                                    bool aggregateOtherAttachedItems = false)
+inline Value::Object canonicalPatch(const Value::Object& style, bool aggregateOtherAttachedItems = false)
 {
     Value::Object result;
     const auto masks = style.find("masks");
     if (masks != style.end() && masks->second.isObject()) {
         for (const auto& [name, value] : masks->second.asObject()) {
-            if (!name.starts_with("origin_") && value.isBool() && value.asBool())
+            if (!name.starts_with("origin_") && value.isBool() && value.asBool()) {
                 result.emplace(std::string(classifierMaskPrefix) + name, true);
+            }
         }
     }
-    if (aggregateOtherAttachedItems)
+    if (aggregateOtherAttachedItems) {
         result.emplace(std::string(classifierAggregateOtherAttachedItems), true);
+    }
     collectActiveValues(Value(style), {}, style, result);
     return result;
 }

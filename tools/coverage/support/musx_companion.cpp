@@ -32,8 +32,8 @@ std::uint16_t readU16(const std::uint8_t* data)
 
 std::uint32_t readU32(const std::uint8_t* data)
 {
-    return static_cast<std::uint32_t>(data[0]) | (static_cast<std::uint32_t>(data[1]) << 8)
-        | (static_cast<std::uint32_t>(data[2]) << 16) | (static_cast<std::uint32_t>(data[3]) << 24);
+    return static_cast<std::uint32_t>(data[0]) | (static_cast<std::uint32_t>(data[1]) << 8) | (static_cast<std::uint32_t>(data[2]) << 16)
+           | (static_cast<std::uint32_t>(data[3]) << 24);
 }
 
 std::vector<std::uint8_t> readWholeFile(const std::filesystem::path& path)
@@ -64,8 +64,7 @@ std::size_t findEndOfCentralDirectory(const std::vector<std::uint8_t>& data)
     if (data.size() < recordSize) {
         throw std::runtime_error("Companion is too small to be a ZIP archive");
     }
-    const auto searchStart = data.size() >= recordSize + maxCommentSize
-        ? data.size() - recordSize - maxCommentSize : 0;
+    const auto searchStart = data.size() >= recordSize + maxCommentSize ? data.size() - recordSize - maxCommentSize : 0;
     for (std::size_t at = data.size() - recordSize + 1; at-- > searchStart;) {
         if (readU32(data.data() + at) == endOfCentralDirectorySignature) {
             return at;
@@ -95,8 +94,7 @@ std::map<std::string, DirectoryEntry> listEntries(const std::vector<std::uint8_t
     std::map<std::string, DirectoryEntry> entries;
     for (std::uint16_t index = 0; index < entryCount; ++index) {
         constexpr std::size_t headerSize = 46;
-        if (at + headerSize > data.size()
-            || readU32(data.data() + at) != centralDirectoryHeaderSignature) {
+        if (at + headerSize > data.size() || readU32(data.data() + at) != centralDirectoryHeaderSignature) {
             throw std::runtime_error("Companion's ZIP central directory is malformed");
         }
         const auto method = readU16(data.data() + at + 10);
@@ -109,17 +107,14 @@ std::map<std::string, DirectoryEntry> listEntries(const std::vector<std::uint8_t
         if (at + headerSize + nameLength > data.size()) {
             throw std::runtime_error("Companion's ZIP central directory is malformed");
         }
-        std::string name(
-            reinterpret_cast<const char*>(data.data() + at + headerSize), nameLength);
-        entries.emplace(std::move(name),
-            DirectoryEntry{method, compressedSize, uncompressedSize, localHeaderOffset});
+        std::string name(reinterpret_cast<const char*>(data.data() + at + headerSize), nameLength);
+        entries.emplace(std::move(name), DirectoryEntry{method, compressedSize, uncompressedSize, localHeaderOffset});
         at += headerSize + nameLength + extraLength + commentLength;
     }
     return entries;
 }
 
-std::vector<std::uint8_t> extractStoredOrDeflated(
-    const std::vector<std::uint8_t>& data, const DirectoryEntry& entry, std::string_view name)
+std::vector<std::uint8_t> extractStoredOrDeflated(const std::vector<std::uint8_t>& data, const DirectoryEntry& entry, std::string_view name)
 {
     constexpr std::size_t headerSize = 30;
     const auto at = entry.localHeaderOffset;
@@ -130,8 +125,7 @@ std::vector<std::uint8_t> extractStoredOrDeflated(
     const auto extraLength = readU16(data.data() + at + 28);
     const auto dataStart = at + headerSize + nameLength + extraLength;
     if (dataStart + entry.compressedSize > data.size()) {
-        throw std::runtime_error(
-            "Companion's " + std::string(name) + " data runs past the end of the file");
+        throw std::runtime_error("Companion's " + std::string(name) + " data runs past the end of the file");
     }
     const auto* begin = data.data() + dataStart;
 
@@ -139,8 +133,7 @@ std::vector<std::uint8_t> extractStoredOrDeflated(
         return std::vector<std::uint8_t>(begin, begin + entry.compressedSize);
     }
     if (entry.compressionMethod != 8) {
-        throw std::runtime_error(
-            "Companion's " + std::string(name) + " uses an unsupported ZIP compression method");
+        throw std::runtime_error("Companion's " + std::string(name) + " uses an unsupported ZIP compression method");
     }
 
     z_stream stream{};
@@ -207,11 +200,9 @@ CompanionArchive readCompanionArchive(const std::filesystem::path& musxPath)
 
     const auto metadataEntry = entries.find(std::string(notationMetadataEntryName));
     if (metadataEntry != entries.end()) {
-        const auto bytes = extractStoredOrDeflated(
-            archive, metadataEntry->second, notationMetadataEntryName);
-        result.notationMetadata = std::vector<char>(
-            reinterpret_cast<const char*>(bytes.data()),
-            reinterpret_cast<const char*>(bytes.data() + bytes.size()));
+        const auto bytes = extractStoredOrDeflated(archive, metadataEntry->second, notationMetadataEntryName);
+        result.notationMetadata =
+            std::vector<char>(reinterpret_cast<const char*>(bytes.data()), reinterpret_cast<const char*>(bytes.data() + bytes.size()));
     }
 
     for (const auto& [name, entry] : entries) {
@@ -221,8 +212,7 @@ CompanionArchive readCompanionArchive(const std::filesystem::path& musxPath)
         // A directory entry ("graphics/" itself, or a nested one) carries no filename after
         // the prefix, or carries another slash in what follows it -- neither is one of the
         // flat files this reader actually embeds a graphic under.
-        const std::string_view filename(name.data() + graphicsEntryPrefix.size(),
-            name.size() - graphicsEntryPrefix.size());
+        const std::string_view filename(name.data() + graphicsEntryPrefix.size(), name.size() - graphicsEntryPrefix.size());
         if (filename.empty() || filename.find('/') != std::string_view::npos) {
             continue;
         }

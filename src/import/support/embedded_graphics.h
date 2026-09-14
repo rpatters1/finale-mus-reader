@@ -10,7 +10,6 @@
 namespace finale_mus_reader {
 
 /// @brief Recovers embedded graphic files from the container's stored graphic block.
-[[nodiscard]] musx::dom::EmbeddedGraphicsMap recoverEmbeddedGraphics(
-    const container::ParsedContainer& parsed, ImportReport& report);
+[[nodiscard]] musx::dom::EmbeddedGraphicsMap recoverEmbeddedGraphics(const container::ParsedContainer& parsed, ImportReport& report);
 
 } // namespace finale_mus_reader

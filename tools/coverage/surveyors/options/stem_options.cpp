@@ -23,36 +23,26 @@ std::optional<DifferenceClassification> classifyStemDifference(const DifferenceC
     if (const auto encodingError = classifyStemConnectionEncodingError(context)) {
         return encodingError;
     }
-    if (context.category == Differs &&
-        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
-        context.origin == "legacy-mus" &&
-        (context.path == "stem_options.stem_width" ||
-         context.path == "stem_options.stem_offset")) {
+    if (context.category == Differs && context.epoch == finale_mus_reader::FormatEpoch::CodaBanner && context.origin == "legacy-mus"
+        && (context.path == "stem_options.stem_width" || context.path == "stem_options.stem_offset")) {
         using Target = musx::dom::options::StemOptions;
         const auto* width = context.sourceReport.findField<Target>("stemWidth");
-        if (width && width->sourceIdentity &&
-            *width->sourceIdentity != finale_mus_reader::numericGlobalTag(
-                finale_mus_reader::codaMigratedPointSizeSelector)) {
+        if (width && width->sourceIdentity
+            && *width->sourceIdentity != finale_mus_reader::numericGlobalTag(finale_mus_reader::codaMigratedPointSizeSelector)) {
             return FinaleUpgradeLoss;
         }
     }
-    if (context.category == CompanionOnly &&
-        comparisonPathStartsWith(context.path, "stem_options.stem_connections[")) {
+    if (context.category == CompanionOnly && comparisonPathStartsWith(context.path, "stem_options.stem_connections[")) {
         return StemConnectionPastTerminator;
     }
-    if (context.path == "stem_options.stem_connections[0].up_stem_horz" &&
-        context.category == Differs && context.origin == "legacy-mus" &&
-        context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 &&
-        context.companionValue.isInteger() &&
-        std::set<std::int64_t>{199, 221, 589, 6969}.contains(context.companionValue.asInteger()) &&
-        comparisonEqualSurrounding(context.source, context.companion,
-                                   "stem_options.stem_connections[0].", context.path)) {
+    if (context.path == "stem_options.stem_connections[0].up_stem_horz" && context.category == Differs && context.origin == "legacy-mus"
+        && context.sourceValue.isInteger() && context.sourceValue.asInteger() == 0 && context.companionValue.isInteger()
+        && std::set<std::int64_t>{199, 221, 589, 6969}.contains(context.companionValue.asInteger())
+        && comparisonEqualSurrounding(context.source, context.companion, "stem_options.stem_connections[0].", context.path)) {
         return StemHorizontalCorrection;
     }
-    if (context.path == "stem_options.stem_connections[0].up_stem_horz" &&
-        context.category == Differs &&
-        context.epoch == finale_mus_reader::FormatEpoch::CodaBanner &&
-        context.origin == "legacy-mus") {
+    if (context.path == "stem_options.stem_connections[0].up_stem_horz" && context.category == Differs
+        && context.epoch == finale_mus_reader::FormatEpoch::CodaBanner && context.origin == "legacy-mus") {
         return DifferentDefaults;
     }
     return std::nullopt;
@@ -62,23 +52,17 @@ Value observeStemOptions(const SurveyContext& ctx)
 {
     using Target = musx::dom::options::StemOptions;
     const auto options = ctx.document->getOptions()->get<Target>();
-    if (!options) return {};
-    auto result =
-        observe(*options, ctx, field("half_stem_length", &Target::halfStemLength),
-                field("stem_length", &Target::stemLength),
-                field("short_stem_length", &Target::shortStemLength),
-                field("rev_stem_adj", &Target::revStemAdj), field("stem_width", &Target::stemWidth),
-                field("stem_offset", &Target::stemOffset),
-                field("use_stem_connections", &Target::useStemConnections),
-                field("no_reverse_stems", &Target::noReverseStems),
-                originField<Target>("origin_halfStemLength", "halfStemLength"),
-                originField<Target>("origin_stemLength", "stemLength"),
-                originField<Target>("origin_shortStemLength", "shortStemLength"),
-                originField<Target>("origin_revStemAdj", "revStemAdj"),
-                originField<Target>("origin_stemWidth", "stemWidth"),
-                originField<Target>("origin_stemOffset", "stemOffset"),
-                originField<Target>("origin_useStemConnections", "useStemConnections"),
-                originField<Target>("origin_noReverseStems", "noReverseStems"));
+    if (!options) {
+        return {};
+    }
+    auto result = observe(*options, ctx, field("half_stem_length", &Target::halfStemLength), field("stem_length", &Target::stemLength),
+        field("short_stem_length", &Target::shortStemLength), field("rev_stem_adj", &Target::revStemAdj), field("stem_width", &Target::stemWidth),
+        field("stem_offset", &Target::stemOffset), field("use_stem_connections", &Target::useStemConnections),
+        field("no_reverse_stems", &Target::noReverseStems), originField<Target>("origin_halfStemLength", "halfStemLength"),
+        originField<Target>("origin_stemLength", "stemLength"), originField<Target>("origin_shortStemLength", "shortStemLength"),
+        originField<Target>("origin_revStemAdj", "revStemAdj"), originField<Target>("origin_stemWidth", "stemWidth"),
+        originField<Target>("origin_stemOffset", "stemOffset"), originField<Target>("origin_useStemConnections", "useStemConnections"),
+        originField<Target>("origin_noReverseStems", "noReverseStems"));
     Value::Array connections;
     for (std::size_t index = 0; index < options->stemConnections.size(); ++index) {
         const auto& connection = options->stemConnections[index];
@@ -88,23 +72,14 @@ Value observeStemOptions(const SurveyContext& ctx)
         // accordingly, so comparing comparators against a companion manufactures
         // disagreements; the face is what both sides agree about.
         std::string connectionFace;
-        if (const auto definition =
-                ctx.document->getOthers()->get<musx::dom::others::FontDefinition>(
-                    musx::dom::SCORE_PARTID, connection->fontId)) {
+        if (const auto definition = ctx.document->getOthers()->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, connection->fontId)) {
             connectionFace = definition->name;
         }
-        Value::Object observed{{"index", index},
-                               {"font_name", connectionFace},
-                               {"font_id", connection->fontId},
-                               {"symbol", static_cast<std::uint32_t>(connection->symbol)},
-                               {"up_stem_vert", connection->upStemVert},
-                               {"down_stem_vert", connection->downStemVert},
-                               {"up_stem_horz", connection->upStemHorz},
-                               {"down_stem_horz", connection->downStemHorz}};
-        for (const auto* member :
-             {"fontId", "symbol", "upStemVert", "downStemVert", "upStemHorz", "downStemHorz"}) {
-            observed.emplace(std::string("origin_") + member,
-                             fieldOrigin<Target>(ctx, prefix + member));
+        Value::Object observed{{"index", index}, {"font_name", connectionFace}, {"font_id", connection->fontId},
+            {"symbol", static_cast<std::uint32_t>(connection->symbol)}, {"up_stem_vert", connection->upStemVert},
+            {"down_stem_vert", connection->downStemVert}, {"up_stem_horz", connection->upStemHorz}, {"down_stem_horz", connection->downStemHorz}};
+        for (const auto* member : {"fontId", "symbol", "upStemVert", "downStemVert", "upStemHorz", "downStemHorz"}) {
+            observed.emplace(std::string("origin_") + member, fieldOrigin<Target>(ctx, prefix + member));
         }
         connections.emplace_back(std::move(observed));
     }

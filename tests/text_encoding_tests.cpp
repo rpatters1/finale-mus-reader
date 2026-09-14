@@ -9,8 +9,8 @@
 #include "import/support/text_encoding.h"
 #include "musx/factory/DocumentFactory.h"
 
-using finale_mus_reader::text::parseMacSymbolFonts;
 using finale_mus_reader::text::codepointFromByte;
+using finale_mus_reader::text::parseMacSymbolFonts;
 using finale_mus_reader::text::toUtf8;
 using finale_mus_reader::text::UnresolvedFontFallback;
 
@@ -34,11 +34,7 @@ bool isValidUtf8(std::string_view value)
 {
     for (std::size_t at = 0; at < value.size();) {
         const auto lead = static_cast<unsigned char>(value[at]);
-        std::size_t length = lead < 0x80 ? 1
-            : (lead & 0xe0U) == 0xc0U   ? 2
-            : (lead & 0xf0U) == 0xe0U   ? 3
-            : (lead & 0xf8U) == 0xf0U   ? 4
-                                        : 0;
+        std::size_t length = lead < 0x80 ? 1 : (lead & 0xe0U) == 0xc0U ? 2 : (lead & 0xf0U) == 0xe0U ? 3 : (lead & 0xf8U) == 0xf0U ? 4 : 0;
         if (length == 0 || at + length > value.size()) {
             return false;
         }
@@ -101,8 +97,8 @@ TEST_CASE("Document font character sets apply regardless of comparator", "[text]
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     for (const auto cmper : {musx::dom::Cmper(0), musx::dom::Cmper(23)}) {
-        auto font = std::make_shared<musx::dom::others::FontDefinition>(document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
+        auto font =
+            std::make_shared<musx::dom::others::FontDefinition>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, cmper);
         font->name = cmper == 0 ? "Pmusic" : "P music";
         font->charsetBank = Bank::MacOS;
         font->charsetVal = 0;

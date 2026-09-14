@@ -22,11 +22,9 @@ TEST_CASE("Coverage recognizes direct and nested font references", "[coverage]")
     using finale_mus_reader::coverage::isComparisonFontReference;
     const std::set<std::string> dynamicReferences;
 
-    REQUIRE(isComparisonFontReference(
-        "chord_suffix_elements[cmper=1,inci=0].font.font_id", dynamicReferences));
+    REQUIRE(isComparisonFontReference("chord_suffix_elements[cmper=1,inci=0].font.font_id", dynamicReferences));
     REQUIRE(isComparisonFontReference("ss_line_styles[cmper=1].char_font_id", dynamicReferences));
-    REQUIRE_FALSE(isComparisonFontReference(
-        "font_definitions.definitions[normalized_name=maestro].cmper", dynamicReferences));
+    REQUIRE_FALSE(isComparisonFontReference("font_definitions.definitions[normalized_name=maestro].cmper", dynamicReferences));
 }
 
 TEST_CASE("Coverage source instances enumerate physical parts without score "
@@ -37,12 +35,9 @@ TEST_CASE("Coverage source instances enumerate physical parts without score "
     using ShareMode = musx::dom::EnigmaBase::ShareMode;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    auto score = std::make_shared<Target>(
-        document, musx::dom::SCORE_PARTID, ShareMode::All, musx::dom::Cmper{1});
-    auto scoreOnly = std::make_shared<Target>(
-        document, musx::dom::SCORE_PARTID, ShareMode::All, musx::dom::Cmper{2});
-    auto part = std::make_shared<Target>(
-        document, musx::dom::Cmper{2}, ShareMode::Partial, musx::dom::Cmper{1});
+    auto score = std::make_shared<Target>(document, musx::dom::SCORE_PARTID, ShareMode::All, musx::dom::Cmper{1});
+    auto scoreOnly = std::make_shared<Target>(document, musx::dom::SCORE_PARTID, ShareMode::All, musx::dom::Cmper{2});
+    auto part = std::make_shared<Target>(document, musx::dom::Cmper{2}, ShareMode::Partial, musx::dom::Cmper{1});
     document->getOthers()->add(Target::XmlNodeName, std::move(score));
     document->getOthers()->add(Target::XmlNodeName, std::move(scoreOnly));
     document->getOthers()->add(Target::XmlNodeName, std::move(part));
@@ -65,27 +60,20 @@ TEST_CASE("Coverage fields always materialize recorded provenance", "[coverage]"
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::UncompressedLegacy);
     const finale_mus_reader::coverage::SurveyContext context{document, report};
 
-    report.setField(finale_mus_reader::instanceKey<FontDefinition>(
-                        musx::dom::SCORE_PARTID, musx::dom::Cmper(0)),
-        "name", {finale_mus_reader::ValueOrigin::LegacyMus, 0, 0, 0});
-    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(
-                context, "name", musx::dom::Cmper(0)) == "legacy-mus");
+    report.setField(finale_mus_reader::instanceKey<FontDefinition>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0)), "name",
+        {finale_mus_reader::ValueOrigin::LegacyMus, 0, 0, 0});
+    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(context, "name", musx::dom::Cmper(0)) == "legacy-mus");
 
-    const auto defaultInstance = finale_mus_reader::instanceKey<FontDefinition>(
-        musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
-    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(
-                context, "charsetBank", defaultInstance) == "finale27-default");
+    const auto defaultInstance = finale_mus_reader::instanceKey<FontDefinition>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(context, "charsetBank", defaultInstance) == "finale27-default");
     REQUIRE(report.findField(defaultInstance, "charsetBank"));
 
     report.setField(defaultInstance, "family", {finale_mus_reader::ValueOrigin::Unmapped, 0, 0, 0});
-    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(
-                context, "family", defaultInstance) == "unmapped");
+    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(context, "family", defaultInstance) == "unmapped");
 
-    const auto recoveredInstance = finale_mus_reader::instanceKey<FontDefinition>(
-        musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
+    const auto recoveredInstance = finale_mus_reader::instanceKey<FontDefinition>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     report.setInstanceOrigin(recoveredInstance, finale_mus_reader::ValueOrigin::LegacyMus);
-    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(
-                context, "pitch", recoveredInstance) == "legacy-mus");
+    REQUIRE(finale_mus_reader::coverage::fieldOrigin<FontDefinition>(context, "pitch", recoveredInstance) == "legacy-mus");
     REQUIRE(report.findField(recoveredInstance, "pitch"));
 }
 TEST_CASE("A contiguous aligned byte-swapped string span is recognized", "[coverage]")

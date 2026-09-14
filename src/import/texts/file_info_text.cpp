@@ -85,8 +85,7 @@ std::string readString(std::span<const std::uint8_t> source, std::size_t offset,
     const auto begin = source.begin() + static_cast<std::ptrdiff_t>(offset);
     const auto end = source.begin() + static_cast<std::ptrdiff_t>(limit);
     const auto terminator = std::find(begin, end, std::uint8_t{0});
-    return std::string(reinterpret_cast<const char*>(source.data() + offset),
-        static_cast<std::size_t>(terminator - begin));
+    return std::string(reinterpret_cast<const char*>(source.data() + offset), static_cast<std::size_t>(terminator - begin));
 }
 
 } // namespace
@@ -104,12 +103,11 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         return;
     }
     const auto limit = readBodyOffset(context.source, context.profile.byteOrder);
-    const auto defaultFont = musx::dom::options::FontOptions::getFontInfoOrNull(
-        context.document, musx::dom::options::FontOptions::FontType::TextBlock);
+    const auto defaultFont =
+        musx::dom::options::FontOptions::getFontInfoOrNull(context.document, musx::dom::options::FontOptions::FontType::TextBlock);
 
     for (const auto& field : fileInfoFields) {
-        if (context.document->getTexts()->get<FileInfoTarget>(
-                static_cast<musx::dom::Cmper>(field.type))) {
+        if (context.document->getTexts()->get<FileInfoTarget>(static_cast<musx::dom::Cmper>(field.type))) {
             // The text pool already stated this one, and it is the more direct statement:
             // the record names its own type where the header only implies it by position.
             continue;
@@ -122,26 +120,20 @@ void importHeaderFileInfoTexts(const ImportContext& context)
         }
         // The stored string is already a raw Enigma string, and musxdom documents the inserts
         // in this class as meaningless, so nothing is translated: only the bytes change.
-        auto instance = std::make_shared<FileInfoTarget>(
-            context.document, static_cast<musx::dom::Cmper>(field.type));
-        instance->text = text::normalizeLineBreaks(
-            text::toUtf8(raw, context.profile.platform));
+        auto instance = std::make_shared<FileInfoTarget>(context.document, static_cast<musx::dom::Cmper>(field.type));
+        instance->text = text::normalizeLineBreaks(text::toUtf8(raw, context.profile.platform));
         bool fontWasSynthesized = false;
         bool sizeWasSynthesized = false;
         bool effectsWereSynthesized = false;
         if (defaultFont) {
             instance->text = text::initializeEnigmaTextFontState(
-                std::move(instance->text), *defaultFont, &fontWasSynthesized,
-                &sizeWasSynthesized, &effectsWereSynthesized);
+                std::move(instance->text), *defaultFont, &fontWasSynthesized, &sizeWasSynthesized, &effectsWereSynthesized);
         }
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            const auto key = reporting.template instanceKey<FileInfoTarget>(
-                musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(field.type));
-            reporting.textField(
-                key, "text", fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized);
-            reporting.report().setField(key, "text",
-                {Reporting::Origin::LegacyMus, 0, field.offset,
-                    static_cast<std::int64_t>(instance->text.size())});
+            const auto key = reporting.template instanceKey<FileInfoTarget>(musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(field.type));
+            reporting.textField(key, "text", fontWasSynthesized, sizeWasSynthesized, effectsWereSynthesized);
+            reporting.report().setField(
+                key, "text", {Reporting::Origin::LegacyMus, 0, field.offset, static_cast<std::int64_t>(instance->text.size())});
         });
         context.document->getTexts()->add(FileInfoTarget::XmlNodeName, std::move(instance));
     }

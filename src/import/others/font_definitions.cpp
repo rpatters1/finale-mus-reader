@@ -34,9 +34,8 @@ void convertNameToUtf8(void* instance, const SourceProfile&, const musx::dom::Do
 
 int symbolCharsetForBank(FontDefinitionTarget::CharacterSetBank bank)
 {
-    return bank == FontDefinitionTarget::CharacterSetBank::Windows
-        ? FontDefinitionTarget::SYMBOL_CHARSET_WIN
-        : FontDefinitionTarget::SYMBOL_CHARSET_MAC;
+    return bank == FontDefinitionTarget::CharacterSetBank::Windows ? FontDefinitionTarget::SYMBOL_CHARSET_WIN
+                                                                   : FontDefinitionTarget::SYMBOL_CHARSET_MAC;
 }
 
 // MacSymbolFonts names faces whose stored charset may not express their glyph-number
@@ -44,24 +43,24 @@ int symbolCharsetForBank(FontDefinitionTarget::CharacterSetBank bank)
 // self-describing, so every later decoder and document consumer can rely on the font itself.
 void applyConfiguredSymbolFonts(const ImportContext& context)
 {
-    if (!context.profile.symbolFontNames) return;
-    for (const auto& font : context.document->getOthers()
-             ->getArray<FontDefinitionTarget>(musx::dom::SCORE_PARTID)) {
-        if (!context.profile.symbolFontNames->contains(
-                musx::dom::normalizeFontName(font->name))) {
+    if (!context.profile.symbolFontNames) {
+        return;
+    }
+    for (const auto& font : context.document->getOthers()->getArray<FontDefinitionTarget>(musx::dom::SCORE_PARTID)) {
+        if (!context.profile.symbolFontNames->contains(musx::dom::normalizeFontName(font->name))) {
             continue;
         }
         const auto adjusted = symbolCharsetForBank(font->charsetBank);
-        if (font->charsetVal == adjusted) continue;
+        if (font->charsetVal == adjusted) {
+            continue;
+        }
         const auto mutableFont = std::const_pointer_cast<FontDefinitionTarget>(font);
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            const auto key = reporting.template instanceKey<FontDefinitionTarget>(
-                musx::dom::SCORE_PARTID, font->getCmper());
+            const auto key = reporting.template instanceKey<FontDefinitionTarget>(musx::dom::SCORE_PARTID, font->getCmper());
             if (auto* info = reporting.report().findField(key, "charsetVal")) {
                 info->origin = Reporting::Origin::LegacyMusAdjusted;
             } else {
-                reporting.report().setField(key, "charsetVal",
-                    {Reporting::Origin::LegacyMusAdjusted, 0, 0, font->charsetVal});
+                reporting.report().setField(key, "charsetVal", {Reporting::Origin::LegacyMusAdjusted, 0, 0, font->charsetVal});
             }
         });
         mutableFont->charsetVal = adjusted;
@@ -81,13 +80,11 @@ void applyConfiguredSymbolFonts(const ImportContext& context)
 // An unclassified platform is treated as Mac. Coda-banner files carry no platform tuple at all,
 // and nothing earlier than Finale 3.0 is Windows-origin, so Mac is the only origin those
 // documents can have.
-void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document)
+void convertEarlyNameToUtf8(void* instance, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
 {
     auto* font = static_cast<FontDefinitionTarget*>(instance);
-    font->charsetBank = profile.platform == SourcePlatform::Windows
-        ? FontDefinitionTarget::CharacterSetBank::Windows
-        : FontDefinitionTarget::CharacterSetBank::MacOS;
+    font->charsetBank =
+        profile.platform == SourcePlatform::Windows ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS;
     convertNameToUtf8(instance, profile, document);
 }
 
@@ -112,8 +109,7 @@ const FieldMapping fontFields[] = {
     // Bit 13 distinguishes the two banks: the nibble holds 1 for Mac and 2 for Windows, so
     // only a Windows font sets it. An explicit conversion keeps the enum honest rather than
     // relying on the legacy encoding happening to match musxdom's enumerators.
-    MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
-        text::legacyCharsetBankBit, 1, charsetBank,
+    MUS_BITS_AS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0, text::legacyCharsetBankBit, 1, charsetBank,
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
     MUS_BITS(FontDefinitionTarget, "FN", CMPER_FROM_TARGET, /*incidence*/ 0, /*slot*/ 0,
         /*firstBit*/ 0, text::legacyCharsetValueBits, charsetVal),
@@ -160,10 +156,8 @@ const FieldMapping classFontFields[] = {
     MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, text::legacyCharsetBankBit, 1, charsetBank,
         value != 0 ? FontDefinitionTarget::CharacterSetBank::Windows : FontDefinitionTarget::CharacterSetBank::MacOS),
     MUS_CLASS_BITS(FontDefinitionTarget, fontDefinitionClass, charsetOffset, 0, text::legacyCharsetValueBits, charsetVal),
-    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, pitch,
-        value & 0x0F),
-    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, family,
-        value & 0xF0),
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, pitch, value & 0x0F),
+    MUS_CLASS_BITS_AS(FontDefinitionTarget, fontDefinitionClass, pitchFamilyOffset, 0, 8, family, value & 0xF0),
     // The payload is length-governed, so the name simply runs to its end. A longer name grows
     // the record rather than spilling into another incidence.
     MUS_CLASS_TEXT(FontDefinitionTarget, fontDefinitionClass, nameOffset, name),
@@ -171,8 +165,7 @@ const FieldMapping classFontFields[] = {
 
 bool sourceHasFontHeader(const SourceProfile& profile)
 {
-    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy,
-        versions::finale3_2);
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale3_2);
 }
 
 bool sourcePredatesFontHeader(const SourceProfile& profile)
@@ -191,8 +184,7 @@ bool sourcePredatesFontHeader(const SourceProfile& profile)
 // the layout is the same fact; only the question of which files it applies to differs.
 const MappingTable& codaFontDefinitionsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.fontName",
+    static const MappingTable table{.reportPrefix = "others.fontName",
         .epochs = EpochMask::CodaBanner,
         .targetKind = TargetKind::OthersFromRecords,
         .recordIdentity = records::packTag("FN"),
@@ -205,8 +197,7 @@ const MappingTable& codaFontDefinitionsTable()
 
 const MappingTable& classFontDefinitionsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.fontName",
+    static const MappingTable table{.reportPrefix = "others.fontName",
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OthersFromRecords,
@@ -220,8 +211,7 @@ const MappingTable& classFontDefinitionsTable()
 
 const MappingTable& fontDefinitionsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.fontName",
+    static const MappingTable table{.reportPrefix = "others.fontName",
         // Fixed-row epochs only. A Coda-banner document can never be Finale 3.2 or later, so
         // listing that epoch here could only ever be satisfied by a misread version.
         .epochs = EpochMask::FixedRow,
@@ -237,8 +227,7 @@ const MappingTable& fontDefinitionsTable()
 
 const MappingTable& earlyFontDefinitionsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.fontName",
+    static const MappingTable table{.reportPrefix = "others.fontName",
         // The uncompressed epoch straddles the boundary, so here the version decides.
         .epochs = EpochMask::FixedRow,
         .sourceApplies = &sourcePredatesFontHeader,
@@ -259,8 +248,7 @@ void importFontDefinitions(const ImportContext& context)
     // boundary and so needs both of the first two; the Coda epoch is decided by its epoch
     // alone, and the zlib epoch reads the same definitions as class records. Listing them
     // together is what lets one file match exactly one of them.
-    applyMappingTables({&fontDefinitionsTable(), &earlyFontDefinitionsTable(),
-                           &codaFontDefinitionsTable(), &classFontDefinitionsTable()},
+    applyMappingTables({&fontDefinitionsTable(), &earlyFontDefinitionsTable(), &codaFontDefinitionsTable(), &classFontDefinitionsTable()},
         context.index, context.profile, context.document, context.report);
     applyConfiguredSymbolFonts(context);
 }

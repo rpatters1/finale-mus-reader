@@ -22,77 +22,53 @@ constexpr std::uint16_t timeSignatureVerticalSelector = 67;
 constexpr std::size_t timeSignatureDistanceWordsWithParts = 11;
 
 const FieldMapping codaTimeSignatureFields[] = {
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 5, timeUpperLift),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 5, timeUpperLift),
     MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 3, timeFront),
     MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 4, timeBack),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 2, timeSigDoAbrvCommon),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 3, timeSigDoAbrvCut),
-    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureCompositeSelector, 0, 1,
-        numCompositeDecimalPlaces),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 2, timeSigDoAbrvCommon),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 3, timeSigDoAbrvCut),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureCompositeSelector, 0, 1, numCompositeDecimalPlaces),
 };
 
 const FieldMapping fixedTimeSignatureFields[] = {
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 5, timeUpperLift),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 5, timeUpperLift),
     MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 3, timeFront),
     MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 0, 4, timeBack),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 3, timeFrontParts),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 4, timeBackParts),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 0, timeUpperLiftParts),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 1, timeLowerLiftParts),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 2, timeAbrvLiftParts),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 2, timeSigDoAbrvCommon),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 3, timeSigDoAbrvCut),
-    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureCompositeSelector, 0, 1,
-        numCompositeDecimalPlaces),
-    MUS_NUMERIC_BIT(
-        TimeSignatureOptionsTarget, courtesyChangeSelector, 0, 3, 1, cautionaryTimeChanges),
-    MUS_NUMERIC_WORD(
-        TimeSignatureOptionsTarget, timeSignatureVerticalSelector, 0, 0, timeLowerLift),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 3, timeFrontParts),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 4, timeBackParts),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 0, timeUpperLiftParts),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 1, timeLowerLiftParts),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureDistanceSelector, 1, 2, timeAbrvLiftParts),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 2, timeSigDoAbrvCommon),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureAbbreviationSelector, 0, 3, timeSigDoAbrvCut),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureCompositeSelector, 0, 1, numCompositeDecimalPlaces),
+    MUS_NUMERIC_BIT(TimeSignatureOptionsTarget, courtesyChangeSelector, 0, 3, 1, cautionaryTimeChanges),
+    MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureVerticalSelector, 0, 0, timeLowerLift),
     MUS_NUMERIC_WORD(TimeSignatureOptionsTarget, timeSignatureVerticalSelector, 0, 1, timeAbrvLift),
 };
 
 const FieldMapping classTimeSignatureFields[] = {
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(5), timeUpperLift),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(3), timeFront),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(4), timeBack),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(9), timeFrontParts),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(10), timeBackParts),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(6), timeUpperLiftParts),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(7), timeLowerLiftParts),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector),
-        GLOBALS_CMPER, classWordOffset(8), timeAbrvLiftParts),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget,
-        numericGlobalClass(timeSignatureAbbreviationSelector), GLOBALS_CMPER, classWordOffset(2),
-        timeSigDoAbrvCommon),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget,
-        numericGlobalClass(timeSignatureAbbreviationSelector), GLOBALS_CMPER, classWordOffset(3),
-        timeSigDoAbrvCut),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureCompositeSelector),
-        GLOBALS_CMPER, classWordOffset(1), numCompositeDecimalPlaces),
-    MUS_CLASS_BIT(TimeSignatureOptionsTarget, numericGlobalClass(courtesyChangeSelector),
-        GLOBALS_CMPER, classWordOffset(3), 1, cautionaryTimeChanges),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(0), timeLowerLift),
-    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(1), timeAbrvLift),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(5), timeUpperLift),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(3), timeFront),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(4), timeBack),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(9), timeFrontParts),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(10), timeBackParts),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(6), timeUpperLiftParts),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(7), timeLowerLiftParts),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureDistanceSelector), GLOBALS_CMPER, classWordOffset(8), timeAbrvLiftParts),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureAbbreviationSelector), GLOBALS_CMPER, classWordOffset(2), timeSigDoAbrvCommon),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureAbbreviationSelector), GLOBALS_CMPER, classWordOffset(3), timeSigDoAbrvCut),
+    MUS_CLASS_WORD(
+        TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureCompositeSelector), GLOBALS_CMPER, classWordOffset(1), numCompositeDecimalPlaces),
+    MUS_CLASS_BIT(
+        TimeSignatureOptionsTarget, numericGlobalClass(courtesyChangeSelector), GLOBALS_CMPER, classWordOffset(3), 1, cautionaryTimeChanges),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureVerticalSelector), GLOBALS_CMPER, classWordOffset(0), timeLowerLift),
+    MUS_CLASS_WORD(TimeSignatureOptionsTarget, numericGlobalClass(timeSignatureVerticalSelector), GLOBALS_CMPER, classWordOffset(1), timeAbrvLift),
 };
 
 const MappingTable& codaTimeSignatureTable()
@@ -132,14 +108,17 @@ const MappingTable& classTimeSignatureTable()
 void reportCodaTimeSignatureDefaults(const ImportContext& context)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+        if (context.profile.epoch != FormatEpoch::CodaBanner) {
+            return;
+        }
         const auto target = context.document->getOptions()->get<TimeSignatureOptionsTarget>();
-        if (!target) return;
+        if (!target) {
+            return;
+        }
 
         const auto key = reporting.template instanceKey<TimeSignatureOptionsTarget>();
         const auto reportDefault = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(
-                key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
+            reporting.report().setField(key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
         };
         // The Coda layout has no supported source for these later fields.
         reportDefault("cautionaryTimeChanges", target->cautionaryTimeChanges);
@@ -150,22 +129,23 @@ void reportCodaTimeSignatureDefaults(const ImportContext& context)
 
 void applySharedTimeSignatureDistances(const ImportContext& context)
 {
-    if (context.profile.epoch == FormatEpoch::ZlibLegacy) return;
-    const auto distances = readGlobalWords(
-        context.index, context.profile, timeSignatureDistanceSelector);
+    if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
+        return;
+    }
+    const auto distances = readGlobalWords(context.index, context.profile, timeSignatureDistanceSelector);
     if (!distances.present || distances.words.size() >= timeSignatureDistanceWordsWithParts) {
         return;
     }
 
     const auto pooled = context.document->getOptions()->get<TimeSignatureOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<TimeSignatureOptionsTarget>(pooled);
-    const auto reportShared = [&](const char* member, musx::dom::Evpu& parts,
-                                  musx::dom::Evpu score) {
+    const auto reportShared = [&](const char* member, musx::dom::Evpu& parts, musx::dom::Evpu score) {
         parts = score;
-        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template behaviorField<TimeSignatureOptionsTarget>(member, score);
-        });
+        withReporting(context.report,
+            [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<TimeSignatureOptionsTarget>(member, score); });
     };
 
     // A fixed-row selector-18 family without its second incidence has one set of distances
@@ -182,9 +162,8 @@ void applySharedTimeSignatureDistances(const ImportContext& context)
 void importTimeSignatureOptions(const ImportContext& context)
 {
     reportCodaTimeSignatureDefaults(context);
-    applyMappingTables(
-        {&codaTimeSignatureTable(), &fixedTimeSignatureTable(), &classTimeSignatureTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&codaTimeSignatureTable(), &fixedTimeSignatureTable(), &classTimeSignatureTable()}, context.index, context.profile,
+        context.document, context.report);
     applySharedTimeSignatureDistances(context);
 }
 

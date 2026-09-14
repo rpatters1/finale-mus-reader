@@ -25,15 +25,13 @@ const FieldMapping codaGraceNoteFields[] = {
 };
 
 const FieldMapping codaFloatGraceSlashWidthFields[] = {
-    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaLineWidthSelector, 0, 0,
-        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
-        graceSlashWidth, legacyPointsToEfix(legacySinglePrecision(value))),
+    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaLineWidthSelector, 0, 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr,
+        nullptr, graceSlashWidth, legacyPointsToEfix(legacySinglePrecision(value))),
 };
 
 const FieldMapping codaMigratedGraceSlashWidthFields[] = {
-    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1,
-        ValueWidth::Word, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
-        graceSlashWidth, legacyTenThousandthsPointToEfix(value)),
+    MUS_NUMERIC_FIELD_AS_IF(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1, ValueWidth::Word, LongWordOrder::HighFirst, BitRange{},
+        nullptr, nullptr, graceSlashWidth, legacyTenThousandthsPointToEfix(value)),
 };
 
 const FieldMapping fixedGraceNoteFields[] = {
@@ -42,29 +40,21 @@ const FieldMapping fixedGraceNoteFields[] = {
     MUS_WORD(GraceNoteOptionsTarget, "27", GLOBALS_CMPER, 0, 4, playbackDuration),
     MUS_WORD(GraceNoteOptionsTarget, "27", GLOBALS_CMPER, 0, 5, entryOffset),
     MUS_WORD(GraceNoteOptionsTarget, "44", GLOBALS_CMPER, 0, 4, slashFlaggedGraceNotes),
-    MUS_NUMERIC_WORD(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1,
-        graceSlashWidth),
+    MUS_NUMERIC_WORD(GraceNoteOptionsTarget, codaMigratedPointSizeSelector, 0, 1, graceSlashWidth),
 };
 
 const FieldMapping classGraceNoteFields[] = {
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(tablatureGraceSizeSelector),
-        GLOBALS_CMPER, classWordOffset(2), tabGracePerc),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSizeSelector), GLOBALS_CMPER,
-        classWordOffset(0), gracePerc),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceTimingSelector), GLOBALS_CMPER,
-        classWordOffset(4), playbackDuration),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceTimingSelector), GLOBALS_CMPER,
-        classWordOffset(5), entryOffset),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSlashBehaviorSelector),
-        GLOBALS_CMPER, classWordOffset(4), slashFlaggedGraceNotes),
-    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector),
-        GLOBALS_CMPER, classWordOffset(1), graceSlashWidth),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(tablatureGraceSizeSelector), GLOBALS_CMPER, classWordOffset(2), tabGracePerc),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSizeSelector), GLOBALS_CMPER, classWordOffset(0), gracePerc),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceTimingSelector), GLOBALS_CMPER, classWordOffset(4), playbackDuration),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceTimingSelector), GLOBALS_CMPER, classWordOffset(5), entryOffset),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(graceSlashBehaviorSelector), GLOBALS_CMPER, classWordOffset(4), slashFlaggedGraceNotes),
+    MUS_CLASS_WORD(GraceNoteOptionsTarget, numericGlobalClass(codaMigratedPointSizeSelector), GLOBALS_CMPER, classWordOffset(1), graceSlashWidth),
 };
 
 const MappingTable& codaGraceNoteTable()
 {
-    static const MappingTable table{
-        .reportPrefix = graceNoteOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = graceNoteOptionsReportPrefix,
         .epochs = EpochMask::CodaBanner,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<GraceNoteOptionsTarget>,
@@ -75,8 +65,7 @@ const MappingTable& codaGraceNoteTable()
 
 const MappingTable& fixedGraceNoteTable()
 {
-    static const MappingTable table{
-        .reportPrefix = graceNoteOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = graceNoteOptionsReportPrefix,
         .epochs = EpochMask::Uncompressed | EpochMask::Dcl,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<GraceNoteOptionsTarget>,
@@ -87,8 +76,7 @@ const MappingTable& fixedGraceNoteTable()
 
 const MappingTable& codaFloatGraceSlashWidthTable()
 {
-    static const MappingTable table{
-        .reportPrefix = graceNoteOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = graceNoteOptionsReportPrefix,
         .epochs = EpochMask::CodaBanner,
         .applies = &storesCodaFloatPointSizes,
         .targetKind = TargetKind::OptionsSingleton,
@@ -100,8 +88,7 @@ const MappingTable& codaFloatGraceSlashWidthTable()
 
 const MappingTable& codaMigratedGraceSlashWidthTable()
 {
-    static const MappingTable table{
-        .reportPrefix = graceNoteOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = graceNoteOptionsReportPrefix,
         .epochs = EpochMask::CodaBanner,
         .applies = &storesCodaMigratedPointSizes,
         .targetKind = TargetKind::OptionsSingleton,
@@ -113,8 +100,7 @@ const MappingTable& codaMigratedGraceSlashWidthTable()
 
 const MappingTable& classGraceNoteTable()
 {
-    static const MappingTable table{
-        .reportPrefix = graceNoteOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = graceNoteOptionsReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -127,14 +113,17 @@ const MappingTable& classGraceNoteTable()
 void reportCodaDefaults(const ImportContext& context)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+        if (context.profile.epoch != FormatEpoch::CodaBanner) {
+            return;
+        }
         const auto target = context.document->getOptions()->get<GraceNoteOptionsTarget>();
-        if (!target) return;
+        if (!target) {
+            return;
+        }
 
         const auto key = reporting.template instanceKey<GraceNoteOptionsTarget>();
         const auto reportDefault = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(
-                key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
+            reporting.report().setField(key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
         };
         // Coda supplies no supported source for these later fields. They deliberately retain
         // the pinned values instead of acquiring speculative mappings from unrelated records.
@@ -150,8 +139,7 @@ void reportCodaDefaults(const ImportContext& context)
 void importGraceNoteOptions(const ImportContext& context)
 {
     reportCodaDefaults(context);
-    applyMappingTables({&codaGraceNoteTable(), &codaFloatGraceSlashWidthTable(),
-                           &codaMigratedGraceSlashWidthTable(), &fixedGraceNoteTable(),
+    applyMappingTables({&codaGraceNoteTable(), &codaFloatGraceSlashWidthTable(), &codaMigratedGraceSlashWidthTable(), &fixedGraceNoteTable(),
                            &classGraceNoteTable()},
         context.index, context.profile, context.document, context.report);
 }
