@@ -241,7 +241,7 @@ TEST_CASE(
         const auto ignoredDocument = emptyStaffSystemDocument();
         addStaffSystemTestMeasures(ignoredDocument, 8);
         const auto report = importStaffSystems(
-            makeClassContainer(0x00df, staffSystemWords(std::int16_t(0xc000)),
+            makeClassContainer(0x00df, staffSystemWords(std::int16_t(-0x4000)),
                                byteOrder, 1),
             profile, ignoredDocument);
         const auto ignored =
@@ -270,7 +270,8 @@ TEST_CASE("A zero legacy staff height takes the standard staff-height behavior",
     const auto system = document->getOthers()->get<StaffSystem>(0, 1);
     REQUIRE(system);
     CHECK(system->staffHeight == 6144);
-    const auto* source = report.findField<StaffSystem>("staffHeight", 0, 1);
+    const auto* source = report.findField<StaffSystem>(
+        "staffHeight", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(source);
     CHECK(source->origin == ValueOrigin::LegacyBehavior);
 }
@@ -415,8 +416,10 @@ TEST_CASE("Expanded staff systems rebuild a valid system grid",
         CHECK(second->endMeas == 7);
         CHECK_FALSE(document->getOthers()->get<StaffSystem>(0, 3));
         CHECK_FALSE(document->getOthers()->get<StaffSystem>(0, 4));
-        const auto* firstEnd = report.findField<StaffSystem>("endMeas", 0, 1);
-        const auto* secondEnd = report.findField<StaffSystem>("endMeas", 0, 2);
+        const auto* firstEnd = report.findField<StaffSystem>(
+            "endMeas", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        const auto* secondEnd = report.findField<StaffSystem>(
+            "endMeas", musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
         REQUIRE(firstEnd);
         REQUIRE(secondEnd);
         CHECK(firstEnd->origin == ValueOrigin::LegacyMusAdjusted);
@@ -482,7 +485,10 @@ TEST_CASE("Coda system scaling rows override the base system options",
             CHECK(field->origin == ValueOrigin::LegacyMus);
         }
     }
-    CHECK(report.findField<StaffSystem>("ssysPercent", 0, 1)->rawValue == 83);
+    CHECK(report.findField<StaffSystem>("ssysPercent",
+                                       musx::dom::SCORE_PARTID,
+                                       musx::dom::Cmper(1))
+              ->rawValue == 83);
     CHECK(reportedFieldCount(report) == 3 * staffSystemFieldCount);
 }
 
