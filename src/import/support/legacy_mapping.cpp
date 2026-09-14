@@ -261,6 +261,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportStaffLists, &others::importStaffLists),
         FINALE_MUS_READER_IMPORTER(ImportStaffStyleAssignments, &others::importStaffStyleAssignments),
         FINALE_MUS_READER_IMPORTER(ImportStaffStyles, &others::importStaffStyles),
+        FINALE_MUS_READER_IMPORTER(ImportStaffSystems, &others::importStaffSystems),
         FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
         FINALE_MUS_READER_IMPORTER(ImportTextExpressionDefs, &others::importTextExpressionDefs),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterFlats, &others::importTonalCenterFlats),

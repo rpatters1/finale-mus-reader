@@ -41,6 +41,8 @@ std::string_view differenceName(DifferenceClassification classification)
         return "awaits-dependent-recovery";
     case EnigmaTextDifference:
         return "enigma-text-difference";
+    case FinaleLayoutRecalculation:
+        return "finale-layout-recalculation";
     case FinaleReplacedLegacyPercussionMap:
         return "finale-replaced-legacy-percussion-map";
     case FinaleTextBlockRenumbering:

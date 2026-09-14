@@ -46,6 +46,7 @@ enum class DifferenceClassification
     DefaultShapeId,
     DifferentDefaults,
     EnigmaTextDifference,
+    FinaleLayoutRecalculation,
     FinaleReplacedLegacyPercussionMap,
     FinaleTextBlockRenumbering,
     FinaleUpgradeLoss,

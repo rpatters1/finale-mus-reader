@@ -9,6 +9,34 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-update-layout.mus / .etf / .musx
+    sha256 dbc18f48dca5acf4c1ae4e478b4b5b7993132cc511f9f599622a3acc99eaa866 (.mus)
+    sha256 7d00d193db10d99e4cdc710a7a7aa72ecf1375fe4b583af0523775bd8e655cc7 (.etf)
+    sha256 c85bd70a62cd4cd42d5819c69d741260eb962c1b6665ed81836fd22dcdd24923 (.musx)
+    Derived from F263-baseline by adding 100 bars and invoking Update Layout. Its 26 `SS`
+    records provide an independent Coda-era sample of the repeated system layout and exclusive
+    end-measure synthesis.
+
+F263-chg-sys.mus / .etf / .musx
+    sha256 e388186acc73a88333f1b95bcaa59ba89b4b208e0d01ea0bd8f8784dc7d387c7 (.mus)
+    sha256 a950f1d98030bedb1089bf8ed15b2b9815ea613d1df0bc500a977c3083fde99d (.etf)
+    sha256 3fd5179814dfc4591dbedfb909838b3ee834bc8a30e986ea39821b428053e349 (.musx)
+    Derived from F263-update-layout by assigning distinct top, left, right, and bottom margin
+    values to systems 1 and 5. The edited `SS` words are `[-161, 173, -420, -207]` and
+    `[-151, 641, -34, -244]`, independently confirming the Finale 1.0 mapping. The unchanged
+    final word remains `0x0080` and establishes no flag meaning.
+
+F263-sysopts.mus / .etf / .musx
+    sha256 698d978308fe5cf4cc456db7f5a7f66155d509f2f33ea61f4aedfd0e4cccdbb3 (.mus)
+    sha256 28d11d4284782399e343d9616c5a937d8598972d785642a330ca3d5de21a1a65 (.etf)
+    sha256 e39f020ec6dbf07e2448c6023bc7273eda704e599560347908873091762cc78b (.musx)
+    Derived from F263-update-layout by adding a second staff and changing three systems. System 1
+    is 83 percent with Hold Margins and Close Up Space both cleared; system 2 is 85 percent with
+    only Hold Margins set; system 3 is 87 percent with only Close Up Space set. Their `SP` rows
+    store `[83, 83, 0, 0, 0, 0]`, `[85, 85, 0, 0, 0, 0x4000]`, and
+    `[87, 87, 0, 0, 0, 0x2000]`. All three corresponding `SS` flag words are `0x0880`, so that
+    word selects the separate options record but does not distinguish the controls.
+
 F263-music-font.mus
     12,848 bytes. Changes the default music font. See ../../../research/FORMAT_NOTES.md.
 

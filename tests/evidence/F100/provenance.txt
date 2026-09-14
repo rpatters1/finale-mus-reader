@@ -17,6 +17,23 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-update-layout.mus / .etf / .musx
+    sha256 20eea94bd827ce067929a6b9e9c73823399b63fc45e70cd66e4f8675e50a43ac (.mus)
+    sha256 5c199663482f1ba62bc5e0f5ffce154b54cd41c2af2441818438df3a0c97cb19 (.etf)
+    sha256 eb3e4cecbc098566c6cfd856b20a50eef81be54ba7f25a348bdaa6b417392cac (.musx)
+    Derived from F100-baseline by adding 100 bars and invoking Update Layout. Its 34 `SS`
+    records establish the ordinary repeated Coda system layout and the derivation of each
+    exclusive end measure from the next system start, with the last ending one past the document.
+
+F100-chg-sys.mus / .etf / .musx
+    sha256 cc765b175cd50bfa2fbd6d68564ecd805fb1cdbced08f1e533cda54c3ddd1cfe (.mus)
+    sha256 274f0d5679cd0724c82921046dcaffa3d072cb01250cc7dbf6eb0cb6ba219b16 (.etf)
+    sha256 44d91c827e7542085702d9e650a940e6a68ad18cf7cb96f8677ae386d12183f3 (.musx)
+    Derived from F100-update-layout by assigning distinct top, left, right, and bottom margin
+    values to systems 1 and 5. The edited `SS` words are `[-257, 389, -247, -299]` and
+    `[-481, 517, -499, -521]`; the companion shows the first word contributing to system 1 top
+    and becoming system 5 distanceToPrev, while the remaining words map directly.
+
 F100-instlist.mus
     sha256 e860efdeb383eedd7cb8195592d604bfbf1a5a6efc0ddbd4e74b558945cfd070
     5,167 bytes. Creates one unnamed staff list. Selector `DC(1)` stores score
