@@ -66,9 +66,9 @@ comma always stays one item per line and one without is left on one line when it
 comma is how a table keeps its row shape, so use it instead of `// clang-format off`.
 
 The whole-repository reformat commits are listed in
-[`.git-blame-ignore-revs`](../../.git-blame-ignore-revs); set
-`git config blame.ignoreRevsFile .git-blame-ignore-revs` once per clone so `git blame` reports the
-authoring change instead.
+[`.git-blame-ignore-revs`](../../.git-blame-ignore-revs). Run
+`git config --global blame.ignoreRevsFile .git-blame-ignore-revs` once per machine so `git blame`
+reports the authoring change instead; GitHub's blame view reads the file on its own.
 
 ## Import reporting
 
