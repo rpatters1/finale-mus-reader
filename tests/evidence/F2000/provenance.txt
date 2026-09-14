@@ -46,6 +46,16 @@ F2000-empty.mus
     It carries the two custom line styles Finale 2000 puts in every new document, cmpers 1
     and 2, which is what makes an added third one unambiguous.
 
+F2000-update-layout.mus / .etf / .musx
+    sha256 ce7a8a997ec2b7728166023f702050572688294801fffad883a2cc07bb48abf3 (.mus)
+    sha256 a14e29429d5a0c0cace3dbc3a018f61575eec9769b22fa5fbf344f2e42069fe9 (.etf)
+    sha256 c3393a25b9af6c8db21cacb24c3ec2697f74f6ed62b2c8b849cc732b038f0a0e (.musx)
+    From F2000-empty, with Update Layout invoked before saving. The source and ETF retain
+    StaffSystem top 0 while changing horzPercent from 0 to 33150, or 331.5 percent. The Finale
+    27 companion stores the same horizontal percentage but writes top as -80. This isolates
+    horizontal stretch as layout-derived while showing that Update Layout does not explain the
+    top conversion.
+
 F2000-ssline-offsets.mus
     sha256 b53b944dd389fd39ec8f5767a055a674478c4a8f08fdf545dee919f14535cdb0
     From F2000-empty, with four custom line styles added as cmpers 3 through 6. Together they

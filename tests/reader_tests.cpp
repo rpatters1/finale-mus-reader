@@ -433,8 +433,14 @@ void expectNoScoreContent(const ImportResult& result)
         expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
             "Output contains a staff no source record built");
     }
-    expect(result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID).empty(),
-        "Output contains fallback systems");
+    for (const auto& system :
+             result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID)) {
+        const auto* origin = result.report.findInstanceOrigin(
+            finale_mus_reader::instanceKey<others::StaffSystem>(
+                system->getSourcePartId(), system->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
+            "Output contains a staff system no source record built");
+    }
     expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(),
         "Output contains fallback pages");
     // Part definitions are not absent: musxdom requires a score part, and every era has one
