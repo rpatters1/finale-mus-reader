@@ -1,0 +1,2 @@
+# Whole-repository formatting commits. Once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs

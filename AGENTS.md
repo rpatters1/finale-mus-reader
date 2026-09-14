@@ -181,9 +181,11 @@ The build uses CMake. Keep these properties intact when extending it:
   definition to the library.
 - Keep committed generated resource sources synchronized with their gzip inputs
   and verify them with `scripts/generate_embedded_defaults.py --check`.
-- Follow the surrounding musxdom C++ conventions where this repository has not yet established a
-  local style. Naming, file headers, namespaces, preprocessor comments, Windows macro safety, the
-  MSVC directory-wide flags, and unity-build cleanliness are in
+- Formatting is fixed by `.clang-format` and checked by `scripts/check_format.py`; run it with
+  `--fix` before handing off. Follow the surrounding musxdom C++ conventions where this repository
+  has not yet established a local style. Formatting, naming, file headers, namespaces,
+  preprocessor comments, Windows macro safety, the MSVC directory-wide flags, and unity-build
+  cleanliness are in
   [`research/reference/code_conventions.md`](research/reference/code_conventions.md).
 - Keep public APIs small and keep wire-format details out of public interfaces
   unless callers need them for diagnostics or capability reporting.
@@ -224,6 +226,6 @@ provenance.
   requests that action.
 - Preserve unrelated user changes in a dirty worktree.
 - Keep implementation changes focused; avoid unrelated cleanup.
-- Before handing off, inspect `git status --short` and `git diff --check`. Note
-  that the authoritative CRLF EnigmaXML resources are the known exception to
-  `git diff --check` whitespace reports.
+- Before handing off, inspect `git status --short` and `git diff --check`, and run
+  `python3 scripts/check_format.py`. Note that the authoritative CRLF EnigmaXML
+  resources are the known exception to `git diff --check` whitespace reports.

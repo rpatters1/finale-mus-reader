@@ -1,6 +1,6 @@
 # C++ code conventions
 
-**Covers:** Naming, file headers, namespaces, preprocessor comments, Windows macro safety, MSVC directory-wide flags, and unity-build cleanliness.
+**Covers:** Formatting, naming, file headers, namespaces, preprocessor comments, Windows macro safety, MSVC directory-wide flags, and unity-build cleanliness.
 **Read when:** Writing or reviewing any project-owned C++ source file.
 **Confidence:** project rule.
 
@@ -43,6 +43,32 @@
   constants when needed. Do not let unity-only fixes change runtime behavior.
 - Project-owned targets enable unity compilation themselves; external dependencies
   retain their own build policy.
+
+## Formatting
+
+Formatting is defined by [`.clang-format`](../../.clang-format) at the repository root and is
+not a matter of taste or of matching the surrounding file. `scripts/check_format.py` runs
+clang-format over every project-owned C++ file (`include/`, `src/`, `tests/`, `tools/`; vendored
+and generated files are listed in `.clang-format-ignore`), CI runs the same check, and
+`scripts/check_format.py --fix` rewrites the tree. Run `--fix` before handing off; do not
+hand-format. The script pins the clang-format major version because releases differ in output.
+
+The rules are MuseScore's, translated from its uncrustify profile: four-space indentation, a
+150-column limit, braces on their own line for function and type definitions (`class`,
+`struct`, `union`) and attached everywhere else (`namespace`, `enum`, control statements,
+lambdas), braces required around every control-statement body, `Type* p` and `Type& r`,
+and a wrapped `&&`, `||`, or `?:` leading its line. Three deliberate deviations from MuseScore,
+each named in the config file: `struct` braces break like `class` braces; braced initializer lists
+have no inner spaces (`{1, 2}`); and a wrapped argument or parameter list continues at one
+indent level rather than aligned under the open paren. Function arguments and braced lists are
+governed separately: arguments are filled to the column limit, while a braced list with a trailing
+comma always stays one item per line and one without is left on one line when it fits. That
+comma is how a table keeps its row shape, so use it instead of `// clang-format off`.
+
+The whole-repository reformat commits are listed in
+[`.git-blame-ignore-revs`](../../.git-blame-ignore-revs); set
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` once per clone so `git blame` reports the
+authoring change instead.
 
 ## Import reporting
 

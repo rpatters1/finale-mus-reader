@@ -63,7 +63,7 @@ Future `MeasureExprAssign` recovery: [legacy attachment modes and positioning mi
 | [`reference/options_fallback.md`](reference/options_fallback.md) | The baseline-seeding sequence and `ValueOrigin` | Adding an overlay or reporting value origin |
 | [`reference/embedded_defaults.md`](reference/embedded_defaults.md) | Pinned baseline resources and their hashes | Touching `src/defaults/` or the generator |
 | [`reference/build_invariants.md`](reference/build_invariants.md) | Unity build, `/bigobj`, `/utf-8`, dependency opt-out | Changing CMake or adding a dependency |
-| [`reference/code_conventions.md`](reference/code_conventions.md) | Naming, file headers, namespaces, MSVC flags, unity cleanliness | Writing any project-owned C++ file |
+| [`reference/code_conventions.md`](reference/code_conventions.md) | Formatting, naming, file headers, namespaces, MSVC flags, unity cleanliness | Writing any project-owned C++ file |
 | [`reference/duplication_scope.md`](reference/duplication_scope.md) | Where the no-duplication rule binds, and the coverage probe/report pair | A repetition in `tools/`, `scripts/`, or tests |
 | [`reference/CITING_EVIDENCE.md`](reference/CITING_EVIDENCE.md) | Evidence tokens, what each confidence level requires, contrary findings | Writing any finding |
 | [`reference/pdk_public_evidence.md`](reference/pdk_public_evidence.md) | The public PDK material and what it establishes | Citing a PDK-derived fact |
