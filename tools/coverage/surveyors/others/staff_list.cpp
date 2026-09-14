@@ -25,8 +25,7 @@ bool hasOriginalFourLists(const finale_mus_reader::ImportReport& report)
 {
     std::set<musx::dom::Cmper> cmpers;
     for (const auto& [key, origin] : report.instanceOrigins) {
-        if (key.classType == std::type_index(typeid(Target))
-            && key.partId == musx::dom::SCORE_PARTID && key.cmper1
+        if (key.classType == std::type_index(typeid(Target)) && key.partId == musx::dom::SCORE_PARTID && key.cmper1
             && origin == finale_mus_reader::ValueOrigin::LegacyMus) {
             cmpers.insert(*key.cmper1);
         }
@@ -35,17 +34,13 @@ bool hasOriginalFourLists(const finale_mus_reader::ImportReport& report)
     return cmpers == expected;
 }
 
-std::optional<DifferenceClassification>
-classifyCategoryStaffListNameDifference(const DifferenceContext& context)
+std::optional<DifferenceClassification> classifyCategoryStaffListNameDifference(const DifferenceContext& context)
 {
     using enum DifferenceCategory;
     if (context.category != ReaderOnly || context.origin != "legacy-mus"
         || !comparisonPathStartsWith(context.path, "staff_list_category_names[cmper=")
-        || !sourceIsVersion(context.epoch, context.sourceVersion,
-            finale_mus_reader::FormatEpoch::ZlibLegacy,
-            finale_mus_reader::versions::finale2009)
-        || !sourceIsBeta(context.sourceVersion)
-        || !hasOriginalFourLists<musx::dom::others::StaffListCategoryParts>(context.sourceReport)
+        || !sourceIsVersion(context.epoch, context.sourceVersion, finale_mus_reader::FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2009)
+        || !sourceIsBeta(context.sourceVersion) || !hasOriginalFourLists<musx::dom::others::StaffListCategoryParts>(context.sourceReport)
         || !hasOriginalFourLists<musx::dom::others::StaffListCategoryScore>(context.sourceReport)) {
         return std::nullopt;
     }
@@ -65,11 +60,8 @@ Value observeStaffLists(const SurveyContext& ctx)
                 {"origin", fieldOrigin<Target>(ctx, member, *list)},
             });
         }
-        result.emplace_back(observe(
-            *list, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field("values", [values = std::move(values)](const Target&) {
-                return Value(values);
-            })));
+        result.emplace_back(observe(*list, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("values", [values = std::move(values)](const Target&) { return Value(values); })));
     }
     return result;
 }
@@ -79,13 +71,8 @@ Value observeStaffListNames(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& name : sourceInstances<Target>(ctx)) {
-        result.emplace_back(observe(
-            *name, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field("name", &Target::name),
-            field("origin_name",
-                [&ctx](const Target& value) {
-                    return fieldOrigin<Target>(ctx, "name", value);
-                })));
+        result.emplace_back(observe(*name, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }), field("name", &Target::name),
+            field("origin_name", [&ctx](const Target& value) { return fieldOrigin<Target>(ctx, "name", value); })));
     }
     return result;
 }
@@ -130,16 +117,13 @@ Value observeRepeatStaffListScoreForced(const SurveyContext& ctx)
     return observeStaffLists<musx::dom::others::StaffListRepeatScoreForced>(ctx);
 }
 
-COVERAGE_CLASS("others", "staff_list_category_names", observeCategoryStaffListNames,
-               classifyCategoryStaffListNameDifference);
+COVERAGE_CLASS("others", "staff_list_category_names", observeCategoryStaffListNames, classifyCategoryStaffListNameDifference);
 COVERAGE_SURVEYOR("others", "staff_list_category_parts", observeCategoryStaffListParts);
 COVERAGE_SURVEYOR("others", "staff_list_category_score", observeCategoryStaffListScore);
 COVERAGE_SURVEYOR("others", "staff_list_repeat_names", observeRepeatStaffListNames);
 COVERAGE_SURVEYOR("others", "staff_list_repeat_parts", observeRepeatStaffListParts);
-COVERAGE_SURVEYOR(
-    "others", "staff_list_repeat_parts_forced", observeRepeatStaffListPartsForced);
+COVERAGE_SURVEYOR("others", "staff_list_repeat_parts_forced", observeRepeatStaffListPartsForced);
 COVERAGE_SURVEYOR("others", "staff_list_repeat_score", observeRepeatStaffListScore);
-COVERAGE_SURVEYOR(
-    "others", "staff_list_repeat_score_forced", observeRepeatStaffListScoreForced);
+COVERAGE_SURVEYOR("others", "staff_list_repeat_score_forced", observeRepeatStaffListScoreForced);
 
 } // namespace

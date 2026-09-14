@@ -22,17 +22,36 @@ public:
     using Object = std::map<std::string, Value, std::less<>>;
     using Storage = std::variant<std::nullptr_t, bool, std::int64_t, double, std::string, Array, Object, Blob>;
 
-    Value() : storage_(nullptr) {}
-    Value(bool value) : storage_(value) {}
-    template <std::integral T> requires (!std::same_as<T, bool>)
-    Value(T value) : storage_(static_cast<std::int64_t>(value)) {}
+    Value()
+        : storage_(nullptr)
+    {}
+    Value(bool value)
+        : storage_(value)
+    {}
+    template <std::integral T>
+        requires(!std::same_as<T, bool>)
+    Value(T value)
+        : storage_(static_cast<std::int64_t>(value))
+    {}
     template <std::floating_point T>
-    Value(T value) : storage_(static_cast<double>(value)) {}
-    Value(std::string value) : storage_(std::move(value)) {}
-    Value(const char* value) : storage_(std::string(value)) {}
-    Value(Array value) : storage_(std::move(value)) {}
-    Value(Object value) : storage_(std::move(value)) {}
-    Value(Blob value) : storage_(std::move(value)) {}
+    Value(T value)
+        : storage_(static_cast<double>(value))
+    {}
+    Value(std::string value)
+        : storage_(std::move(value))
+    {}
+    Value(const char* value)
+        : storage_(std::string(value))
+    {}
+    Value(Array value)
+        : storage_(std::move(value))
+    {}
+    Value(Object value)
+        : storage_(std::move(value))
+    {}
+    Value(Blob value)
+        : storage_(std::move(value))
+    {}
 
     [[nodiscard]] std::string toJson() const;
 

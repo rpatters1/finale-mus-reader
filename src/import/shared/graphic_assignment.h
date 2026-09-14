@@ -50,8 +50,11 @@ void populateGraphicAssignmentPosition(Target& target, std::uint16_t packed)
     }
     if constexpr (HasPositionFrom) {
         using P = typename Target::PositionFrom;
-        if ((packed & 0x0080U) != 0) target.posFrom = P::PageEdge;
-        else if ((packed & 0x0040U) != 0) target.posFrom = P::Margins;
+        if ((packed & 0x0080U) != 0) {
+            target.posFrom = P::PageEdge;
+        } else if ((packed & 0x0040U) != 0) {
+            target.posFrom = P::Margins;
+        }
     }
     target.fixedPerc = (packed & 0x0100U) != 0;
 }

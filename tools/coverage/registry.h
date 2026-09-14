@@ -81,32 +81,24 @@ SurveyResult runAllSurveyors(const SurveyContext& ctx);
 
 /// @brief Registers one class descriptor when this translation unit
 /// initializes.
-#define COVERAGE_CLASS(pool, key, fn, classifier)                                                  \
-    namespace {                                                                                    \
-    const int registration_##fn =                                                                  \
-        (::finale_mus_reader::coverage::registerSurveyor({pool, key, fn, classifier, nullptr}),    \
-         0);                                                                                       \
+#define COVERAGE_CLASS(pool, key, fn, classifier)                                                                             \
+    namespace {                                                                                                               \
+    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor({pool, key, fn, classifier, nullptr}), 0); \
     }
 
-#define COVERAGE_TEXT_CLASS(pool, key, fn, textClassifier)                                         \
-    namespace {                                                                                    \
-    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor(                \
-                                       {pool, key, fn, nullptr, textClassifier, nullptr, nullptr}),\
-                                   0);                                                             \
+#define COVERAGE_TEXT_CLASS(pool, key, fn, textClassifier)                                                                                          \
+    namespace {                                                                                                                                     \
+    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor({pool, key, fn, nullptr, textClassifier, nullptr, nullptr}), 0); \
     }
 
-#define COVERAGE_CLASS_WITH_EQUIVALENCE(pool, key, fn, classifier, equivalence)                    \
-    namespace {                                                                                    \
-    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor(                \
-                                       {pool, key, fn, classifier, nullptr, equivalence, nullptr}),\
-                                   0);                                                             \
+#define COVERAGE_CLASS_WITH_EQUIVALENCE(pool, key, fn, classifier, equivalence)                                                                     \
+    namespace {                                                                                                                                     \
+    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor({pool, key, fn, classifier, nullptr, equivalence, nullptr}), 0); \
     }
 
-#define COVERAGE_CLASS_WITH_PREPARATION(pool, key, fn, classifier, preparation)                   \
-    namespace {                                                                                    \
-    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor(                \
-                                       {pool, key, fn, classifier, nullptr, nullptr, preparation}),\
-                                   0);                                                             \
+#define COVERAGE_CLASS_WITH_PREPARATION(pool, key, fn, classifier, preparation)                                                                     \
+    namespace {                                                                                                                                     \
+    const int registration_##fn = (::finale_mus_reader::coverage::registerSurveyor({pool, key, fn, classifier, nullptr, nullptr, preparation}), 0); \
     }
 
 #define COVERAGE_SURVEYOR(pool, key, fn) COVERAGE_CLASS(pool, key, fn, nullptr)

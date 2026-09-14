@@ -21,11 +21,9 @@ Value observeRelationships(const SurveyContext& ctx)
     using musx::dom::others::TextBlock;
 
     std::set<musx::dom::Cmper> partNameTextIds;
-    const auto score = ctx.document->getOthers()->get<PartDefinition>(
-        musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
+    const auto score = ctx.document->getOthers()->get<PartDefinition>(musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
     if (score && score->nameId) {
-        if (const auto textBlock = ctx.document->getOthers()->get<TextBlock>(
-                score->getRequestedPartId(), score->nameId)) {
+        if (const auto textBlock = ctx.document->getOthers()->get<TextBlock>(score->getRequestedPartId(), score->nameId)) {
             partNameTextIds.insert(textBlock->textId);
         }
     }

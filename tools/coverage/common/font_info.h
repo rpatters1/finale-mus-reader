@@ -17,8 +17,7 @@ std::string canonicalFontName(std::string_view value);
 bool sameFontName(std::string_view left, std::string_view right);
 std::set<std::string> comparisonFontReferencePaths(const SurveySnapshot& snapshot);
 std::string comparisonFontIdentity(const SurveySnapshot& snapshot, std::int64_t id);
-bool isComparisonFontReference(std::string_view path,
-                               const std::set<std::string>& shapeFontPaths);
+bool isComparisonFontReference(std::string_view path, const std::set<std::string>& shapeFontPaths);
 
 } // namespace coverage
 } // namespace finale_mus_reader

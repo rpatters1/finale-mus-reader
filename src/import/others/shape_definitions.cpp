@@ -47,20 +47,16 @@ struct ShapeSourceFamily
 ShapeSourceFamily sourceFamily(const ImportContext& context)
 {
     if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-        return {&context.index.getClassOthers(), shapeDefinitionClass,
-            shapeInstructionClass, shapeDataClass, false, true};
+        return {&context.index.getClassOthers(), shapeDefinitionClass, shapeInstructionClass, shapeDataClass, false, true};
     }
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
-        return {&context.index.getOthers(), shapeDefinitionTag,
-            earlyShapeInstructionTag, earlyShapeDataTag, true, false};
+        return {&context.index.getOthers(), shapeDefinitionTag, earlyShapeInstructionTag, earlyShapeDataTag, true, false};
     }
     // The uncompressed and DCL epochs deliberately share the same fixed-row spelling.
-    return {&context.index.getOthers(), shapeDefinitionTag,
-        shapeInstructionTag, shapeDataTag, false, false};
+    return {&context.index.getOthers(), shapeDefinitionTag, shapeInstructionTag, shapeDataTag, false, false};
 }
 
-std::uint32_t combineShapeWords(std::int16_t first, std::int16_t second,
-    SourcePlatform platform)
+std::uint32_t combineShapeWords(std::int16_t first, std::int16_t second, SourcePlatform platform)
 {
     const auto a = static_cast<std::uint16_t>(first);
     const auto b = static_cast<std::uint16_t>(second);
@@ -68,40 +64,32 @@ std::uint32_t combineShapeWords(std::int16_t first, std::int16_t second,
     // record index has normalized each word. The Windows form is low-word first; the Mac
     // form is high-word first. Zlib payloads are read separately as ordinary four-byte
     // numbers in the container's byte order and never reach this branch.
-    return platform == SourcePlatform::Windows
-        ? (static_cast<std::uint32_t>(b) << 16U) | a
-        : (static_cast<std::uint32_t>(a) << 16U) | b;
+    return platform == SourcePlatform::Windows ? (static_cast<std::uint32_t>(b) << 16U) | a : (static_cast<std::uint32_t>(a) << 16U) | b;
 }
 
 std::int32_t readShapeLong(const std::uint8_t* bytes, ByteOrder order)
 {
     const auto value = order == ByteOrder::BigEndian
-        ? (static_cast<std::uint32_t>(bytes[0]) << 24U)
-            | (static_cast<std::uint32_t>(bytes[1]) << 16U)
-            | (static_cast<std::uint32_t>(bytes[2]) << 8U) | bytes[3]
-        : static_cast<std::uint32_t>(bytes[0])
-            | (static_cast<std::uint32_t>(bytes[1]) << 8U)
-            | (static_cast<std::uint32_t>(bytes[2]) << 16U)
-            | (static_cast<std::uint32_t>(bytes[3]) << 24U);
+                           ? (static_cast<std::uint32_t>(bytes[0]) << 24U) | (static_cast<std::uint32_t>(bytes[1]) << 16U)
+                                 | (static_cast<std::uint32_t>(bytes[2]) << 8U) | bytes[3]
+                           : static_cast<std::uint32_t>(bytes[0]) | (static_cast<std::uint32_t>(bytes[1]) << 8U)
+                                 | (static_cast<std::uint32_t>(bytes[2]) << 16U) | (static_cast<std::uint32_t>(bytes[3]) << 24U);
     return static_cast<std::int32_t>(value);
 }
 
-std::vector<std::int32_t> fixedLongs(std::span<const records::LegacyRow> rows,
-    SourcePlatform platform)
+std::vector<std::int32_t> fixedLongs(std::span<const records::LegacyRow> rows, SourcePlatform platform)
 {
     std::vector<std::int32_t> result;
     result.reserve(rows.size() * 3);
     for (const auto& row : rows) {
         for (std::size_t i = 0; i + 1 < row.wordCount; i += 2) {
-            result.push_back(static_cast<std::int32_t>(
-                combineShapeWords(row.words[i], row.words[i + 1], platform)));
+            result.push_back(static_cast<std::int32_t>(combineShapeWords(row.words[i], row.words[i + 1], platform)));
         }
     }
     return result;
 }
 
-std::vector<std::int32_t> classLongs(const records::LegacyRowPool& pool,
-    const records::LegacyRow& row, ByteOrder order)
+std::vector<std::int32_t> classLongs(const records::LegacyRowPool& pool, const records::LegacyRow& row, ByteOrder order)
 {
     const auto payload = pool.effectivePayloadOf(row);
     std::vector<std::int32_t> result;
@@ -112,9 +100,8 @@ std::vector<std::int32_t> classLongs(const records::LegacyRowPool& pool,
     return result;
 }
 
-std::vector<std::int32_t> shapeLongs(const ShapeSourceFamily& source,
-    records::LegacyTag identity, std::uint16_t cmper, std::uint16_t partId,
-    const ImportContext& context)
+std::vector<std::int32_t> shapeLongs(
+    const ShapeSourceFamily& source, records::LegacyTag identity, std::uint16_t cmper, std::uint16_t partId, const ImportContext& context)
 {
     const auto rows = source.pool->getArray(identity, cmper, 0, partId);
     if (rows.empty()) {
@@ -127,11 +114,10 @@ std::vector<std::int32_t> shapeLongs(const ShapeSourceFamily& source,
 }
 
 template <typename Target, typename Reporting>
-void reportShapeValue(Reporting& reporting, musx::dom::Cmper cmper, std::string member,
-    std::uint16_t partId, std::int64_t value, const records::LegacyRow& row)
+void reportShapeValue(
+    Reporting& reporting, musx::dom::Cmper cmper, std::string member, std::uint16_t partId, std::int64_t value, const records::LegacyRow& row)
 {
-    reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper),
-        std::move(member),
+    reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper), std::move(member),
         {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
 }
 
@@ -151,8 +137,7 @@ ShapeInstructionType instructionType(records::LegacyTag tag, bool early)
     case packTag("fs"): return ShapeInstructionType::FillSolid;
     case packTag("go"): return ShapeInstructionType::GoToOrigin;
     // Before Finale 3.0 this instruction meant origin, not the beginning of the path.
-    case packTag("gs"): return early ? ShapeInstructionType::GoToOrigin
-                                      : ShapeInstructionType::GoToStart;
+    case packTag("gs"): return early ? ShapeInstructionType::GoToOrigin : ShapeInstructionType::GoToStart;
     case packTag("lw"): return ShapeInstructionType::LineWidth;
     case packTag("sw"): return ShapeInstructionType::LineWidth;
     case packTag("re"): return ShapeInstructionType::Rectangle;
@@ -182,27 +167,27 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
             // Comparator 0 means "no data" wherever a ShapeDef stores it, so nothing ever
             // resolves this comparator; a physical record here is leftover bytes from a
             // deleted or never-populated slot, not content any real shape can reach.
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "Skipped ShapeData comparator 0, which Finale reserves to mean \"no data\"."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Info, "Skipped ShapeData comparator 0, which Finale reserves to mean \"no data\"."});
             continue;
         }
         const auto rows = source.pool->getArray(source.data, cmper, 0, partId);
-        auto target = createOthersRecordTarget<ShapeDataTarget>(context.document, recordSource,
-                                                                rows.front(), cmper);
-        if (!target) continue;
+        auto target = createOthersRecordTarget<ShapeDataTarget>(context.document, recordSource, rows.front(), cmper);
+        if (!target) {
+            continue;
+        }
         std::vector<std::size_t> earlyLineWidths;
         if (source.earlyData) {
             // The three pools have independent comparators. Find every definition that
             // names this data list instead of assuming its instruction-list id matches.
-            for (const auto& shape : context.document->getOthers()
-                    ->getArray<ShapeDefTarget>(partId)) {
-                if (shape->dataList != cmper) continue;
-                if (const auto instructions = context.document->getOthers()
-                        ->get<ShapeInstructionTarget>(partId, shape->instructionList)) {
+            for (const auto& shape : context.document->getOthers()->getArray<ShapeDefTarget>(partId)) {
+                if (shape->dataList != cmper) {
+                    continue;
+                }
+                if (const auto instructions = context.document->getOthers()->get<ShapeInstructionTarget>(partId, shape->instructionList)) {
                     std::size_t dataIndex = 0;
                     for (const auto& instruction : instructions->instructions) {
-                        if (instruction->type == ShapeInstructionType::LineWidth
-                                && instruction->numData == 1) {
+                        if (instruction->type == ShapeInstructionType::LineWidth && instruction->numData == 1) {
                             earlyLineWidths.push_back(dataIndex);
                         }
                         dataIndex += static_cast<std::size_t>(instruction->numData);
@@ -213,22 +198,16 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
         const auto values = shapeLongs(source, source.data, cmper, partId, context);
         for (std::size_t index = 0; index < values.size(); ++index) {
             auto value = values[index];
-            if (source.earlyData
-                    && std::find(earlyLineWidths.begin(), earlyLineWidths.end(), index)
-                        != earlyLineWidths.end()) {
+            if (source.earlyData && std::find(earlyLineWidths.begin(), earlyLineWidths.end(), index) != earlyLineWidths.end()) {
                 // Revision 1's `sw` stored hundredths of a point. The modern LineWidth
                 // instruction consumes Efix: one point becomes 256.
                 value = (value * 256 + (value >= 0 ? 50 : -50)) / 100;
             }
             target->values.push_back(value);
-            const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy
-                ? 0 : (index / 3)];
+            const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy ? 0 : (index / 3)];
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                reporting.report().setField(
-                    reporting.template instanceKey<ShapeDataTarget>(partId, cmper),
-                    "values[" + std::to_string(index) + "]",
-                    {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset,
-                        values[index]});
+                reporting.report().setField(reporting.template instanceKey<ShapeDataTarget>(partId, cmper), "values[" + std::to_string(index) + "]",
+                    {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, values[index]});
             });
         }
         context.document->getOthers()->add(ShapeDataTarget::XmlNodeName, std::move(target));
@@ -245,16 +224,17 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
             // nothing ever resolves this comparator; a physical record here is leftover
             // bytes from a deleted or never-populated slot, not content any real shape can
             // reach.
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "Skipped ShapeInstructionList comparator 0, which Finale reserves to mean "
-                "\"no instructions\"."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Info, "Skipped ShapeInstructionList comparator 0, which Finale reserves to mean "
+                                                     "\"no instructions\"."});
             continue;
         }
         const auto rows = source.pool->getArray(source.instructions, cmper, 0, partId);
         const auto packed = shapeLongs(source, source.instructions, cmper, partId, context);
-        auto target = createOthersRecordTarget<ShapeInstructionTarget>(
-            context.document, recordSource, rows.front(), cmper);
-        if (!target) continue;
+        auto target = createOthersRecordTarget<ShapeInstructionTarget>(context.document, recordSource, rows.front(), cmper);
+        if (!target) {
+            continue;
+        }
         for (std::size_t index = 0; index < packed.size(); ++index) {
             const auto raw = static_cast<std::uint32_t>(packed[index]);
             if (raw == 0) {
@@ -270,27 +250,22 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
             instruction->numData = numData;
             instruction->type = instructionType(tag, source.earlyData);
             target->instructions.push_back(instruction);
-            const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy
-                ? 0 : (index / 3)];
+            const auto& row = rows[context.profile.epoch == FormatEpoch::ZlibLegacy ? 0 : (index / 3)];
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const auto reportPrefix =
-                    "instructions[" + std::to_string(target->instructions.size() - 1) + "].";
-                reportShapeValue<ShapeInstructionTarget>(
-                    reporting, cmper, reportPrefix + "numData", partId, numData, row);
+                const auto reportPrefix = "instructions[" + std::to_string(target->instructions.size() - 1) + "].";
+                reportShapeValue<ShapeInstructionTarget>(reporting, cmper, reportPrefix + "numData", partId, numData, row);
                 // The destination is an enum, but the report's raw value preserves the
                 // two-byte source tag that selected it.
-                reportShapeValue<ShapeInstructionTarget>(
-                    reporting, cmper, reportPrefix + "type", partId, tag, row);
+                reportShapeValue<ShapeInstructionTarget>(reporting, cmper, reportPrefix + "type", partId, tag, row);
             });
 
             if (instruction->type == ShapeInstructionType::Undocumented || revision > 2) {
-                context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                    "Shape " + std::to_string(cmper) + " contains unsupported instruction tag "
-                        + records::tagText(tag) + " revision " + std::to_string(revision) + "."});
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Info, "Shape " + std::to_string(cmper) + " contains unsupported instruction tag "
+                                                             + records::tagText(tag) + " revision " + std::to_string(revision) + "."});
             }
         }
-        context.document->getOthers()->add(
-            ShapeInstructionTarget::XmlNodeName, std::move(target));
+        context.document->getOthers()->add(ShapeInstructionTarget::XmlNodeName, std::move(target));
     }
 }
 
@@ -304,8 +279,8 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
             // ever resolving it), so nothing ever resolves this comparator; a physical
             // record here is leftover bytes from a deleted or never-populated slot, not a
             // shape any reference can reach.
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-                "Skipped ShapeDef comparator 0, which Finale reserves to mean \"no shape\"."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Info, "Skipped ShapeDef comparator 0, which Finale reserves to mean \"no shape\"."});
             continue;
         }
         const auto rows = source.pool->getArray(source.definition, cmper, 0, partId);
@@ -313,46 +288,40 @@ void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& conte
             continue;
         }
         const auto words = context.profile.epoch == FormatEpoch::ZlibLegacy
-            ? payloadWords(source.pool->effectivePayloadOf(rows.front()), context.profile.byteOrder)
-            : std::vector<std::int16_t>(rows.front().words.begin(),
-                rows.front().words.begin() + rows.front().wordCount);
+                               ? payloadWords(source.pool->effectivePayloadOf(rows.front()), context.profile.byteOrder)
+                               : std::vector<std::int16_t>(rows.front().words.begin(), rows.front().words.begin() + rows.front().wordCount);
         if (words.size() < 2) {
             continue;
         }
-        auto target = createOthersRecordTarget<ShapeDefTarget>(context.document, recordSource,
-                                                               rows.front(), cmper);
-        if (!target) continue;
+        auto target = createOthersRecordTarget<ShapeDefTarget>(context.document, recordSource, rows.front(), cmper);
+        if (!target) {
+            continue;
+        }
         target->instructionList = static_cast<musx::dom::Cmper>(words[0]);
         target->dataList = static_cast<musx::dom::Cmper>(words[1]);
         // Coda SD carries a bounding rectangle after the two list ids. Later SD and
         // zlib class 0x00d6 put the semantic enum in word 2; out-of-range values are
         // retained as Other rather than constructing an invalid enum.
-        const bool hasStoredShapeType = context.profile.epoch == FormatEpoch::UncompressedLegacy
-            || context.profile.epoch == FormatEpoch::DclLegacy
-            || context.profile.epoch == FormatEpoch::ZlibLegacy;
-        if (hasStoredShapeType && words.size() >= 3
-                && words[2] >= static_cast<int>(ShapeDefTarget::ShapeType::Other)
-                && words[2] <= static_cast<int>(ShapeDefTarget::ShapeType::Clef)) {
+        const bool hasStoredShapeType = context.profile.epoch == FormatEpoch::UncompressedLegacy || context.profile.epoch == FormatEpoch::DclLegacy
+                                        || context.profile.epoch == FormatEpoch::ZlibLegacy;
+        if (hasStoredShapeType && words.size() >= 3 && words[2] >= static_cast<int>(ShapeDefTarget::ShapeType::Other)
+            && words[2] <= static_cast<int>(ShapeDefTarget::ShapeType::Clef)) {
             target->shapeType = static_cast<ShapeDefTarget::ShapeType>(words[2]);
         }
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reportShapeValue<ShapeDefTarget>(
-                reporting, cmper, "instructionList", partId, target->instructionList, rows.front());
-            reportShapeValue<ShapeDefTarget>(
-                reporting, cmper, "dataList", partId, target->dataList, rows.front());
+            reportShapeValue<ShapeDefTarget>(reporting, cmper, "instructionList", partId, target->instructionList, rows.front());
+            reportShapeValue<ShapeDefTarget>(reporting, cmper, "dataList", partId, target->dataList, rows.front());
         });
         if (!hasStoredShapeType) {
             // This layout carries a bounding rectangle in this position. `Other` is
             // the behavior represented by an absent modern type, not a recovered value.
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                reporting.report().setField(
-                    reporting.template instanceKey<ShapeDefTarget>(partId, cmper), "shapeType",
+                reporting.report().setField(reporting.template instanceKey<ShapeDefTarget>(partId, cmper), "shapeType",
                     {Reporting::Origin::LegacyBehavior, 0, 0, static_cast<int>(target->shapeType)});
             });
         } else {
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                reportShapeValue<ShapeDefTarget>(reporting, cmper, "shapeType", partId,
-                    static_cast<int>(target->shapeType), rows.front());
+                reportShapeValue<ShapeDefTarget>(reporting, cmper, "shapeType", partId, static_cast<int>(target->shapeType), rows.front());
             });
         }
         context.document->getOthers()->add(ShapeDefTarget::XmlNodeName, std::move(target));
@@ -368,11 +337,11 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
     const RecordFamilySource recordSource{source.pool, source.definition, source.classRecords};
     for (const auto [partId, cmper] : recordKeys(recordSource)) {
         const auto shape = context.document->getOthers()->get<ShapeDefTarget>(partId, cmper);
-        if (!shape || shape->isBlank()) continue;
-        const auto instructions = context.document->getOthers()->get<ShapeInstructionTarget>(
-            partId, shape->instructionList);
-        const auto data =
-            context.document->getOthers()->get<ShapeDataTarget>(partId, shape->dataList);
+        if (!shape || shape->isBlank()) {
+            continue;
+        }
+        const auto instructions = context.document->getOthers()->get<ShapeInstructionTarget>(partId, shape->instructionList);
+        const auto data = context.document->getOthers()->get<ShapeDataTarget>(partId, shape->dataList);
         if (!instructions || !data) {
             ++unresolved;
             continue;
@@ -387,10 +356,8 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
                 if (required + 2 >= data->values.size()) {
                     ++unresolvedGraphicAssignments;
                 } else {
-                    const auto assignmentCmper = static_cast<musx::dom::Cmper>(
-                        data->values[required + 2]);
-                    const auto assignment = musx::dom::others::ShapeGraphicAssign::findForGraphic(
-                        context.document, partId, assignmentCmper);
+                    const auto assignmentCmper = static_cast<musx::dom::Cmper>(data->values[required + 2]);
+                    const auto assignment = musx::dom::others::ShapeGraphicAssign::findForGraphic(context.document, partId, assignmentCmper);
                     if (!assignment) {
                         ++unresolvedGraphicAssignments;
                     }
@@ -398,22 +365,20 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
             }
             required += static_cast<std::size_t>(instruction->numData);
         }
-        if (required > data->values.size()) ++insufficient;
+        if (required > data->values.size()) {
+            ++insufficient;
+        }
     }
     if (unresolved != 0 || insufficient != 0) {
-        context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            std::to_string(unresolved) + " nonblank shape definition(s) have a missing list, and "
-                + std::to_string(insufficient)
-                + " have less data than their instructions consume."});
+        context.report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Warning, std::to_string(unresolved) + " nonblank shape definition(s) have a missing list, and "
+                                                        + std::to_string(insufficient) + " have less data than their instructions consume."});
     }
     if (externalGraphics != 0) {
-        const auto level = unresolvedGraphicAssignments == 0
-            ? musx::util::Logger::LogLevel::Verbose
-            : musx::util::Logger::LogLevel::Info;
-        context.report.diagnostics.push_back({level,
-            std::to_string(externalGraphics) + " shape external-graphic instruction(s) were "
-                + "checked; " + std::to_string(unresolvedGraphicAssignments)
-                + " do not resolve to a ShapeGraphicAssign."});
+        const auto level = unresolvedGraphicAssignments == 0 ? musx::util::Logger::LogLevel::Verbose : musx::util::Logger::LogLevel::Info;
+        context.report.diagnostics.push_back(
+            {level, std::to_string(externalGraphics) + " shape external-graphic instruction(s) were " + "checked; "
+                        + std::to_string(unresolvedGraphicAssignments) + " do not resolve to a ShapeGraphicAssign."});
     }
 }
 

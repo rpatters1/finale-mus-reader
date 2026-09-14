@@ -21,11 +21,10 @@ constexpr std::uint16_t alternateNotationNumberSelector = 46;
 // offsets use an origin one staff space above the later origin. Selector 46 stores another
 // member of this option family and is absent from the earlier layout; it does not distinguish
 // the Finale 97 change itself, so that upper boundary remains version-gated.
-std::optional<std::int64_t> adjustEarlyAlternateNotationOrigin(std::int64_t value,
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+std::optional<std::int64_t> adjustEarlyAlternateNotationOrigin(
+    std::int64_t value, const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    if (!sourcePredatesVersion(
-            profile, FormatEpoch::UncompressedLegacy, versions::finale97)
+    if (!sourcePredatesVersion(profile, FormatEpoch::UncompressedLegacy, versions::finale97)
         || !readGlobalWords(index, profile, alternateNotationNumberSelector).present) {
         return std::nullopt;
     }
@@ -33,25 +32,21 @@ std::optional<std::int64_t> adjustEarlyAlternateNotationOrigin(std::int64_t valu
 }
 
 template <typename T>
-void applyAlternateNotationBehavior(AlternateNotationOptionsTarget& target,
-    T AlternateNotationOptionsTarget::*member, const char* name, T value,
-    ImportReport& report)
+void applyAlternateNotationBehavior(
+    AlternateNotationOptionsTarget& target, T AlternateNotationOptionsTarget::* member, const char* name, T value, ImportReport& report)
 {
     target.*member = value;
-    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<AlternateNotationOptionsTarget>(name, value);
-    });
+    withReporting(
+        report, [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<AlternateNotationOptionsTarget>(name, value); });
 }
 
 template <typename T>
-void adjustAlternateNotationValue(AlternateNotationOptionsTarget& target,
-    T AlternateNotationOptionsTarget::*member, const char* name, T adjustment,
-    ImportReport& report)
+void adjustAlternateNotationValue(
+    AlternateNotationOptionsTarget& target, T AlternateNotationOptionsTarget::* member, const char* name, T adjustment, ImportReport& report)
 {
     target.*member -= adjustment;
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        if (auto* info = reporting.report().findField(
-                reporting.template instanceKey<AlternateNotationOptionsTarget>(), name)) {
+        if (auto* info = reporting.report().findField(reporting.template instanceKey<AlternateNotationOptionsTarget>(), name)) {
             info->origin = Reporting::Origin::LegacyMusAdjusted;
         }
     });
@@ -61,31 +56,26 @@ void adjustAlternateNotationValue(AlternateNotationOptionsTarget& target,
 // from an origin two staff spaces above the modern one. Without selector 43 none of the six
 // slash offsets is operative. Selector presence is the lower boundary because these sparse
 // early version ranges do not state when the corresponding settings became available.
-void applyPreSelector46Behavior(const ImportContext& context,
-    AlternateNotationOptionsTarget& target)
+void applyPreSelector46Behavior(const ImportContext& context, AlternateNotationOptionsTarget& target)
 {
-    if (!sourcePredatesVersion(
-            context.profile, FormatEpoch::UncompressedLegacy, versions::finale97)
-        || readGlobalWords(context.index, context.profile,
-            alternateNotationNumberSelector).present) {
+    if (!sourcePredatesVersion(context.profile, FormatEpoch::UncompressedLegacy, versions::finale97)
+        || readGlobalWords(context.index, context.profile, alternateNotationNumberSelector).present) {
         return;
     }
 
-    const auto oneSpace = static_cast<decltype(target.halfSlashLift)>(
-        musx::dom::EVPU_PER_SPACE);
+    const auto oneSpace = static_cast<decltype(target.halfSlashLift)>(musx::dom::EVPU_PER_SPACE);
 #define APPLY_ALTERNATE_BEHAVIOR(member, value) \
-    applyAlternateNotationBehavior(target, &AlternateNotationOptionsTarget::member, \
-        #member, static_cast<decltype(target.member)>(value), context.report)
+    applyAlternateNotationBehavior(             \
+        target, &AlternateNotationOptionsTarget::member, #member, static_cast<decltype(target.member)>(value), context.report)
     APPLY_ALTERNATE_BEHAVIOR(halfSlashLift, -oneSpace);
     APPLY_ALTERNATE_BEHAVIOR(wholeSlashLift, -oneSpace);
     APPLY_ALTERNATE_BEHAVIOR(dWholeSlashLift, -oneSpace);
 
-    const bool hasStemOffsets = readGlobalWords(context.index, context.profile,
-        alternateNotationStemSelector).present;
+    const bool hasStemOffsets = readGlobalWords(context.index, context.profile, alternateNotationStemSelector).present;
     if (hasStemOffsets) {
 #define ADJUST_ALTERNATE_VALUE(member, value) \
-    adjustAlternateNotationValue(target, &AlternateNotationOptionsTarget::member, \
-        #member, static_cast<decltype(target.member)>(value), context.report)
+    adjustAlternateNotationValue(             \
+        target, &AlternateNotationOptionsTarget::member, #member, static_cast<decltype(target.member)>(value), context.report)
         const auto twoSpaces = static_cast<decltype(target.halfSlashLift)>(2 * oneSpace);
         ADJUST_ALTERNATE_VALUE(halfSlashStemLift, twoSpaces);
         ADJUST_ALTERNATE_VALUE(quartSlashStemLift, twoSpaces);
@@ -104,43 +94,27 @@ void applyPreSelector46Behavior(const ImportContext& context,
 // address them by selector and the zlib encoding coalesces each selector into the class id
 // derived by numericGlobalClass.
 const FieldMapping fixedRowAlternateNotationFields[] = {
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 1,
-        &adjustEarlyAlternateNotationOrigin, halfSlashLift),
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 2,
-        &adjustEarlyAlternateNotationOrigin, wholeSlashLift),
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 3,
-        &adjustEarlyAlternateNotationOrigin, dWholeSlashLift),
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 3,
-        &adjustEarlyAlternateNotationOrigin, halfSlashStemLift),
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 4,
-        &adjustEarlyAlternateNotationOrigin, quartSlashStemLift),
-    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 5,
-        &adjustEarlyAlternateNotationOrigin, quartSlashLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 1, &adjustEarlyAlternateNotationOrigin, halfSlashLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 2, &adjustEarlyAlternateNotationOrigin, wholeSlashLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "22", GLOBALS_CMPER, 0, 3, &adjustEarlyAlternateNotationOrigin, dWholeSlashLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 3, &adjustEarlyAlternateNotationOrigin, halfSlashStemLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 4, &adjustEarlyAlternateNotationOrigin, quartSlashStemLift),
+    MUS_WORD_ADJUSTED(AlternateNotationOptionsTarget, "43", GLOBALS_CMPER, 0, 5, &adjustEarlyAlternateNotationOrigin, quartSlashLift),
     MUS_WORD(AlternateNotationOptionsTarget, "46", GLOBALS_CMPER, 0, 5, twoMeasNumLift),
 };
 
 const FieldMapping classRecordAlternateNotationFields[] = {
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER,
-        classWordOffset(1), halfSlashLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER,
-        classWordOffset(2), wholeSlashLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER,
-        classWordOffset(3), dWholeSlashLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER,
-        classWordOffset(3), halfSlashStemLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER,
-        classWordOffset(4), quartSlashStemLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER,
-        classWordOffset(5), quartSlashLift),
-    MUS_CLASS_WORD(AlternateNotationOptionsTarget,
-        numericGlobalClass(alternateNotationNumberSelector), GLOBALS_CMPER,
-        classWordOffset(5), twoMeasNumLift),
+    MUS_CLASS_WORD(AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER, classWordOffset(1), halfSlashLift),
+    MUS_CLASS_WORD(AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER, classWordOffset(2), wholeSlashLift),
+    MUS_CLASS_WORD(AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationSelector), GLOBALS_CMPER, classWordOffset(3), dWholeSlashLift),
+    MUS_CLASS_WORD(
+        AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER, classWordOffset(3), halfSlashStemLift),
+    MUS_CLASS_WORD(
+        AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER, classWordOffset(4), quartSlashStemLift),
+    MUS_CLASS_WORD(
+        AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationStemSelector), GLOBALS_CMPER, classWordOffset(5), quartSlashLift),
+    MUS_CLASS_WORD(
+        AlternateNotationOptionsTarget, numericGlobalClass(alternateNotationNumberSelector), GLOBALS_CMPER, classWordOffset(5), twoMeasNumLift),
 };
 
 const MappingTable& fixedRowAlternateNotationTable()
@@ -157,7 +131,8 @@ const MappingTable& fixedRowAlternateNotationTable()
 const MappingTable& classRecordAlternateNotationTable()
 {
     static const MappingTable table{.reportPrefix = "options.alternateNotationOptions",
-        .epochs = EpochMask::Zlib, .encoding = RecordEncoding::ClassRecord,
+        .epochs = EpochMask::Zlib,
+        .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<AlternateNotationOptionsTarget>,
         .fields = classRecordAlternateNotationFields,
@@ -170,12 +145,9 @@ const MappingTable& classRecordAlternateNotationTable()
 void importAlternateNotationOptions(const ImportContext& context)
 {
     applyMappingTables(
-        {&fixedRowAlternateNotationTable(), &classRecordAlternateNotationTable()},
-        context.index, context.profile, context.document, context.report);
-    for (const auto& target :
-        enumerateOptionsTarget<AlternateNotationOptionsTarget>(context.document)) {
-        applyPreSelector46Behavior(context,
-            *static_cast<AlternateNotationOptionsTarget*>(target.instance));
+        {&fixedRowAlternateNotationTable(), &classRecordAlternateNotationTable()}, context.index, context.profile, context.document, context.report);
+    for (const auto& target : enumerateOptionsTarget<AlternateNotationOptionsTarget>(context.document)) {
+        applyPreSelector46Behavior(context, *static_cast<AlternateNotationOptionsTarget*>(target.instance));
     }
 }
 

@@ -7,8 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <string>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,8 +31,7 @@ using LegacyTag = std::uint16_t;
 /// whatever byte order the file used to store it.
 [[nodiscard]] constexpr LegacyTag packTag(std::string_view tag)
 {
-    return static_cast<LegacyTag>(
-        (static_cast<unsigned char>(tag[0]) << 8U) | static_cast<unsigned char>(tag[1]));
+    return static_cast<LegacyTag>((static_cast<unsigned char>(tag[0]) << 8U) | static_cast<unsigned char>(tag[1]));
 }
 
 /// @brief Unpacks a tag back into its two characters, for diagnostics and reporting.
@@ -121,29 +120,26 @@ public:
     /// @brief Returns a zlib row's uninterpreted continuation bytes, or an empty span.
     [[nodiscard]] std::span<const std::uint8_t> continuationOf(const LegacyRow& row) const
     {
-        if (row.continuationSize == 0) return {};
-        return std::span<const std::uint8_t>(m_payload.data() + row.continuationOffset,
-            row.continuationSize);
+        if (row.continuationSize == 0) {
+            return {};
+        }
+        return std::span<const std::uint8_t>(m_payload.data() + row.continuationOffset, row.continuationSize);
     }
 
     /// @brief Returns every row of a family, in incidence order.
     [[nodiscard]] std::span<const LegacyRow> getArray(
-        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0,
-        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2 = 0, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     /// @brief Returns one incidence of a family, or nullptr when it is absent.
     [[nodiscard]] const LegacyRow* get(
-        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci,
-        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     /// @brief Returns every distinct first comparator carried by a tag and part.
-    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(
-        LegacyTag tag, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
+    [[nodiscard]] std::vector<std::uint16_t> cmpersForTag(LegacyTag tag, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     /// @brief Returns every distinct second comparator for a tag, part, and first comparator.
     [[nodiscard]] std::vector<std::uint16_t> secondCmpersForTag(
-        LegacyTag tag, std::uint16_t cmper1,
-        std::uint16_t partId = musx::dom::SCORE_PARTID) const;
+        LegacyTag tag, std::uint16_t cmper1, std::uint16_t partId = musx::dom::SCORE_PARTID) const;
 
     /// @brief Returns every distinct source part carried by a tag, score first.
     [[nodiscard]] std::vector<std::uint16_t> partIdsForTag(LegacyTag tag) const;
@@ -204,13 +200,11 @@ public:
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
     /// stream is what lets a four-byte value straddle an incidence boundary.
-    [[nodiscard]] std::optional<RecordWord> word(
-        LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const;
+    [[nodiscard]] std::optional<RecordWord> word(LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const;
 
     [[nodiscard]] bool empty() const
     {
-        return m_others.empty() && m_details.empty()
-            && m_classOthers.empty() && m_classDetails.empty() && m_texts.empty();
+        return m_others.empty() && m_details.empty() && m_classOthers.empty() && m_classDetails.empty() && m_texts.empty();
     }
 
 private:

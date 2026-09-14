@@ -80,8 +80,7 @@ constexpr std::size_t earlyMmRestFamilyWords = records::otherWordCount;
 /// shape from two words that mean something else entirely. That is the cost of an ambiguous
 /// file, and it is why a source with no selector 25 at all reads as the later layout:
 /// recovering nothing is better than recovering three fields from the wrong slots.
-bool statesEarlyMmRestLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool statesEarlyMmRestLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
         return false;
@@ -90,8 +89,7 @@ bool statesEarlyMmRestLayout(
     return family.present && family.words.size() <= earlyMmRestFamilyWords;
 }
 
-bool statesLaterMmRestLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool statesLaterMmRestLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return !statesEarlyMmRestLayout(index, profile);
 }
@@ -104,13 +102,10 @@ bool statesLaterMmRestLayout(
 /// without the selector does not update automatically, which is asserted in
 /// @ref captureMultimeasureRestOptions rather than left to the pinned baseline, which says the
 /// opposite.
-bool storesMmRestAutoUpdate(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesMmRestAutoUpdate(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        return index.getClassOthers().get(
-                   numericGlobalClass(mmRestUpdateSelector), GLOBALS_CMPER, 0, 0)
-            != nullptr;
+        return index.getClassOthers().get(numericGlobalClass(mmRestUpdateSelector), GLOBALS_CMPER, 0, 0) != nullptr;
     }
     return readNumericGlobalWords(index, mmRestUpdateSelector).present;
 }
@@ -129,8 +124,7 @@ const FieldMapping mmRestFields[] = {
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 1, numAdjXSlot, numAdjX),
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 1, startAdjustSlot, startAdjust),
     MUS_WORD(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 1, endAdjustSlot, endAdjust),
-    MUS_BIT(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 1, mmRestFlagsSlot,
-        useSymbolsBit, useSymbols),
+    MUS_BIT(MmRestTarget, "25", GLOBALS_CMPER, /*incidence*/ 1, mmRestFlagsSlot, useSymbolsBit, useSymbols),
 };
 
 // Finale 1.0.0 through Finale 3.2, spanning the whole Coda-banner epoch and the first
@@ -156,39 +150,28 @@ const FieldMapping earlyMmRestFields[] = {
 // set in most documents and is **not** this flag; reading it instead would switch automatic
 // updating on for roughly half of them.
 const FieldMapping mmRestAutoUpdateFields[] = {
-    MUS_WORD(MmRestTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, mmRestUpdateSlot,
-        autoUpdateMmRests),
+    MUS_WORD(MmRestTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, mmRestUpdateSlot, autoUpdateMmRests),
 };
 
 // Finale 2007 and later: the same ten logical values, reached through the shared
 // numericGlobalClass rule and addressed by byte offset in the coalesced payload. Both byte
 // orders occur in this era.
 const FieldMapping classMmRestFields[] = {
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(0), measWidth),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(2), numAdjY),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(3), shapeDef),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(4), numStart),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(5), useSymsThreshold),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(secondRowWord(symSpacingSlot)), symSpacing),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(secondRowWord(numAdjXSlot)), numAdjX),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(secondRowWord(startAdjustSlot)), startAdjust),
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(secondRowWord(endAdjustSlot)), endAdjust),
-    MUS_CLASS_BIT(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER,
-        classWordOffset(secondRowWord(mmRestFlagsSlot)), useSymbolsBit, useSymbols),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(0), measWidth),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(2), numAdjY),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(3), shapeDef),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(4), numStart),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(5), useSymsThreshold),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(secondRowWord(symSpacingSlot)), symSpacing),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(secondRowWord(numAdjXSlot)), numAdjX),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(secondRowWord(startAdjustSlot)), startAdjust),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(secondRowWord(endAdjustSlot)), endAdjust),
+    MUS_CLASS_BIT(
+        MmRestTarget, numericGlobalClass(mmRestSelector), GLOBALS_CMPER, classWordOffset(secondRowWord(mmRestFlagsSlot)), useSymbolsBit, useSymbols),
 };
 
 const FieldMapping classMmRestAutoUpdateFields[] = {
-    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestUpdateSelector), GLOBALS_CMPER,
-        classWordOffset(mmRestUpdateSlot), autoUpdateMmRests),
+    MUS_CLASS_WORD(MmRestTarget, numericGlobalClass(mmRestUpdateSelector), GLOBALS_CMPER, classWordOffset(mmRestUpdateSlot), autoUpdateMmRests),
 };
 
 constexpr const char* mmRestReportPrefix = "options.multimeasureRestOptions";
@@ -202,8 +185,7 @@ constexpr EpochMask fixedRowMmRestEpochs = EpochMask::CodaBanner | EpochMask::Fi
 
 const MappingTable& earlyMmRestTable()
 {
-    static const MappingTable table{
-        .reportPrefix = mmRestReportPrefix,
+    static const MappingTable table{.reportPrefix = mmRestReportPrefix,
         .epochs = fixedRowMmRestEpochs,
         .applies = &statesEarlyMmRestLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -215,8 +197,7 @@ const MappingTable& earlyMmRestTable()
 
 const MappingTable& mmRestTable()
 {
-    static const MappingTable table{
-        .reportPrefix = mmRestReportPrefix,
+    static const MappingTable table{.reportPrefix = mmRestReportPrefix,
         .epochs = fixedRowMmRestEpochs,
         .applies = &statesLaterMmRestLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -232,8 +213,7 @@ const MappingTable& mmRestAutoUpdateTable()
     // opposite when the same test says the record is absent, so a mask that could disagree
     // with it would leave a document with neither a read value nor an assertion, sitting at a
     // baseline default that says the opposite of both.
-    static const MappingTable table{
-        .reportPrefix = mmRestReportPrefix,
+    static const MappingTable table{.reportPrefix = mmRestReportPrefix,
         .epochs = fixedRowMmRestEpochs,
         .applies = &storesMmRestAutoUpdate,
         .targetKind = TargetKind::OptionsSingleton,
@@ -245,8 +225,7 @@ const MappingTable& mmRestAutoUpdateTable()
 
 const MappingTable& classMmRestTable()
 {
-    static const MappingTable table{
-        .reportPrefix = mmRestReportPrefix,
+    static const MappingTable table{.reportPrefix = mmRestReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -258,8 +237,7 @@ const MappingTable& classMmRestTable()
 
 const MappingTable& classMmRestAutoUpdateTable()
 {
-    static const MappingTable table{
-        .reportPrefix = mmRestReportPrefix,
+    static const MappingTable table{.reportPrefix = mmRestReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &storesMmRestAutoUpdate,
         .encoding = RecordEncoding::ClassRecord,
@@ -273,9 +251,7 @@ const MappingTable& classMmRestAutoUpdateTable()
 /// @brief Records one value the era fixed rather than stored.
 void reportEraBehavior(ImportReport& report, const char* member, std::int64_t value)
 {
-    withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<MmRestTarget>(member, value);
-    });
+    withReporting(report, [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<MmRestTarget>(member, value); });
 }
 
 /// @brief Asserts the values a legacy source fixed rather than stored.
@@ -284,8 +260,8 @@ void reportEraBehavior(ImportReport& report, const char* member, std::int64_t va
 /// from before them cannot have meant. "Stretch Horizontally" arrived with Finale 27 and is
 /// false for every legacy document, whatever its era. Runs before the scalar tables, whose
 /// gates then leave the asserted fields alone.
-void captureMultimeasureRestOptions(const records::LegacyRecordIndex& index,
-    const SourceProfile& profile, const musx::dom::DocumentPtr& document, ImportReport& report)
+void captureMultimeasureRestOptions(
+    const records::LegacyRecordIndex& index, const SourceProfile& profile, const musx::dom::DocumentPtr& document, ImportReport& report)
 {
     const auto pooled = document->getOptions()->get<MmRestTarget>();
     if (!pooled) {
@@ -343,8 +319,7 @@ void captureMultimeasureRestOptions(const records::LegacyRecordIndex& index,
 /// @brief Checks the recovered H-bar shape reference against the shape pool.
 /// @details Runs after the shape definitions are decoded, which the registry guarantees by
 /// filling the others pool before any options class.
-void validateMultimeasureRestOptions(
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+void validateMultimeasureRestOptions(const musx::dom::DocumentPtr& document, ImportReport& report)
 {
     const auto target = document->getOptions()->get<MmRestTarget>();
     if (!target || target->shapeDef == 0) {
@@ -360,12 +335,10 @@ void validateMultimeasureRestOptions(
     // no shape records at all, and Finale supplies the drawing from its own resources. Raising
     // it as a warning would report a normal document as suspect, which is how a diagnostic
     // channel stops being read.
-    if (!document->getOthers()->get<musx::dom::others::ShapeDef>(
-            musx::dom::SCORE_PARTID, target->shapeDef)) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-            "The multimeasure rest H-bar names shape definition "
-            + std::to_string(target->shapeDef)
-            + ", which this document does not define; it is kept as stored."});
+    if (!document->getOthers()->get<musx::dom::others::ShapeDef>(musx::dom::SCORE_PARTID, target->shapeDef)) {
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Info, "The multimeasure rest H-bar names shape definition " + std::to_string(target->shapeDef)
+                                                     + ", which this document does not define; it is kept as stored."});
     }
 }
 
@@ -376,10 +349,8 @@ void importMultimeasureRestOptions(const ImportContext& context)
     // The capture pass runs first because it establishes the fields no era-appropriate table
     // will read, and the table machinery leaves an already-reported field alone rather than
     // downgrading it to a synthesized default.
-    captureMultimeasureRestOptions(
-        context.index, context.profile, context.document, context.report);
-    applyMappingTables({&earlyMmRestTable(), &mmRestTable(), &mmRestAutoUpdateTable(),
-                           &classMmRestTable(), &classMmRestAutoUpdateTable()},
+    captureMultimeasureRestOptions(context.index, context.profile, context.document, context.report);
+    applyMappingTables({&earlyMmRestTable(), &mmRestTable(), &mmRestAutoUpdateTable(), &classMmRestTable(), &classMmRestAutoUpdateTable()},
         context.index, context.profile, context.document, context.report);
     validateMultimeasureRestOptions(context.document, context.report);
 }

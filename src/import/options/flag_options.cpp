@@ -52,50 +52,30 @@ const FieldMapping fixedFlagFields[] = {
 };
 
 const FieldMapping classFlagFields[] = {
-    MUS_CLASS_BIT(FlagOptionsTarget, numericGlobalClass(flagBehaviorSelector),
-        GLOBALS_CMPER, classWordOffset(2), 0, straightFlags),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(0), upHAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(1), downHAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(2), upHAdj2),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(3), downHAdj2),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(4), upHAdj16),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector),
-        GLOBALS_CMPER, classWordOffset(5), downHAdj16),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(0), upVAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(1), downVAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(2), upVAdj2),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(3), downVAdj2),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(4), upVAdj16),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector),
-        GLOBALS_CMPER, classWordOffset(5), downVAdj16),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector),
-        GLOBALS_CMPER, classWordOffset(2), stUpHAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector),
-        GLOBALS_CMPER, classWordOffset(3), stDownHAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector),
-        GLOBALS_CMPER, classWordOffset(4), stUpVAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector),
-        GLOBALS_CMPER, classWordOffset(5), stDownVAdj),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagSpacingSelector),
-        GLOBALS_CMPER, classWordOffset(0), flagSpacing),
-    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagSpacingSelector),
-        GLOBALS_CMPER, classWordOffset(1), secondaryGroupAdj),
+    MUS_CLASS_BIT(FlagOptionsTarget, numericGlobalClass(flagBehaviorSelector), GLOBALS_CMPER, classWordOffset(2), 0, straightFlags),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(0), upHAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(1), downHAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(2), upHAdj2),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(3), downHAdj2),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(4), upHAdj16),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagHorizontalSelector), GLOBALS_CMPER, classWordOffset(5), downHAdj16),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(0), upVAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(1), downVAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(2), upVAdj2),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(3), downVAdj2),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(4), upVAdj16),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagVerticalSelector), GLOBALS_CMPER, classWordOffset(5), downVAdj16),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector), GLOBALS_CMPER, classWordOffset(2), stUpHAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector), GLOBALS_CMPER, classWordOffset(3), stDownHAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector), GLOBALS_CMPER, classWordOffset(4), stUpVAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(straightFlagSelector), GLOBALS_CMPER, classWordOffset(5), stDownVAdj),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagSpacingSelector), GLOBALS_CMPER, classWordOffset(0), flagSpacing),
+    MUS_CLASS_WORD(FlagOptionsTarget, numericGlobalClass(flagSpacingSelector), GLOBALS_CMPER, classWordOffset(1), secondaryGroupAdj),
 };
 
 const MappingTable& fixedFlagTable()
 {
-    static const MappingTable table{
-        .reportPrefix = flagOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = flagOptionsReportPrefix,
         .epochs = EpochMask::Uncompressed | EpochMask::Dcl,
         .applies = &storesFinale35OptionLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -106,16 +86,13 @@ const MappingTable& fixedFlagTable()
 }
 
 template <typename Reporting>
-void reportCodaFlagField(Reporting& reporting, const char* member,
-    typename Reporting::Origin origin, std::size_t blockOffset, std::size_t decodedOffset,
-    std::int64_t rawValue)
+void reportCodaFlagField(Reporting& reporting, const char* member, typename Reporting::Origin origin, std::size_t blockOffset,
+    std::size_t decodedOffset, std::int64_t rawValue)
 {
-    reporting.report().setField(reporting.template instanceKey<FlagOptionsTarget>(), member,
-        {origin, blockOffset, decodedOffset, rawValue});
+    reporting.report().setField(reporting.template instanceKey<FlagOptionsTarget>(), member, {origin, blockOffset, decodedOffset, rawValue});
 }
 
-void reportCodaFlagOptions(const ImportContext& context, const FlagOptionsTarget& target,
-    const GlobalSelectorWords& position)
+void reportCodaFlagOptions(const ImportContext& context, const FlagOptionsTarget& target, const GlobalSelectorWords& position)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto reportDefault = [&](const char* member, std::int64_t value) {
@@ -139,26 +116,31 @@ void reportCodaFlagOptions(const ImportContext& context, const FlagOptionsTarget
         reportBehavior("flagSpacing", target.flagSpacing);
         reportBehavior("secondaryGroupAdj", target.secondaryGroupAdj);
         for (auto member : {"upVAdj", "upVAdj16"}) {
-            reportCodaFlagField(reporting, member, Reporting::Origin::LegacyMusAdjusted,
-                position.blockOffset, position.decodedOffset, position.words[4]);
+            reportCodaFlagField(
+                reporting, member, Reporting::Origin::LegacyMusAdjusted, position.blockOffset, position.decodedOffset, position.words[4]);
         }
         for (auto member : {"downVAdj", "downVAdj16"}) {
-            reportCodaFlagField(reporting, member, Reporting::Origin::LegacyMusAdjusted,
-                position.blockOffset, position.decodedOffset, position.words[5]);
+            reportCodaFlagField(
+                reporting, member, Reporting::Origin::LegacyMusAdjusted, position.blockOffset, position.decodedOffset, position.words[5]);
         }
     });
 }
 
 void importCodaFlagOptions(const ImportContext& context)
 {
-    if (context.profile.epoch != FormatEpoch::CodaBanner) return;
+    if (context.profile.epoch != FormatEpoch::CodaBanner) {
+        return;
+    }
 
-    const auto position = readGlobalWords(
-        context.index, context.profile, codaFlagPositionSelector);
-    if (!position.present || position.words.size() < 6) return;
+    const auto position = readGlobalWords(context.index, context.profile, codaFlagPositionSelector);
+    if (!position.present || position.words.size() < 6) {
+        return;
+    }
 
     const auto pooled = context.document->getOptions()->get<FlagOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<FlagOptionsTarget>(pooled);
 
     // Coda stores vertical-origin switches rather than the later independent coordinates.
@@ -167,8 +149,7 @@ void importCodaFlagOptions(const ImportContext& context)
     // unverified, so the horizontal coordinates retain their seeded defaults.
     const auto upVertical = position.words[4] ? codaOriginVertical : codaCurvedUpVertical;
     const auto downVertical = position.words[5] ? -codaOriginVertical : codaCurvedDownVertical;
-    const auto downVertical16 = position.words[5]
-        ? -codaOriginVertical : codaCurvedDownVertical16;
+    const auto downVertical16 = position.words[5] ? -codaOriginVertical : codaCurvedDownVertical16;
 
     target->downHAdj = target->downHAdj2 = target->downHAdj16 = 0;
     target->upVAdj = target->upVAdj16 = upVertical;
@@ -187,8 +168,7 @@ void importCodaFlagOptions(const ImportContext& context)
 
 const MappingTable& classFlagTable()
 {
-    static const MappingTable table{
-        .reportPrefix = flagOptionsReportPrefix,
+    static const MappingTable table{.reportPrefix = flagOptionsReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -204,12 +184,10 @@ void importFlagOptions(const ImportContext& context)
 {
     if (const auto options = context.document->getOptions()->get<FlagOptionsTarget>()) {
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template defaultField<FlagOptionsTarget>(
-                "eighthFlagHoist", options->eighthFlagHoist);
+            reporting.template defaultField<FlagOptionsTarget>("eighthFlagHoist", options->eighthFlagHoist);
         });
     }
-    applyMappingTables({&fixedFlagTable(), &classFlagTable()}, context.index,
-        context.profile, context.document, context.report);
+    applyMappingTables({&fixedFlagTable(), &classFlagTable()}, context.index, context.profile, context.document, context.report);
     importCodaFlagOptions(context);
 }
 

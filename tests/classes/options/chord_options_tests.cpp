@@ -17,12 +17,10 @@ constexpr musx::dom::Cmper referenceFretInstId = 92;
 constexpr musx::dom::Cmper storedFretStyleId = 2;
 
 /// @brief A reference document carrying the two fret comparators the pinned baseline supplies.
-musx::dom::DocumentPtr chordReferenceDocument(
-    musx::factory::DocumentFactory::ConstructionSession& session)
+musx::dom::DocumentPtr chordReferenceDocument(musx::factory::DocumentFactory::ConstructionSession& session)
 {
     const auto document = session.getDocument();
-    auto options = std::make_shared<ChordOptions>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
+    auto options = std::make_shared<ChordOptions>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
     options->fretStyleId = referenceFretStyleId;
     options->fretInstId = referenceFretInstId;
     document->getOptions()->add(ChordOptions::XmlNodeName, options);
@@ -53,8 +51,7 @@ musx::dom::Cmper importedFretStyleId(bool chordOptionsFirst, bool withFretboardS
 {
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    auto options = std::make_shared<ChordOptions>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
+    auto options = std::make_shared<ChordOptions>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
     document->getOptions()->add(ChordOptions::XmlNodeName, options);
 
     auto referenceSession = musx::factory::DocumentFactory::begin();
@@ -67,8 +64,7 @@ musx::dom::Cmper importedFretStyleId(bool chordOptionsFirst, bool withFretboardS
     const auto index = LegacyRecordIndex::build(parsed);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
-    const finale_mus_reader::ImportContext context{
-        index, profile, noSource, document, reference, report, pending, construction};
+    const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
 
     if (chordOptionsFirst) {
         finale_mus_reader::options::importChordOptions(context);
@@ -85,19 +81,15 @@ TEST_CASE("Chord options resolve their fret references whatever order the regist
 {
     // The definition exists, so the source's own comparator survives either way. Consulting the
     // fretboard pool inline instead would make the first ordering yield the pinned default.
-    expect(importedFretStyleId(/*chordOptionsFirst*/ false, /*withFretboardStyle*/ true)
-            == storedFretStyleId,
+    expect(importedFretStyleId(/*chordOptionsFirst*/ false, /*withFretboardStyle*/ true) == storedFretStyleId,
         "A recovered fret style comparator was lost when its definitions imported first");
-    expect(importedFretStyleId(/*chordOptionsFirst*/ true, /*withFretboardStyle*/ true)
-            == storedFretStyleId,
+    expect(importedFretStyleId(/*chordOptionsFirst*/ true, /*withFretboardStyle*/ true) == storedFretStyleId,
         "A recovered fret style comparator was lost when chord options imported first");
 
     // No definition of that comparator: the pinned default replaces it, again either way.
-    expect(importedFretStyleId(/*chordOptionsFirst*/ false, /*withFretboardStyle*/ false)
-            == referenceFretStyleId,
+    expect(importedFretStyleId(/*chordOptionsFirst*/ false, /*withFretboardStyle*/ false) == referenceFretStyleId,
         "A fret style comparator naming no definition did not take the pinned default");
-    expect(importedFretStyleId(/*chordOptionsFirst*/ true, /*withFretboardStyle*/ false)
-            == referenceFretStyleId,
+    expect(importedFretStyleId(/*chordOptionsFirst*/ true, /*withFretboardStyle*/ false) == referenceFretStyleId,
         "A fret style comparator naming no definition did not take the pinned default when chord"
         " options imported first");
 }
@@ -107,23 +99,23 @@ TEST_CASE("Chord accidental lifts recover from Finale 3.7 onward")
     const auto import = [](std::uint8_t minor) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
-        auto options = std::make_shared<ChordOptions>(
-            document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
+        auto options = std::make_shared<ChordOptions>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
         document->getOptions()->add(ChordOptions::XmlNodeName, options);
 
         auto referenceSession = musx::factory::DocumentFactory::begin();
         const auto reference = chordReferenceDocument(referenceSession);
-        const auto parsed = makeContainer({
-            {GLOBALS_CMPER, "37", {0, 0, 0, 24, 25, 26}},
-            {GLOBALS_CMPER, "41", {0, 0, 0, 0, 0, 0}},
-        }, FormatEpoch::UncompressedLegacy);
+        const auto parsed = makeContainer(
+            {
+                {GLOBALS_CMPER, "37", {0, 0, 0, 24, 25, 26}},
+                {GLOBALS_CMPER, "41", {0, 0, 0, 0, 0, 0}},
+            },
+            FormatEpoch::UncompressedLegacy);
         auto profile = profileFor(3, minor);
         ImportReport report(profile.epoch);
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{
-            index, profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importChordOptions(context);
         return std::pair{document->getOptions()->get<ChordOptions>(), std::move(report)};
     };
@@ -132,15 +124,13 @@ TEST_CASE("Chord accidental lifts recover from Finale 3.7 onward")
     CHECK(finale35->chordSharpLift == 12);
     CHECK(finale35->chordFlatLift == 12);
     CHECK(finale35->chordNaturalLift == 12);
-    CHECK(field(finale35Report, "options.chordOptions.chordSharpLift").origin
-        == ValueOrigin::LegacyBehavior);
+    CHECK(field(finale35Report, "options.chordOptions.chordSharpLift").origin == ValueOrigin::LegacyBehavior);
 
     const auto [finale37, finale37Report] = import(7);
     CHECK(finale37->chordSharpLift == 24);
     CHECK(finale37->chordFlatLift == 25);
     CHECK(finale37->chordNaturalLift == 26);
-    CHECK(field(finale37Report, "options.chordOptions.chordSharpLift").origin
-        == ValueOrigin::LegacyMus);
+    CHECK(field(finale37Report, "options.chordOptions.chordSharpLift").origin == ValueOrigin::LegacyMus);
 }
 
 TEST_CASE("Finale 2.6.3 recovers the unambiguous fretboard display states", "[class][reader]")
@@ -155,8 +145,7 @@ TEST_CASE("Finale 2.6.3 recovers the unambiguous fretboard display states", "[cl
         REQUIRE(options);
         INFO(fixture);
         CHECK(options->showFretboards == expected);
-        CHECK(field(result, "options.chordOptions.showFretboards").origin
-            == ValueOrigin::LegacyMus);
+        CHECK(field(result, "options.chordOptions.showFretboards").origin == ValueOrigin::LegacyMus);
     }
 
     for (const auto mixedState : {0x0004, 0x0008}) {
@@ -168,16 +157,14 @@ TEST_CASE("Finale 2.6.3 recovers the unambiguous fretboard display states", "[cl
 
         auto referenceSession = musx::factory::DocumentFactory::begin();
         const auto reference = chordReferenceDocument(referenceSession);
-        const auto parsed = makeContainer({{GLOBALS_CMPER, "41", {0, 0,
-            static_cast<std::int16_t>(mixedState), 0, 0, 0}}}, FormatEpoch::CodaBanner);
+        const auto parsed = makeContainer({{GLOBALS_CMPER, "41", {0, 0, static_cast<std::int16_t>(mixedState), 0, 0, 0}}}, FormatEpoch::CodaBanner);
         SourceProfile profile(FormatEpoch::CodaBanner);
         profile.byteOrder = parsed.byteOrder;
         ImportReport report(profile.epoch);
         const auto index = LegacyRecordIndex::build(parsed);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{
-            index, profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
 
         finale_mus_reader::options::importChordOptions(context);
         INFO(mixedState);
@@ -192,13 +179,10 @@ TEST_CASE("Unresolved Coda fretboard display is a different default", "[coverage
     const Value companionValue(true);
     const ComparisonLeaves leaves;
     finale_mus_reader::ImportReport report(finale_mus_reader::FormatEpoch::CodaBanner);
-    DifferenceContext context{"chord_options.show_fretboards", DifferenceCategory::Differs,
-        "finale27-default", sourceValue, companionValue, leaves, leaves,
-        finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian,
-        nullptr, report};
+    DifferenceContext context{"chord_options.show_fretboards", DifferenceCategory::Differs, "finale27-default", sourceValue, companionValue, leaves,
+        leaves, finale_mus_reader::FormatEpoch::CodaBanner, finale_mus_reader::ByteOrder::BigEndian, nullptr, report};
 
-    REQUIRE(classifyCodaChordOptionsDifference(context)
-        == DifferenceClassification::DifferentDefaults);
+    REQUIRE(classifyCodaChordOptionsDifference(context) == DifferenceClassification::DifferentDefaults);
     context.origin = "legacy-mus";
     REQUIRE_FALSE(classifyCodaChordOptionsDifference(context));
     context.origin = "finale27-default";

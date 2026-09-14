@@ -22,8 +22,7 @@ musx::dom::DocumentPtr makeLyricDocument()
     options->useAltHyphenFont = true;
     options->wordExtLineWidth = 115;
     options->lyricUseEdgePunctuation = false;
-    for (const auto type : {Lyrics::SyllablePosStyleType::Default,
-             Lyrics::SyllablePosStyleType::WordExt, Lyrics::SyllablePosStyleType::First,
+    for (const auto type : {Lyrics::SyllablePosStyleType::Default, Lyrics::SyllablePosStyleType::WordExt, Lyrics::SyllablePosStyleType::First,
              Lyrics::SyllablePosStyleType::SystemStart}) {
         auto style = std::make_shared<Lyrics::SyllablePosStyle>();
         style->on = true;
@@ -33,8 +32,7 @@ musx::dom::DocumentPtr makeLyricDocument()
     zeroOffset->connectIndex = Lyrics::WordExtConnectIndex::SystemRight;
     zeroOffset->xOffset = 91;
     zeroOffset->yOffset = 92;
-    options->wordExtConnectStyles[Lyrics::WordExtConnectStyleType::ZeroOffset] =
-        std::move(zeroOffset);
+    options->wordExtConnectStyles[Lyrics::WordExtConnectStyleType::ZeroOffset] = std::move(zeroOffset);
     document->getOptions()->add(Lyrics::XmlNodeName, options);
     return std::move(session).finish();
 }
@@ -51,9 +49,8 @@ void testLyricWordExtConnectionLayouts()
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{
-            LegacyRecordIndex::build(makeContainer(rows, FormatEpoch::DclLegacy)), profile,
-            noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(makeContainer(rows, FormatEpoch::DclLegacy)), profile, noSource,
+            document, reference, report, pending, construction};
         finale_mus_reader::options::importLyricOptions(context);
         return document->getOptions()->get<Lyrics>();
     };
@@ -65,23 +62,21 @@ void testLyricWordExtConnectionLayouts()
         {GLOBALS_CMPER, "55", {16, 42, 0, 0, 0, 0}},
     };
     const auto early = runImport(earlyRows);
-    expectMapping(early->wordExtConnectStyles.at(ConnectType::SystemStart)->connectIndex
-            == Lyrics::WordExtConnectIndex::DurationLyrBaseline,
+    expectMapping(early->wordExtConnectStyles.at(ConnectType::SystemStart)->connectIndex == Lyrics::WordExtConnectIndex::DurationLyrBaseline,
         "The eight-style word-extension table did not retain its third element");
     expectMapping(early->wordExtConnectStyles.at(ConnectType::DottedEnd)->xOffset == 8
-            && early->wordExtConnectStyles.at(ConnectType::DurationEnd)->xOffset == -8,
+                      && early->wordExtConnectStyles.at(ConnectType::DurationEnd)->xOffset == -8,
         "The eight-style word-extension table was shifted into the later layout");
     expectMapping(early->wordExtConnectStyles.at(ConnectType::ZeroOffset)->xOffset == 91
-            && early->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 92,
+                      && early->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 92,
         "The absent ninth word-extension style overwrote the seeded value");
 
     auto laterRows = earlyRows;
     laterRows.push_back({GLOBALS_CMPER, "55", {17, 7, 8, 0, 0, 0}});
     const auto later = runImport(std::move(laterRows));
-    expectMapping(later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->connectIndex
-            == Lyrics::WordExtConnectIndex::HeadRightLyrBaseline
-            && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->xOffset == 7
-            && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 8,
+    expectMapping(later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->connectIndex == Lyrics::WordExtConnectIndex::HeadRightLyrBaseline
+                      && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->xOffset == 7
+                      && later->wordExtConnectStyles.at(ConnectType::ZeroOffset)->yOffset == 8,
         "The ninth word-extension style was not read from the longer layout");
 }
 
@@ -94,8 +89,7 @@ void testLyricEdgePunctuationVersionGate()
 {
     using Lyrics = musx::dom::options::LyricOptions;
     // Selector 57 with word 4 set: "use edge punctuation", the Finale 2012 spelling.
-    const auto parsed = makeClassContainer(
-        0x0047, {1, 0, 38, 1, 1, 0}, ByteOrder::LittleEndian);
+    const auto parsed = makeClassContainer(0x0047, {1, 0, 38, 1, 1, 0}, ByteOrder::LittleEndian);
     const auto runAt = [&](std::uint8_t major) {
         const auto document = makeLyricDocument();
         const auto reference = makeLyricDocument();
@@ -105,11 +99,10 @@ void testLyricEdgePunctuationVersionGate()
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
-            profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{
+            LegacyRecordIndex::build(parsed), profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importLyricOptions(context);
-        return std::make_pair(document->getOptions()->get<Lyrics>(),
-            field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin);
+        return std::make_pair(document->getOptions()->get<Lyrics>(), field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin);
     };
 
     // Finale 2011 is the first release that stores it, and Finale 2012 keeps doing so.
@@ -124,8 +117,8 @@ void testLyricEdgePunctuationVersionGate()
     // All 22 companion-backed Finale 2010 documents of the installs corpus carry 0 here while
     // all 597 Finale 2011 ones carry 1, which is where the boundary comes from.
     const auto [ten, tenOrigin] = runAt(15);
-    expectMapping(ten->lyricUseEdgePunctuation && tenOrigin == ValueOrigin::LegacyBehavior,
-        "A pre-Finale-2011 document read a word its era does not use");
+    expectMapping(
+        ten->lyricUseEdgePunctuation && tenOrigin == ValueOrigin::LegacyBehavior, "A pre-Finale-2011 document read a word its era does not use");
     // And a zlib document whose version could not be recovered falls to the same era behavior,
     // which is the right answer for every release but one.
     const auto document = makeLyricDocument();
@@ -135,12 +128,11 @@ void testLyricEdgePunctuationVersionGate()
     ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
-    const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed), unknown,
-        noSource, document, reference, report, pending, construction};
+    const finale_mus_reader::ImportContext context{
+        LegacyRecordIndex::build(parsed), unknown, noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importLyricOptions(context);
     expectMapping(document->getOptions()->get<Lyrics>()->lyricUseEdgePunctuation
-            && field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin
-                == ValueOrigin::LegacyBehavior,
+                      && field(report, "options.lyricOptions.lyricUseEdgePunctuation").origin == ValueOrigin::LegacyBehavior,
         "A zlib document with no recoverable version did not fall back to era behavior");
 }
 
@@ -155,14 +147,10 @@ void testLyricPunctuationTailEncodingGate()
     // 16-bit code units for Finale 2012, packed bytes for Finale 2011. Little-endian in both,
     // which is what makes the transposition hazard real rather than theoretical.
     const std::vector<std::int16_t> unicodeTail{1, 0, 38, 1, 1, 0, 0x23, 0x40, 0x25, 0x26, 0, 0};
-    const std::vector<std::int16_t> byteTail{
-        1, 0, 38, 1, 1, 0, static_cast<std::int16_t>(0x4023),
-        static_cast<std::int16_t>(0x2625), 0, 0, 0, 0};
+    const std::vector<std::int16_t> byteTail{1, 0, 38, 1, 1, 0, static_cast<std::int16_t>(0x4023), static_cast<std::int16_t>(0x2625), 0, 0, 0, 0};
     const auto runAt = [&](std::uint8_t major) {
         const auto parsed = makeClassContainer(0x0047,
-            finale_mus_reader::VersionBound{major} >= finale_mus_reader::versions::finale2012
-                ? unicodeTail : byteTail,
-            ByteOrder::LittleEndian);
+            finale_mus_reader::VersionBound{major} >= finale_mus_reader::versions::finale2012 ? unicodeTail : byteTail, ByteOrder::LittleEndian);
         const auto document = makeLyricDocument();
         const auto reference = makeLyricDocument();
         auto profile = profileFor(major);
@@ -171,17 +159,15 @@ void testLyricPunctuationTailEncodingGate()
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         musx::factory::ConstructionContext construction;
-        const finale_mus_reader::ImportContext context{LegacyRecordIndex::build(parsed),
-            profile, noSource, document, reference, report, pending, construction};
+        const finale_mus_reader::ImportContext context{
+            LegacyRecordIndex::build(parsed), profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::options::importLyricOptions(context);
         return std::make_pair(document->getOptions()->get<Lyrics>(), report);
     };
 
     const auto [twelve, twelveReport] = runAt(17);
-    expectMapping(twelve->lyricPunctuationToIgnore == "#@%&",
-        "A Finale 2012 tail was not decoded as UTF-16");
-    expectMapping(field(twelveReport, "options.lyricOptions.lyricPunctuationToIgnore").origin
-            == ValueOrigin::LegacyMus,
+    expectMapping(twelve->lyricPunctuationToIgnore == "#@%&", "A Finale 2012 tail was not decoded as UTF-16");
+    expectMapping(field(twelveReport, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::LegacyMus,
         "A decoded Finale 2012 tail was not reported as read");
 
     // Finale 2011 reads the switch from the same record but stores the tail as packed 8-bit
@@ -189,12 +175,9 @@ void testLyricPunctuationTailEncodingGate()
     // what this half of the test pins: the words above hold 0x2340, 0x2526 and so on, so a
     // reader that treated them as code units would produce the pairs in the wrong order.
     const auto [eleven, elevenReport] = runAt(16);
-    expectMapping(eleven->lyricUseEdgePunctuation,
-        "A Finale 2011 document did not read the edge punctuation switch");
-    expectMapping(eleven->lyricPunctuationToIgnore == "#@%&",
-        "A Finale 2011 tail was not decoded as packed bytes");
-    expectMapping(field(elevenReport, "options.lyricOptions.lyricPunctuationToIgnore").origin
-            == ValueOrigin::LegacyMus,
+    expectMapping(eleven->lyricUseEdgePunctuation, "A Finale 2011 document did not read the edge punctuation switch");
+    expectMapping(eleven->lyricPunctuationToIgnore == "#@%&", "A Finale 2011 tail was not decoded as packed bytes");
+    expectMapping(field(elevenReport, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::LegacyMus,
         "A decoded Finale 2011 tail was not reported as read");
 }
 
@@ -216,43 +199,32 @@ void testLyricPostFormatAssertions()
     ImportReport report(FormatEpoch::UncompressedLegacy);
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
-    const finale_mus_reader::ImportContext context{
-        index, profileFor(9), noSource, document, reference, report, pending, construction};
+    const finale_mus_reader::ImportContext context{index, profileFor(9), noSource, document, reference, report, pending, construction};
     finale_mus_reader::options::importLyricOptions(context);
 
     const auto lyrics = document->getOptions()->get<Lyrics>();
-    expectMapping(!lyrics->useAltHyphenFont,
-        "The alternate hyphen font switch was inherited rather than asserted");
-    expectMapping(field(report, "options.lyricOptions.useAltHyphenFont").origin
-            == ValueOrigin::LegacyBehavior,
+    expectMapping(!lyrics->useAltHyphenFont, "The alternate hyphen font switch was inherited rather than asserted");
+    expectMapping(field(report, "options.lyricOptions.useAltHyphenFont").origin == ValueOrigin::LegacyBehavior,
         "The alternate hyphen font switch was not reported as era behavior");
     // The one field the reader must not touch. A hard-coded U+002D would show up here as the
     // seeded tilde being overwritten.
-    expectMapping(lyrics->hyphenChar == U'~',
-        "The hyphen character was asserted in code instead of taken from the seed");
-    expectMapping(field(report, "options.lyricOptions.hyphenChar").origin
-            == ValueOrigin::MusxOnly,
+    expectMapping(lyrics->hyphenChar == U'~', "The hyphen character was asserted in code instead of taken from the seed");
+    expectMapping(field(report, "options.lyricOptions.hyphenChar").origin == ValueOrigin::MusxOnly,
         "The post-legacy hyphen character was not reported as MUSX-only");
     // musxdom populates altHyphenFont only from an <altHyphenFont> element and synthesizes one
     // in integrityCheck, so the field surface is reported without claiming a source.
-    for (const auto* member : {"altHyphenFont.fontId", "altHyphenFont.fontSize",
-             "altHyphenFont.effects"}) {
-        expectMapping(field(report, std::string("options.lyricOptions.") + member).origin
-                == ValueOrigin::MusxOnly,
+    for (const auto* member : {"altHyphenFont.fontId", "altHyphenFont.fontSize", "altHyphenFont.effects"}) {
+        expectMapping(field(report, std::string("options.lyricOptions.") + member).origin == ValueOrigin::MusxOnly,
             std::string("The alternate hyphen font field was not MUSX-only: ") + member);
     }
 
     // The three assertions that do contradict the seed, for contrast: without any of the six
     // selectors the reader must not leave a document claiming these.
-    expectMapping(lyrics->wordExtLineWidth == 224,
-        "The word extension line width was inherited rather than asserted");
-    expectMapping(lyrics->lyricUseEdgePunctuation,
-        "The syllable edge punctuation setting was inherited rather than asserted");
-    for (const auto type : {Lyrics::SyllablePosStyleType::WordExt,
-             Lyrics::SyllablePosStyleType::First, Lyrics::SyllablePosStyleType::SystemStart}) {
-        expectMapping(!lyrics->syllablePosStyles.at(type)->on,
-            "An optional syllable position was left switched on by an era that has no record"
-            " for it");
+    expectMapping(lyrics->wordExtLineWidth == 224, "The word extension line width was inherited rather than asserted");
+    expectMapping(lyrics->lyricUseEdgePunctuation, "The syllable edge punctuation setting was inherited rather than asserted");
+    for (const auto type : {Lyrics::SyllablePosStyleType::WordExt, Lyrics::SyllablePosStyleType::First, Lyrics::SyllablePosStyleType::SystemStart}) {
+        expectMapping(!lyrics->syllablePosStyles.at(type)->on, "An optional syllable position was left switched on by an era that has no record"
+                                                               " for it");
     }
 }
 
@@ -264,8 +236,7 @@ void testLyricOptionsRecovery()
     using ConnectIndex = Lyrics::WordExtConnectIndex;
     using AlignJustify = musx::dom::AlignJustify;
     const auto read = [](const char* relative) {
-        return Reader::readWithReport<TestXmlDocument>(
-            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+        return Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
 
     struct Expected
@@ -283,99 +254,68 @@ void testLyricOptionsRecovery()
     // epochs that store it. The Coda-banner pair state neither it nor the syllable positions,
     // and their companions show exactly what the reader asserts for both.
     const Expected fixtures[] = {
-        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner,
-            144, 224, false, 4, 4},
-        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner,
-            144, 224, false, 4, 4},
-        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy,
-            144, 118, false, 4, 4},
-        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy,
-            144, 118, false, 4, 4},
-        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy,
-            144, 118, true, 4, 1},
+        {"evidence/F100/F100-baseline.mus", "Finale 1.0.0", FormatEpoch::CodaBanner, 144, 224, false, 4, 4},
+        {"evidence/F263/F263-baseline.mus", "Finale 2.6.3", FormatEpoch::CodaBanner, 144, 224, false, 4, 4},
+        {"evidence/F372/F372-baseline.mus", "Finale 3.7.2", FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 4},
+        {"evidence/F97/Fin97-baseline.mus", "Finale 97", FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 4},
+        {"evidence/F2000/F2000-baseline.mus", "Finale 2000", FormatEpoch::UncompressedLegacy, 144, 118, true, 4, 1},
         // The one tracked document that clears the "use this positioning" bit while carrying
         // the selector, which is what separates the bit from the record's mere presence.
-        {"evidence/F2000/F2000-multilayer.mus", "Finale 2000 multilayer",
-            FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 4},
-        {"evidence/F2002/F2002-baseline.mus", "Finale 2002", FormatEpoch::DclLegacy,
-            144, 118, true, 4, 1},
-        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy,
-            144, 224, true, 4, 1},
+        {"evidence/F2000/F2000-multilayer.mus", "Finale 2000 multilayer", FormatEpoch::UncompressedLegacy, 144, 118, false, 4, 4},
+        {"evidence/F2002/F2002-baseline.mus", "Finale 2002", FormatEpoch::DclLegacy, 144, 118, true, 4, 1},
+        {"evidence/F2005/F2005-baseline.mus", "Finale 2005", FormatEpoch::DclLegacy, 144, 224, true, 4, 1},
         // Finale 2006 moves the starting connection's horizontal offset alone, which is what
         // shows the class-level offsets are that connection's rather than a coincidence.
-        {"evidence/F2006/F2006-embedded-tif.mus", "Finale 2006", FormatEpoch::DclLegacy,
-            144, 224, true, 8, 1},
+        {"evidence/F2006/F2006-embedded-tif.mus", "Finale 2006", FormatEpoch::DclLegacy, 144, 224, true, 8, 1},
         // The zlib era in both byte orders.
-        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy,
-            144, 224, true, 4, 1},
-        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy,
-            144, 115, true, 4, 1},
+        {"evidence/F2007/F2007-lyric-hyphens.mus", "Finale 2007", FormatEpoch::ZlibLegacy, 144, 224, true, 4, 1},
+        {"evidence/F2012/F2012-upstem-flags.mus", "Finale 2012", FormatEpoch::ZlibLegacy, 144, 115, true, 4, 1},
     };
     for (const auto& fixture : fixtures) {
         const auto result = read(fixture.path);
-        expect(result.report.formatEpoch == fixture.epoch,
-            std::string("The fixture for ") + fixture.era + " is not the expected epoch");
+        expect(result.report.formatEpoch == fixture.epoch, std::string("The fixture for ") + fixture.era + " is not the expected epoch");
         const auto lyrics = result.document->getOptions()->get<Lyrics>();
-        expect(static_cast<bool>(lyrics),
-            std::string("No lyric options for ") + fixture.era);
-        const auto wrong = [&](const char* name) {
-            return std::string("The lyric ") + name + " was wrong for " + fixture.era;
-        };
-        expect(lyrics->maxHyphenSeparation == fixture.maxHyphenSeparation,
-            wrong("maximum hyphen separation"));
-        expect(lyrics->wordExtLineWidth == fixture.wordExtLineWidth,
-            wrong("word extension line width"));
-        expect(lyrics->wordExtHorzOffset == fixture.wordExtHorzOffset,
-            wrong("word extension horizontal offset"));
-        expect(lyrics->wordExtVertOffset == fixture.wordExtVertOffset,
-            wrong("word extension vertical offset"));
+        expect(static_cast<bool>(lyrics), std::string("No lyric options for ") + fixture.era);
+        const auto wrong = [&](const char* name) { return std::string("The lyric ") + name + " was wrong for " + fixture.era; };
+        expect(lyrics->maxHyphenSeparation == fixture.maxHyphenSeparation, wrong("maximum hyphen separation"));
+        expect(lyrics->wordExtLineWidth == fixture.wordExtLineWidth, wrong("word extension line width"));
+        expect(lyrics->wordExtHorzOffset == fixture.wordExtHorzOffset, wrong("word extension horizontal offset"));
+        expect(lyrics->wordExtVertOffset == fixture.wordExtVertOffset, wrong("word extension vertical offset"));
         // "Lift" and "Push" have homes of their own on selectors 29 and 30 in every epoch, so
         // these two are the only fields of this class a Coda-banner document supplies.
-        expect(field(result, "options.lyricOptions.wordExtVertOffset").origin
-                    == ValueOrigin::LegacyMus
-                && field(result, "options.lyricOptions.wordExtHorzOffset").origin
-                    == ValueOrigin::LegacyMus,
+        expect(field(result, "options.lyricOptions.wordExtVertOffset").origin == ValueOrigin::LegacyMus
+                   && field(result, "options.lyricOptions.wordExtHorzOffset").origin == ValueOrigin::LegacyMus,
             wrong("word extension offset provenance"));
         // The four alignments never vary across the tracked fixtures, but the legacy list is
         // in neither musxdom's order nor its reverse, so an untranslated value would show up
         // here as `left` where the companion says `center`.
         const auto style = [&](SyllableType type) {
             const auto found = lyrics->syllablePosStyles.find(type);
-            expect(found != lyrics->syllablePosStyles.end() && found->second,
-                wrong("syllable position style"));
+            expect(found != lyrics->syllablePosStyles.end() && found->second, wrong("syllable position style"));
             return found->second;
         };
-        expect(style(SyllableType::Default)->align == AlignJustify::Center
-                && style(SyllableType::Default)->justify == AlignJustify::Center,
+        expect(style(SyllableType::Default)->align == AlignJustify::Center && style(SyllableType::Default)->justify == AlignJustify::Center,
             wrong("default syllable position"));
-        expect(style(SyllableType::WordExt)->align == AlignJustify::Left
-                && style(SyllableType::WordExt)->justify == AlignJustify::Left,
+        expect(style(SyllableType::WordExt)->align == AlignJustify::Left && style(SyllableType::WordExt)->justify == AlignJustify::Left,
             wrong("word extension syllable position"));
-        expect(style(SyllableType::First)->align == AlignJustify::Center
-                && style(SyllableType::First)->justify == AlignJustify::Left,
+        expect(style(SyllableType::First)->align == AlignJustify::Center && style(SyllableType::First)->justify == AlignJustify::Left,
             wrong("first syllable position"));
-        expect(style(SyllableType::SystemStart)->align == AlignJustify::Center
-                && style(SyllableType::SystemStart)->justify == AlignJustify::Left,
+        expect(style(SyllableType::SystemStart)->align == AlignJustify::Center && style(SyllableType::SystemStart)->justify == AlignJustify::Left,
             wrong("system start syllable position"));
-        for (const auto type :
-                {SyllableType::WordExt, SyllableType::First, SyllableType::SystemStart}) {
-            expect(style(type)->on == fixture.optionalPositionsOn,
-                wrong("optional syllable positioning switch"));
+        for (const auto type : {SyllableType::WordExt, SyllableType::First, SyllableType::SystemStart}) {
+            expect(style(type)->on == fixture.optionalPositionsOn, wrong("optional syllable positioning switch"));
         }
         // Not ignored in any era before Finale 2012, which the pinned baseline says the
         // opposite of, so every earlier fixture asserts it. A Finale 2012 document reads
         // selector 57 word 4 instead: all six tracked fixtures clear it, matching companions
         // that omit the element.
-        const bool isFinale2012 = fixture.epoch == FormatEpoch::ZlibLegacy
-            && result.report.sourceVersion
-            && finale_mus_reader::VersionBound{result.report.sourceVersion->major,
-                   result.report.sourceVersion->minor,
-                   result.report.sourceVersion->maint}
-                >= finale_mus_reader::versions::finale2012;
-        expect(lyrics->lyricUseEdgePunctuation == !isFinale2012,
-            wrong("syllable edge punctuation setting"));
+        const bool isFinale2012 = fixture.epoch == FormatEpoch::ZlibLegacy && result.report.sourceVersion
+                                  && finale_mus_reader::VersionBound{result.report.sourceVersion->major, result.report.sourceVersion->minor,
+                                         result.report.sourceVersion->maint}
+                                         >= finale_mus_reader::versions::finale2012;
+        expect(lyrics->lyricUseEdgePunctuation == !isFinale2012, wrong("syllable edge punctuation setting"));
         expect(field(result, "options.lyricOptions.lyricUseEdgePunctuation").origin
-                == (isFinale2012 ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior),
+                   == (isFinale2012 ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior),
             wrong("syllable edge punctuation provenance"));
 
         // Both settings postdate Finale 2012, so no source of any era states either, but they
@@ -385,21 +325,15 @@ void testLyricOptionsRecovery()
         // testLyricPostFormatAssertions, which seeds the opposite of both.
         expect(lyrics->hyphenChar == U'-', wrong("hyphen character"));
         expect(!lyrics->useAltHyphenFont, wrong("alternate hyphen font switch"));
-        expect(field(result, "options.lyricOptions.hyphenChar").origin
-                == ValueOrigin::MusxOnly,
-            wrong("hyphen character provenance"));
-        expect(field(result, "options.lyricOptions.useAltHyphenFont").origin
-                == ValueOrigin::LegacyBehavior,
+        expect(field(result, "options.lyricOptions.hyphenChar").origin == ValueOrigin::MusxOnly, wrong("hyphen character provenance"));
+        expect(field(result, "options.lyricOptions.useAltHyphenFont").origin == ValueOrigin::LegacyBehavior,
             wrong("alternate hyphen font switch provenance"));
         // The pinned <lyricOptions> carries no <altHyphenFont>. musxdom synthesizes it in
         // integrityCheck, while the reader reports its persisted leaves as MUSX-only.
-        expect(static_cast<bool>(lyrics->altHyphenFont),
-            wrong("alternate hyphen font, which musxdom should have synthesized"));
+        expect(static_cast<bool>(lyrics->altHyphenFont), wrong("alternate hyphen font, which musxdom should have synthesized"));
         for (const auto* member : {"fontId", "fontSize", "effects"}) {
-            const auto description = std::string("alternate hyphen font ")
-                + member + " provenance";
-            expect(field(result, std::string("options.lyricOptions.altHyphenFont.") + member)
-                        .origin == ValueOrigin::MusxOnly,
+            const auto description = std::string("alternate hyphen font ") + member + " provenance";
+            expect(field(result, std::string("options.lyricOptions.altHyphenFont.") + member).origin == ValueOrigin::MusxOnly,
                 wrong(description.c_str()));
         }
     }
@@ -412,15 +346,13 @@ void testLyricOptionsRecovery()
     const auto needUnderscore = read("evidence/F2004/F2004-lyropts-needuscore.mus");
     const auto f2004Base = read("evidence/F2004/F2004-baseline.mus");
     expect(f2004Base.document->getOptions()->get<Lyrics>()->useSmartWordExtensions
-            && !noSmartWext.document->getOptions()->get<Lyrics>()->useSmartWordExtensions,
+               && !noSmartWext.document->getOptions()->get<Lyrics>()->useSmartWordExtensions,
         "Smart word extensions were not read from selector 34 word 5");
     expect(!f2004Base.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore
-            && needUnderscore.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore,
+               && needUnderscore.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore,
         "The underscore requirement was not read from selector 57 word 1");
-    for (const auto& [result, target] :
-            {std::pair{std::cref(noSmartWext), "options.lyricOptions.useSmartWordExtensions"},
-                std::pair{std::cref(needUnderscore),
-                    "options.lyricOptions.wordExtNeedUnderscore"}}) {
+    for (const auto& [result, target] : {std::pair{std::cref(noSmartWext), "options.lyricOptions.useSmartWordExtensions"},
+             std::pair{std::cref(needUnderscore), "options.lyricOptions.wordExtNeedUnderscore"}}) {
         expect(field(result.get(), target).origin == ValueOrigin::LegacyMus,
             std::string("A Finale 2004 lyric switch was not reported as read: ") + target);
     }
@@ -433,16 +365,13 @@ void testLyricOptionsRecovery()
     // on, and the reader asserts false anyway, because an upgrade turning a modern feature on
     // for an old document is not the same as the old document having had it.
     const auto f263 = read("evidence/F263/F263-baseline.mus");
-    expect(!f263.document->getOptions()->get<Lyrics>()->useSmartWordExtensions
-            && !f263.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore
-            && !f263.document->getOptions()->get<Lyrics>()->useSmartHyphens,
+    expect(!f263.document->getOptions()->get<Lyrics>()->useSmartWordExtensions && !f263.document->getOptions()->get<Lyrics>()->wordExtNeedUnderscore
+               && !f263.document->getOptions()->get<Lyrics>()->useSmartHyphens,
         "A Coda-banner document claimed a Finale 2004 lyric feature");
-    for (const char* target : {"options.lyricOptions.useSmartWordExtensions",
-             "options.lyricOptions.wordExtNeedUnderscore",
-             "options.lyricOptions.useSmartHyphens"}) {
+    for (const char* target :
+        {"options.lyricOptions.useSmartWordExtensions", "options.lyricOptions.wordExtNeedUnderscore", "options.lyricOptions.useSmartHyphens"}) {
         expect(field(f263, target).origin == ValueOrigin::LegacyBehavior,
-            std::string("A pre-Finale-2004 lyric switch was not reported as era behavior: ")
-                + target);
+            std::string("A pre-Finale-2004 lyric switch was not reported as era behavior: ") + target);
     }
 
     // Finale 2000 is the first release with a dedicated Lyric Options dialog, and the only
@@ -460,16 +389,14 @@ void testLyricOptionsRecovery()
             "A syllable position style is missing from the Finale 2000 alignment fixture");
         return found->second;
     };
-    expect(alignStyle(SyllableType::First)->align == AlignJustify::Right
-            && alignStyle(SyllableType::First)->justify == AlignJustify::Left,
+    expect(alignStyle(SyllableType::First)->align == AlignJustify::Right && alignStyle(SyllableType::First)->justify == AlignJustify::Left,
         "The legacy alignment value 3 was not translated to right");
-    expect(alignStyle(SyllableType::SystemStart)->justify == AlignJustify::Right
-            && alignStyle(SyllableType::SystemStart)->align == AlignJustify::Center,
+    expect(
+        alignStyle(SyllableType::SystemStart)->justify == AlignJustify::Right && alignStyle(SyllableType::SystemStart)->align == AlignJustify::Center,
         "The legacy justification value 3 was not translated to right");
     // Setting a position's alignment enables it, and the word extension position is left off,
     // so the same record carries both states of the flag bit.
-    expect(alignStyle(SyllableType::First)->on && alignStyle(SyllableType::SystemStart)->on
-            && !alignStyle(SyllableType::WordExt)->on,
+    expect(alignStyle(SyllableType::First)->on && alignStyle(SyllableType::SystemStart)->on && !alignStyle(SyllableType::WordExt)->on,
         "The Finale 2000 alignment fixture did not read its positioning switches");
 
     // The controlled Finale 1.0.0 pair that names "Lift" and "Push". It moves selector 29
@@ -483,13 +410,13 @@ void testLyricOptionsRecovery()
     // With no selector 55 in this era, the starting connection takes the dialog's own values,
     // which is what the companion shows.
     expect(liftLyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->xOffset == 6
-            && liftLyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
+               && liftLyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
         "The Coda-banner starting connection did not take the recovered lift and push");
     // Its sibling holds 4 and 4, so the pair discriminates rather than merely agreeing with a
     // default that happens to match.
     const auto liftBase = read("evidence/F100/F100-baseline.mus");
     expect(liftBase.document->getOptions()->get<Lyrics>()->wordExtVertOffset == 4
-            && liftBase.document->getOptions()->get<Lyrics>()->wordExtHorzOffset == 4,
+               && liftBase.document->getOptions()->get<Lyrics>()->wordExtHorzOffset == 4,
         "The Coda-banner baseline did not read its own lift and push");
 
     // Finale 3.7.2 exposes two lyric settings the Coda banner does not -- hyphen spacing and
@@ -498,14 +425,13 @@ void testLyricOptionsRecovery()
     // confirms lift and push a second time in a different epoch. Its ETF prints the same rows.
     const auto f372opts = read("evidence/F372/F372-lyricopts-changed.mus");
     const auto f372Lyrics = f372opts.document->getOptions()->get<Lyrics>();
-    expect(f372Lyrics->maxHyphenSeparation == 157 && f372Lyrics->wordExtLineWidth == 134
-            && f372Lyrics->wordExtVertOffset == 5 && f372Lyrics->wordExtHorzOffset == 6,
+    expect(f372Lyrics->maxHyphenSeparation == 157 && f372Lyrics->wordExtLineWidth == 134 && f372Lyrics->wordExtVertOffset == 5
+               && f372Lyrics->wordExtHorzOffset == 6,
         "The Finale 3.7.2 four-option save was not read from selectors 15, 29, 30 and 67");
-    for (const char* target : {"options.lyricOptions.maxHyphenSeparation",
-             "options.lyricOptions.wordExtLineWidth", "options.lyricOptions.wordExtVertOffset",
-             "options.lyricOptions.wordExtHorzOffset"}) {
-        expect(field(f372opts, target).origin == ValueOrigin::LegacyMus,
-            std::string("A Finale 3.7.2 lyric option was not reported as read: ") + target);
+    for (const char* target : {"options.lyricOptions.maxHyphenSeparation", "options.lyricOptions.wordExtLineWidth",
+             "options.lyricOptions.wordExtVertOffset", "options.lyricOptions.wordExtHorzOffset"}) {
+        expect(
+            field(f372opts, target).origin == ValueOrigin::LegacyMus, std::string("A Finale 3.7.2 lyric option was not reported as read: ") + target);
     }
     // The era stores no connection table, so the starting connection takes the dialog's own
     // values, as its companion does. Its `oneEntryEnd` is the deliberate difference: the
@@ -513,7 +439,7 @@ void testLyricOptionsRecovery()
     // keeps the pinned baseline's 42 rather than reproducing a formula one specimen cannot
     // distinguish from several others. See FORMAT_NOTES.
     expect(f372Lyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->xOffset == 6
-            && f372Lyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
+               && f372Lyrics->wordExtConnectStyles.at(ConnectType::DefaultStart)->yOffset == 5,
         "The Finale 3.7.2 starting connection did not take the recovered lift and push");
     expect(f372Lyrics->wordExtConnectStyles.at(ConnectType::OneEntryEnd)->xOffset == 42,
         "The reader reproduced a synthesized one-entry offset instead of keeping the baseline");
@@ -525,15 +451,12 @@ void testLyricOptionsRecovery()
     // <lyricUseEdgePunctuation/>.
     const auto noIgnore = read("evidence/F2012/F2012-lyropts-noign-punct.mus");
     const auto noIgnoreLyrics = noIgnore.document->getOptions()->get<Lyrics>();
-    expect(noIgnoreLyrics->lyricUseEdgePunctuation,
-        "A Finale 2012 document with the ignore switch cleared did not read as not-ignored");
-    expect(field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").origin
-                == ValueOrigin::LegacyMus
-            && field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").rawValue == 1,
+    expect(noIgnoreLyrics->lyricUseEdgePunctuation, "A Finale 2012 document with the ignore switch cleared did not read as not-ignored");
+    expect(field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").origin == ValueOrigin::LegacyMus
+               && field(noIgnore, "options.lyricOptions.lyricUseEdgePunctuation").rawValue == 1,
         "The cleared ignore switch was not reported as read from selector 57 word 4");
     // Its list is the stock one, so the record carries no tail even though ignoring is off.
-    expect(field(noIgnore, "options.lyricOptions.lyricPunctuationToIgnore").origin
-            == ValueOrigin::Finale27Default,
+    expect(field(noIgnore, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::Finale27Default,
         "A document with no punctuation tail was reported as carrying one");
 
     // Automatic lyric numbering arrives with Finale 2011 in a record that grew to hold it:
@@ -558,21 +481,14 @@ void testLyricOptionsRecovery()
     for (const auto& c : autoNumCases) {
         const auto result = read(c.path);
         const auto ly = result.document->getOptions()->get<Lyrics>();
-        const auto wrongAt = [&](const char* what) {
-            return std::string("The lyric ") + what + " was wrong for " + c.path;
-        };
+        const auto wrongAt = [&](const char* what) { return std::string("The lyric ") + what + " was wrong for " + c.path; };
         expect(ly->showAutoNumbersOnVerses == c.verses, wrongAt("verse auto-number switch"));
-        expect(ly->showAutoNumbersOnChoruses == c.choruses,
-            wrongAt("chorus auto-number switch"));
-        expect(ly->showAutoNumbersOnSections == c.sections,
-            wrongAt("section auto-number switch"));
+        expect(ly->showAutoNumbersOnChoruses == c.choruses, wrongAt("chorus auto-number switch"));
+        expect(ly->showAutoNumbersOnSections == c.sections, wrongAt("section auto-number switch"));
         expect(ly->lyricAutoNumType == c.type, wrongAt("auto-number type"));
-        for (const char* target : {"options.lyricOptions.showAutoNumbersOnVerses",
-                 "options.lyricOptions.showAutoNumbersOnChoruses",
-                 "options.lyricOptions.showAutoNumbersOnSections",
-                 "options.lyricOptions.lyricAutoNumType"}) {
-            expect(field(result, target).origin == ValueOrigin::LegacyMus,
-                wrongAt("auto-number provenance"));
+        for (const char* target : {"options.lyricOptions.showAutoNumbersOnVerses", "options.lyricOptions.showAutoNumbersOnChoruses",
+                 "options.lyricOptions.showAutoNumbersOnSections", "options.lyricOptions.lyricAutoNumType"}) {
+            expect(field(result, target).origin == ValueOrigin::LegacyMus, wrongAt("auto-number provenance"));
         }
     }
     // A Finale 2007 document carries the short record, so the same reader must assert the
@@ -581,15 +497,12 @@ void testLyricOptionsRecovery()
     // Finale 2011 ones carry twenty-four, which is where the marker comes from.
     const auto f2007auto = read("evidence/F2007/F2007-lyric-hyphens.mus");
     const auto f2007Lyrics = f2007auto.document->getOptions()->get<Lyrics>();
-    expect(!f2007Lyrics->showAutoNumbersOnVerses && !f2007Lyrics->showAutoNumbersOnChoruses
-            && !f2007Lyrics->showAutoNumbersOnSections,
+    expect(!f2007Lyrics->showAutoNumbersOnVerses && !f2007Lyrics->showAutoNumbersOnChoruses && !f2007Lyrics->showAutoNumbersOnSections,
         "A Finale 2007 document claimed automatic lyric numbers");
-    expect(field(f2007auto, "options.lyricOptions.showAutoNumbersOnVerses").origin
-            == ValueOrigin::LegacyBehavior,
+    expect(field(f2007auto, "options.lyricOptions.showAutoNumbersOnVerses").origin == ValueOrigin::LegacyBehavior,
         "A pre-Finale-2011 auto-number switch was not reported as era behavior");
     expect(f2007Lyrics->lyricAutoNumType == AutoNum::Align
-            && field(f2007auto, "options.lyricOptions.lyricAutoNumType").origin
-                == ValueOrigin::Finale27Default,
+               && field(f2007auto, "options.lyricOptions.lyricAutoNumType").origin == ValueOrigin::Finale27Default,
         "A pre-Finale-2011 document did not leave the numbering type to the baseline");
 
     // Finale 2011 stores the same tail in a different layout, and the pair of fixtures is what
@@ -600,22 +513,18 @@ void testLyricOptionsRecovery()
     // measurement: 0xc7 0xc8 is the guillemet pair in Mac Roman and `ÇÈ` in Windows-1252.
     const auto f2011punct = read("evidence/F2011/F2011-lyric-punct.mus");
     const auto f2011Lyrics = f2011punct.document->getOptions()->get<Lyrics>();
-    expect(f2011Lyrics->lyricPunctuationToIgnore == "#@%&\u00ab\u00bb",
-        "The Finale 2011 punctuation tail was not decoded as packed Mac Roman bytes");
-    expect(field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").origin
-                == ValueOrigin::LegacyMus
-            && field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 6,
+    expect(f2011Lyrics->lyricPunctuationToIgnore == "#@%&\u00ab\u00bb", "The Finale 2011 punctuation tail was not decoded as packed Mac Roman bytes");
+    expect(field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::LegacyMus
+               && field(f2011punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 6,
         "The Finale 2011 tail was not reported as read, with its byte count");
     // Its baseline sibling carries no tail and keeps musxdom's own default list, and both
     // read the switch from the same record: Finale 2011 is where that word becomes live.
     const auto f2011base = read("evidence/F2011/F2011-baseline.mus");
-    expect(f2011base.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore
-            == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
+    expect(f2011base.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
         "A Finale 2011 document with no tail did not keep musxdom's default list");
     for (const auto& r : {std::cref(f2011base), std::cref(f2011punct)}) {
         expect(!r.get().document->getOptions()->get<Lyrics>()->lyricUseEdgePunctuation
-                && field(r.get(), "options.lyricOptions.lyricUseEdgePunctuation").origin
-                    == ValueOrigin::LegacyMus,
+                   && field(r.get(), "options.lyricOptions.lyricUseEdgePunctuation").origin == ValueOrigin::LegacyMus,
             "A Finale 2011 document did not read the edge punctuation switch from its record");
     }
 
@@ -624,27 +533,23 @@ void testLyricOptionsRecovery()
     // nothing with the stock list so that finding them proves where the tail begins.
     const auto punct = read("evidence/F2012/F2012-lyric-punct.mus");
     const auto punctLyrics = punct.document->getOptions()->get<Lyrics>();
-    expect(punctLyrics->lyricPunctuationToIgnore == "#@%&",
-        "The custom punctuation list was not read from the selector 57 tail");
-    expect(field(punct, "options.lyricOptions.lyricPunctuationToIgnore").origin
-                == ValueOrigin::LegacyMus
-            && field(punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 4,
+    expect(punctLyrics->lyricPunctuationToIgnore == "#@%&", "The custom punctuation list was not read from the selector 57 tail");
+    expect(field(punct, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::LegacyMus
+               && field(punct, "options.lyricOptions.lyricPunctuationToIgnore").rawValue == 4,
         "The custom punctuation list was not reported as read, with its code unit count");
     // Its sibling keeps the stock list, which the record does not carry at all. musxdom's
     // integrityCheck owns that default, so the reader must leave the field empty rather than
     // state the set a second time.
     const auto stock = read("evidence/F2012/F2012-baseline.mus");
-    expect(stock.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore
-            == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
+    expect(stock.document->getOptions()->get<Lyrics>()->lyricPunctuationToIgnore == ",.?!;:\'\"\u201c\u201d\u2018\u2019",
         "A document with no punctuation tail did not fall to musxdom's own default list");
-    expect(field(stock, "options.lyricOptions.lyricPunctuationToIgnore").origin
-            == ValueOrigin::Finale27Default,
+    expect(field(stock, "options.lyricOptions.lyricPunctuationToIgnore").origin == ValueOrigin::Finale27Default,
         "An absent punctuation tail was reported as read");
     // Finale rewrote the word extension connection table when the Lyric Options dialog was
     // dismissed, so this fixture is a second specimen for it: five of its nine styles carry a
     // vertical offset of 5 where every other tracked document carries zero.
     expect(punctLyrics->wordExtConnectStyles.at(ConnectType::DefaultEnd)->yOffset == 5
-            && punctLyrics->wordExtConnectStyles.at(ConnectType::SystemStart)->yOffset == 1,
+               && punctLyrics->wordExtConnectStyles.at(ConnectType::SystemStart)->yOffset == 1,
         "The rewritten connection table was not read from the punctuation fixture");
 
     // The connection table itself, from the fixture whose offsets are all distinct. Its
@@ -673,12 +578,9 @@ void testLyricOptionsRecovery()
     };
     for (const auto& expected : connections) {
         const auto found = connect.find(expected.type);
-        expect(found != connect.end() && found->second,
-            "A word extension connection style is missing from the Finale 2006 fixture");
-        expect(found->second->connectIndex == expected.index,
-            "A word extension connection point was translated wrongly");
-        expect(found->second->xOffset == expected.xOffset
-                && found->second->yOffset == expected.yOffset,
+        expect(found != connect.end() && found->second, "A word extension connection style is missing from the Finale 2006 fixture");
+        expect(found->second->connectIndex == expected.index, "A word extension connection point was translated wrongly");
+        expect(found->second->xOffset == expected.xOffset && found->second->yOffset == expected.yOffset,
             "A word extension connection offset was read from the wrong word");
     }
 
@@ -686,30 +588,23 @@ void testLyricOptionsRecovery()
     // neither the line width nor the syllable positions, so both must be reported as era
     // behavior rather than claimed as read or left at a Finale 27 setting that says otherwise.
     const auto f100 = read("evidence/F100/F100-baseline.mus");
-    expect(field(f100, "options.lyricOptions.wordExtLineWidth").origin
-            == ValueOrigin::LegacyBehavior,
+    expect(field(f100, "options.lyricOptions.wordExtLineWidth").origin == ValueOrigin::LegacyBehavior,
         "The Coda-era word extension line width was not reported as era behavior");
-    expect(field(f100, "options.lyricOptions.syllablePosStyles[wordExt].on").origin
-            == ValueOrigin::LegacyBehavior,
+    expect(field(f100, "options.lyricOptions.syllablePosStyles[wordExt].on").origin == ValueOrigin::LegacyBehavior,
         "A Coda-era syllable positioning switch was not reported as era behavior");
-    expect(field(f100, "options.lyricOptions.maxHyphenSeparation").origin
-            == ValueOrigin::Finale27Default,
+    expect(field(f100, "options.lyricOptions.maxHyphenSeparation").origin == ValueOrigin::Finale27Default,
         "The Coda-era selector 15 word 1 was claimed as a hyphen separation");
     // Selector 55 exists in this era and is a different option; reading it as the connection
     // table would replace nine connection styles with another option's bytes. Those bytes are
     // 16128 and 16448 in this fixture, so the failure would be loud: no connection point at
     // all, and offsets of tens of thousands. Nothing is reported for the collection either,
     // because the capture pass reports only what it reads.
-    const auto f100Connect =
-        f100.document->getOptions()->get<Lyrics>()->wordExtConnectStyles;
+    const auto f100Connect = f100.document->getOptions()->get<Lyrics>()->wordExtConnectStyles;
     const auto f100Start = f100Connect.find(ConnectType::DefaultStart);
-    expect(f100Start != f100Connect.end() && f100Start->second
-            && f100Start->second->connectIndex == ConnectIndex::LyricRightBottom
-            && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 4,
+    expect(f100Start != f100Connect.end() && f100Start->second && f100Start->second->connectIndex == ConnectIndex::LyricRightBottom
+               && f100Start->second->xOffset == 4 && f100Start->second->yOffset == 4,
         "The Coda-era selector 55 was read as the word extension connection table");
-    expect(!anyReportedField(f100.report, [](const auto& member, const auto&) {
-               return member.find("wordExtConnectStyles") != std::string::npos;
-           }),
+    expect(!anyReportedField(f100.report, [](const auto& member, const auto&) { return member.find("wordExtConnectStyles") != std::string::npos; }),
         "A Coda-era document reported a word extension connection it never stored");
 
     // Finale 2003 is the last release before the smart-lyric group. All three of its switches
@@ -720,34 +615,44 @@ void testLyricOptionsRecovery()
     // smart shapes, which Finale 27 manufactures on upgrade and this reader does not.
     const auto f2003 = read("evidence/F2003/F2003-baseline.mus");
     const auto f2003Lyrics = f2003.document->getOptions()->get<Lyrics>();
-    expect(!f2003Lyrics->useSmartHyphens && !f2003Lyrics->useSmartWordExtensions
-            && !f2003Lyrics->wordExtNeedUnderscore,
+    expect(!f2003Lyrics->useSmartHyphens && !f2003Lyrics->useSmartWordExtensions && !f2003Lyrics->wordExtNeedUnderscore,
         "A Finale 2003 document claimed a smart-lyric feature its era did not have");
-    for (const char* target : {"options.lyricOptions.useSmartHyphens",
-             "options.lyricOptions.useSmartWordExtensions",
-             "options.lyricOptions.wordExtNeedUnderscore"}) {
-        expect(field(f2003, target).origin == ValueOrigin::LegacyBehavior,
-            std::string("A pre-Finale-2004 smart-lyric switch was not reported as era "
-                        "behavior: ")
-                + target);
+    for (const char* target :
+        {"options.lyricOptions.useSmartHyphens", "options.lyricOptions.useSmartWordExtensions", "options.lyricOptions.wordExtNeedUnderscore"}) {
+        expect(field(f2003, target).origin == ValueOrigin::LegacyBehavior, std::string("A pre-Finale-2004 smart-lyric switch was not reported as era "
+                                                                                       "behavior: ")
+                                                                               + target);
     }
     const auto f2004 = read("evidence/F2004/F2004-baseline.mus");
     expect(f2004.document->getOptions()->get<Lyrics>()->useSmartHyphens
-            && field(f2004, "options.lyricOptions.useSmartHyphens").origin
-                == ValueOrigin::LegacyMus,
+               && field(f2004, "options.lyricOptions.useSmartHyphens").origin == ValueOrigin::LegacyMus,
         "The Finale 2004 smart-hyphen switch was not read from selector 35");
     expect(f2004.document->getOptions()->get<Lyrics>()->wordExtMinLength == 38
-            && field(f2004, "options.lyricOptions.wordExtMinLength").origin
-                == ValueOrigin::LegacyMus,
+               && field(f2004, "options.lyricOptions.wordExtMinLength").origin == ValueOrigin::LegacyMus,
         "The Finale 2004 word extension minimum length was not read from selector 57");
 }
 
-TEST_CASE("Lyric options recovery", "[class][reader]") { testLyricOptionsRecovery(); }
+TEST_CASE("Lyric options recovery", "[class][reader]")
+{
+    testLyricOptionsRecovery();
+}
 
-TEST_CASE("Lyric word extension connection layouts", "[class]") { testLyricWordExtConnectionLayouts(); }
-TEST_CASE("Lyric edge punctuation version gate", "[class]") { testLyricEdgePunctuationVersionGate(); }
-TEST_CASE("Lyric punctuation tail encoding gate", "[class]") { testLyricPunctuationTailEncodingGate(); }
-TEST_CASE("Lyric post-format assertions", "[class]") { testLyricPostFormatAssertions(); }
+TEST_CASE("Lyric word extension connection layouts", "[class]")
+{
+    testLyricWordExtConnectionLayouts();
+}
+TEST_CASE("Lyric edge punctuation version gate", "[class]")
+{
+    testLyricEdgePunctuationVersionGate();
+}
+TEST_CASE("Lyric punctuation tail encoding gate", "[class]")
+{
+    testLyricPunctuationTailEncodingGate();
+}
+TEST_CASE("Lyric post-format assertions", "[class]")
+{
+    testLyricPostFormatAssertions();
+}
 
 } // namespace
 } // namespace finale_mus_reader_tests

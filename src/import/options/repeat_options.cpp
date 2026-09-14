@@ -48,8 +48,7 @@ std::int64_t repeatMaxPasses(std::int64_t value)
     return value == 0 ? 20 : value;
 }
 
-bool hasRepeatOptionsLayout(const records::LegacyRecordIndex& index,
-    const SourceProfile& profile)
+bool hasRepeatOptionsLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     // A Coda row with the same two-character tag is not a numeric global in the later
     // fixed-row sense. Selector 72 is part of every located RepeatOptions family in the
@@ -64,8 +63,7 @@ bool hasRepeatOptionsLayout(const records::LegacyRecordIndex& index,
 // dating the file. This leaves earlier uncompressed files at the seeded defaults.
 const FieldMapping repeatFields[] = {
     MUS_WORD(RepeatTarget, bracketHeightTag, GLOBALS_CMPER, 0, 3, bracketHeight),
-    MUS_WORD_AS_IF(RepeatTarget, maxPassesTag, GLOBALS_CMPER, 0, 3, nullptr,
-        maxPasses, repeatMaxPasses(value)),
+    MUS_WORD_AS_IF(RepeatTarget, maxPassesTag, GLOBALS_CMPER, 0, 3, nullptr, maxPasses, repeatMaxPasses(value)),
     MUS_WORD(RepeatTarget, periodTag, GLOBALS_CMPER, 0, 1, addPeriod),
     MUS_WORD(RepeatTarget, repeatLineTag, GLOBALS_CMPER, 0, 0, thickLineWidth),
     MUS_WORD(RepeatTarget, repeatLineTag, GLOBALS_CMPER, 0, 1, thinLineWidth),
@@ -75,8 +73,7 @@ const FieldMapping repeatFields[] = {
     MUS_WORD(RepeatTarget, repeatLineTag, GLOBALS_CMPER, 0, 5, backwardDotHPos),
     MUS_WORD(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 0, upperDotVPos),
     MUS_WORD(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 1, lowerDotVPos),
-    MUS_WORD_AS_IF(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 2, nullptr,
-        wingStyle, repeatWingStyle(value)),
+    MUS_WORD_AS_IF(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 2, nullptr, wingStyle, repeatWingStyle(value)),
     MUS_WORD(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 3, afterClefSpace),
     MUS_WORD(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 4, afterKeySpace),
     MUS_WORD(RepeatTarget, repeatDotTag, GLOBALS_CMPER, 0, 5, afterTimeSpace),
@@ -92,58 +89,37 @@ const FieldMapping repeatFields[] = {
 // Finale 2007 through Finale 2012. The same numeric globals are class records,
 // and their single fixed-row incidence becomes one 12-byte payload.
 const FieldMapping classRepeatFields[] = {
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(bracketHeightTag)), GLOBALS_CMPER,
-        classWordOffset(3), bracketHeight),
-    MUS_CLASS_WORD_AS_IF(RepeatTarget, numericGlobalClass(repeatSelector(maxPassesTag)), GLOBALS_CMPER,
-        classWordOffset(3), nullptr, maxPasses, repeatMaxPasses(value)),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(periodTag)), GLOBALS_CMPER,
-        classWordOffset(1), addPeriod),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(0), thickLineWidth),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(1), thinLineWidth),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(2), lineSpace),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(3), backToBackStyle),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(4), forwardDotHPos),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER,
-        classWordOffset(5), backwardDotHPos),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(0), upperDotVPos),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(1), lowerDotVPos),
-    MUS_CLASS_WORD_AS_IF(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(2), nullptr, wingStyle, repeatWingStyle(value)),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(3), afterClefSpace),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(4), afterKeySpace),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER,
-        classWordOffset(5), afterTimeSpace),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(0), bracketHookLen),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(1), bracketLineWidth),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(2), bracketStartInset),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(3), bracketEndInset),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(4), bracketTextHPos),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER,
-        classWordOffset(5), bracketTextVPos),
-    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingBackHookTag)), GLOBALS_CMPER,
-        classWordOffset(2), bracketEndHookLen),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(bracketHeightTag)), GLOBALS_CMPER, classWordOffset(3), bracketHeight),
+    MUS_CLASS_WORD_AS_IF(RepeatTarget, numericGlobalClass(repeatSelector(maxPassesTag)), GLOBALS_CMPER, classWordOffset(3), nullptr, maxPasses,
+        repeatMaxPasses(value)),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(periodTag)), GLOBALS_CMPER, classWordOffset(1), addPeriod),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(0), thickLineWidth),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(1), thinLineWidth),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(2), lineSpace),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(3), backToBackStyle),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(4), forwardDotHPos),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatLineTag)), GLOBALS_CMPER, classWordOffset(5), backwardDotHPos),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(0), upperDotVPos),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(1), lowerDotVPos),
+    MUS_CLASS_WORD_AS_IF(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(2), nullptr, wingStyle,
+        repeatWingStyle(value)),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(3), afterClefSpace),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(4), afterKeySpace),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(repeatDotTag)), GLOBALS_CMPER, classWordOffset(5), afterTimeSpace),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(0), bracketHookLen),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(1), bracketLineWidth),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(2), bracketStartInset),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(3), bracketEndInset),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(4), bracketTextHPos),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingTag)), GLOBALS_CMPER, classWordOffset(5), bracketTextVPos),
+    MUS_CLASS_WORD(RepeatTarget, numericGlobalClass(repeatSelector(endingBackHookTag)), GLOBALS_CMPER, classWordOffset(2), bracketEndHookLen),
 };
 
 constexpr const char* repeatReportPrefix = "options.repeatOptions";
 
 const MappingTable& repeatTable()
 {
-    static const MappingTable table{
-        .reportPrefix = repeatReportPrefix,
+    static const MappingTable table{.reportPrefix = repeatReportPrefix,
         .epochs = EpochMask::FixedRow,
         .applies = &hasRepeatOptionsLayout,
         .targetKind = TargetKind::OptionsSingleton,
@@ -155,8 +131,7 @@ const MappingTable& repeatTable()
 
 const MappingTable& classRepeatTable()
 {
-    static const MappingTable table{
-        .reportPrefix = repeatReportPrefix,
+    static const MappingTable table{.reportPrefix = repeatReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &hasRepeatOptionsLayout,
         .encoding = RecordEncoding::ClassRecord,
@@ -171,8 +146,7 @@ const MappingTable& classRepeatTable()
 
 void importRepeatOptions(const ImportContext& context)
 {
-    applyMappingTables({&repeatTable(), &classRepeatTable()}, context.index,
-        context.profile, context.document, context.report);
+    applyMappingTables({&repeatTable(), &classRepeatTable()}, context.index, context.profile, context.document, context.report);
 
     const auto pooled = context.document->getOptions()->get<RepeatTarget>();
     if (!pooled) {
@@ -195,16 +169,14 @@ void importRepeatOptions(const ImportContext& context)
             reporting.template behaviorField<RepeatTarget>("bracketLineWidth", 0);
         });
         target->bracketEndAnchorThinLine = false;
-        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0);
-        });
+        withReporting(context.report,
+            [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0); });
         return;
     }
     // Files that carry the legacy RepeatOptions family use the older anchor behavior.
     target->bracketEndAnchorThinLine = false;
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0);
-    });
+    withReporting(context.report,
+        [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<RepeatTarget>("bracketEndAnchorThinLine", 0); });
 }
 
 } // namespace options

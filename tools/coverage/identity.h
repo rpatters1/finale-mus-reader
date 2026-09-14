@@ -13,9 +13,7 @@ namespace coverage {
 
 inline std::string partIdentityPrefix(std::int64_t partId)
 {
-    return partId == musx::dom::SCORE_PARTID
-        ? std::string{}
-        : "part_id=" + std::to_string(partId) + ',';
+    return partId == musx::dom::SCORE_PARTID ? std::string{} : "part_id=" + std::to_string(partId) + ',';
 }
 
 } // namespace coverage

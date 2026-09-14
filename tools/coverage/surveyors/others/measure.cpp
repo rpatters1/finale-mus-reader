@@ -11,8 +11,8 @@
 
 #include "coverage/classification_rules.h"
 #include "coverage/registry.h"
-#include "coverage/support/source_gate.h"
 #include "coverage/schema.h"
+#include "coverage/support/source_gate.h"
 #include "musx/musx.h"
 
 namespace {
@@ -54,7 +54,6 @@ constexpr DeferredRecovery deferredMeasureRecoveries[] = {
     {".has_chord", "legacy-behavior", "entry recovery: the chord record is an entry detail"},
 };
 
-
 /// @brief Whether a later Finale beta authored this file and then wrote it out in an older format.
 /// @details A back-save carries two versions: the creator names the release that made the
 /// document, the last saver the format on disk. When the creator postdates the format it wrote,
@@ -65,8 +64,7 @@ constexpr DeferredRecovery deferredMeasureRecoveries[] = {
 {
     const auto& creator = context.sourceReport.creatorVersion;
     return creator && sourceIsBeta(&*creator)
-        && finale_mus_reader::VersionBound{creator->major, creator->minor}
-            > finale_mus_reader::versions::finale2012;
+           && finale_mus_reader::VersionBound{creator->major, creator->minor} > finale_mus_reader::versions::finale2012;
 }
 
 // musxdom's barline values that Finale checks "Barline ends word extensions" for.
@@ -78,17 +76,14 @@ constexpr std::int64_t solidBarline = 5;
 /// @details Double, final and solid, plus a backwards repeat, which Finale treats the same way.
 /// Selecting any of them in the modern interface checks the box; selecting anything else clears
 /// it, and only a deliberate edit afterwards separates the two.
-[[nodiscard]] bool measureEndsWordExtensions(const DifferenceContext& context,
-    std::string_view prefix)
+[[nodiscard]] bool measureEndsWordExtensions(const DifferenceContext& context, std::string_view prefix)
 {
     const auto barline = comparisonIntegerLeaf(context.source, std::string(prefix) + "barline_type");
-    if (barline && (*barline == doubleBarline || *barline == finalBarline
-            || *barline == solidBarline)) {
+    if (barline && (*barline == doubleBarline || *barline == finalBarline || *barline == solidBarline)) {
         return true;
     }
     const auto repeat = context.source.find(std::string(prefix) + "backwards_repeat_bar");
-    return repeat != context.source.end() && repeat->second.first.isBool()
-        && repeat->second.first.asBool();
+    return repeat != context.source.end() && repeat->second.first.isBool() && repeat->second.first.asBool();
 }
 
 /// @brief One time-signature word that is a comparator rather than a value, and the flag saying so.
@@ -114,29 +109,28 @@ constexpr CompositeTimeSigWord compositeTimeSigWords[] = {
 };
 
 /// @brief Whether a measure's leaf is a composite comparator rather than a stored value.
-[[nodiscard]] bool measureWordIsCompositeComparator(const DifferenceContext& context,
-    std::string_view prefix, std::string_view flag)
+[[nodiscard]] bool measureWordIsCompositeComparator(const DifferenceContext& context, std::string_view prefix, std::string_view flag)
 {
     const auto found = context.source.find(std::string(prefix) + std::string(flag));
-    return found != context.source.end() && found->second.first.isBool()
-        && found->second.first.asBool();
+    return found != context.source.end() && found->second.first.isBool() && found->second.first.asBool();
 }
 
-std::optional<DifferenceClassification>
-classifyMeasureDifference(const DifferenceContext& context)
+std::optional<DifferenceClassification> classifyMeasureDifference(const DifferenceContext& context)
 {
-    if (context.category != DifferenceCategory::Differs) return std::nullopt;
-    if (!context.path.starts_with("measures[")) return std::nullopt;
+    if (context.category != DifferenceCategory::Differs) {
+        return std::nullopt;
+    }
+    if (!context.path.starts_with("measures[")) {
+        return std::nullopt;
+    }
 
     // Finale's musx conversion writes "Barline ends word extensions" from the barline itself,
     // where the source leaves the stored bit clear. That is the upgrade stating what the era did
     // rather than what the file says, and the file is what is reported. Only the direction the
     // conversion adds is classified: a set bit the companion drops would be a real loss.
-    if (context.path.ends_with(".break_word_ext") && context.origin == "legacy-mus"
-        && context.sourceValue.isBool() && context.companionValue.isBool()
+    if (context.path.ends_with(".break_word_ext") && context.origin == "legacy-mus" && context.sourceValue.isBool() && context.companionValue.isBool()
         && !context.sourceValue.asBool() && context.companionValue.asBool()) {
-        const auto prefix = context.path.substr(0, context.path.size()
-            - std::string_view(".break_word_ext").size() + 1);
+        const auto prefix = context.path.substr(0, context.path.size() - std::string_view(".break_word_ext").size() + 1);
         if (measureEndsWordExtensions(context, prefix)) {
             return DifferenceClassification::FinaleUpgradeLoss;
         }
@@ -146,22 +140,24 @@ classifyMeasureDifference(const DifferenceContext& context)
     // filler through Finale 2012, so no supported layout can carry either. A document a later
     // beta authored and back-saved is the one case where the companion can state one anyway, and
     // it is not a recovery failure: the value is not in the bytes.
-    if ((context.path.ends_with(".global_key_sig.hide_key_sig_show_accis")
-            || context.path.ends_with(".global_key_sig.keyless"))
+    if ((context.path.ends_with(".global_key_sig.hide_key_sig_show_accis") || context.path.ends_with(".global_key_sig.keyless"))
         && sourceWrittenByLaterBeta(context)) {
         return DifferenceClassification::BetaDiscrepancy;
     }
 
-    if (!deferredRecoveryClassified()) return std::nullopt;
+    if (!deferredRecoveryClassified()) {
+        return std::nullopt;
+    }
 
     // A composite time-signature word is a list comparator, and the two sides number their lists
     // independently. Only a word whose own flag says it is a comparator is deferred; a plain beat
     // count or Edu value that disagrees is a decoding failure and stays unexpected.
     if (context.sourceValue.isInteger() && context.companionValue.isInteger()) {
         for (const auto& composite : compositeTimeSigWords) {
-            if (!context.path.ends_with(composite.leaf)) continue;
-            const auto prefix = context.path.substr(
-                0, context.path.size() - composite.leaf.size() + 1);
+            if (!context.path.ends_with(composite.leaf)) {
+                continue;
+            }
+            const auto prefix = context.path.substr(0, context.path.size() - composite.leaf.size() + 1);
             if (measureWordIsCompositeComparator(context, prefix, composite.flag)) {
                 return DifferenceClassification::AwaitsDependentRecovery;
             }
@@ -171,7 +167,9 @@ classifyMeasureDifference(const DifferenceContext& context)
     // a set one against a clear companion one is a cache the reader cannot yet know is stale.
     // Neither is answerable until the class that holds the objects is recovered, so both wait on
     // it and both leave when it lands.
-    if (!context.sourceValue.isBool() || !context.companionValue.isBool()) return std::nullopt;
+    if (!context.sourceValue.isBool() || !context.companionValue.isBool()) {
+        return std::nullopt;
+    }
     for (const auto& deferred : deferredMeasureRecoveries) {
         if (context.path.ends_with(deferred.leaf) && context.origin == deferred.origin) {
             return DifferenceClassification::AwaitsDependentRecovery;
@@ -199,25 +197,27 @@ Value observeGlobalKeySig(const MeasureSurveyTarget& measure, const SurveyContex
 {
     const auto& key = *measure.globalKeySig;
     const auto origin = [&](std::string_view leaf) {
-        return fieldOrigin<MeasureSurveyTarget>(
-            context, "globalKeySig." + std::string(leaf), measure);
+        return fieldOrigin<MeasureSurveyTarget>(context, "globalKeySig." + std::string(leaf), measure);
     };
-    return Value::Object{{"key", key.key}, {"keyless", key.keyless},
-        {"hide_key_sig_show_accis", key.hideKeySigShowAccis},
-        {"origin_key", origin("key")}, {"origin_keyless", origin("keyless")},
-        {"origin_hideKeySigShowAccis", origin("hideKeySigShowAccis")}};
+    return Value::Object{{"key", key.key}, {"keyless", key.keyless}, {"hide_key_sig_show_accis", key.hideKeySigShowAccis},
+        {"origin_key", origin("key")}, {"origin_keyless", origin("keyless")}, {"origin_hideKeySigShowAccis", origin("hideKeySigShowAccis")}};
 }
 
 // The comparison identity of one observed measure: its source part and its comparator.
-[[nodiscard]] std::optional<std::pair<std::int64_t, std::int64_t>> measureIdentity(
-    const Value& measure)
+[[nodiscard]] std::optional<std::pair<std::int64_t, std::int64_t>> measureIdentity(const Value& measure)
 {
-    if (!measure.isObject()) return std::nullopt;
+    if (!measure.isObject()) {
+        return std::nullopt;
+    }
     const auto& fields = measure.asObject();
     const auto part = fields.find("part_id");
     const auto cmper = fields.find("cmper");
-    if (part == fields.end() || cmper == fields.end()) return std::nullopt;
-    if (!part->second.isInteger() || !cmper->second.isInteger()) return std::nullopt;
+    if (part == fields.end() || cmper == fields.end()) {
+        return std::nullopt;
+    }
+    if (!part->second.isInteger() || !cmper->second.isInteger()) {
+        return std::nullopt;
+    }
     return std::pair{part->second.asInteger(), cmper->second.asInteger()};
 }
 
@@ -225,15 +225,20 @@ Value observeGlobalKeySig(const MeasureSurveyTarget& measure, const SurveyContex
 // rather than their content.
 [[nodiscard]] bool measureContentMatches(const Value& left, const Value& right)
 {
-    static const std::set<std::string, std::less<>> identityKeys{
-        "part_id", "share_mode", "cmper", "origin"};
-    if (!left.isObject() || !right.isObject()) return false;
+    static const std::set<std::string, std::less<>> identityKeys{"part_id", "share_mode", "cmper", "origin"};
+    if (!left.isObject() || !right.isObject()) {
+        return false;
+    }
     const auto& a = left.asObject();
     const auto& b = right.asObject();
     for (const auto& [key, value] : a) {
-        if (identityKeys.count(key) || key.starts_with("origin_")) continue;
+        if (identityKeys.count(key) || key.starts_with("origin_")) {
+            continue;
+        }
         const auto found = b.find(key);
-        if (found == b.end() || !(found->second == value)) return false;
+        if (found == b.end() || !(found->second == value)) {
+            return false;
+        }
     }
     return true;
 }
@@ -247,18 +252,18 @@ Value observeGlobalKeySig(const MeasureSurveyTarget& measure, const SurveyContex
 /// **Only that case is dropped.** A part measure Finale re-laid out -- carrying its own width or
 /// positioning mode -- differs from its score measure and stays in the comparison, because the
 /// reader genuinely does not have those values and never can: no record in the source states them.
-[[nodiscard]] std::size_t dropMaterializedPartMeasures(const SurveySnapshot& source,
-    SurveySnapshot& companion)
+[[nodiscard]] std::size_t dropMaterializedPartMeasures(const SurveySnapshot& source, SurveySnapshot& companion)
 {
     const auto sourceFound = source.find("measures");
     const auto companionFound = companion.find("measures");
-    if (sourceFound == source.end() || companionFound == companion.end()
-        || !sourceFound->second.isArray() || !companionFound->second.isArray()) {
+    if (sourceFound == source.end() || companionFound == companion.end() || !sourceFound->second.isArray() || !companionFound->second.isArray()) {
         return 0;
     }
     std::set<std::pair<std::int64_t, std::int64_t>> sourceInstances;
     for (const auto& measure : sourceFound->second.asArray()) {
-        if (const auto identity = measureIdentity(measure)) sourceInstances.insert(*identity);
+        if (const auto identity = measureIdentity(measure)) {
+            sourceInstances.insert(*identity);
+        }
     }
     std::map<std::int64_t, const Value*> companionScore;
     for (const auto& measure : companionFound->second.asArray()) {
@@ -272,10 +277,14 @@ Value observeGlobalKeySig(const MeasureSurveyTarget& measure, const SurveyContex
     const auto before = measures.size();
     std::erase_if(measures, [&](const Value& measure) {
         const auto identity = measureIdentity(measure);
-        if (!identity || identity->first == musx::dom::SCORE_PARTID) return false;
+        if (!identity || identity->first == musx::dom::SCORE_PARTID) {
+            return false;
+        }
         // Only a part instance the reader does not have at all, and only where the companion's
         // own score measure already says the same thing.
-        if (sourceInstances.count(*identity)) return false;
+        if (sourceInstances.count(*identity)) {
+            return false;
+        }
         const auto score = companionScore.find(identity->second);
         return score != companionScore.end() && measureContentMatches(*score->second, measure);
     });
@@ -295,85 +304,45 @@ Value observeMeasures(const SurveyContext& ctx)
     using Target = MeasureSurveyTarget;
     Value::Array result;
     for (const auto& measure : sourceInstances<Target>(ctx)) {
-        result.push_back(observe(*measure, ctx,
-            field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field("width", &Target::width),
-            field("global_key_sig", &observeGlobalKeySig),
-            field("beats", &Target::beats),
-            field("div_beat", &Target::divBeat),
-            field("disp_beats", &Target::dispBeats),
-            field("disp_divbeat", &Target::dispDivbeat),
-            field("custom_bar_shape", &Target::customBarShape),
-            field("custom_left_bar_shape", &Target::customLeftBarShape),
-            field("front_space_extra", &Target::frontSpaceExtra),
-            field("back_space_extra", &Target::backSpaceExtra),
-            field("break_word_ext", &Target::breakWordExt),
-            field("hide_caution", &Target::hideCaution),
-            field("has_smart_shape", &Target::hasSmartShape),
-            field("group_barline_override", &Target::groupBarlineOverride),
-            field("show_full_names", &Target::showFullNames),
-            field("has_meas_numb_indiv_pos", &Target::hasMeasNumbIndivPos),
-            field("allow_split_points", &Target::allowSplitPoints),
-            field("composite_numerator", &Target::compositeNumerator),
-            field("composite_denominator", &Target::compositeDenominator),
-            field("show_key", &Target::showKey),
-            field("show_time", &Target::showTime),
-            field("evenly_across_measure", &Target::evenlyAcrossMeasure),
-            field("positioning_mode", &Target::positioningMode),
-            field("begin_new_system", &Target::beginNewSystem),
-            field("has_expression", &Target::hasExpression),
-            field("break_mm_rest", &Target::breakMmRest),
-            field("no_meas_num", &Target::noMeasNum),
-            field("has_ossia", &Target::hasOssia),
-            field("has_text_block", &Target::hasTextBlock),
-            field("barline_type", &Target::barlineType),
-            field("forward_repeat_bar", &Target::forwardRepeatBar),
-            field("backwards_repeat_bar", &Target::backwardsRepeatBar),
-            field("has_ending", &Target::hasEnding),
-            field("has_text_repeat", &Target::hasTextRepeat),
-            field("abbrv_time", &Target::abbrvTime),
-            field("use_display_timesig", &Target::useDisplayTimesig),
-            field("has_chord", &Target::hasChord),
-            field("left_barline_type", &Target::leftBarlineType),
-            field("composite_disp_numerator", &Target::compositeDispNumerator),
-            field("composite_disp_denominator", &Target::compositeDispDenominator),
-            field("page_break", &Target::pageBreak),
-            field("origin_width", measureOrigin("width")),
-            field("origin_beats", measureOrigin("beats")),
-            field("origin_divBeat", measureOrigin("divBeat")),
-            field("origin_dispBeats", measureOrigin("dispBeats")),
-            field("origin_dispDivbeat", measureOrigin("dispDivbeat")),
-            field("origin_customBarShape", measureOrigin("customBarShape")),
+        result.push_back(observe(*measure, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }), field("width", &Target::width),
+            field("global_key_sig", &observeGlobalKeySig), field("beats", &Target::beats), field("div_beat", &Target::divBeat),
+            field("disp_beats", &Target::dispBeats), field("disp_divbeat", &Target::dispDivbeat), field("custom_bar_shape", &Target::customBarShape),
+            field("custom_left_bar_shape", &Target::customLeftBarShape), field("front_space_extra", &Target::frontSpaceExtra),
+            field("back_space_extra", &Target::backSpaceExtra), field("break_word_ext", &Target::breakWordExt),
+            field("hide_caution", &Target::hideCaution), field("has_smart_shape", &Target::hasSmartShape),
+            field("group_barline_override", &Target::groupBarlineOverride), field("show_full_names", &Target::showFullNames),
+            field("has_meas_numb_indiv_pos", &Target::hasMeasNumbIndivPos), field("allow_split_points", &Target::allowSplitPoints),
+            field("composite_numerator", &Target::compositeNumerator), field("composite_denominator", &Target::compositeDenominator),
+            field("show_key", &Target::showKey), field("show_time", &Target::showTime), field("evenly_across_measure", &Target::evenlyAcrossMeasure),
+            field("positioning_mode", &Target::positioningMode), field("begin_new_system", &Target::beginNewSystem),
+            field("has_expression", &Target::hasExpression), field("break_mm_rest", &Target::breakMmRest), field("no_meas_num", &Target::noMeasNum),
+            field("has_ossia", &Target::hasOssia), field("has_text_block", &Target::hasTextBlock), field("barline_type", &Target::barlineType),
+            field("forward_repeat_bar", &Target::forwardRepeatBar), field("backwards_repeat_bar", &Target::backwardsRepeatBar),
+            field("has_ending", &Target::hasEnding), field("has_text_repeat", &Target::hasTextRepeat), field("abbrv_time", &Target::abbrvTime),
+            field("use_display_timesig", &Target::useDisplayTimesig), field("has_chord", &Target::hasChord),
+            field("left_barline_type", &Target::leftBarlineType), field("composite_disp_numerator", &Target::compositeDispNumerator),
+            field("composite_disp_denominator", &Target::compositeDispDenominator), field("page_break", &Target::pageBreak),
+            field("origin_width", measureOrigin("width")), field("origin_beats", measureOrigin("beats")),
+            field("origin_divBeat", measureOrigin("divBeat")), field("origin_dispBeats", measureOrigin("dispBeats")),
+            field("origin_dispDivbeat", measureOrigin("dispDivbeat")), field("origin_customBarShape", measureOrigin("customBarShape")),
             field("origin_customLeftBarShape", measureOrigin("customLeftBarShape")),
-            field("origin_frontSpaceExtra", measureOrigin("frontSpaceExtra")),
-            field("origin_backSpaceExtra", measureOrigin("backSpaceExtra")),
-            field("origin_breakWordExt", measureOrigin("breakWordExt")),
-            field("origin_hideCaution", measureOrigin("hideCaution")),
+            field("origin_frontSpaceExtra", measureOrigin("frontSpaceExtra")), field("origin_backSpaceExtra", measureOrigin("backSpaceExtra")),
+            field("origin_breakWordExt", measureOrigin("breakWordExt")), field("origin_hideCaution", measureOrigin("hideCaution")),
             field("origin_hasSmartShape", measureOrigin("hasSmartShape")),
             field("origin_groupBarlineOverride", measureOrigin("groupBarlineOverride")),
-            field("origin_showFullNames", measureOrigin("showFullNames")),
-            field("origin_hasMeasNumbIndivPos", measureOrigin("hasMeasNumbIndivPos")),
+            field("origin_showFullNames", measureOrigin("showFullNames")), field("origin_hasMeasNumbIndivPos", measureOrigin("hasMeasNumbIndivPos")),
             field("origin_allowSplitPoints", measureOrigin("allowSplitPoints")),
             field("origin_compositeNumerator", measureOrigin("compositeNumerator")),
-            field("origin_compositeDenominator", measureOrigin("compositeDenominator")),
-            field("origin_showKey", measureOrigin("showKey")),
-            field("origin_showTime", measureOrigin("showTime")),
-            field("origin_evenlyAcrossMeasure", measureOrigin("evenlyAcrossMeasure")),
-            field("origin_positioningMode", measureOrigin("positioningMode")),
-            field("origin_beginNewSystem", measureOrigin("beginNewSystem")),
-            field("origin_hasExpression", measureOrigin("hasExpression")),
-            field("origin_breakMmRest", measureOrigin("breakMmRest")),
-            field("origin_noMeasNum", measureOrigin("noMeasNum")),
-            field("origin_hasOssia", measureOrigin("hasOssia")),
-            field("origin_hasTextBlock", measureOrigin("hasTextBlock")),
-            field("origin_barlineType", measureOrigin("barlineType")),
+            field("origin_compositeDenominator", measureOrigin("compositeDenominator")), field("origin_showKey", measureOrigin("showKey")),
+            field("origin_showTime", measureOrigin("showTime")), field("origin_evenlyAcrossMeasure", measureOrigin("evenlyAcrossMeasure")),
+            field("origin_positioningMode", measureOrigin("positioningMode")), field("origin_beginNewSystem", measureOrigin("beginNewSystem")),
+            field("origin_hasExpression", measureOrigin("hasExpression")), field("origin_breakMmRest", measureOrigin("breakMmRest")),
+            field("origin_noMeasNum", measureOrigin("noMeasNum")), field("origin_hasOssia", measureOrigin("hasOssia")),
+            field("origin_hasTextBlock", measureOrigin("hasTextBlock")), field("origin_barlineType", measureOrigin("barlineType")),
             field("origin_forwardRepeatBar", measureOrigin("forwardRepeatBar")),
-            field("origin_backwardsRepeatBar", measureOrigin("backwardsRepeatBar")),
-            field("origin_hasEnding", measureOrigin("hasEnding")),
-            field("origin_hasTextRepeat", measureOrigin("hasTextRepeat")),
-            field("origin_abbrvTime", measureOrigin("abbrvTime")),
-            field("origin_useDisplayTimesig", measureOrigin("useDisplayTimesig")),
-            field("origin_hasChord", measureOrigin("hasChord")),
+            field("origin_backwardsRepeatBar", measureOrigin("backwardsRepeatBar")), field("origin_hasEnding", measureOrigin("hasEnding")),
+            field("origin_hasTextRepeat", measureOrigin("hasTextRepeat")), field("origin_abbrvTime", measureOrigin("abbrvTime")),
+            field("origin_useDisplayTimesig", measureOrigin("useDisplayTimesig")), field("origin_hasChord", measureOrigin("hasChord")),
             field("origin_leftBarlineType", measureOrigin("leftBarlineType")),
             field("origin_compositeDispNumerator", measureOrigin("compositeDispNumerator")),
             field("origin_compositeDispDenominator", measureOrigin("compositeDispDenominator")),
@@ -382,7 +351,6 @@ Value observeMeasures(const SurveyContext& ctx)
     return Value(std::move(result));
 }
 
-COVERAGE_CLASS_WITH_PREPARATION("others", "measures", observeMeasures,
-    classifyMeasureDifference, prepareMeasureComparison);
+COVERAGE_CLASS_WITH_PREPARATION("others", "measures", observeMeasures, classifyMeasureDifference, prepareMeasureComparison);
 
 } // namespace

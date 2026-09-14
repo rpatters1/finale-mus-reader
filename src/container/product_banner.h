@@ -24,8 +24,7 @@ namespace banner {
 /// @details Three spellings exist and every one of them has to be recognized, because a
 /// file whose spelling is unmatched reports no product at all rather than reporting a
 /// wrong one. Missing the third is what kept 22 Finale 1.0.0 documents unreadable.
-enum class Spelling
-{
+enum class Spelling {
     None,
     /// @brief `Finale(R) 2003 Copyright (c) ...`, at 0x20 in signature-bearing files.
     Registered,
@@ -55,16 +54,10 @@ struct ProductBanner
     [[nodiscard]] explicit operator bool() const { return spelling != Spelling::None; }
 
     /// @brief Whether this is one of the two pre-signature spellings.
-    [[nodiscard]] bool isPreSignature() const
-    {
-        return spelling == Spelling::Trademark || spelling == Spelling::MacTrademark;
-    }
+    [[nodiscard]] bool isPreSignature() const { return spelling == Spelling::Trademark || spelling == Spelling::MacTrademark; }
 
     /// @brief Whether the product begins with a digit, as a version-bearing one does.
-    [[nodiscard]] bool hasNumericProduct() const
-    {
-        return !product.empty() && product.front() >= '0' && product.front() <= '9';
-    }
+    [[nodiscard]] bool hasNumericProduct() const { return !product.empty() && product.front() >= '0' && product.front() <= '9'; }
 
     /// @brief Whether the product's leading token is `PC`, which names the platform.
     /// @details The pre-signature era states its platform here and nowhere else: its
@@ -77,11 +70,7 @@ struct ProductBanner
     /// version on purpose, and matching the whole string would reject a Windows document
     /// from any other release. That version does not parse either, so such a file carries
     /// no recovered version and every version-gated mapping skips it.
-    [[nodiscard]] bool hasPcProduct() const
-    {
-        return product.rfind("PC", 0) == 0
-            && (product.size() == 2 || product[2] == ' ');
-    }
+    [[nodiscard]] bool hasPcProduct() const { return product.rfind("PC", 0) == 0 && (product.size() == 2 || product[2] == ' '); }
 };
 
 /// @brief Finds and parses the product banner in a header.

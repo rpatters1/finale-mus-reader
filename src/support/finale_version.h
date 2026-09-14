@@ -14,16 +14,15 @@ namespace finale_mus_reader {
 /// in a point release.
 struct VersionBound
 {
-    constexpr VersionBound(std::uint8_t sourceMajor) : major(sourceMajor) {}
+    constexpr VersionBound(std::uint8_t sourceMajor)
+        : major(sourceMajor)
+    {}
     constexpr VersionBound(std::uint8_t sourceMajor, std::uint8_t sourceMinor)
         : major(sourceMajor), minor(sourceMinor)
-    {
-    }
-    constexpr VersionBound(std::uint8_t sourceMajor, std::uint8_t sourceMinor,
-        std::uint8_t sourceMaint)
+    {}
+    constexpr VersionBound(std::uint8_t sourceMajor, std::uint8_t sourceMinor, std::uint8_t sourceMaint)
         : major(sourceMajor), minor(sourceMinor), maint(sourceMaint)
-    {
-    }
+    {}
 
     std::uint8_t major;
     std::uint8_t minor{};

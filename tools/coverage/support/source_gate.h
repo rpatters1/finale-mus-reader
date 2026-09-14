@@ -16,11 +16,10 @@ using finale_mus_reader::sourcePredatesVersion;
     return sourceVersion && sourceVersion->devStatus == 2;
 }
 
-[[nodiscard]] constexpr bool sourceIsVersion(FormatEpoch sourceEpoch,
-    const SourceVersion* sourceVersion, FormatEpoch expectedEpoch, VersionBound expectedVersion)
+[[nodiscard]] constexpr bool sourceIsVersion(
+    FormatEpoch sourceEpoch, const SourceVersion* sourceVersion, FormatEpoch expectedEpoch, VersionBound expectedVersion)
 {
-    return sourceEpoch == expectedEpoch && sourceVersion
-        && VersionBound{sourceVersion->major, sourceVersion->minor} == expectedVersion;
+    return sourceEpoch == expectedEpoch && sourceVersion && VersionBound{sourceVersion->major, sourceVersion->minor} == expectedVersion;
 }
 
 } // namespace coverage

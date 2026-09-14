@@ -17,27 +17,19 @@ Value observeNoteRestOptions(const SurveyContext& ctx)
 {
     using Target = musx::dom::options::NoteRestOptions;
     const auto options = ctx.document->getOptions()->get<Target>();
-    if (!options) return {};
+    if (!options) {
+        return {};
+    }
 
-    auto result = observe(
-        *options, ctx, field("do_shape_notes", &Target::doShapeNotes),
-        field("do_cross_staff_notes", &Target::doCrossStaffNotes),
-        field(noteRestDrop8thLeaf, &Target::drop8thRest),
-        field(noteRestDrop16thLeaf, &Target::drop16thRest),
-        field(noteRestDrop32ndLeaf, &Target::drop32ndRest),
-        field(noteRestDrop64thLeaf, &Target::drop64thRest),
-        field(noteRestDrop128thLeaf, &Target::drop128thRest),
-        field("scale_manual_positioning", &Target::scaleManualPositioning),
-        field("draw_outline", &Target::drawOutline),
-        originField<Target>("origin_doShapeNotes", "doShapeNotes"),
-        originField<Target>("origin_doCrossStaffNotes", "doCrossStaffNotes"),
-        originField<Target>("origin_drop8thRest", "drop8thRest"),
-        originField<Target>("origin_drop16thRest", "drop16thRest"),
-        originField<Target>("origin_drop32ndRest", "drop32ndRest"),
-        originField<Target>("origin_drop64thRest", "drop64thRest"),
-        originField<Target>("origin_drop128thRest", "drop128thRest"),
-        originField<Target>("origin_scaleManualPositioning", "scaleManualPositioning"),
-        originField<Target>("origin_drawOutline", "drawOutline"));
+    auto result = observe(*options, ctx, field("do_shape_notes", &Target::doShapeNotes), field("do_cross_staff_notes", &Target::doCrossStaffNotes),
+        field(noteRestDrop8thLeaf, &Target::drop8thRest), field(noteRestDrop16thLeaf, &Target::drop16thRest),
+        field(noteRestDrop32ndLeaf, &Target::drop32ndRest), field(noteRestDrop64thLeaf, &Target::drop64thRest),
+        field(noteRestDrop128thLeaf, &Target::drop128thRest), field("scale_manual_positioning", &Target::scaleManualPositioning),
+        field("draw_outline", &Target::drawOutline), originField<Target>("origin_doShapeNotes", "doShapeNotes"),
+        originField<Target>("origin_doCrossStaffNotes", "doCrossStaffNotes"), originField<Target>("origin_drop8thRest", "drop8thRest"),
+        originField<Target>("origin_drop16thRest", "drop16thRest"), originField<Target>("origin_drop32ndRest", "drop32ndRest"),
+        originField<Target>("origin_drop64thRest", "drop64thRest"), originField<Target>("origin_drop128thRest", "drop128thRest"),
+        originField<Target>("origin_scaleManualPositioning", "scaleManualPositioning"), originField<Target>("origin_drawOutline", "drawOutline"));
 
     Value::Array colors;
     for (std::size_t index = 0; index < options->noteColors.size(); ++index) {
@@ -60,7 +52,6 @@ Value observeNoteRestOptions(const SurveyContext& ctx)
     return result;
 }
 
-COVERAGE_CLASS("options", "note_rest_options", observeNoteRestOptions,
-    classifyNoteRestOptionsDifference);
+COVERAGE_CLASS("options", "note_rest_options", observeNoteRestOptions, classifyNoteRestOptionsDifference);
 
 } // namespace

@@ -17,23 +17,20 @@
 namespace finale_mus_reader {
 namespace coverage {
 
-enum class DifferenceCategory
-{
+enum class DifferenceCategory {
     Differs,
     ReaderOnly,
     CompanionOnly
 };
 
-enum class RelatedDifference
-{
+enum class RelatedDifference {
     None,
     MatchingTextBlockReferent,
     MatchingPageOnlyTextBlockReferent,
     RenumberedTextBlockReferent
 };
 
-enum class DifferenceClassification
-{
+enum class DifferenceClassification {
     Unexpected,
     AccidentalInsert17Byte,
     AwaitsDependentRecovery,
@@ -70,8 +67,7 @@ enum class DifferenceClassification
     WhitespaceControl
 };
 
-enum class TextDifferenceClassification
-{
+enum class TextDifferenceClassification {
     AddedFontInfo,
     Effects,
     EmptyPartNameTemplate,
@@ -85,8 +81,7 @@ enum class TextDifferenceClassification
     Whitespace
 };
 
-enum class ComparisonTransformation
-{
+enum class ComparisonTransformation {
     EquivalentEnigmaFontState,
     EquivalentTextBlockReferent,
     FinaleAddedChordSuffixFiller,
@@ -132,8 +127,7 @@ struct TextDifferenceContext
     bool synthesizedScoreName{};
 };
 
-using TextDifferenceClassifierFn =
-    std::optional<TextClassificationResult> (*)(const TextDifferenceContext& context);
+using TextDifferenceClassifierFn = std::optional<TextClassificationResult> (*)(const TextDifferenceContext& context);
 
 using ComparisonLeaves = std::map<std::string, std::pair<Value, std::string>>;
 
@@ -157,8 +151,7 @@ struct DifferenceContext
     const musx::dom::Document* companionDocument{}; ///< Companion document, when available.
 };
 
-using DifferenceClassifierFn =
-    std::optional<DifferenceClassification> (*)(const DifferenceContext& context);
+using DifferenceClassifierFn = std::optional<DifferenceClassification> (*)(const DifferenceContext& context);
 using DifferenceEquivalenceFn = bool (*)(const DifferenceContext& context);
 
 /// @brief Whether deferred-recovery rules classify their differences at all.
@@ -175,15 +168,16 @@ void setDeferredRecoveryClassified(bool enabled);
 
 bool comparisonPathStartsWith(std::string_view path, std::string_view prefix);
 bool comparisonPathEndsWith(std::string_view path, std::string_view suffix);
-inline std::optional<std::int64_t> comparisonIntegerLeaf(
-    const ComparisonLeaves& leaves, std::string_view path)
+inline std::optional<std::int64_t> comparisonIntegerLeaf(const ComparisonLeaves& leaves, std::string_view path)
 {
     const auto found = leaves.find(std::string(path));
-    if (found == leaves.end() || !found->second.first.isInteger()) return std::nullopt;
+    if (found == leaves.end() || !found->second.first.isInteger()) {
+        return std::nullopt;
+    }
     return found->second.first.asInteger();
 }
-bool comparisonEqualSurrounding(const ComparisonLeaves& source, const ComparisonLeaves& companion,
-                                std::string_view prefix, std::string_view excluded);
+bool comparisonEqualSurrounding(
+    const ComparisonLeaves& source, const ComparisonLeaves& companion, std::string_view prefix, std::string_view excluded);
 
 } // namespace coverage
 } // namespace finale_mus_reader

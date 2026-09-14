@@ -42,7 +42,9 @@ constexpr std::uint16_t earlySelectorCount = 8;
 
 std::int16_t readWord(std::span<const std::uint8_t> bytes, std::size_t offset, ByteOrder order)
 {
-    if (offset + 2 > bytes.size()) return 0;
+    if (offset + 2 > bytes.size()) {
+        return 0;
+    }
     if (order == ByteOrder::BigEndian) {
         return static_cast<std::int16_t>((static_cast<std::uint16_t>(bytes[offset]) << 8U) | bytes[offset + 1]);
     }
@@ -84,10 +86,15 @@ int main(int argc, char** argv)
 
     std::string path;
     while (std::getline(list, path)) {
-        if (path.empty()) continue;
+        if (path.empty()) {
+            continue;
+        }
         std::ifstream in(path, std::ios::binary);
         std::vector<std::uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        if (data.empty()) { std::printf("%s\tUNREADABLE\n", path.c_str()); continue; }
+        if (data.empty()) {
+            std::printf("%s\tUNREADABLE\n", path.c_str());
+            continue;
+        }
         try {
             const auto parsed = container::parse(data.data(), data.size());
             const auto index = records::LegacyRecordIndex::build(parsed);
@@ -114,7 +121,9 @@ int main(int argc, char** argv)
             } else if (!selectorRows.empty()) {
                 std::vector<std::int16_t> words;
                 for (const auto& row : selectorRows) {
-                    for (std::uint8_t w = 0; w < row.wordCount; ++w) words.push_back(row.words[w]);
+                    for (std::uint8_t w = 0; w < row.wordCount; ++w) {
+                        words.push_back(row.words[w]);
+                    }
                 }
                 std::printf("selector%u rows=%zu", clefSelector, selectorRows.size());
                 printTuples(words, 9);
@@ -122,9 +131,11 @@ int main(int argc, char** argv)
                 std::printf("early");
                 std::size_t present = 0;
                 for (std::uint16_t i = 0; i < earlySelectorCount; ++i) {
-                    const auto rows = index.getOthers().getArray(
-                        selectorTag(static_cast<std::uint16_t>(earlyFirstSelector + i)), globalsCmper);
-                    if (rows.empty()) { std::printf(" [absent]"); continue; }
+                    const auto rows = index.getOthers().getArray(selectorTag(static_cast<std::uint16_t>(earlyFirstSelector + i)), globalsCmper);
+                    if (rows.empty()) {
+                        std::printf(" [absent]");
+                        continue;
+                    }
                     ++present;
                     std::printf(" x%zu[", rows.size());
                     for (std::uint8_t w = 0; w < rows[0].wordCount; ++w) {

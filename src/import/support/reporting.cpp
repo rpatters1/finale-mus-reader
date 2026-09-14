@@ -10,20 +10,16 @@ namespace finale_mus_reader {
 std::optional<InstanceKey> ReportWriter::importedInstance(const musx::dom::EnigmaBase& object)
 {
     if (const auto* other = dynamic_cast<const musx::dom::OthersBase*>(&object)) {
-        return InstanceKey{typeid(object), other->getSourcePartId(), other->getCmper(),
-            other->getInci(), std::nullopt};
+        return InstanceKey{typeid(object), other->getSourcePartId(), other->getCmper(), other->getInci(), std::nullopt};
     }
     if (const auto* detail = dynamic_cast<const musx::dom::DetailsBase*>(&object)) {
-        return InstanceKey{typeid(object), detail->getSourcePartId(), detail->getCmper1(),
-            detail->getInci(), detail->getCmper2()};
+        return InstanceKey{typeid(object), detail->getSourcePartId(), detail->getCmper1(), detail->getInci(), detail->getCmper2()};
     }
     if (const auto* text = dynamic_cast<const musx::dom::TextsBase*>(&object)) {
-        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID, text->getTextNumber(),
-            std::nullopt, std::nullopt};
+        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID, text->getTextNumber(), std::nullopt, std::nullopt};
     }
     if (dynamic_cast<const musx::dom::OptionsBase*>(&object)) {
-        return InstanceKey{
-            typeid(object), musx::dom::SCORE_PARTID, std::nullopt, std::nullopt, std::nullopt};
+        return InstanceKey{typeid(object), musx::dom::SCORE_PARTID, std::nullopt, std::nullopt, std::nullopt};
     }
     return std::nullopt;
 }

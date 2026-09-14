@@ -58,141 +58,100 @@ bool sourceStoresPianoBraceThickness(const SourceProfile& profile)
 
 bool sourceUsesPreFinale37PianoBraceBehavior(const SourceProfile& profile)
 {
-    return sourceMatches(profile, EpochMask::Uncompressed) &&
-           sourcePredatesVersion(profile, FormatEpoch::UncompressedLegacy, versions::finale3_7);
+    return sourceMatches(profile, EpochMask::Uncompressed) && sourcePredatesVersion(profile, FormatEpoch::UncompressedLegacy, versions::finale3_7);
 }
 
 const FieldMapping pianoBraceBracketCodaFields[] = {
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "55", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerTipH,
-                    pianoBraceBracketCodaFloat(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "55", GLOBALS_CMPER, 0, 4, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerBodyH,
-                    pianoBraceBracketCodaFloat(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "55", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerTipH, pianoBraceBracketCodaFloat(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "55", GLOBALS_CMPER, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerBodyH, pianoBraceBracketCodaFloat(value)),
 };
 
 const FieldMapping pianoBraceBracketFixedFields[] = {
-    MUS_WORD_IF_SOURCE(PianoBraceBracketTarget, "14", GLOBALS_CMPER, 0, 3,
-                       sourceStoresDefaultBracketPosition, defBracketPos),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "45", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, sourceStoresPianoBraceThickness, nullptr,
-                    centerThickness, pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "45", GLOBALS_CMPER, 0, 4, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, sourceStoresPianoBraceThickness, nullptr,
-                    tipThickness, pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 0, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, outerBodyV,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerTipV,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 4, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerBodyV,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 0, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, outerTipH,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, outerTipV,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 4, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, outerBodyH,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "64", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, width,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "65", GLOBALS_CMPER, 0, 2, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerTipH,
-                    pianoBraceBracketFixedPoint(value)),
-    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "65", GLOBALS_CMPER, 0, 4, ValueWidth::Long,
-                    LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr, innerBodyH,
-                    pianoBraceBracketFixedPoint(value)),
+    MUS_WORD_IF_SOURCE(PianoBraceBracketTarget, "14", GLOBALS_CMPER, 0, 3, sourceStoresDefaultBracketPosition, defBracketPos),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "45", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{},
+        sourceStoresPianoBraceThickness, nullptr, centerThickness, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "45", GLOBALS_CMPER, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{},
+        sourceStoresPianoBraceThickness, nullptr, tipThickness, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        outerBodyV, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerTipV, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "60", GLOBALS_CMPER, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerBodyV, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 0, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        outerTipH, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        outerTipV, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "61", GLOBALS_CMPER, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        outerBodyH, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "64", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        width, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "65", GLOBALS_CMPER, 0, 2, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerTipH, pianoBraceBracketFixedPoint(value)),
+    MUS_FIELD_AS_IF(PianoBraceBracketTarget, "65", GLOBALS_CMPER, 0, 4, ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, nullptr,
+        innerBodyH, pianoBraceBracketFixedPoint(value)),
 };
 
 const FieldMapping pianoBraceBracketClassFields[] = {
-    MUS_CLASS_WORD(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketDistanceSelector),
-                   GLOBALS_CMPER, classWordOffset(3), defBracketPos),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketThicknessSelector), GLOBALS_CMPER,
-                          classWordOffset(2), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, centerThickness, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketThicknessSelector), GLOBALS_CMPER,
-                          classWordOffset(4), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, tipThickness, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER,
-                          classWordOffset(0), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, outerBodyV, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER,
-                          classWordOffset(2), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, innerTipV, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER,
-                          classWordOffset(4), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, innerBodyV, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER,
-                          classWordOffset(0), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, outerTipH, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER,
-                          classWordOffset(2), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, outerTipV, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER,
-                          classWordOffset(4), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, outerBodyH, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketWidthSelector), GLOBALS_CMPER,
-                          classWordOffset(2), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, width, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketInnerBodySelector), GLOBALS_CMPER,
-                          classWordOffset(2), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, innerTipH, pianoBraceBracketFixedPoint(value)),
-    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget,
-                          numericGlobalClass(pianoBraceBracketInnerBodySelector), GLOBALS_CMPER,
-                          classWordOffset(4), ValueWidth::Long, LongWordOrder::HighFirst,
-                          BitRange{}, nullptr, innerBodyH, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_WORD(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketDistanceSelector), GLOBALS_CMPER, classWordOffset(3), defBracketPos),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketThicknessSelector), GLOBALS_CMPER, classWordOffset(2),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, centerThickness, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketThicknessSelector), GLOBALS_CMPER, classWordOffset(4),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, tipThickness, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER, classWordOffset(0),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, outerBodyV, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER, classWordOffset(2),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, innerTipV, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterBodySelector), GLOBALS_CMPER, classWordOffset(4),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, innerBodyV, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER, classWordOffset(0),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, outerTipH, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER, classWordOffset(2),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, outerTipV, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketOuterTipSelector), GLOBALS_CMPER, classWordOffset(4),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, outerBodyH, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketWidthSelector), GLOBALS_CMPER, classWordOffset(2),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, width, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketInnerBodySelector), GLOBALS_CMPER, classWordOffset(2),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, innerTipH, pianoBraceBracketFixedPoint(value)),
+    MUS_CLASS_FIELD_AS_IF(PianoBraceBracketTarget, numericGlobalClass(pianoBraceBracketInnerBodySelector), GLOBALS_CMPER, classWordOffset(4),
+        ValueWidth::Long, LongWordOrder::HighFirst, BitRange{}, nullptr, innerBodyH, pianoBraceBracketFixedPoint(value)),
 };
 
 const MappingTable& pianoBraceBracketFixedTable()
 {
     static const MappingTable table{.reportPrefix = pianoBraceBracketReportPrefix,
-                                    .epochs = EpochMask::FixedRow,
-                                    .targetKind = TargetKind::OptionsSingleton,
-                                    .enumerateTargets =
-                                        &enumerateOptionsTarget<PianoBraceBracketTarget>,
-                                    .fields = pianoBraceBracketFixedFields,
-                                    .fieldCount = std::size(pianoBraceBracketFixedFields)};
+        .epochs = EpochMask::FixedRow,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PianoBraceBracketTarget>,
+        .fields = pianoBraceBracketFixedFields,
+        .fieldCount = std::size(pianoBraceBracketFixedFields)};
     return table;
 }
 
 const MappingTable& pianoBraceBracketCodaTable()
 {
     static const MappingTable table{.reportPrefix = pianoBraceBracketReportPrefix,
-                                    .epochs = EpochMask::CodaBanner,
-                                    .applies = &hasCodaPianoBraceLayout,
-                                    .targetKind = TargetKind::OptionsSingleton,
-                                    .enumerateTargets =
-                                        &enumerateOptionsTarget<PianoBraceBracketTarget>,
-                                    .fields = pianoBraceBracketCodaFields,
-                                    .fieldCount = std::size(pianoBraceBracketCodaFields)};
+        .epochs = EpochMask::CodaBanner,
+        .applies = &hasCodaPianoBraceLayout,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PianoBraceBracketTarget>,
+        .fields = pianoBraceBracketCodaFields,
+        .fieldCount = std::size(pianoBraceBracketCodaFields)};
     return table;
 }
 
 const MappingTable& pianoBraceBracketClassTable()
 {
     static const MappingTable table{.reportPrefix = pianoBraceBracketReportPrefix,
-                                    .epochs = EpochMask::Zlib,
-                                    .encoding = RecordEncoding::ClassRecord,
-                                    .targetKind = TargetKind::OptionsSingleton,
-                                    .enumerateTargets =
-                                        &enumerateOptionsTarget<PianoBraceBracketTarget>,
-                                    .fields = pianoBraceBracketClassFields,
-                                    .fieldCount = std::size(pianoBraceBracketClassFields)};
+        .epochs = EpochMask::Zlib,
+        .encoding = RecordEncoding::ClassRecord,
+        .targetKind = TargetKind::OptionsSingleton,
+        .enumerateTargets = &enumerateOptionsTarget<PianoBraceBracketTarget>,
+        .fields = pianoBraceBracketClassFields,
+        .fieldCount = std::size(pianoBraceBracketClassFields)};
     return table;
 }
 
@@ -200,9 +159,8 @@ const MappingTable& pianoBraceBracketClassTable()
 
 void importPianoBraceBracketOptions(const ImportContext& context)
 {
-    applyMappingTables({&pianoBraceBracketFixedTable(), &pianoBraceBracketCodaTable(),
-                        &pianoBraceBracketClassTable()},
-                       context.index, context.profile, context.document, context.report);
+    applyMappingTables({&pianoBraceBracketFixedTable(), &pianoBraceBracketCodaTable(), &pianoBraceBracketClassTable()}, context.index,
+        context.profile, context.document, context.report);
 
     const auto pooled = context.document->getOptions()->get<PianoBraceBracketTarget>();
     if (!pooled) {
@@ -213,8 +171,7 @@ void importPianoBraceBracketOptions(const ImportContext& context)
     const auto applyBehavior = [&](double& property, const char* member, double value) {
         property = value;
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.template behaviorField<PianoBraceBracketTarget>(
-                member, static_cast<std::int64_t>(value));
+            reporting.template behaviorField<PianoBraceBracketTarget>(member, static_cast<std::int64_t>(value));
         });
     };
 

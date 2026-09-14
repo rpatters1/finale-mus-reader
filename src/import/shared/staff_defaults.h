@@ -12,17 +12,20 @@ namespace finale_mus_reader {
 
 inline const musx::dom::others::Staff& finale27StaffDefaults(const ImportContext& context)
 {
-    const auto result = context.referenceDocument->getOthers()->get<musx::dom::others::Staff>(
-        musx::dom::SCORE_PARTID, 1);
-    if (!result) throw std::logic_error("Finale 27 reference is missing its standard Staff");
+    const auto result = context.referenceDocument->getOthers()->get<musx::dom::others::Staff>(musx::dom::SCORE_PARTID, 1);
+    if (!result) {
+        throw std::logic_error("Finale 27 reference is missing its standard Staff");
+    }
     return *result;
 }
 
 inline int finale27NoteheadFontSize(const ImportContext& context)
 {
-    const auto font = musx::dom::options::FontOptions::getFontInfoOrNull(
-        context.referenceDocument, musx::dom::options::FontOptions::FontType::Noteheads);
-    if (!font) throw std::logic_error("Finale 27 reference is missing its notehead font default");
+    const auto font =
+        musx::dom::options::FontOptions::getFontInfoOrNull(context.referenceDocument, musx::dom::options::FontOptions::FontType::Noteheads);
+    if (!font) {
+        throw std::logic_error("Finale 27 reference is missing its notehead font default");
+    }
     return font->fontSize;
 }
 

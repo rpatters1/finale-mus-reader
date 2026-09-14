@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
-#include <stdexcept>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -23,14 +23,12 @@ namespace finale_mus_reader {
 
 double legacySinglePrecision(std::int64_t value)
 {
-    return static_cast<double>(
-        std::bit_cast<float>(static_cast<std::uint32_t>(value)));
+    return static_cast<double>(std::bit_cast<float>(static_cast<std::uint32_t>(value)));
 }
 
 musx::dom::Efix legacyPointsToEfix(double value)
 {
-    return static_cast<musx::dom::Efix>(std::llround(
-        value * musx::dom::EVPU_PER_POINT * musx::dom::EFIX_PER_EVPU));
+    return static_cast<musx::dom::Efix>(std::llround(value * musx::dom::EVPU_PER_POINT * musx::dom::EFIX_PER_EVPU));
 }
 
 musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value)
@@ -39,9 +37,8 @@ musx::dom::Efix legacyTenThousandthsPointToEfix(std::int64_t value)
     return legacyPointsToEfix(static_cast<double>(value) / storedUnitsPerPoint);
 }
 
-std::string readRowText(const records::LegacyRowPool& pool,
-    std::span<const records::LegacyRow> family, std::uint32_t firstIncidence,
-    std::uint32_t incidenceCount)
+std::string readRowText(
+    const records::LegacyRowPool& pool, std::span<const records::LegacyRow> family, std::uint32_t firstIncidence, std::uint32_t incidenceCount)
 {
     std::string result;
     for (const auto& row : family) {
@@ -50,8 +47,7 @@ std::string readRowText(const records::LegacyRowPool& pool,
         }
         const auto bytes = pool.effectivePayloadOf(row);
         const auto terminator = std::find(bytes.begin(), bytes.end(), std::uint8_t{0});
-        result.append(reinterpret_cast<const char*>(bytes.data()),
-            static_cast<std::size_t>(terminator - bytes.begin()));
+        result.append(reinterpret_cast<const char*>(bytes.data()), static_cast<std::size_t>(terminator - bytes.begin()));
         if (terminator != bytes.end()) {
             break;
         }
@@ -59,25 +55,24 @@ std::string readRowText(const records::LegacyRowPool& pool,
     return result;
 }
 
-std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context,
-    const records::LegacyRowPool& fixedPool, const records::LegacyRowPool& classPool,
-    records::LegacyTag fixedTag, records::LegacyTag classId, bool details,
+std::optional<RecordFamilySource> selectRecordFamilySource(const ImportContext& context, const records::LegacyRowPool& fixedPool,
+    const records::LegacyRowPool& classPool, records::LegacyTag fixedTag, records::LegacyTag classId, bool details,
     std::span<const CompactPartLayout> compactPartLayouts)
 {
     switch (context.profile.epoch) {
     case FormatEpoch::CodaBanner:
     case FormatEpoch::UncompressedLegacy:
-    case FormatEpoch::DclLegacy:
-        return RecordFamilySource{&fixedPool, fixedTag, false, details};
-    case FormatEpoch::ZlibLegacy:
-        return RecordFamilySource{&classPool, classId, true, details, compactPartLayouts};
+    case FormatEpoch::DclLegacy: return RecordFamilySource{&fixedPool, fixedTag, false, details};
+    case FormatEpoch::ZlibLegacy: return RecordFamilySource{&classPool, classId, true, details, compactPartLayouts};
     }
     return std::nullopt;
 }
 
 std::vector<std::uint16_t> recordPartIds(const RecordFamilySource& source)
 {
-    if (!source.classRecords) return {musx::dom::SCORE_PARTID};
+    if (!source.classRecords) {
+        return {musx::dom::SCORE_PARTID};
+    }
     return source.pool->partIdsForTag(source.identity);
 }
 
@@ -92,26 +87,29 @@ std::vector<std::pair<std::uint16_t, std::uint16_t>> recordKeys(const RecordFami
     return result;
 }
 
-musx::dom::EnigmaBase::ShareMode recordShareMode(const RecordFamilySource& source,
-                                                 const records::LegacyRow& row)
+musx::dom::EnigmaBase::ShareMode recordShareMode(const RecordFamilySource& source, const records::LegacyRow& row)
 {
     using ShareMode = musx::dom::EnigmaBase::ShareMode;
     if (!source.classRecords || row.partId == musx::dom::SCORE_PARTID) {
         return ShareMode::All;
     }
-    if (row.continuationSize != 0) return ShareMode::Partial;
+    if (row.continuationSize != 0) {
+        return ShareMode::Partial;
+    }
 
     for (const auto& layout : source.compactPartLayouts) {
-        if (row.payloadSize != layout.partPayloadSize) continue;
-        const auto* score = source.pool->get(
-            source.identity, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
-        if (score && score->payloadSize == layout.scorePayloadSize) return ShareMode::Partial;
+        if (row.payloadSize != layout.partPayloadSize) {
+            continue;
+        }
+        const auto* score = source.pool->get(source.identity, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
+        if (score && score->payloadSize == layout.scorePayloadSize) {
+            return ShareMode::Partial;
+        }
     }
     return ShareMode::None;
 }
 
-std::vector<std::uint8_t> collectRecordPayload(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows)
+std::vector<std::uint8_t> collectRecordPayload(const RecordFamilySource& source, std::span<const records::LegacyRow> rows)
 {
     std::vector<std::uint8_t> result;
     for (const auto& row : rows) {
@@ -121,40 +119,30 @@ std::vector<std::uint8_t> collectRecordPayload(
     return result;
 }
 
-std::vector<std::int16_t> collectRecordWords(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
-    ByteOrder byteOrder)
+std::vector<std::int16_t> collectRecordWords(const RecordFamilySource& source, std::span<const records::LegacyRow> rows, ByteOrder byteOrder)
 {
     return payloadWords(collectRecordPayload(source, rows), byteOrder);
 }
 
-std::uint16_t payloadWord(
-    std::span<const std::uint8_t> payload, std::size_t offset, ByteOrder byteOrder)
+std::uint16_t payloadWord(std::span<const std::uint8_t> payload, std::size_t offset, ByteOrder byteOrder)
 {
-    return byteOrder == ByteOrder::BigEndian
-        ? static_cast<std::uint16_t>((static_cast<std::uint16_t>(payload[offset]) << 8U)
-            | payload[offset + 1])
-        : static_cast<std::uint16_t>(payload[offset]
-            | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U));
+    return byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>((static_cast<std::uint16_t>(payload[offset]) << 8U) | payload[offset + 1])
+                                             : static_cast<std::uint16_t>(payload[offset] | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U));
 }
 
-std::int32_t payloadLong(std::span<const std::uint8_t> payload,
-    std::size_t offset, ByteOrder byteOrder, LongWordOrder wordOrder)
+std::int32_t payloadLong(std::span<const std::uint8_t> payload, std::size_t offset, ByteOrder byteOrder, LongWordOrder wordOrder)
 {
     const auto first = payloadWord(payload, offset, byteOrder);
     const auto second = payloadWord(payload, offset + 2, byteOrder);
     const auto high = wordOrder == LongWordOrder::HighFirst ? first : second;
     const auto low = wordOrder == LongWordOrder::HighFirst ? second : first;
-    return static_cast<std::int32_t>(
-        (static_cast<std::uint32_t>(high) << 16U) | low);
+    return static_cast<std::int32_t>((static_cast<std::uint32_t>(high) << 16U) | low);
 }
 
-std::string payloadString(std::span<const std::uint8_t> payload,
-    std::size_t offset, std::size_t capacity)
+std::string payloadString(std::span<const std::uint8_t> payload, std::size_t offset, std::size_t capacity)
 {
     const auto available = (std::min)(capacity, payload.size() - offset);
-    std::string result(
-        reinterpret_cast<const char*>(payload.data() + offset), available);
+    std::string result(reinterpret_cast<const char*>(payload.data() + offset), available);
     if (const auto end = result.find('\0'); end != std::string::npos) {
         result.resize(end);
     }
@@ -286,18 +274,15 @@ const std::vector<RegisteredImporter>& registeredImporters()
 
 // Reads a numeric value from a class-identified record, addressed by byte offset inside a
 // single record's payload rather than by word slot across an incidence stream.
-std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder,
-    std::uint16_t partId)
+std::optional<ResolvedValue> readClassValue(
+    const records::LegacyRecordIndex& index, std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder, std::uint16_t partId)
 {
-    const auto* row = index.getClassOthers().get(
-        source.identity, cmper, 0, source.incidence, partId);
+    const auto* row = index.getClassOthers().get(source.identity, cmper, 0, source.incidence, partId);
     if (!row) {
         return std::nullopt;
     }
     const auto payload = index.getClassOthers().effectivePayloadOf(*row);
-    const std::size_t width = source.width == ValueWidth::Long ? 4
-        : source.width == ValueWidth::Byte ? 1 : 2;
+    const std::size_t width = source.width == ValueWidth::Long ? 4 : source.width == ValueWidth::Byte ? 1 : 2;
     if (source.wordSlot + width > payload.size()) {
         return std::nullopt;
     }
@@ -308,11 +293,8 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
     // 65524 and is assigned as such. A bit range is exempt, being a magnitude rather than a
     // number with a sign, and takes its value from the unsigned payload below.
     const auto readWord = [&](std::size_t at) {
-        return byteOrder == ByteOrder::BigEndian
-            ? static_cast<std::uint16_t>(
-                  (static_cast<std::uint16_t>(payload[at]) << 8U) | payload[at + 1])
-            : static_cast<std::uint16_t>(
-                  payload[at] | (static_cast<std::uint16_t>(payload[at + 1]) << 8U));
+        return byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>((static_cast<std::uint16_t>(payload[at]) << 8U) | payload[at + 1])
+                                                 : static_cast<std::uint16_t>(payload[at] | (static_cast<std::uint16_t>(payload[at + 1]) << 8U));
     };
     std::int64_t value = 0;
     if (width == 4) {
@@ -322,23 +304,21 @@ std::optional<ResolvedValue> readClassValue(const records::LegacyRecordIndex& in
         // and the stem offset is the field that shows it.
         const auto first = readWord(source.wordSlot);
         const auto second = readWord(source.wordSlot + 2);
-        const std::uint32_t combined = source.longOrder == LongWordOrder::HighFirst
-            ? (static_cast<std::uint32_t>(first) << 16U) | second
-            : (static_cast<std::uint32_t>(second) << 16U) | first;
+        const std::uint32_t combined = source.longOrder == LongWordOrder::HighFirst ? (static_cast<std::uint32_t>(first) << 16U) | second
+                                                                                    : (static_cast<std::uint32_t>(second) << 16U) | first;
         value = static_cast<std::int32_t>(combined);
     } else if (width == 2) {
         value = static_cast<std::int16_t>(readWord(source.wordSlot));
     } else {
         value = static_cast<std::int8_t>(payload[source.wordSlot]);
     }
-    return ResolvedValue{extractBits(value, source.bits), row->blockOffset,
-        row->decodedOffset};
+    return ResolvedValue{extractBits(value, source.bits), row->blockOffset, row->decodedOffset};
 }
 
 // Reads text from a class-identified record: the payload runs to its own end, so the name
 // simply occupies whatever remains after the fields before it.
-std::optional<std::string> readClassText(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source, std::uint16_t partId)
+std::optional<std::string> readClassText(
+    const records::LegacyRecordIndex& index, std::uint16_t cmper, const SourceLocation& source, std::uint16_t partId)
 {
     const auto* row = index.getClassOthers().get(source.identity, cmper, 0, 0, partId);
     if (!row) {
@@ -348,20 +328,17 @@ std::optional<std::string> readClassText(const records::LegacyRecordIndex& index
     if (source.wordSlot >= payload.size()) {
         return std::nullopt;
     }
-    std::string text(reinterpret_cast<const char*>(payload.data() + source.wordSlot),
-        payload.size() - source.wordSlot);
+    std::string text(reinterpret_cast<const char*>(payload.data() + source.wordSlot), payload.size() - source.wordSlot);
     if (const auto end = text.find('\0'); end != std::string::npos) {
         text.resize(end);
     }
     return text;
 }
 
-std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source)
+std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index, std::uint16_t cmper, const SourceLocation& source)
 {
     const auto tag = source.identity;
-    const std::size_t wordIndex = static_cast<std::size_t>(source.incidence)
-        * records::otherWordCount + source.wordSlot;
+    const std::size_t wordIndex = static_cast<std::size_t>(source.incidence) * records::otherWordCount + source.wordSlot;
     const auto first = index.word(tag, cmper, wordIndex);
     if (!first) {
         return std::nullopt;
@@ -377,9 +354,8 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         }
         const auto firstWord = static_cast<std::uint16_t>(first->value);
         const auto secondWord = static_cast<std::uint16_t>(second->value);
-        const std::uint32_t combined = source.longOrder == LongWordOrder::HighFirst
-            ? (static_cast<std::uint32_t>(firstWord) << 16U) | secondWord
-            : (static_cast<std::uint32_t>(secondWord) << 16U) | firstWord;
+        const std::uint32_t combined = source.longOrder == LongWordOrder::HighFirst ? (static_cast<std::uint32_t>(firstWord) << 16U) | secondWord
+                                                                                    : (static_cast<std::uint32_t>(secondWord) << 16U) | firstWord;
         value = static_cast<std::int32_t>(combined);
     } else if (source.width == ValueWidth::Byte) {
         // A one-byte field is selected through a 16-bit slot and then narrowed.
@@ -390,16 +366,13 @@ std::optional<ResolvedValue> readValue(const records::LegacyRecordIndex& index,
         value = first->value;
     }
 
-    return ResolvedValue{extractBits(value, source.bits), first->blockOffset,
-        first->decodedOffset};
+    return ResolvedValue{extractBits(value, source.bits), first->blockOffset, first->decodedOffset};
 }
 
-std::optional<std::string> readText(const records::LegacyRecordIndex& index,
-    std::uint16_t cmper, const SourceLocation& source)
+std::optional<std::string> readText(const records::LegacyRecordIndex& index, std::uint16_t cmper, const SourceLocation& source)
 {
     const auto family = index.getOthers().getArray(source.identity, cmper);
-    const auto present = std::any_of(family.begin(), family.end(),
-        [&](const records::LegacyRow& row) { return row.inci >= source.incidence; });
+    const auto present = std::any_of(family.begin(), family.end(), [&](const records::LegacyRow& row) { return row.inci >= source.incidence; });
     if (!present) {
         return std::nullopt;
     }
@@ -429,21 +402,17 @@ struct MappedFieldData
 class MappedFieldReport
 {
 public:
-    MappedFieldReport(ImportReport& report, const MappingTable& table, const MappingTarget& target,
-        const EffectiveField& field)
+    MappedFieldReport(ImportReport& report, const MappingTable& table, const MappingTarget& target, const EffectiveField& field)
         : m_report(report)
     {
         withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
             auto& data = reporting.state(m_data);
             data.instance = reporting.instanceKey(target.reportClass, target.partId,
-                table.targetKind == TargetKind::OptionsSingleton
-                    ? std::optional<musx::dom::Cmper>{}
-                    : std::optional<musx::dom::Cmper>{target.cmper});
+                table.targetKind == TargetKind::OptionsSingleton ? std::optional<musx::dom::Cmper>{} : std::optional<musx::dom::Cmper>{target.cmper});
             data.member = reporting.memberName(field.reporting->fieldName);
             // A capture pass may already have established this field's provenance. An
             // unreadable table field must not replace that entry with a seeded default.
-            data.preserveExisting =
-                !field.readable && reporting.report().findField(data.instance, data.member);
+            data.preserveExisting = !field.readable && reporting.report().findField(data.instance, data.member);
             if (!data.preserveExisting && field.reporting->read) {
                 data.info.rawValue = field.reporting->read(target.instance);
             }
@@ -453,9 +422,8 @@ public:
     void recovered(const ResolvedValue& source, bool adjusted, std::uint16_t identity)
     {
         withReporting(m_report, [&]<typename Reporting>(Reporting& reporting) {
-            reporting.state(m_data).info = {
-                adjusted ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus,
-                source.blockOffset, source.decodedOffset, source.value, identity};
+            reporting.state(m_data).info = {adjusted ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus, source.blockOffset,
+                source.decodedOffset, source.value, identity};
         });
     }
 
@@ -497,21 +465,15 @@ struct EffectiveTable
 /// so a document from an era the tables do not cover still shows its supported fields
 /// sitting at their synthesized defaults. The gates decide only what is readable.
 std::vector<EffectiveTable> buildEffectiveTables(
-    const std::vector<const MappingTable*>& tables,
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+    const std::vector<const MappingTable*>& tables, const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     std::vector<EffectiveTable> result;
     for (const auto* table : tables) {
-        const bool tableApplies = sourceMatches(profile, table->epochs)
-            && (!table->sourceApplies || table->sourceApplies(profile))
-            && (!table->applies || table->applies(index, profile));
+        const bool tableApplies = sourceMatches(profile, table->epochs) && (!table->sourceApplies || table->sourceApplies(profile))
+                                  && (!table->applies || table->applies(index, profile));
         const auto found = std::find_if(result.begin(), result.end(),
-            [&](const EffectiveTable& candidate) {
-                return std::string_view(candidate.table->reportPrefix) == table->reportPrefix;
-            });
-        auto& effective = found != result.end()
-            ? *found
-            : result.emplace_back(EffectiveTable{table, {}, false});
+            [&](const EffectiveTable& candidate) { return std::string_view(candidate.table->reportPrefix) == table->reportPrefix; });
+        auto& effective = found != result.end() ? *found : result.emplace_back(EffectiveTable{table, {}, false});
         // Tables that share a prefix layer onto one destination, but they may differ in how
         // their records are encoded and enumerated. The group must be represented by a table
         // that actually applies to this file, otherwise a later era would be read through an
@@ -522,12 +484,9 @@ std::vector<EffectiveTable> buildEffectiveTables(
         }
         for (std::size_t i = 0; i < table->fieldCount; ++i) {
             const auto* field = table->fields + i;
-            const bool readable = tableApplies
-                && (!field->sourceApplies || field->sourceApplies(profile));
+            const bool readable = tableApplies && (!field->sourceApplies || field->sourceApplies(profile));
             const auto existing = std::find_if(effective.fields.begin(), effective.fields.end(),
-                [&](const EffectiveField& candidate) {
-                    return std::string_view(candidate.reporting->fieldName) == field->fieldName;
-                });
+                [&](const EffectiveField& candidate) { return std::string_view(candidate.reporting->fieldName) == field->fieldName; });
             if (existing == effective.fields.end()) {
                 effective.fields.push_back({field, readable ? field : nullptr});
             } else if (readable) {
@@ -557,18 +516,13 @@ musx::dom::ImportObjectCallback baselineObjectReporter(ImportReport& report)
     return result;
 }
 
-std::optional<ResolvedValue> readSourceValue(
-    const records::LegacyRecordIndex& index, RecordEncoding encoding,
-    std::uint16_t cmper, const SourceLocation& source, ByteOrder byteOrder,
-    std::uint16_t partId)
+std::optional<ResolvedValue> readSourceValue(const records::LegacyRecordIndex& index, RecordEncoding encoding, std::uint16_t cmper,
+    const SourceLocation& source, ByteOrder byteOrder, std::uint16_t partId)
 {
-    return encoding == RecordEncoding::ClassRecord
-        ? readClassValue(index, cmper, source, byteOrder, partId)
-        : readValue(index, cmper, source);
+    return encoding == RecordEncoding::ClassRecord ? readClassValue(index, cmper, source, byteOrder, partId) : readValue(index, cmper, source);
 }
 
-GlobalSelectorWords readNumericGlobalWords(
-    const records::LegacyRecordIndex& index, std::uint16_t selector)
+GlobalSelectorWords readNumericGlobalWords(const records::LegacyRecordIndex& index, std::uint16_t selector)
 {
     GlobalSelectorWords result;
     const auto rows = index.getOthers().getArray(numericGlobalTag(selector), GLOBALS_CMPER);
@@ -585,83 +539,72 @@ GlobalSelectorWords readNumericGlobalWords(
     return result;
 }
 
-GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index,
-    const SourceProfile& profile, std::uint16_t selector)
+GlobalSelectorWords readGlobalWords(const records::LegacyRecordIndex& index, const SourceProfile& profile, std::uint16_t selector)
 {
     if (profile.epoch != FormatEpoch::ZlibLegacy) {
         return readNumericGlobalWords(index, selector);
     }
     GlobalSelectorWords result;
-    const auto* row = index.getClassOthers().get(
-        numericGlobalClass(selector), GLOBALS_CMPER, 0, 0);
+    const auto* row = index.getClassOthers().get(numericGlobalClass(selector), GLOBALS_CMPER, 0, 0);
     if (!row) {
         return result;
     }
-    result.words = payloadWords(
-        index.getClassOthers().effectivePayloadOf(*row), profile.byteOrder);
+    result.words = payloadWords(index.getClassOthers().effectivePayloadOf(*row), profile.byteOrder);
     result.present = true;
     result.blockOffset = row->blockOffset;
     result.decodedOffset = row->decodedOffset;
     return result;
 }
 
-bool storesCodaMigratedPointSizes(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesCodaMigratedPointSizes(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    return profile.epoch == FormatEpoch::CodaBanner
-        && readGlobalWords(index, profile, codaMigratedPointSizeSelector).present;
+    return profile.epoch == FormatEpoch::CodaBanner && readGlobalWords(index, profile, codaMigratedPointSizeSelector).present;
 }
 
-bool storesCodaFloatPointSizes(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesCodaFloatPointSizes(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    return profile.epoch == FormatEpoch::CodaBanner
-        && !storesCodaMigratedPointSizes(index, profile);
+    return profile.epoch == FormatEpoch::CodaBanner && !storesCodaMigratedPointSizes(index, profile);
 }
 
-bool storesLoneStemFlagLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesLoneStemFlagLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    if (profile.epoch != FormatEpoch::CodaBanner
-        && profile.epoch != FormatEpoch::UncompressedLegacy) {
+    if (profile.epoch != FormatEpoch::CodaBanner && profile.epoch != FormatEpoch::UncompressedLegacy) {
         return false;
     }
     constexpr std::uint16_t beamFlagsSelector = 41;
     constexpr std::size_t beamFlagsSlot = 1;
     const auto words = readNumericGlobalWords(index, beamFlagsSelector);
-    if (!words.present || words.words.size() <= beamFlagsSlot) return true;
+    if (!words.present || words.words.size() <= beamFlagsSlot) {
+        return true;
+    }
     constexpr std::uint16_t loneStemFlag = 0x0001;
-    return (static_cast<std::uint16_t>(words.words[beamFlagsSlot])
-        & ~loneStemFlag) == 0;
+    return (static_cast<std::uint16_t>(words.words[beamFlagsSlot]) & ~loneStemFlag) == 0;
 }
 
-bool storesPackedBeamFlagLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesPackedBeamFlagLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return !storesLoneStemFlagLayout(index, profile);
 }
 
-bool storesFinale35OptionLayout(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesFinale35OptionLayout(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     constexpr std::uint16_t finale35MarkerSelector = 75;
     return readGlobalWords(index, profile, finale35MarkerSelector).present;
 }
 
-bool storesPreFinale35StemAndBeamUnits(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesPreFinale35StemAndBeamUnits(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    if (profile.epoch == FormatEpoch::ZlibLegacy) return false;
+    if (profile.epoch == FormatEpoch::ZlibLegacy) {
+        return false;
+    }
     constexpr std::uint16_t stemConnectionSelector = 40;
     constexpr std::size_t earlyConnectionCount = 32;
     constexpr std::size_t connectionWords = 6;
     const auto family = readNumericGlobalWords(index, stemConnectionSelector);
-    return family.present
-        && family.words.size() <= earlyConnectionCount * connectionWords;
+    return family.present && family.words.size() <= earlyConnectionCount * connectionWords;
 }
 
-bool storesFinale35StemAndBeamUnits(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesFinale35StemAndBeamUnits(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     return !storesPreFinale35StemAndBeamUnits(index, profile);
 }
@@ -671,17 +614,14 @@ std::int16_t wordAt(const std::vector<std::int16_t>& words, std::size_t index)
     return index < words.size() ? words[index] : static_cast<std::int16_t>(0);
 }
 
-std::vector<std::int16_t> payloadWords(
-    std::span<const std::uint8_t> payload, ByteOrder byteOrder)
+std::vector<std::int16_t> payloadWords(std::span<const std::uint8_t> payload, ByteOrder byteOrder)
 {
     std::vector<std::int16_t> words;
     words.reserve(payload.size() / 2);
     for (std::size_t offset = 0; offset + 2 <= payload.size(); offset += 2) {
         words.push_back(byteOrder == ByteOrder::BigEndian
-            ? static_cast<std::int16_t>(
-                  (static_cast<std::uint16_t>(payload[offset]) << 8U) | payload[offset + 1])
-            : static_cast<std::int16_t>(
-                  payload[offset] | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U)));
+                            ? static_cast<std::int16_t>((static_cast<std::uint16_t>(payload[offset]) << 8U) | payload[offset + 1])
+                            : static_cast<std::int16_t>(payload[offset] | (static_cast<std::uint16_t>(payload[offset + 1]) << 8U)));
     }
     return words;
 }
@@ -693,8 +633,7 @@ std::uint32_t narrowCodepoint(std::int16_t stored)
 
 std::uint32_t wideCodepoint(std::int16_t low, std::int16_t high)
 {
-    return static_cast<std::uint32_t>(static_cast<std::uint16_t>(low))
-        | (static_cast<std::uint32_t>(static_cast<std::uint16_t>(high)) << 16U);
+    return static_cast<std::uint32_t>(static_cast<std::uint16_t>(low)) | (static_cast<std::uint32_t>(static_cast<std::uint16_t>(high)) << 16U);
 }
 
 namespace {
@@ -704,9 +643,8 @@ namespace {
 /// for. File-local because @ref applyLegacyMappings is its only caller and the ordering rule --
 /// that this runs after every pool is filled, and that nothing may allocate an `others`
 /// comparator afterwards -- is enforced there rather than by any caller of this header.
-void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument,
-    PendingReferences& pending, ImportReport& report)
+void resolveDeferredReferences(
+    const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, PendingReferences& pending, ImportReport& report)
 {
     const auto reportImported = baselineObjectReporter(report);
     // Keyed by the reference comparator, and scoped to this one import. Two clefs naming the same
@@ -716,23 +654,20 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
     bool reportedFailure = false;
     for (auto& request : pending.shapes) {
         musx::dom::Cmper resolved = 0;
-        if (const auto found = copiedShapes.find(request.referenceShapeId);
-            found != copiedShapes.end()) {
+        if (const auto found = copiedShapes.find(request.referenceShapeId); found != copiedShapes.end()) {
             resolved = found->second;
-        } else if (const auto source = referenceDocument->getOthers()
-                ->get<musx::dom::others::ShapeDef>(
-                    musx::dom::SCORE_PARTID, request.referenceShapeId)) {
-            if (const auto imported = musx::dom::others::importShapeDefInto(
-                    document, source, reportImported)) {
+        } else if (const auto source =
+                       referenceDocument->getOthers()->get<musx::dom::others::ShapeDef>(musx::dom::SCORE_PARTID, request.referenceShapeId)) {
+            if (const auto imported = musx::dom::others::importShapeDefInto(document, source, reportImported)) {
                 resolved = *imported;
                 copiedShapes.emplace(request.referenceShapeId, resolved);
             }
         }
         if (resolved == 0) {
             if (!reportedFailure) {
-                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "A Finale 27 shape could not be copied into this document; the clefs that "
-                    "use it read as blank."});
+                report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "A Finale 27 shape could not be copied into this document; the clefs that "
+                                                            "use it read as blank."});
                 reportedFailure = true;
             }
             continue;
@@ -746,33 +681,29 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
         });
     }
     if (!pending.shapes.empty()) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "Copied " + std::to_string(copiedShapes.size()) + " Finale 27 shape(s) for "
-            + std::to_string(pending.shapes.size()) + " clef definition(s)."});
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Verbose, "Copied " + std::to_string(copiedShapes.size()) + " Finale 27 shape(s) for "
+                                                        + std::to_string(pending.shapes.size()) + " clef definition(s)."});
     }
 
     std::map<musx::dom::Cmper, musx::dom::Cmper> copiedCustomLines;
     reportedFailure = false;
     for (auto& request : pending.customLines) {
         musx::dom::Cmper resolved = 0;
-        if (const auto found = copiedCustomLines.find(request.referenceLineId);
-            found != copiedCustomLines.end()) {
+        if (const auto found = copiedCustomLines.find(request.referenceLineId); found != copiedCustomLines.end()) {
             resolved = found->second;
-        } else if (const auto source = referenceDocument->getOthers()
-                ->get<musx::dom::others::SmartShapeCustomLine>(
-                    musx::dom::SCORE_PARTID, request.referenceLineId)) {
-            if (const auto imported =
-                    musx::dom::others::importSmartShapeCustomLineInto(
-                        document, source, reportImported)) {
+        } else if (const auto source = referenceDocument->getOthers()->get<musx::dom::others::SmartShapeCustomLine>(
+                       musx::dom::SCORE_PARTID, request.referenceLineId)) {
+            if (const auto imported = musx::dom::others::importSmartShapeCustomLineInto(document, source, reportImported)) {
                 resolved = *imported;
                 copiedCustomLines.emplace(request.referenceLineId, resolved);
             }
         }
         if (resolved == 0) {
             if (!reportedFailure) {
-                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "A Finale 27 custom line could not be copied into this document; the "
-                    "Smart Shape tools that use it have no line style."});
+                report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "A Finale 27 custom line could not be copied into this document; the "
+                                                            "Smart Shape tools that use it have no line style."});
                 reportedFailure = true;
             }
             continue;
@@ -787,10 +718,9 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
         });
     }
     if (!pending.customLines.empty()) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Verbose,
-            "Copied " + std::to_string(copiedCustomLines.size())
-            + " Finale 27 custom line(s) for "
-            + std::to_string(pending.customLines.size()) + " Smart Shape option field(s)."});
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Verbose, "Copied " + std::to_string(copiedCustomLines.size()) + " Finale 27 custom line(s) for "
+                                                        + std::to_string(pending.customLines.size()) + " Smart Shape option field(s)."});
     }
 
     // Last within this phase: a check may read anything the copies above just added.
@@ -799,18 +729,15 @@ void resolveDeferredReferences(const musx::dom::DocumentPtr& document,
 
 } // namespace
 
-void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    std::span<const std::uint8_t> source, const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile, std::span<const std::uint8_t> source,
+    const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
     musx::factory::ConstructionContext& construction)
 {
     if (!referenceDocument || referenceDocument == document) {
-        throw std::logic_error(
-            "Legacy mappings require a separate, fully formed reference document");
+        throw std::logic_error("Legacy mappings require a separate, fully formed reference document");
     }
     PendingReferences pending;
-    const ImportContext context{
-        index, profile, source, document, referenceDocument, report, pending, construction};
+    const ImportContext context{index, profile, source, document, referenceDocument, report, pending, construction};
     for (const auto& entry : registeredImporters()) {
         FINALE_MUS_READER_TIMED_SCOPE(entry.phase);
         entry.importer(context);
@@ -824,7 +751,6 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     }
 }
 
-
 void runDeferredChecks(PendingReferences& pending)
 {
     for (const auto& materialize : pending.materialize) {
@@ -835,8 +761,7 @@ void runDeferredChecks(PendingReferences& pending)
     }
 }
 
-void applyMappingTables(const std::vector<const MappingTable*>& tables,
-    const records::LegacyRecordIndex& index, const SourceProfile& profile,
+void applyMappingTables(const std::vector<const MappingTable*>& tables, const records::LegacyRecordIndex& index, const SourceProfile& profile,
     const musx::dom::DocumentPtr& document, ImportReport& report)
 {
     for (const auto& effective : buildEffectiveTables(tables, index, profile)) {
@@ -848,17 +773,19 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
             // Nothing is created when no table applies to this file: with no seeded object to
             // overlay there is no default to report either, and an object built from a record
             // no table can read would be an empty fabrication.
-            const auto& pool = table.encoding == RecordEncoding::ClassRecord
-                ? index.getClassOthers() : index.getOthers();
+            const auto& pool = table.encoding == RecordEncoding::ClassRecord ? index.getClassOthers() : index.getOthers();
             if (effective.applicable) {
-                const RecordFamilySource source{&pool, table.recordIdentity,
-                    table.encoding == RecordEncoding::ClassRecord, false,
-                    table.compactPartLayouts};
+                const RecordFamilySource source{
+                    &pool, table.recordIdentity, table.encoding == RecordEncoding::ClassRecord, false, table.compactPartLayouts};
                 for (const auto [partId, cmper] : recordKeys(source)) {
                     const auto rows = pool.getArray(table.recordIdentity, cmper, 0, partId);
-                    if (rows.empty()) continue;
+                    if (rows.empty()) {
+                        continue;
+                    }
                     auto target = table.createTarget(document, source, rows.front(), cmper);
-                    if (target.instance) targets.push_back(target);
+                    if (target.instance) {
+                        targets.push_back(target);
+                    }
                 }
             }
         } else {
@@ -873,21 +800,17 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                 // belongs to the destination rather than to any one era, so it is taken from
                 // the reporting row, and it sees every field declared before it already
                 // applied.
-                if (field.reporting->targetApplies
-                    && !field.reporting->targetApplies(target.instance)) {
+                if (field.reporting->targetApplies && !field.reporting->targetApplies(target.instance)) {
                     continue;
                 }
                 MappedFieldReport fieldReport(report, table, target, field);
 
                 if (field.readable) {
-                    const auto selector =
-                        table.targetKind == TargetKind::OptionsSingleton
-                            ? field.readable->source.selector : target.cmper;
+                    const auto selector = table.targetKind == TargetKind::OptionsSingleton ? field.readable->source.selector : target.cmper;
                     const bool classRecord = table.encoding == RecordEncoding::ClassRecord;
                     if (field.readable->kind == FieldKind::Text) {
-                        const auto text = classRecord
-                            ? readClassText(index, selector, field.readable->source, target.partId)
-                            : readText(index, selector, field.readable->source);
+                        const auto text = classRecord ? readClassText(index, selector, field.readable->source, target.partId)
+                                                      : readText(index, selector, field.readable->source);
                         if (text) {
                             field.readable->applyText(target.instance, *text);
                             fieldReport.text(*text);
@@ -895,17 +818,12 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
                         fieldReport.finish();
                         continue;
                     }
-                    const auto resolved = readSourceValue(index, table.encoding, selector,
-                        field.readable->source, profile.byteOrder, target.partId);
+                    const auto resolved = readSourceValue(index, table.encoding, selector, field.readable->source, profile.byteOrder, target.partId);
                     if (resolved) {
-                        const auto adjusted = field.readable->sourceAdjustment
-                            ? field.readable->sourceAdjustment(
-                                  resolved->value, index, profile)
-                            : std::nullopt;
-                        field.readable->apply(target.instance,
-                            adjusted.value_or(resolved->value));
-                        fieldReport.recovered(
-                            *resolved, adjusted.has_value(), field.readable->source.identity);
+                        const auto adjusted =
+                            field.readable->sourceAdjustment ? field.readable->sourceAdjustment(resolved->value, index, profile) : std::nullopt;
+                        field.readable->apply(target.instance, adjusted.value_or(resolved->value));
+                        fieldReport.recovered(*resolved, adjusted.has_value(), field.readable->source.identity);
                     }
                 }
                 fieldReport.finish();
@@ -916,6 +834,5 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables,
         }
     }
 }
-
 
 } // namespace finale_mus_reader

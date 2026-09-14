@@ -6,12 +6,11 @@
 namespace finale_mus_reader {
 namespace detail {
 
-ReaderResources prepareReaderResources(const ReaderOptions &options,
-                                       XmlParser parseXml) {
+ReaderResources prepareReaderResources(const ReaderOptions& options, XmlParser parseXml)
+{
     ReaderResources result;
     result.symbolFontNames = text::parseMacSymbolFonts(options.macSymbolFonts);
-    result.percussionMappings =
-        percussion::parseMappingTables(options.percussionMappingXml, parseXml);
+    result.percussionMappings = percussion::parseMappingTables(options.percussionMappingXml, parseXml);
     return result;
 }
 

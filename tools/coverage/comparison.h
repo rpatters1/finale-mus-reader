@@ -48,12 +48,9 @@ struct ComparisonResult
     std::vector<DifferenceExample> textExamples;
 };
 
-ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion,
-                                  const musx::dom::DocumentPtr& sourceDocument,
-                                  const musx::dom::DocumentPtr& companionDocument,
-                                  FormatEpoch sourceEpoch, ByteOrder sourceByteOrder,
-                                  const SourceVersion* sourceVersion,
-                                  const ImportReport& sourceReport);
+ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion, const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument, FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
+    const ImportReport& sourceReport);
 
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison);
 

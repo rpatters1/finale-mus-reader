@@ -30,17 +30,26 @@ SymbolFontNames parseMacSymbolFonts(std::span<const std::uint8_t> contents)
         while (lineEnd < contents.size() && contents[lineEnd] != '\n') {
             ++lineEnd;
         }
-        while (lineStart < lineEnd && isSpace(contents[lineStart])) ++lineStart;
-        while (lineEnd > lineStart && isSpace(contents[lineEnd - 1])) --lineEnd;
+        while (lineStart < lineEnd && isSpace(contents[lineStart])) {
+            ++lineStart;
+        }
+        while (lineEnd > lineStart && isSpace(contents[lineEnd - 1])) {
+            --lineEnd;
+        }
         if (lineEnd > lineStart) {
             const auto* first = reinterpret_cast<const char*>(contents.data() + lineStart);
-            auto normalized = musx::dom::normalizeFontName(
-                std::string(first, static_cast<std::size_t>(lineEnd - lineStart)));
-            if (!normalized.empty()) result.insert(std::move(normalized));
+            auto normalized = musx::dom::normalizeFontName(std::string(first, static_cast<std::size_t>(lineEnd - lineStart)));
+            if (!normalized.empty()) {
+                result.insert(std::move(normalized));
+            }
         }
         lineStart = lineEnd;
-        while (lineStart < contents.size() && contents[lineStart] != '\n') ++lineStart;
-        if (lineStart < contents.size()) ++lineStart;
+        while (lineStart < contents.size() && contents[lineStart] != '\n') {
+            ++lineStart;
+        }
+        if (lineStart < contents.size()) {
+            ++lineStart;
+        }
     }
     return result;
 }
@@ -55,13 +64,14 @@ std::string utf16ToUtf8Impl(std::size_t size, UnitAt unitAt)
     std::string result;
     for (std::size_t at = 0; at < size; ++at) {
         const auto unit = unitAt(at);
-        if (unit == 0) break;
+        if (unit == 0) {
+            break;
+        }
         char32_t codepoint = unit;
         if (unit >= 0xd800 && unit <= 0xdbff && at + 1 < size) {
             const auto low = unitAt(at + 1);
             if (low >= 0xdc00 && low <= 0xdfff) {
-                codepoint = static_cast<char32_t>(
-                    0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
+                codepoint = static_cast<char32_t>(0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
                 ++at;
             }
         }
@@ -72,8 +82,7 @@ std::string utf16ToUtf8Impl(std::size_t size, UnitAt unitAt)
 
 // Windows code page numbers are the portable encoding identifier: Windows consumes them
 // directly, while the other platforms map them to their native conversion APIs.
-enum class CodePage : int
-{
+enum class CodePage : int {
     Windows1250 = 1250,
     Windows1251 = 1251,
     Windows1252 = 1252,
@@ -233,11 +242,11 @@ constexpr char16_t macCentralEuropeTable[] = {
 const char16_t* macTableFor(CodePage codePage)
 {
     switch (codePage) {
-    case CodePage::MacRoman:         return macRomanTable;
-    case CodePage::MacGreek:         return macGreekTable;
-    case CodePage::MacCyrillic:      return macCyrillicTable;
+    case CodePage::MacRoman: return macRomanTable;
+    case CodePage::MacGreek: return macGreekTable;
+    case CodePage::MacCyrillic: return macCyrillicTable;
     case CodePage::MacCentralEurope: return macCentralEuropeTable;
-    default:                         return nullptr;
+    default: return nullptr;
     }
 }
 
@@ -270,33 +279,33 @@ std::string convertWithTable(const char16_t* table, std::string_view source)
 const char* iconvNameFor(CodePage codePage)
 {
     switch (codePage) {
-    case CodePage::Windows1250:       return "CP1250";
-    case CodePage::Windows1251:       return "CP1251";
-    case CodePage::Windows1252:       return "CP1252";
-    case CodePage::Windows1253:       return "CP1253";
-    case CodePage::Windows1254:       return "CP1254";
-    case CodePage::Windows1255:       return "CP1255";
-    case CodePage::Windows1256:       return "CP1256";
-    case CodePage::Windows1257:       return "CP1257";
-    case CodePage::Thai874:           return "CP874";
-    case CodePage::ShiftJis:          return "SHIFT-JIS";
-    case CodePage::Gb2312:            return "GB2312";
-    case CodePage::Korean:            return "EUC-KR";
-    case CodePage::Big5:              return "BIG5";
-    case CodePage::MacRoman:          return "MACINTOSH";
+    case CodePage::Windows1250: return "CP1250";
+    case CodePage::Windows1251: return "CP1251";
+    case CodePage::Windows1252: return "CP1252";
+    case CodePage::Windows1253: return "CP1253";
+    case CodePage::Windows1254: return "CP1254";
+    case CodePage::Windows1255: return "CP1255";
+    case CodePage::Windows1256: return "CP1256";
+    case CodePage::Windows1257: return "CP1257";
+    case CodePage::Thai874: return "CP874";
+    case CodePage::ShiftJis: return "SHIFT-JIS";
+    case CodePage::Gb2312: return "GB2312";
+    case CodePage::Korean: return "EUC-KR";
+    case CodePage::Big5: return "BIG5";
+    case CodePage::MacRoman: return "MACINTOSH";
     // No Mac-specific iconv name exists for these four; the fallbacks below decode Mac-stored
     // CJK font names correctly. Windows uses the exact Mac code page.
-    case CodePage::MacJapanese:       return "SHIFT-JIS";
-    case CodePage::MacTradChinese:    return "BIG5";
-    case CodePage::MacKorean:         return "EUC-KR";
-    case CodePage::MacSimpChinese:    return "GB2312";
-    case CodePage::MacArabic:         return "MACARABIC";
-    case CodePage::MacHebrew:         return "MACHEBREW";
-    case CodePage::MacGreek:          return "MACGREEK";
-    case CodePage::MacCyrillic:       return "MACCYRILLIC";
-    case CodePage::MacThai:           return "MACTHAI";
-    case CodePage::MacCentralEurope:  return "MACCENTRALEUROPE";
-    case CodePage::MacTurkish:        return "MACTURKISH";
+    case CodePage::MacJapanese: return "SHIFT-JIS";
+    case CodePage::MacTradChinese: return "BIG5";
+    case CodePage::MacKorean: return "EUC-KR";
+    case CodePage::MacSimpChinese: return "GB2312";
+    case CodePage::MacArabic: return "MACARABIC";
+    case CodePage::MacHebrew: return "MACHEBREW";
+    case CodePage::MacGreek: return "MACGREEK";
+    case CodePage::MacCyrillic: return "MACCYRILLIC";
+    case CodePage::MacThai: return "MACTHAI";
+    case CodePage::MacCentralEurope: return "MACCENTRALEUROPE";
+    case CodePage::MacTurkish: return "MACTURKISH";
     }
     return nullptr;
 }
@@ -319,8 +328,7 @@ std::optional<std::string> convertWithIconv(const char* fromEncoding, std::strin
     std::size_t outputLeft = output.size();
 
     while (inputLeft > 0) {
-        const std::size_t result =
-            iconv(converter, &inputCursor, &inputLeft, &outputCursor, &outputLeft);
+        const std::size_t result = iconv(converter, &inputCursor, &inputLeft, &outputCursor, &outputLeft);
         if (result != static_cast<std::size_t>(-1)) {
             break;
         }
@@ -363,27 +371,21 @@ std::optional<std::string> convert(CodePage codePage, std::string_view source)
 
 #if defined(_WIN32)
     const auto page = static_cast<UINT>(codePage);
-    const int wideLength = MultiByteToWideChar(
-        page, MB_ERR_INVALID_CHARS, source.data(), static_cast<int>(source.size()), nullptr, 0);
+    const int wideLength = MultiByteToWideChar(page, MB_ERR_INVALID_CHARS, source.data(), static_cast<int>(source.size()), nullptr, 0);
     if (wideLength <= 0) {
         return std::nullopt;
     }
     std::wstring wide(static_cast<std::size_t>(wideLength), L'\0');
-    if (MultiByteToWideChar(page, MB_ERR_INVALID_CHARS, source.data(),
-            static_cast<int>(source.size()), wide.data(), wideLength)
-        != wideLength) {
+    if (MultiByteToWideChar(page, MB_ERR_INVALID_CHARS, source.data(), static_cast<int>(source.size()), wide.data(), wideLength) != wideLength) {
         return std::nullopt;
     }
 
-    const int utf8Length = WideCharToMultiByte(
-        CP_UTF8, 0, wide.data(), wideLength, nullptr, 0, nullptr, nullptr);
+    const int utf8Length = WideCharToMultiByte(CP_UTF8, 0, wide.data(), wideLength, nullptr, 0, nullptr, nullptr);
     if (utf8Length <= 0) {
         return std::nullopt;
     }
     std::string utf8(static_cast<std::size_t>(utf8Length), '\0');
-    if (WideCharToMultiByte(CP_UTF8, 0, wide.data(), wideLength, utf8.data(), utf8Length,
-            nullptr, nullptr)
-        != utf8Length) {
+    if (WideCharToMultiByte(CP_UTF8, 0, wide.data(), wideLength, utf8.data(), utf8Length, nullptr, nullptr) != utf8Length) {
         return std::nullopt;
     }
     return utf8;
@@ -394,15 +396,13 @@ std::optional<std::string> convert(CodePage codePage, std::string_view source)
     // code page 10008 is Simplified Chinese, whose script code is 25, and 10081 is Turkish,
     // whose encoding is 35. Deriving the encoding by subtracting 10000 would be wrong for
     // both, so the documented conversion is used instead of arithmetic.
-    const CFStringEncoding encoding =
-        CFStringConvertWindowsCodepageToEncoding(static_cast<UInt32>(codePage));
+    const CFStringEncoding encoding = CFStringConvertWindowsCodepageToEncoding(static_cast<UInt32>(codePage));
     if (encoding == kCFStringEncodingInvalidId || !CFStringIsEncodingAvailable(encoding)) {
         return std::nullopt;
     }
 
-    const CFStringRef decoded = CFStringCreateWithBytes(nullptr,
-        reinterpret_cast<const UInt8*>(source.data()), static_cast<CFIndex>(source.size()),
-        encoding, /*isExternalRepresentation*/ false);
+    const CFStringRef decoded = CFStringCreateWithBytes(
+        nullptr, reinterpret_cast<const UInt8*>(source.data()), static_cast<CFIndex>(source.size()), encoding, /*isExternalRepresentation*/ false);
     if (decoded == nullptr) {
         // The bytes are not valid in the encoding the charset field claimed.
         return std::nullopt;
@@ -416,11 +416,9 @@ std::optional<std::string> convert(CodePage codePage, std::string_view source)
     CFStringGetBytes(decoded, range, kCFStringEncodingUTF8, 0, false, nullptr, 0, &needed);
     std::vector<UInt8> buffer(static_cast<std::size_t>(needed));
     CFIndex written = 0;
-    CFStringGetBytes(decoded, range, kCFStringEncodingUTF8, 0, false,
-        buffer.data(), needed, &written);
+    CFStringGetBytes(decoded, range, kCFStringEncodingUTF8, 0, false, buffer.data(), needed, &written);
     CFRelease(decoded);
-    return std::string(reinterpret_cast<const char*>(buffer.data()),
-        static_cast<std::size_t>(written));
+    return std::string(reinterpret_cast<const char*>(buffer.data()), static_cast<std::size_t>(written));
 
 #else
     // The embedded Mac tables come first: they are exact, always present, and cover the
@@ -443,18 +441,18 @@ static CodePage codePageForCharset(Bank bank, int charsetVal)
     switch (bank) {
     case Bank::Windows:
         switch (charsetVal) {
-        case windowsShiftJisCharset:    return CodePage::ShiftJis;
-        case windowsHangeulCharset:     return CodePage::Korean;
-        case windowsGb2312Charset:      return CodePage::Gb2312;
-        case windowsBig5Charset:        return CodePage::Big5;
-        case windowsGreekCharset:       return CodePage::Windows1253;
-        case windowsTurkishCharset:     return CodePage::Windows1254;
-        case windowsHebrewCharset:      return CodePage::Windows1255;
-        case windowsArabicCharset:      return CodePage::Windows1256;
-        case windowsBalticCharset:      return CodePage::Windows1257;
-        case windowsCyrillicCharset:    return CodePage::Windows1251;
-        case windowsThaiCharset:        return CodePage::Thai874;
-        case windowsEastEuropeCharset:  return CodePage::Windows1250;
+        case windowsShiftJisCharset: return CodePage::ShiftJis;
+        case windowsHangeulCharset: return CodePage::Korean;
+        case windowsGb2312Charset: return CodePage::Gb2312;
+        case windowsBig5Charset: return CodePage::Big5;
+        case windowsGreekCharset: return CodePage::Windows1253;
+        case windowsTurkishCharset: return CodePage::Windows1254;
+        case windowsHebrewCharset: return CodePage::Windows1255;
+        case windowsArabicCharset: return CodePage::Windows1256;
+        case windowsBalticCharset: return CodePage::Windows1257;
+        case windowsCyrillicCharset: return CodePage::Windows1251;
+        case windowsThaiCharset: return CodePage::Thai874;
+        case windowsEastEuropeCharset: return CodePage::Windows1250;
         case windowsVietnameseCharset:
             // Windows-1258 is the Vietnamese page, but nothing has been seen to use this
             // charset and the enum carries no value that has never been needed. It falls to the
@@ -474,17 +472,17 @@ static CodePage codePageForCharset(Bank bank, int charsetVal)
 
     case Bank::MacOS:
         switch (charsetVal) {
-        case macJapaneseScript:     return CodePage::MacJapanese;
-        case macTradChineseScript:  return CodePage::MacTradChinese;
-        case macKoreanScript:       return CodePage::MacKorean;
-        case macArabicScript:       return CodePage::MacArabic;
-        case macHebrewScript:       return CodePage::MacHebrew;
-        case macGreekScript:        return CodePage::MacGreek;
-        case macCyrillicScript:     return CodePage::MacCyrillic;
-        case macThaiScript:         return CodePage::MacThai;
-        case macSimpChineseScript:  return CodePage::MacSimpChinese;
-        case macCentralEuroScript:  return CodePage::MacCentralEurope;
-        case macTurkishScript:      return CodePage::MacTurkish;
+        case macJapaneseScript: return CodePage::MacJapanese;
+        case macTradChineseScript: return CodePage::MacTradChinese;
+        case macKoreanScript: return CodePage::MacKorean;
+        case macArabicScript: return CodePage::MacArabic;
+        case macHebrewScript: return CodePage::MacHebrew;
+        case macGreekScript: return CodePage::MacGreek;
+        case macCyrillicScript: return CodePage::MacCyrillic;
+        case macThaiScript: return CodePage::MacThai;
+        case macSimpChineseScript: return CodePage::MacSimpChinese;
+        case macCentralEuroScript: return CodePage::MacCentralEurope;
+        case macTurkishScript: return CodePage::MacTurkish;
         case macUninterpretedScript:
         case macRomanScript:
         default:
@@ -522,8 +520,7 @@ static std::string toUtf8WithCodePage(std::string_view source, CodePage codePage
 static CodePage codePageForPackedCharset(std::uint16_t packed)
 {
     constexpr auto valueMask = (std::uint16_t{1} << legacyCharsetValueBits) - 1;
-    const auto bank = (packed & (std::uint16_t{1} << legacyCharsetBankBit)) != 0
-        ? Bank::Windows : Bank::MacOS;
+    const auto bank = (packed & (std::uint16_t{1} << legacyCharsetBankBit)) != 0 ? Bank::Windows : Bank::MacOS;
     return codePageForCharset(bank, packed & valueMask);
 }
 
@@ -547,23 +544,20 @@ std::string normalizeLineBreaks(std::string source)
 static CodePage platformCodePage(SourcePlatform platform)
 {
     using Bank = musx::dom::others::FontDefinition::CharacterSetBank;
-    return codePageForCharset(
-        platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
+    return codePageForCharset(platform == SourcePlatform::Windows ? Bank::Windows : Bank::MacOS, 0);
 }
 
 static CodePage documentCodePage(const musx::dom::DocumentPtr& document)
 {
     const auto header = document->getHeader();
-    return platformCodePage(header
-            && header->textEncoding == musx::dom::header::TextEncoding::Windows
-        ? SourcePlatform::Windows : SourcePlatform::MacOS);
+    return platformCodePage(
+        header && header->textEncoding == musx::dom::header::TextEncoding::Windows ? SourcePlatform::Windows : SourcePlatform::MacOS);
 }
 
-static std::optional<CodePage> codePageForDocumentFont(const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
+static std::optional<CodePage> codePageForDocumentFont(
+    const musx::dom::DocumentPtr& document, musx::dom::Cmper fontId, std::optional<CodePage> unknownFont)
 {
-    const auto definition = document->getOthers()
-        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fontId);
+    const auto definition = document->getOthers()->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fontId);
     if (!definition) {
         return unknownFont;
     }
@@ -582,8 +576,7 @@ std::optional<char32_t> firstCodepoint(std::string_view utf8)
         return std::nullopt;
     }
     const auto lead = static_cast<unsigned char>(utf8[0]);
-    const std::size_t length = lead < 0x80U ? 1 : (lead & 0xe0U) == 0xc0U ? 2
-        : (lead & 0xf0U) == 0xe0U ? 3 : (lead & 0xf8U) == 0xf0U ? 4 : 0;
+    const std::size_t length = lead < 0x80U ? 1 : (lead & 0xe0U) == 0xc0U ? 2 : (lead & 0xf0U) == 0xe0U ? 3 : (lead & 0xf8U) == 0xf0U ? 4 : 0;
     if (length == 0 || length > utf8.size()) {
         return std::nullopt;
     }
@@ -603,17 +596,14 @@ std::optional<char32_t> firstCodepoint(std::string_view utf8)
 
 std::string utf16ToUtf8(std::span<const std::int16_t> source)
 {
-    return utf16ToUtf8Impl(source.size(), [&source](std::size_t at) {
-        return static_cast<std::uint16_t>(source[at]);
-    });
+    return utf16ToUtf8Impl(source.size(), [&source](std::size_t at) { return static_cast<std::uint16_t>(source[at]); });
 }
 
 std::string utf16LeToUtf8(std::span<const std::uint8_t> source)
 {
     return utf16ToUtf8Impl(source.size() / 2, [&source](std::size_t at) {
         const auto byte = at * 2;
-        return static_cast<std::uint16_t>(source[byte]
-            | (static_cast<std::uint16_t>(source[byte + 1]) << 8U));
+        return static_cast<std::uint16_t>(source[byte] | (static_cast<std::uint16_t>(source[byte + 1]) << 8U));
     });
 }
 
@@ -655,23 +645,22 @@ std::string toUtf8(std::string_view source, std::uint16_t packedCharset)
     return toUtf8WithCodePage(source, codePageForPackedCharset(packedCharset));
 }
 
-std::string toUtf8(std::string_view source, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
+std::string toUtf8(
+    std::string_view source, const musx::dom::DocumentPtr& document, musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
 {
-    const auto unresolved = unresolvedFontFallback == UnresolvedFontFallback::Text
-        ? std::optional<CodePage>(documentCodePage(document)) : std::nullopt;
+    const auto unresolved =
+        unresolvedFontFallback == UnresolvedFontFallback::Text ? std::optional<CodePage>(documentCodePage(document)) : std::nullopt;
     if (const auto codePage = codePageForDocumentFont(document, fontId, unresolved)) {
         return toUtf8WithCodePage(source, *codePage);
     }
     return symbolBytesToUtf8(source);
 }
 
-char32_t codepointFromByte(std::uint8_t stored, const musx::dom::DocumentPtr& document,
-    musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
+char32_t codepointFromByte(
+    std::uint8_t stored, const musx::dom::DocumentPtr& document, musx::dom::Cmper fontId, UnresolvedFontFallback unresolvedFontFallback)
 {
     const std::string source(1, static_cast<char>(stored));
-    return firstCodepointOrByte(
-        stored, toUtf8(source, document, fontId, unresolvedFontFallback));
+    return firstCodepointOrByte(stored, toUtf8(source, document, fontId, unresolvedFontFallback));
 }
 
 } // namespace text

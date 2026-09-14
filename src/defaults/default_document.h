@@ -46,8 +46,7 @@ struct ParsedDefaultDocument
 /// reports what was actually selected.
 /// @throws std::runtime_error if the embedded resource fails validation or lacks the
 /// elements the reader seeds from.
-[[nodiscard]] ParsedDefaultDocument parseDefault(
-    XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform);
+[[nodiscard]] ParsedDefaultDocument parseDefault(XmlParser parseXml, DocumentParser parseDocument, SourcePlatform platform);
 
 } // namespace defaults
 } // namespace finale_mus_reader

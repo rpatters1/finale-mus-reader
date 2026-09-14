@@ -30,7 +30,9 @@ struct TestReportData
 
 void require(bool condition, const char* message)
 {
-    if (!condition) throw std::runtime_error(message);
+    if (!condition) {
+        throw std::runtime_error(message);
+    }
 }
 
 void testLazyReporting()
@@ -57,29 +59,22 @@ void testLazyReporting()
         const auto member = prepareMember();
         const auto key = reporting.instanceKey(identity);
         require(key == reporting.instanceKey(type, 2, 3, 4, 5), "Opaque identity lost a key");
-        require(key == reporting.template instanceKey<Target>(2, 3, 4, 5),
-            "Typed identity disagrees with opaque identity");
+        require(key == reporting.template instanceKey<Target>(2, 3, 4, 5), "Typed identity disagrees with opaque identity");
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyBehavior);
         auto& info = reporting.report().fieldProvenance(key, member);
-        require(info.origin == Reporting::Origin::LegacyBehavior,
-            "A new field did not inherit its instance origin");
+        require(info.origin == Reporting::Origin::LegacyBehavior, "A new field did not inherit its instance origin");
         info = {Reporting::Origin::LegacyMusAdjusted, 123, 456, -789, 42};
         reporting.unmappedField(key, member, 999);
-        require(info.origin == Reporting::Origin::LegacyMusAdjusted && info.rawValue == -789,
-            "Unmapped reporting replaced an established field");
-        require(info.blockOffset == 123 && info.decodedOffset == 456 && info.sourceIdentity == 42,
-            "Adjusted reporting lost source provenance");
+        require(info.origin == Reporting::Origin::LegacyMusAdjusted && info.rawValue == -789, "Unmapped reporting replaced an established field");
+        require(info.blockOffset == 123 && info.decodedOffset == 456 && info.sourceIdentity == 42, "Adjusted reporting lost source provenance");
         reporting.unmappedField(key, "unknown", 7);
-        require(reporting.report().findField(key, "unknown")->origin == Reporting::Origin::Unmapped,
-            "Unknown field origin changed");
+        require(reporting.report().findField(key, "unknown")->origin == Reporting::Origin::Unmapped, "Unknown field origin changed");
         reporting.template defaultField<Target>("seeded", 8);
         reporting.template behaviorField<Target>("behavior", 9);
         reporting.textField(key, "text", true, false, true);
         const auto& text = reporting.report().textFields.at(key).at("text");
-        require(text.fontWasSynthesized && !text.sizeWasSynthesized && text.effectsWereSynthesized,
-            "Text formatting provenance changed");
-        require(reporting.memberName(member.c_str()) == "nested.field",
-            "Report member normalization changed");
+        require(text.fontWasSynthesized && !text.sizeWasSynthesized && text.effectsWereSynthesized, "Text formatting provenance changed");
+        require(reporting.memberName(member.c_str()) == "nested.field", "Report member normalization changed");
         reporting.state(state).info = info;
         reporting.state(deferred) = {key, member};
     });
@@ -92,14 +87,11 @@ void testLazyReporting()
         auto* info = reporting.report().findField(field.instance, field.member);
         require(info && info->rawValue == saved.rawValue, "Deferred field identity was lost");
         info->rawValue = 1001;
-        require(info->origin == saved.origin && info->blockOffset == saved.blockOffset,
-            "Deferred update changed unrelated provenance");
+        require(info->origin == saved.origin && info->blockOffset == saved.blockOffset, "Deferred update changed unrelated provenance");
         const auto singleton = reporting.template instanceKey<Target>();
-        require(reporting.report().findField(singleton, "seeded")->origin ==
-                Reporting::Origin::Finale27Default,
+        require(reporting.report().findField(singleton, "seeded")->origin == Reporting::Origin::Finale27Default,
             "Default convenience method changed origin");
-        require(reporting.report().findField(singleton, "behavior")->origin ==
-                Reporting::Origin::LegacyBehavior,
+        require(reporting.report().findField(singleton, "behavior")->origin == Reporting::Origin::LegacyBehavior,
             "Behavior convenience method changed origin");
     });
 }

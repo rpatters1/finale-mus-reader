@@ -24,11 +24,9 @@ struct LegacyOther
     std::size_t decodedOffset{};
 };
 
-[[nodiscard]] std::vector<LegacyOther> decodeLegacyOthers(
-    const container::ParsedContainer& parsed);
+[[nodiscard]] std::vector<LegacyOther> decodeLegacyOthers(const container::ParsedContainer& parsed);
 
-[[nodiscard]] std::int16_t readPayloadWord(
-    const LegacyOther& record, std::size_t wordIndex, ByteOrder byteOrder);
+[[nodiscard]] std::int16_t readPayloadWord(const LegacyOther& record, std::size_t wordIndex, ByteOrder byteOrder);
 
 } // namespace records
 } // namespace finale_mus_reader

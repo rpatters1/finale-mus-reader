@@ -15,8 +15,7 @@
 namespace finale_mus_reader {
 namespace timing {
 
-enum class Phase : std::size_t
-{
+enum class Phase : std::size_t {
     FileIo,
     ContainerParse,
     SourceReport,
@@ -114,8 +113,7 @@ enum class Phase : std::size_t
     Count
 };
 
-enum class Counter : std::size_t
-{
+enum class Counter : std::size_t {
     TextRecords,
     TextRecordBytes,
     TextCommands,
@@ -131,15 +129,13 @@ enum class Counter : std::size_t
     Count
 };
 
-enum class ContainerCandidate
-{
+enum class ContainerCandidate {
     Uncompressed,
     Dcl,
     Zlib
 };
 
-enum class ContainerAttemptResult
-{
+enum class ContainerAttemptResult {
     Accepted,
     InputBounds,
     FirstType,
@@ -256,17 +252,12 @@ void increment(Counter counter, std::size_t amount = 1);
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 #define FINALE_MUS_READER_TIMED_SCOPE(phase) \
-    const ::finale_mus_reader::timing::Scope \
-        FINALE_MUS_READER_TIMING_JOIN(finaleMusReaderTimingScope_, __LINE__)(phase)
-#define FINALE_MUS_READER_CONTAINER_ATTEMPT(name, candidate, bigEndian) \
-    ::finale_mus_reader::timing::ContainerAttempt name(candidate, bigEndian)
-#define FINALE_MUS_READER_CONTAINER_DECOMPRESSION_BEGIN(name, bytes) \
-    name.beginDecompression(bytes)
-#define FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(name, bytes) \
-    name.decompressionSucceeded(bytes)
+    const ::finale_mus_reader::timing::Scope FINALE_MUS_READER_TIMING_JOIN(finaleMusReaderTimingScope_, __LINE__)(phase)
+#define FINALE_MUS_READER_CONTAINER_ATTEMPT(name, candidate, bigEndian) ::finale_mus_reader::timing::ContainerAttempt name(candidate, bigEndian)
+#define FINALE_MUS_READER_CONTAINER_DECOMPRESSION_BEGIN(name, bytes) name.beginDecompression(bytes)
+#define FINALE_MUS_READER_CONTAINER_DECOMPRESSION_SUCCEEDED(name, bytes) name.decompressionSucceeded(bytes)
 #define FINALE_MUS_READER_CONTAINER_ATTEMPT_FINISH(name, result) name.finish(result)
-#define FINALE_MUS_READER_TIMING_INCREMENT(counter, amount) \
-    ::finale_mus_reader::timing::increment(counter, amount)
+#define FINALE_MUS_READER_TIMING_INCREMENT(counter, amount) ::finale_mus_reader::timing::increment(counter, amount)
 #else
 #define FINALE_MUS_READER_TIMED_SCOPE(phase) static_cast<void>(0)
 #define FINALE_MUS_READER_CONTAINER_ATTEMPT(name, candidate, bigEndian) static_cast<void>(0)

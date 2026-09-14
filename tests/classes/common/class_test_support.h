@@ -5,11 +5,11 @@
 
 #include <algorithm>
 #include <array>
-#include <span>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <iterator>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -17,12 +17,12 @@
 
 #include "container/mus_container.h"
 #include "finale_mus_reader/reader.h"
-#include "import/support/embedded_graphics.h"
 #include "import/details.h"
-#include "import/support/legacy_mapping.h"
-#include "import/others.h"
 #include "import/options.h"
 #include "import/options/test_access.h"
+#include "import/others.h"
+#include "import/support/embedded_graphics.h"
+#include "import/support/legacy_mapping.h"
 #include "records/legacy_record_index.h"
 
 #include "musx/musx.h"
@@ -43,21 +43,21 @@ namespace finale_mus_reader_tests {
 namespace classes {
 
 using finale_mus_reader::ByteOrder;
-using finale_mus_reader::FormatEpoch;
+using finale_mus_reader::EpochMask;
 using finale_mus_reader::FieldInfo;
+using finale_mus_reader::FieldMapping;
+using finale_mus_reader::FormatEpoch;
+using finale_mus_reader::GLOBALS_CMPER;
 using finale_mus_reader::ImportReport;
 using finale_mus_reader::ImportResult;
-using finale_mus_reader::Reader;
-using finale_mus_reader::SourceVersion;
-using finale_mus_reader::ValueOrigin;
-using finale_mus_reader::EpochMask;
-using finale_mus_reader::FieldMapping;
-using finale_mus_reader::GLOBALS_CMPER;
 using finale_mus_reader::LongWordOrder;
 using finale_mus_reader::MappingTable;
-using finale_mus_reader::SourceProfile;
-using finale_mus_reader::TargetKind;
+using finale_mus_reader::Reader;
 using finale_mus_reader::SourceGate;
+using finale_mus_reader::SourceProfile;
+using finale_mus_reader::SourceVersion;
+using finale_mus_reader::TargetKind;
+using finale_mus_reader::ValueOrigin;
 using finale_mus_reader::records::LegacyRecordIndex;
 using Spacing = musx::dom::options::MusicSpacingOptions;
 using TestXmlDocument = musx::xml::pugi::Document;
@@ -69,48 +69,36 @@ constexpr auto sourceMatchTestProfile = [] {
 }();
 static_assert(finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask::Zlib));
 static_assert(!finale_mus_reader::sourceMatches(sourceMatchTestProfile, EpochMask::Dcl));
-static_assert(finale_mus_reader::sourceAtOrAfter(
-    sourceMatchTestProfile, FormatEpoch::DclLegacy));
-static_assert(finale_mus_reader::sourceMatchesVersion(
-    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
-static_assert(!finale_mus_reader::sourceMatchesVersion(
-    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 0}));
-static_assert(!finale_mus_reader::sourceMatchesVersion(
-    sourceMatchTestProfile, FormatEpoch::DclLegacy, {15, 1}));
-static_assert(!finale_mus_reader::sourceMatchesVersion(FormatEpoch::ZlibLegacy, nullptr,
-    FormatEpoch::ZlibLegacy, {15, 1}));
+static_assert(finale_mus_reader::sourceAtOrAfter(sourceMatchTestProfile, FormatEpoch::DclLegacy));
+static_assert(finale_mus_reader::sourceMatchesVersion(sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 0}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(sourceMatchTestProfile, FormatEpoch::DclLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceMatchesVersion(FormatEpoch::ZlibLegacy, nullptr, FormatEpoch::ZlibLegacy, {15, 1}));
 constexpr SourceProfile earlierSourceMatchTestProfile(FormatEpoch::DclLegacy);
-static_assert(!finale_mus_reader::sourceAtOrAfter(
-    earlierSourceMatchTestProfile, FormatEpoch::ZlibLegacy));
-static_assert(finale_mus_reader::sourceAtOrAfter(
-    sourceMatchTestProfile, FormatEpoch::DclLegacy, finale_mus_reader::versions::finale2007));
-static_assert(finale_mus_reader::sourceAtOrAfter(
-    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
-static_assert(!finale_mus_reader::sourceAtOrAfter(
-    sourceMatchTestProfile, FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011));
-static_assert(finale_mus_reader::sourcePredatesVersion(FormatEpoch::CodaBanner, nullptr,
-    FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale97));
-static_assert(!finale_mus_reader::sourcePredatesVersion(FormatEpoch::UncompressedLegacy, nullptr,
-    FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale97));
-static_assert(finale_mus_reader::sourceAtOrAfter(FormatEpoch::DclLegacy, nullptr,
-    FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2000));
+static_assert(!finale_mus_reader::sourceAtOrAfter(earlierSourceMatchTestProfile, FormatEpoch::ZlibLegacy));
+static_assert(finale_mus_reader::sourceAtOrAfter(sourceMatchTestProfile, FormatEpoch::DclLegacy, finale_mus_reader::versions::finale2007));
+static_assert(finale_mus_reader::sourceAtOrAfter(sourceMatchTestProfile, FormatEpoch::ZlibLegacy, {15, 1}));
+static_assert(!finale_mus_reader::sourceAtOrAfter(sourceMatchTestProfile, FormatEpoch::ZlibLegacy, finale_mus_reader::versions::finale2011));
+static_assert(finale_mus_reader::sourcePredatesVersion(
+    FormatEpoch::CodaBanner, nullptr, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale97));
+static_assert(!finale_mus_reader::sourcePredatesVersion(
+    FormatEpoch::UncompressedLegacy, nullptr, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale97));
+static_assert(
+    finale_mus_reader::sourceAtOrAfter(FormatEpoch::DclLegacy, nullptr, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2000));
 
 inline bool sourceAtFinale2007(const SourceProfile& profile)
 {
-    return finale_mus_reader::sourceAtOrAfter(
-        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2007);
+    return finale_mus_reader::sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale2007);
 }
 
 inline bool sourceAtFinale35(const SourceProfile& profile)
 {
-    return finale_mus_reader::sourceAtOrAfter(
-        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5);
+    return finale_mus_reader::sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5);
 }
 
 inline bool sourceAtFinale351(const SourceProfile& profile)
 {
-    return finale_mus_reader::sourceAtOrAfter(
-        profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5_1);
+    return finale_mus_reader::sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, finale_mus_reader::versions::finale3_5_1);
 }
 
 // These tests drive one importer at a time against a synthesized record set, so none of them
@@ -129,17 +117,13 @@ inline void expect(bool condition, const std::string& message)
     expectMapping(condition, message);
 }
 
-inline constexpr std::string_view fixtureLegacySymbolFonts =
-    "Maestro\nPetrucci\nPmusic\nSonata\n";
+inline constexpr std::string_view fixtureLegacySymbolFonts = "Maestro\nPetrucci\nPmusic\nSonata\n";
 
-inline ImportResult readFixture(const std::filesystem::path& relativePath,
-    std::string_view macSymbolFonts = {})
+inline ImportResult readFixture(const std::filesystem::path& relativePath, std::string_view macSymbolFonts = {})
 {
     const auto* symbolFontBytes = reinterpret_cast<const std::uint8_t*>(macSymbolFonts.data());
-    const finale_mus_reader::ReaderOptions options{
-        std::span<const std::uint8_t>(symbolFontBytes, macSymbolFonts.size())};
-    return Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relativePath, options);
+    const finale_mus_reader::ReaderOptions options{std::span<const std::uint8_t>(symbolFontBytes, macSymbolFonts.size())};
+    return Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relativePath, options);
 }
 
 /// @brief One synthetic 16-byte legacy row.
@@ -152,9 +136,7 @@ struct SyntheticRow
 
 /// @brief Builds a parsed container holding the given rows as an uncompressed other pool.
 inline finale_mus_reader::container::ParsedContainer makeContainer(
-    const std::vector<SyntheticRow>& rows,
-    FormatEpoch epoch = FormatEpoch::UncompressedLegacy,
-    ByteOrder byteOrder = ByteOrder::BigEndian)
+    const std::vector<SyntheticRow>& rows, FormatEpoch epoch = FormatEpoch::UncompressedLegacy, ByteOrder byteOrder = ByteOrder::BigEndian)
 {
     finale_mus_reader::container::ParsedContainer parsed(epoch);
     parsed.byteOrder = byteOrder;
@@ -172,10 +154,8 @@ inline finale_mus_reader::container::ParsedContainer makeContainer(
     };
     for (const auto& row : rows) {
         appendWord(row.cmper);
-        block.data.push_back(static_cast<std::uint8_t>(
-            row.tag[byteOrder == ByteOrder::BigEndian ? 0 : 1]));
-        block.data.push_back(static_cast<std::uint8_t>(
-            row.tag[byteOrder == ByteOrder::BigEndian ? 1 : 0]));
+        block.data.push_back(static_cast<std::uint8_t>(row.tag[byteOrder == ByteOrder::BigEndian ? 0 : 1]));
+        block.data.push_back(static_cast<std::uint8_t>(row.tag[byteOrder == ByteOrder::BigEndian ? 1 : 0]));
         for (const auto word : row.words) {
             appendWord(static_cast<std::uint16_t>(word));
         }
@@ -190,8 +170,7 @@ inline musx::dom::DocumentPtr makeDocument(Spacing** instanceOut)
 {
     auto session = musx::factory::DocumentFactory::begin();
     auto document = session.getDocument();
-    auto spacing = std::make_shared<Spacing>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
+    auto spacing = std::make_shared<Spacing>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
     spacing->minWidth = 111;
     spacing->maxWidth = 222;
     spacing->referenceDuration = 333;
@@ -213,19 +192,19 @@ struct SyntheticClassRow
     bool hasContinuation{};
     std::vector<std::uint16_t> continuationMasks;
 
-    SyntheticClassRow(std::uint16_t classIdValue, std::vector<std::int16_t> wordValues,
-        std::uint16_t cmperValue = GLOBALS_CMPER, std::uint16_t partIdValue = 0,
-        bool continuation = false, std::vector<std::uint16_t> maskValues = {})
-        : classId(classIdValue), words(std::move(wordValues)), cmper(cmperValue),
-          partId(partIdValue), hasContinuation(continuation),
+    SyntheticClassRow(std::uint16_t classIdValue, std::vector<std::int16_t> wordValues, std::uint16_t cmperValue = GLOBALS_CMPER,
+        std::uint16_t partIdValue = 0, bool continuation = false, std::vector<std::uint16_t> maskValues = {})
+        : classId(classIdValue),
+          words(std::move(wordValues)),
+          cmper(cmperValue),
+          partId(partIdValue),
+          hasContinuation(continuation),
           continuationMasks(std::move(maskValues))
-    {
-    }
+    {}
 };
 
 /// @brief Builds a parsed container holding class-identified records, the 2007+ framing.
-inline finale_mus_reader::container::ParsedContainer makeClassContainer(
-    const std::vector<SyntheticClassRow>& rows, ByteOrder byteOrder)
+inline finale_mus_reader::container::ParsedContainer makeClassContainer(const std::vector<SyntheticClassRow>& rows, ByteOrder byteOrder)
 {
     finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::ZlibLegacy);
     parsed.byteOrder = byteOrder;
@@ -259,13 +238,10 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
             push16(static_cast<std::uint16_t>(word));
         }
         if (row.hasContinuation) {
-            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length >> 16U)
-                                                     : static_cast<std::uint16_t>(length));
-            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length)
-                                                     : static_cast<std::uint16_t>(length >> 16U));
+            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length >> 16U) : static_cast<std::uint16_t>(length));
+            push16(byteOrder == ByteOrder::BigEndian ? static_cast<std::uint16_t>(length) : static_cast<std::uint16_t>(length >> 16U));
             for (std::size_t slot = 0; slot + 2 < row.words.size(); ++slot) {
-                push16(slot < row.continuationMasks.size()
-                        ? row.continuationMasks[slot] : 0);
+                push16(slot < row.continuationMasks.size() ? row.continuationMasks[slot] : 0);
             }
         }
         block.data.insert(block.data.end(), 4, 0);
@@ -277,16 +253,13 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(
 
 /// @brief Builds a parsed container holding one class-identified record.
 inline finale_mus_reader::container::ParsedContainer makeClassContainer(
-    std::uint16_t classId, const std::vector<std::int16_t>& words, ByteOrder byteOrder,
-    std::uint16_t cmper = GLOBALS_CMPER)
+    std::uint16_t classId, const std::vector<std::int16_t>& words, ByteOrder byteOrder, std::uint16_t cmper = GLOBALS_CMPER)
 {
     return makeClassContainer({SyntheticClassRow{classId, words, cmper}}, byteOrder);
 }
 
-inline finale_mus_reader::container::ParsedContainer makeDetailContainer(
-    FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
-    const std::vector<std::int16_t>& words, const char* tag = "mg",
-    ByteOrder byteOrder = ByteOrder::BigEndian)
+inline finale_mus_reader::container::ParsedContainer makeDetailContainer(FormatEpoch epoch, std::uint16_t staffId, std::uint16_t meas,
+    const std::vector<std::int16_t>& words, const char* tag = "mg", ByteOrder byteOrder = ByteOrder::BigEndian)
 {
     finale_mus_reader::container::ParsedContainer parsed(epoch);
     parsed.byteOrder = byteOrder;
@@ -305,18 +278,17 @@ inline finale_mus_reader::container::ParsedContainer makeDetailContainer(
         push16(staffId);
         push16(meas);
         push16(finale_mus_reader::records::packTag(tag));
-        for (std::size_t slot = 0; slot < finale_mus_reader::records::detailWordCount; ++slot)
+        for (std::size_t slot = 0; slot < finale_mus_reader::records::detailWordCount; ++slot) {
             push16(static_cast<std::uint16_t>(words[at + slot]));
+        }
     }
     block.info.decodedSize = block.data.size();
     parsed.blocks.push_back(std::move(block));
     return parsed;
 }
 
-inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
-    std::uint16_t staffId, std::uint16_t meas, std::uint16_t partId,
-    const std::vector<std::int16_t>& words, ByteOrder byteOrder,
-    std::uint16_t classId = 0x041d, bool hasContinuation = false,
+inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(std::uint16_t staffId, std::uint16_t meas, std::uint16_t partId,
+    const std::vector<std::int16_t>& words, ByteOrder byteOrder, std::uint16_t classId = 0x041d, bool hasContinuation = false,
     const std::vector<std::uint16_t>& continuationMasks = {})
 {
     auto parsed = makeClassContainer(classId, {}, byteOrder, staffId);
@@ -337,12 +309,16 @@ inline finale_mus_reader::container::ParsedContainer makeDetailClassContainer(
     push16(meas);
     push16(partId);
     const auto length = static_cast<std::uint32_t>(words.size() * 2);
-    if (byteOrder == ByteOrder::BigEndian)
+    if (byteOrder == ByteOrder::BigEndian) {
         push16(static_cast<std::uint16_t>(length >> 16U));
+    }
     push16(static_cast<std::uint16_t>(length));
-    if (byteOrder == ByteOrder::LittleEndian)
+    if (byteOrder == ByteOrder::LittleEndian) {
         push16(static_cast<std::uint16_t>(length >> 16U));
-    for (const auto word : words) push16(static_cast<std::uint16_t>(word));
+    }
+    for (const auto word : words) {
+        push16(static_cast<std::uint16_t>(word));
+    }
     if (hasContinuation) {
         if (byteOrder == ByteOrder::BigEndian) {
             push16(static_cast<std::uint16_t>(length >> 16U));
@@ -379,8 +355,7 @@ inline musx::dom::DocumentPtr makeClefReferenceDocument()
     return std::move(session).finish();
 }
 
-inline SourceProfile profileFor(
-    std::uint8_t major, std::uint8_t minor = 0, std::uint8_t maint = 0)
+inline SourceProfile profileFor(std::uint8_t major, std::uint8_t minor = 0, std::uint8_t maint = 0)
 {
     SourceProfile profile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
@@ -407,29 +382,25 @@ inline ExpectedReportField expectedReportField(std::string_view target)
 {
     ExpectedReportField result{std::string(target), std::nullopt, std::nullopt};
     if (target.starts_with("options.fontOptions[")) {
-        result.member = "fonts["
-            + std::string(target.substr(std::string_view("options.fontOptions[").size()));
+        result.member = "fonts[" + std::string(target.substr(std::string_view("options.fontOptions[").size()));
     } else if (target.starts_with("options.fontOptionsPhysical[")) {
-        result.member = "physical[" + std::string(
-            target.substr(std::string_view("options.fontOptionsPhysical[").size()));
+        result.member = "physical[" + std::string(target.substr(std::string_view("options.fontOptionsPhysical[").size()));
     } else if (target.starts_with("options.")) {
         const auto dot = target.find('.', std::string_view("options.").size());
-        if (dot != std::string_view::npos) result.member = target.substr(dot + 1);
+        if (dot != std::string_view::npos) {
+            result.member = target.substr(dot + 1);
+        }
     } else if (const auto open = target.find('['); open != std::string_view::npos) {
         const auto close = target.find(']', open);
         const auto dot = close == std::string_view::npos ? close : target.find('.', close);
         if (close != std::string_view::npos && dot != std::string_view::npos) {
             const auto comma = target.find(',', open);
             const auto cmperEnd = comma == std::string_view::npos || comma > close ? close : comma;
-            result.cmper = musx::dom::Cmper(
-                std::stoul(std::string(target.substr(open + 1, cmperEnd - open - 1))));
+            result.cmper = musx::dom::Cmper(std::stoul(std::string(target.substr(open + 1, cmperEnd - open - 1))));
             if (comma != std::string_view::npos && comma < close) {
                 const auto nextComma = target.find(',', comma + 1);
-                const auto inciEnd = nextComma == std::string_view::npos || nextComma > close
-                    ? close
-                    : nextComma;
-                result.inci = musx::dom::Inci(
-                    std::stol(std::string(target.substr(comma + 1, inciEnd - comma - 1))));
+                const auto inciEnd = nextComma == std::string_view::npos || nextComma > close ? close : nextComma;
+                result.inci = musx::dom::Inci(std::stol(std::string(target.substr(comma + 1, inciEnd - comma - 1))));
             }
             result.member = target.substr(dot + 1);
         }
@@ -441,14 +412,19 @@ inline const finale_mus_reader::FieldInfo& field(const ImportReport& report, std
 {
     const auto expected = expectedReportField(target);
     for (const auto& [instance, fields] : report.fields) {
-        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
-        if (expected.inci && instance.inci != expected.inci) continue;
+        if (expected.cmper && instance.cmper1 != expected.cmper) {
+            continue;
+        }
+        if (expected.inci && instance.inci != expected.inci) {
+            continue;
+        }
         for (const auto& [member, info] : fields) {
-            if (member == expected.member) return info;
+            if (member == expected.member) {
+                return info;
+            }
         }
     }
-    std::string message = std::string("Missing mapping report for ").append(target)
-        .append("; available members:");
+    std::string message = std::string("Missing mapping report for ").append(target).append("; available members:");
     for (const auto& [instance, fields] : report.fields) {
         static_cast<void>(instance);
         for (const auto& [member, info] : fields) {
@@ -459,31 +435,36 @@ inline const finale_mus_reader::FieldInfo& field(const ImportReport& report, std
     throw std::runtime_error(std::move(message));
 }
 
-inline const finale_mus_reader::FieldInfo& field(
-    const ImportResult& result, std::string_view target)
+inline const finale_mus_reader::FieldInfo& field(const ImportResult& result, std::string_view target)
 {
     return field(result.report, target);
 }
 
 template <typename Target>
-inline const finale_mus_reader::FieldInfo& fieldFor(
-    const ImportReport& report, std::string_view target)
+inline const finale_mus_reader::FieldInfo& fieldFor(const ImportReport& report, std::string_view target)
 {
     const auto expected = expectedReportField(target);
     for (const auto& [instance, fields] : report.fields) {
-        if (instance.classType != std::type_index(typeid(Target))) continue;
-        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
-        if (expected.inci && instance.inci != expected.inci) continue;
+        if (instance.classType != std::type_index(typeid(Target))) {
+            continue;
+        }
+        if (expected.cmper && instance.cmper1 != expected.cmper) {
+            continue;
+        }
+        if (expected.inci && instance.inci != expected.inci) {
+            continue;
+        }
         for (const auto& [member, info] : fields) {
-            if (member == expected.member) return info;
+            if (member == expected.member) {
+                return info;
+            }
         }
     }
     throw std::runtime_error(std::string("Missing mapping report for ").append(target));
 }
 
 template <typename Target>
-inline const finale_mus_reader::FieldInfo& fieldFor(
-    const ImportResult& result, std::string_view target)
+inline const finale_mus_reader::FieldInfo& fieldFor(const ImportResult& result, std::string_view target)
 {
     return fieldFor<Target>(result.report, target);
 }
@@ -493,10 +474,14 @@ inline bool fieldPresent(const ImportReport& report, std::string_view target)
 {
     const auto expected = expectedReportField(target);
     for (const auto& [instance, fields] : report.fields) {
-        if (expected.cmper && instance.cmper1 != expected.cmper) continue;
+        if (expected.cmper && instance.cmper1 != expected.cmper) {
+            continue;
+        }
         for (const auto& [member, info] : fields) {
             (void)info;
-            if (member == expected.member) return true;
+            if (member == expected.member) {
+                return true;
+            }
         }
     }
     return false;
@@ -508,7 +493,9 @@ inline bool anyMappingReportedField(const ImportReport& report, Predicate predic
     for (const auto& [instance, fields] : report.fields) {
         (void)instance;
         for (const auto& [member, info] : fields) {
-            if (predicate(member, info)) return true;
+            if (predicate(member, info)) {
+                return true;
+            }
         }
     }
     return false;
@@ -530,11 +517,10 @@ inline std::size_t reportedFieldCount(const ImportReport& report)
     return result;
 }
 
-inline MappingTable makeTable(const char* prefix, const FieldMapping* fields, std::size_t count,
-    SourceGate sourceApplies = nullptr, EpochMask epochs = EpochMask::FixedRow)
+inline MappingTable makeTable(
+    const char* prefix, const FieldMapping* fields, std::size_t count, SourceGate sourceApplies = nullptr, EpochMask epochs = EpochMask::FixedRow)
 {
-    return MappingTable{
-        .reportPrefix = prefix,
+    return MappingTable{.reportPrefix = prefix,
         .epochs = epochs,
         .sourceApplies = sourceApplies,
         .targetKind = TargetKind::OptionsSingleton,

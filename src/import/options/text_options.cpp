@@ -5,10 +5,10 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 #include <iterator>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
@@ -53,13 +53,10 @@ constexpr std::uint32_t lineSpacingIsPercentSlot = 1;
 /// default it already holds. The pair is different because its two tables must stay
 /// complementary -- musxdom rejects a TextOptions with both members engaged or neither -- so
 /// the absent case has to be named rather than left to fall through both.
-bool storesTextLayoutOptions(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool storesTextLayoutOptions(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        return index.getClassOthers().get(
-                   numericGlobalClass(layoutSelector), GLOBALS_CMPER, 0, 0)
-            != nullptr;
+        return index.getClassOthers().get(numericGlobalClass(layoutSelector), GLOBALS_CMPER, 0, 0) != nullptr;
     }
     return readNumericGlobalWords(index, layoutSelector).present;
 }
@@ -80,12 +77,9 @@ const FieldMapping textStampFields[] = {
 // orders: -6 is stored as the word pair (-1, -6) and 42 as (0, 42), whichever order the
 // container uses.
 const FieldMapping textMetricsFields[] = {
-    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0,
-        LongWordOrder::HighFirst, textTracking),
-    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2,
-        LongWordOrder::HighFirst, textBaselineShift),
-    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4,
-        LongWordOrder::HighFirst, textSuperscript),
+    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, LongWordOrder::HighFirst, textTracking),
+    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, LongWordOrder::HighFirst, textBaselineShift),
+    MUS_LONG(TextTarget, "81", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4, LongWordOrder::HighFirst, textSuperscript),
 };
 
 // Selectors 82 and 83, less the two words that need more than a slot each: word 0 of 82, whose
@@ -99,54 +93,38 @@ const FieldMapping textLayoutFields[] = {
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 2, textWordWrap),
     MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, textPageOffset),
     MUS_BITS_AS(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 4,
-        /*firstBit*/ 0, /*bitCount*/ 0, textJustify,
-        static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
-    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5,
-        textExpandSingleWord),
+        /*firstBit*/ 0, /*bitCount*/ 0, textJustify, static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
+    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 5, textExpandSingleWord),
     MUS_WORD(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 0, textHorzAlign),
     MUS_BITS_AS(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 1,
-        /*firstBit*/ 0, /*bitCount*/ 0, textVertAlign,
-        static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
+        /*firstBit*/ 0, /*bitCount*/ 0, textVertAlign, static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
     MUS_WORD(TextTarget, "83", GLOBALS_CMPER, /*incidence*/ 0, /*slot*/ 3, textIsEdgeAligned),
 };
 
 // Finale 2007 and later reach the same words through the shared numericGlobalClass rule,
 // addressed by byte offset in the coalesced payload.
 const FieldMapping classTextStampFields[] = {
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(dateSelector), GLOBALS_CMPER,
-        classWordOffset(4), showTimeSeconds),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(dateSelector), GLOBALS_CMPER,
-        classWordOffset(5), dateFormat),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(tabSelector), GLOBALS_CMPER,
-        classWordOffset(0), tabSpaces),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(dateSelector), GLOBALS_CMPER, classWordOffset(4), showTimeSeconds),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(dateSelector), GLOBALS_CMPER, classWordOffset(5), dateFormat),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(tabSelector), GLOBALS_CMPER, classWordOffset(0), tabSpaces),
 };
 
 const FieldMapping classTextMetricsFields[] = {
-    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER,
-        classWordOffset(0), LongWordOrder::HighFirst, textTracking),
-    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER,
-        classWordOffset(2), LongWordOrder::HighFirst, textBaselineShift),
-    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER,
-        classWordOffset(4), LongWordOrder::HighFirst, textSuperscript),
+    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER, classWordOffset(0), LongWordOrder::HighFirst, textTracking),
+    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER, classWordOffset(2), LongWordOrder::HighFirst, textBaselineShift),
+    MUS_CLASS_LONG(TextTarget, numericGlobalClass(metricsSelector), GLOBALS_CMPER, classWordOffset(4), LongWordOrder::HighFirst, textSuperscript),
 };
 
 const FieldMapping classTextLayoutFields[] = {
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(2), textWordWrap),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(3), textPageOffset),
-    MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(4), /*firstBit*/ 0, /*bitCount*/ 0, textJustify,
-        static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(5), textExpandSingleWord),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
-        classWordOffset(0), textHorzAlign),
-    MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
-        classWordOffset(1), /*firstBit*/ 0, /*bitCount*/ 0, textVertAlign,
-        static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER,
-        classWordOffset(3), textIsEdgeAligned),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(2), textWordWrap),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(3), textPageOffset),
+    MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(4), /*firstBit*/ 0, /*bitCount*/ 0,
+        textJustify, static_cast<TextTarget::TextJustify>(legacyCenterOppositeOrder(value))),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(5), textExpandSingleWord),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER, classWordOffset(0), textHorzAlign),
+    MUS_CLASS_SELECTED_BITS_AS(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER, classWordOffset(1), /*firstBit*/ 0, /*bitCount*/ 0,
+        textVertAlign, static_cast<TextTarget::VerticalAlignment>(legacyCenterOppositeOrder(value))),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(alignSelector), GLOBALS_CMPER, classWordOffset(3), textIsEdgeAligned),
 };
 
 constexpr const char* textReportPrefix = "options.textOptions";
@@ -157,8 +135,7 @@ constexpr EpochMask fixedRowTextEpochs = EpochMask::CodaBanner | EpochMask::Fixe
 
 const MappingTable& textStampTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = fixedRowTextEpochs,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<TextTarget>,
@@ -169,8 +146,7 @@ const MappingTable& textStampTable()
 
 const MappingTable& textMetricsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = fixedRowTextEpochs,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<TextTarget>,
@@ -181,8 +157,7 @@ const MappingTable& textMetricsTable()
 
 const MappingTable& textLayoutTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = fixedRowTextEpochs,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<TextTarget>,
@@ -193,8 +168,7 @@ const MappingTable& textLayoutTable()
 
 const MappingTable& classTextStampTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -206,8 +180,7 @@ const MappingTable& classTextStampTable()
 
 const MappingTable& classTextMetricsTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -219,8 +192,7 @@ const MappingTable& classTextMetricsTable()
 
 const MappingTable& classTextLayoutTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
@@ -241,60 +213,45 @@ const MappingTable& classTextLayoutTable()
 ///
 /// A source with no selector 82 answers false, which costs nothing: the tables that depend on
 /// this one are gated on the same record's presence.
-bool statesLineSpacingAsPercent(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool statesLineSpacingAsPercent(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    const auto encoding = profile.epoch == FormatEpoch::ZlibLegacy
-        ? RecordEncoding::ClassRecord
-        : RecordEncoding::FixedRow;
+    const auto encoding = profile.epoch == FormatEpoch::ZlibLegacy ? RecordEncoding::ClassRecord : RecordEncoding::FixedRow;
     SourceLocation source;
-    source.identity = encoding == RecordEncoding::ClassRecord
-        ? numericGlobalClass(layoutSelector)
-        : records::packTag("82");
+    source.identity = encoding == RecordEncoding::ClassRecord ? numericGlobalClass(layoutSelector) : records::packTag("82");
     source.selector = GLOBALS_CMPER;
     source.incidence = 0;
-    source.wordSlot = encoding == RecordEncoding::ClassRecord
-        ? classWordOffset(lineSpacingIsPercentSlot)
-        : lineSpacingIsPercentSlot;
-    const auto resolved
-        = readSourceValue(index, encoding, GLOBALS_CMPER, source, profile.byteOrder);
+    source.wordSlot = encoding == RecordEncoding::ClassRecord ? classWordOffset(lineSpacingIsPercentSlot) : lineSpacingIsPercentSlot;
+    const auto resolved = readSourceValue(index, encoding, GLOBALS_CMPER, source, profile.byteOrder);
     return resolved && resolved->value != 0;
 }
 
-bool statesLineSpacingAsEvpu(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+bool statesLineSpacingAsEvpu(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
-    return storesTextLayoutOptions(index, profile)
-        && !statesLineSpacingAsPercent(index, profile);
+    return storesTextLayoutOptions(index, profile) && !statesLineSpacingAsPercent(index, profile);
 }
 
 // The two halves of selector 82 word 0. Exactly one table applies to any document that carries
 // the selector, and musxdom's own integrity check rejects a TextOptions with both members
 // engaged or neither, so the pair must stay complementary.
 const FieldMapping lineSpacingPercentFields[] = {
-    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, lineSpacingValueSlot,
-        textLineSpacingPercent),
+    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, lineSpacingValueSlot, textLineSpacingPercent),
 };
 
 const FieldMapping lineSpacingEvpuFields[] = {
-    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, lineSpacingValueSlot,
-        textLineSpacingEvpu),
+    MUS_WORD(TextTarget, "82", GLOBALS_CMPER, /*incidence*/ 0, lineSpacingValueSlot, textLineSpacingEvpu),
 };
 
 const FieldMapping classLineSpacingPercentFields[] = {
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(lineSpacingValueSlot), textLineSpacingPercent),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(lineSpacingValueSlot), textLineSpacingPercent),
 };
 
 const FieldMapping classLineSpacingEvpuFields[] = {
-    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER,
-        classWordOffset(lineSpacingValueSlot), textLineSpacingEvpu),
+    MUS_CLASS_WORD(TextTarget, numericGlobalClass(layoutSelector), GLOBALS_CMPER, classWordOffset(lineSpacingValueSlot), textLineSpacingEvpu),
 };
 
 const MappingTable& lineSpacingPercentTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = fixedRowTextEpochs,
         .applies = &statesLineSpacingAsPercent,
         .targetKind = TargetKind::OptionsSingleton,
@@ -306,8 +263,7 @@ const MappingTable& lineSpacingPercentTable()
 
 const MappingTable& lineSpacingEvpuTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = fixedRowTextEpochs,
         .applies = &statesLineSpacingAsEvpu,
         .targetKind = TargetKind::OptionsSingleton,
@@ -319,8 +275,7 @@ const MappingTable& lineSpacingEvpuTable()
 
 const MappingTable& classLineSpacingPercentTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &statesLineSpacingAsPercent,
         .encoding = RecordEncoding::ClassRecord,
@@ -333,8 +288,7 @@ const MappingTable& classLineSpacingPercentTable()
 
 const MappingTable& classLineSpacingEvpuTable()
 {
-    static const MappingTable table{
-        .reportPrefix = textReportPrefix,
+    static const MappingTable table{.reportPrefix = textReportPrefix,
         .epochs = EpochMask::Zlib,
         .applies = &statesLineSpacingAsEvpu,
         .encoding = RecordEncoding::ClassRecord,
@@ -350,8 +304,7 @@ const MappingTable& classLineSpacingEvpuTable()
 /// one would otherwise leave that percent engaged beside it, which is exactly the shape
 /// musxdom's `TextOptions::integrityCheck` rejects. Runs only when the source has the record
 /// to replace it with, so a document from before Finale 97 keeps the baseline value.
-void clearSeededLineSpacing(const records::LegacyRecordIndex& index,
-    const SourceProfile& profile, const musx::dom::DocumentPtr& document)
+void clearSeededLineSpacing(const records::LegacyRecordIndex& index, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
 {
     if (!storesTextLayoutOptions(index, profile)) {
         return;
@@ -387,8 +340,7 @@ constexpr std::size_t insertFontEffectsOffset = 14;
 constexpr std::size_t insertSymCharOffset = 16;
 
 /// @brief Which physical shape of the insert block a source carries.
-enum class InsertLayout
-{
+enum class InsertLayout {
     /// @brief Finale 3.7-2000. 17 bytes, a one-byte character, little-endian throughout.
     EarlyByteChar,
     /// @brief Finale 2001-2010. 18 bytes, a two-byte character of which only the low byte counts.
@@ -418,8 +370,7 @@ constexpr musx::dom::options::AccidentalInsertSymbolType insertOrder[] = {
 
 constexpr std::size_t insertCount = std::size(insertOrder);
 
-const char* const insertNames[insertCount] = {
-    "sharp", "flat", "natural", "dblSharp", "dblFlat"};
+const char* const insertNames[insertCount] = {"sharp", "flat", "natural", "dblSharp", "dblFlat"};
 
 /// @brief The insert block's payload bytes, in the order its own struct is laid out.
 struct InsertBlock
@@ -434,8 +385,7 @@ struct InsertBlock
 /// @brief Serializes a fixed-row word stream back to the bytes the file holds.
 /// @details The row decoder hands out words rather than bytes, and this block is a byte
 /// structure with an odd-sized element, so the bytes have to be reassembled to address it.
-void appendWords(std::vector<std::uint8_t>& bytes, const std::vector<std::int16_t>& words,
-    ByteOrder order)
+void appendWords(std::vector<std::uint8_t>& bytes, const std::vector<std::int16_t>& words, ByteOrder order)
 {
     for (const auto word : words) {
         const auto raw = static_cast<std::uint16_t>(word);
@@ -477,13 +427,11 @@ void appendWords(std::vector<std::uint8_t>& bytes, const std::vector<std::int16_
 ///
 /// A document that was converted by that upgrade and re-saved carries the mis-converted values
 /// permanently. Those are reproduced exactly, because there the bytes really do say that.
-InsertBlock readInsertBlock(
-    const records::LegacyRecordIndex& index, const SourceProfile& profile)
+InsertBlock readInsertBlock(const records::LegacyRecordIndex& index, const SourceProfile& profile)
 {
     InsertBlock result;
     if (profile.epoch == FormatEpoch::ZlibLegacy) {
-        const auto* row = index.getClassOthers().get(
-            numericGlobalClass(insertSelector), GLOBALS_CMPER, 0, 0);
+        const auto* row = index.getClassOthers().get(numericGlobalClass(insertSelector), GLOBALS_CMPER, 0, 0);
         if (!row) {
             return result;
         }
@@ -492,9 +440,7 @@ InsertBlock readInsertBlock(
         result.bytes.assign(payload.begin(), payload.end());
         // The payload's own length states the layout: Finale 2007-2010 write 96 bytes and
         // Finale 2012 writes 108. No other length occurs.
-        result.layout = result.bytes.size() >= insertCount * elementSize(InsertLayout::WideChar)
-            ? InsertLayout::WideChar
-            : InsertLayout::NarrowChar;
+        result.layout = result.bytes.size() >= insertCount * elementSize(InsertLayout::WideChar) ? InsertLayout::WideChar : InsertLayout::NarrowChar;
         result.blockOffset = row->blockOffset;
         result.decodedOffset = row->decodedOffset;
         return result;
@@ -504,27 +450,22 @@ InsertBlock readInsertBlock(
         return result;
     }
     result.present = true;
-    result.layout = profile.epoch == FormatEpoch::DclLegacy ? InsertLayout::NarrowChar
-                                                            : InsertLayout::EarlyByteChar;
-    appendWords(result.bytes, family.words,
-        result.layout == InsertLayout::EarlyByteChar ? ByteOrder::LittleEndian
-                                                     : profile.byteOrder);
+    result.layout = profile.epoch == FormatEpoch::DclLegacy ? InsertLayout::NarrowChar : InsertLayout::EarlyByteChar;
+    appendWords(result.bytes, family.words, result.layout == InsertLayout::EarlyByteChar ? ByteOrder::LittleEndian : profile.byteOrder);
     result.blockOffset = family.blockOffset;
     result.decodedOffset = family.decodedOffset;
     return result;
 }
 
 /// @brief Reads one unsigned value of the given width from an element.
-[[nodiscard]] std::uint32_t readInsertField(const InsertBlock& block, std::size_t elementBase,
-    std::size_t offset, std::size_t width, ByteOrder order)
+[[nodiscard]] std::uint32_t readInsertField(const InsertBlock& block, std::size_t elementBase, std::size_t offset, std::size_t width, ByteOrder order)
 {
     std::uint32_t value = 0;
     for (std::size_t i = 0; i < width; ++i) {
         const auto byte = static_cast<std::uint32_t>(block.bytes[elementBase + offset + i]);
         // The early layout is little-endian throughout; the later two follow the container,
         // except that a 32-bit value is two 16-bit words with the high word first.
-        const bool littleEndian = block.layout == InsertLayout::EarlyByteChar
-            || order == ByteOrder::LittleEndian;
+        const bool littleEndian = block.layout == InsertLayout::EarlyByteChar || order == ByteOrder::LittleEndian;
         value |= byte << (8U * (littleEndian ? i : width - 1 - i));
     }
     return value;
@@ -535,8 +476,7 @@ InsertBlock readInsertBlock(
 /// orders: a big-endian Finale 2005 file stores 1000 as 00 00 03 e8 and a little-endian Finale
 /// 2012 file stores it as 00 00 e8 03. The early layout is a plain little-endian long instead,
 /// which reads the same way once its bytes have been reassembled.
-[[nodiscard]] std::int32_t readInsertLong(const InsertBlock& block, std::size_t elementBase,
-    std::size_t offset, ByteOrder order)
+[[nodiscard]] std::int32_t readInsertLong(const InsertBlock& block, std::size_t elementBase, std::size_t offset, ByteOrder order)
 {
     if (block.layout == InsertLayout::EarlyByteChar) {
         return static_cast<std::int32_t>(readInsertField(block, elementBase, offset, 4, order));
@@ -553,18 +493,12 @@ InsertBlock readInsertBlock(
 /// what counts. Finale 2012 widened the field to a long for Unicode and it must not be masked;
 /// it reads as a plain little-endian long. **No value above 0xFFFF has been seen, so whether
 /// that is a long or a low-word-first pair is undetermined.**
-[[nodiscard]] char32_t readInsertChar(const InsertBlock& block, std::size_t elementBase,
-    ByteOrder order)
+[[nodiscard]] char32_t readInsertChar(const InsertBlock& block, std::size_t elementBase, ByteOrder order)
 {
     switch (block.layout) {
-    case InsertLayout::EarlyByteChar:
-        return static_cast<char32_t>(
-            readInsertField(block, elementBase, insertSymCharOffset, 1, order));
-    case InsertLayout::NarrowChar:
-        return static_cast<char32_t>(
-            readInsertField(block, elementBase, insertSymCharOffset, 2, order) & 0xFFU);
-    case InsertLayout::WideChar:
-        break;
+    case InsertLayout::EarlyByteChar: return static_cast<char32_t>(readInsertField(block, elementBase, insertSymCharOffset, 1, order));
+    case InsertLayout::NarrowChar: return static_cast<char32_t>(readInsertField(block, elementBase, insertSymCharOffset, 2, order) & 0xFFU);
+    case InsertLayout::WideChar: break;
     }
     const auto low = readInsertField(block, elementBase, insertSymCharOffset, 2, order);
     const auto high = readInsertField(block, elementBase, insertSymCharOffset + 2, 2, order);
@@ -572,16 +506,16 @@ InsertBlock readInsertBlock(
 }
 
 template <typename Reporting>
-void reportInsertField(Reporting& reporting, const char* insertName, const char* member,
-    typename Reporting::Origin origin, std::int64_t rawValue, const InsertBlock& block)
+void reportInsertField(Reporting& reporting, const char* insertName, const char* member, typename Reporting::Origin origin, std::int64_t rawValue,
+    const InsertBlock& block)
 {
     typename Reporting::FieldInfo info{origin, 0, 0, rawValue};
     if (origin == Reporting::Origin::LegacyMus) {
         info.blockOffset = block.blockOffset;
         info.decodedOffset = block.decodedOffset;
     }
-    reporting.report().setField(reporting.template instanceKey<TextTarget>(),
-        "symbolInserts[" + std::string(insertName) + "]." + member, std::move(info));
+    reporting.report().setField(
+        reporting.template instanceKey<TextTarget>(), "symbolInserts[" + std::string(insertName) + "]." + member, std::move(info));
 }
 
 /// @brief Rebuilds the five accidental inserts from the source's own block.
@@ -597,9 +531,8 @@ void reportInsertField(Reporting& reporting, const char* insertName, const char*
 /// asks the document whether it defines the comparator rather than testing the comparator
 /// against zero: what zero means is musxdom's business, and a document that defines it has
 /// nothing to report.
-bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report,
-    musx::factory::ConstructionContext& construction)
+bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceProfile& profile, const musx::dom::DocumentPtr& document,
+    ImportReport& report, musx::factory::ConstructionContext& construction)
 {
     const auto block = readInsertBlock(index, profile);
     if (!block.present) {
@@ -611,9 +544,9 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
     }
     const auto stride = elementSize(block.layout);
     if (block.bytes.size() < insertCount * stride) {
-        report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-            "The text options symbol-insert block holds " + std::to_string(block.bytes.size())
-                + " bytes, too few for five elements; the Finale 27 defaults are kept."});
+        report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Warning, "The text options symbol-insert block holds " + std::to_string(block.bytes.size())
+                                                        + " bytes, too few for five elements; the Finale 27 defaults are kept."});
         return false;
     }
     // Pool instances are handed out const. Overlaying legacy values is the one reason this
@@ -624,24 +557,18 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         const auto base = ordinal * stride;
         const auto* name = insertNames[ordinal];
         auto insert = std::make_shared<TextTarget::InsertSymbolInfo>(pooled);
-        insert->trackingBefore
-            = readInsertLong(block, base, insertTrackingBeforeOffset, profile.byteOrder);
-        insert->trackingAfter
-            = readInsertLong(block, base, insertTrackingAfterOffset, profile.byteOrder);
-        insert->baselineShiftPerc = static_cast<std::int16_t>(
-            readInsertField(block, base, insertBaselineShiftOffset, 2, profile.byteOrder));
+        insert->trackingBefore = readInsertLong(block, base, insertTrackingBeforeOffset, profile.byteOrder);
+        insert->trackingAfter = readInsertLong(block, base, insertTrackingAfterOffset, profile.byteOrder);
+        insert->baselineShiftPerc = static_cast<std::int16_t>(readInsertField(block, base, insertBaselineShiftOffset, 2, profile.byteOrder));
 
         // The font is the ordinary Enigma tuple: comparator, size, effects bitmask. musxdom
         // owns the bitmask, and it drops the same two bits Finale 27 drops -- a stored 56
         // becomes strikeout alone in both -- so the mask is handed to it whole rather than
         // decoded here. The size is a percent of the preceding font size in an Enigma string,
         // which is what the second constructor argument states.
-        const auto fontId = static_cast<musx::dom::Cmper>(
-            readInsertField(block, base, insertFontIdOffset, 2, profile.byteOrder));
-        const auto fontSize = static_cast<std::int16_t>(
-            readInsertField(block, base, insertFontSizeOffset, 2, profile.byteOrder));
-        const auto effects = static_cast<std::uint16_t>(
-            readInsertField(block, base, insertFontEffectsOffset, 2, profile.byteOrder));
+        const auto fontId = static_cast<musx::dom::Cmper>(readInsertField(block, base, insertFontIdOffset, 2, profile.byteOrder));
+        const auto fontSize = static_cast<std::int16_t>(readInsertField(block, base, insertFontSizeOffset, 2, profile.byteOrder));
+        const auto effects = static_cast<std::uint16_t>(readInsertField(block, base, insertFontEffectsOffset, 2, profile.byteOrder));
         auto font = std::make_shared<musx::dom::FontInfo>(document, /*sizeIsPercent*/ true);
         font->fontId = construction.assignFontId(fontId);
         font->fontSize = fontSize;
@@ -653,32 +580,27 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
         // its default names a music font, whose byte is a glyph number and comes through
         // unchanged; one pointed at a text font is decoded through that font's code page.
         const auto storedChar = readInsertChar(block, base, profile.byteOrder);
-        insert->symChar = block.layout == InsertLayout::WideChar
-            ? storedChar
-            : text::codepointFromByte(static_cast<std::uint8_t>(storedChar),
-                document, fontId, text::UnresolvedFontFallback::Symbol);
+        insert->symChar = block.layout == InsertLayout::WideChar ? storedChar
+                                                                 : text::codepointFromByte(static_cast<std::uint8_t>(storedChar), document, fontId,
+                                                                       text::UnresolvedFontFallback::Symbol);
 
         target->symbolInserts[insertOrder[ordinal]] = std::move(insert);
 
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportInsertField(reporting, name, "trackingBefore", Reporting::Origin::LegacyMus,
-                target->symbolInserts[insertOrder[ordinal]]->trackingBefore, block);
-            reportInsertField(reporting, name, "trackingAfter", Reporting::Origin::LegacyMus,
-                target->symbolInserts[insertOrder[ordinal]]->trackingAfter, block);
+            reportInsertField(
+                reporting, name, "trackingBefore", Reporting::Origin::LegacyMus, target->symbolInserts[insertOrder[ordinal]]->trackingBefore, block);
+            reportInsertField(
+                reporting, name, "trackingAfter", Reporting::Origin::LegacyMus, target->symbolInserts[insertOrder[ordinal]]->trackingAfter, block);
             reportInsertField(reporting, name, "baselineShiftPerc", Reporting::Origin::LegacyMus,
                 target->symbolInserts[insertOrder[ordinal]]->baselineShiftPerc, block);
-            reportInsertField(
-                reporting, name, "symFont.fontId", Reporting::Origin::LegacyMus, fontId, block);
-            reportInsertField(
-                reporting, name, "symFont.fontSize", Reporting::Origin::LegacyMus, fontSize, block);
-            reportInsertField(
-                reporting, name, "symFont.effects", Reporting::Origin::LegacyMus, effects, block);
+            reportInsertField(reporting, name, "symFont.fontId", Reporting::Origin::LegacyMus, fontId, block);
+            reportInsertField(reporting, name, "symFont.fontSize", Reporting::Origin::LegacyMus, fontSize, block);
+            reportInsertField(reporting, name, "symFont.effects", Reporting::Origin::LegacyMus, effects, block);
         });
         // The byte the source stored, not the code point it decoded to, matching how the
         // clef and stem-connection reports name the same kind of value.
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
-            reportInsertField(reporting, name, "symChar", Reporting::Origin::LegacyMus,
-                static_cast<std::int64_t>(storedChar), block);
+            reportInsertField(reporting, name, "symChar", Reporting::Origin::LegacyMus, static_cast<std::int64_t>(storedChar), block);
         });
     }
     return true;
@@ -699,8 +621,7 @@ bool captureSymbolInserts(const records::LegacyRecordIndex& index, const SourceP
 /// including zero: zero is the default-music-font sentinel, and the helper both returns it
 /// unchanged and guarantees a definition exists at zero in this document, which is exactly the
 /// part a caller that skipped the call for zero would leave undone.
-void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
-    const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
+void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
     musx::factory::ConstructionContext& construction)
 {
     const auto pooled = document->getOptions()->get<TextTarget>();
@@ -720,44 +641,33 @@ void reportSeededSymbolInserts(const musx::dom::DocumentPtr& document,
 
         musx::dom::Cmper fontId = 0;
         if (insert.symFont) {
-            const auto referenceFont
-                = referenceDocument->getOthers()->get<musx::dom::others::FontDefinition>(
-                    musx::dom::SCORE_PARTID, insert.symFont->fontId);
+            const auto referenceFont =
+                referenceDocument->getOthers()->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, insert.symFont->fontId);
             if (!referenceFont) {
-                report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "The Finale 27 " + std::string(name)
-                        + " insert names a font definition the baseline does not carry;"
-                          " substituted font id 0."});
-            } else if (const auto resolved
-                = musx::dom::importFontDefinitionInto(
-                    document, referenceFont, baselineObjectReporter(report))) {
+                report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "The Finale 27 " + std::string(name)
+                                                                + " insert names a font definition the baseline does not carry;"
+                                                                  " substituted font id 0."});
+            } else if (const auto resolved = musx::dom::importFontDefinitionInto(document, referenceFont, baselineObjectReporter(report))) {
                 fontId = *resolved;
             } else {
                 report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "No free font comparator remained for Finale 27 font \""
-                        + referenceFont->name + "\"; substituted font id 0."});
+                    "No free font comparator remained for Finale 27 font \"" + referenceFont->name + "\"; substituted font id 0."});
             }
             insert.symFont->fontId = construction.assignFontId(fontId);
         }
 
         withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
             const InsertBlock absent;
-            reportInsertField(reporting, name, "trackingBefore", Reporting::Origin::Finale27Default,
-                insert.trackingBefore, absent);
-            reportInsertField(reporting, name, "trackingAfter", Reporting::Origin::Finale27Default,
-                insert.trackingAfter, absent);
-            reportInsertField(reporting, name, "baselineShiftPerc",
-                Reporting::Origin::Finale27Default, insert.baselineShiftPerc, absent);
-            reportInsertField(reporting, name, "symFont.fontId", Reporting::Origin::Finale27Default,
-                fontId, absent);
-            reportInsertField(reporting, name, "symFont.fontSize",
-                Reporting::Origin::Finale27Default, insert.symFont ? insert.symFont->fontSize : 0,
-                absent);
-            reportInsertField(reporting, name, "symFont.effects",
-                Reporting::Origin::Finale27Default,
+            reportInsertField(reporting, name, "trackingBefore", Reporting::Origin::Finale27Default, insert.trackingBefore, absent);
+            reportInsertField(reporting, name, "trackingAfter", Reporting::Origin::Finale27Default, insert.trackingAfter, absent);
+            reportInsertField(reporting, name, "baselineShiftPerc", Reporting::Origin::Finale27Default, insert.baselineShiftPerc, absent);
+            reportInsertField(reporting, name, "symFont.fontId", Reporting::Origin::Finale27Default, fontId, absent);
+            reportInsertField(
+                reporting, name, "symFont.fontSize", Reporting::Origin::Finale27Default, insert.symFont ? insert.symFont->fontSize : 0, absent);
+            reportInsertField(reporting, name, "symFont.effects", Reporting::Origin::Finale27Default,
                 insert.symFont ? insert.symFont->getEnigmaStyles() : 0, absent);
-            reportInsertField(reporting, name, "symChar", Reporting::Origin::Finale27Default,
-                static_cast<std::int64_t>(insert.symChar), absent);
+            reportInsertField(reporting, name, "symChar", Reporting::Origin::Finale27Default, static_cast<std::int64_t>(insert.symChar), absent);
         });
     }
 }
@@ -771,20 +681,14 @@ void importTextOptions(const ImportContext& context)
     // either way. A source that carries the block replaces all five together; one that does
     // not keeps the baseline's, which then need their font comparators translated into this
     // document's numbering and reporting as the synthesized defaults they are.
-    const bool recovered = captureSymbolInserts(
-        context.index, context.profile, context.document, context.report,
-        context.construction);
-    applyMappingTables({&textStampTable(), &textMetricsTable(), &textLayoutTable(),
-                           &lineSpacingPercentTable(), &lineSpacingEvpuTable(),
-                           &classTextStampTable(), &classTextMetricsTable(),
-                           &classTextLayoutTable(), &classLineSpacingPercentTable(),
-                           &classLineSpacingEvpuTable()},
+    const bool recovered = captureSymbolInserts(context.index, context.profile, context.document, context.report, context.construction);
+    applyMappingTables(
+        {&textStampTable(), &textMetricsTable(), &textLayoutTable(), &lineSpacingPercentTable(), &lineSpacingEvpuTable(), &classTextStampTable(),
+            &classTextMetricsTable(), &classTextLayoutTable(), &classLineSpacingPercentTable(), &classLineSpacingEvpuTable()},
         context.index, context.profile, context.document, context.report);
 
     if (!recovered) {
-        reportSeededSymbolInserts(
-            context.document, context.referenceDocument, context.report,
-            context.construction);
+        reportSeededSymbolInserts(context.document, context.referenceDocument, context.report, context.construction);
     }
 }
 

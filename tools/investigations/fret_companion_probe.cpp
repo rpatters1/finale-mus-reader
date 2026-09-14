@@ -25,9 +25,7 @@ void printElements(std::string_view xml, std::string_view elementName)
     while ((pos = xml.find(opening, pos)) != std::string_view::npos) {
         const auto openingEnd = xml.find('>', pos);
         const auto pairedClosing = xml.find(closing, openingEnd);
-        const auto end = openingEnd > pos && xml[openingEnd - 1] == '/'
-            ? openingEnd + 1
-            : pairedClosing + closing.size();
+        const auto end = openingEnd > pos && xml[openingEnd - 1] == '/' ? openingEnd + 1 : pairedClosing + closing.size();
         if (end <= xml.size()) {
             std::cout << xml.substr(pos, end - pos) << '\n';
         }
@@ -44,10 +42,8 @@ int main(int argc, char* argv[])
         return 2;
     }
 
-    const auto archive = finale_mus_reader::coverage::readCompanionArchive(
-        std::filesystem::path(argv[1]));
-    const std::string_view xml(reinterpret_cast<const char*>(archive.enigmaXml.data()),
-        archive.enigmaXml.size());
+    const auto archive = finale_mus_reader::coverage::readCompanionArchive(std::filesystem::path(argv[1]));
+    const std::string_view xml(reinterpret_cast<const char*>(archive.enigmaXml.data()), archive.enigmaXml.size());
     for (const auto elementName : fretElementNames) {
         if (argc == 3 && elementName != argv[2]) {
             continue;

@@ -23,17 +23,13 @@ Value observePartGlobals(const SurveyContext& ctx)
     using Target = PartGlobalsSurveyTarget;
     Value::Array result;
     for (const auto& globals : sourceInstances<Target>(ctx)) {
-        result.push_back(observe(*globals, ctx,
-            field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field("show_transposed", &Target::showTransposed),
-            field("scroll_view_i_ulist", &Target::scrollViewIUlist),
-            field("studio_view_i_ulist", &Target::studioViewIUlist),
-            field("special_part_extraction_i_u_list", &Target::specialPartExtractionIUList),
+        result.push_back(observe(*globals, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("show_transposed", &Target::showTransposed), field("scroll_view_i_ulist", &Target::scrollViewIUlist),
+            field("studio_view_i_ulist", &Target::studioViewIUlist), field("special_part_extraction_i_u_list", &Target::specialPartExtractionIUList),
             field("origin_showTransposed", partGlobalsOrigin("showTransposed")),
             field("origin_scrollViewIUlist", partGlobalsOrigin("scrollViewIUlist")),
             field("origin_studioViewIUlist", partGlobalsOrigin("studioViewIUlist")),
-            field("origin_specialPartExtractionIUList",
-                partGlobalsOrigin("specialPartExtractionIUList"))));
+            field("origin_specialPartExtractionIUList", partGlobalsOrigin("specialPartExtractionIUList"))));
     }
     return Value(std::move(result));
 }

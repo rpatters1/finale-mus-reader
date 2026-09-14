@@ -9,30 +9,49 @@ namespace finale_mus_reader {
 namespace coverage {
 std::string Value::toJson() const
 {
-    if (isNull()) return "null";
-    if (isBool()) return jsonBool(asBool());
-    if (isInteger()) return std::to_string(asInteger());
-    if (std::holds_alternative<double>(storage_)) return std::to_string(std::get<double>(storage_));
-    if (isString()) return jsonString(asString());
+    if (isNull()) {
+        return "null";
+    }
+    if (isBool()) {
+        return jsonBool(asBool());
+    }
+    if (isInteger()) {
+        return std::to_string(asInteger());
+    }
+    if (std::holds_alternative<double>(storage_)) {
+        return std::to_string(std::get<double>(storage_));
+    }
+    if (isString()) {
+        return jsonString(asString());
+    }
     std::string result;
     if (isArray() || isBlob()) {
         result = '[';
         bool first = true;
         const auto append = [&](const std::string& item) {
-            if (!first) result += ',';
+            if (!first) {
+                result += ',';
+            }
             first = false;
             result += item;
         };
-        if (isBlob())
-            for (const auto byte : asBlob()) append(std::to_string(byte));
-        else
-            for (const auto& item : asArray()) append(item.toJson());
+        if (isBlob()) {
+            for (const auto byte : asBlob()) {
+                append(std::to_string(byte));
+            }
+        } else {
+            for (const auto& item : asArray()) {
+                append(item.toJson());
+            }
+        }
         return result + ']';
     }
     result = '{';
     bool first = true;
     for (const auto& [key, value] : asObject()) {
-        if (!first) result += ',';
+        if (!first) {
+            result += ',';
+        }
         first = false;
         result += jsonString(key) + ':' + value.toJson();
     }
@@ -41,14 +60,18 @@ std::string Value::toJson() const
 
 const Value* Value::find(std::string_view key) const
 {
-    if (!isObject()) return nullptr;
+    if (!isObject()) {
+        return nullptr;
+    }
     const auto found = asObject().find(key);
     return found == asObject().end() ? nullptr : &found->second;
 }
 
 Value* Value::find(std::string_view key)
 {
-    if (!isObject()) return nullptr;
+    if (!isObject()) {
+        return nullptr;
+    }
     const auto found = asObject().find(key);
     return found == asObject().end() ? nullptr : &found->second;
 }

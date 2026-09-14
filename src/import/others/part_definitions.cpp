@@ -75,31 +75,26 @@ void applyScoreBehavior(const ImportContext& context, PartDefinitionTarget& targ
     target.copies = 1;
     target.printPart = true;
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<PartDefinitionTarget>(
-            musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
+        const auto key = reporting.template instanceKey<PartDefinitionTarget>(musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID);
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyBehavior);
-        for (const auto& [member, value] : {std::pair<const char*, std::int64_t>{"nameId", 0},
-                 {"partOrder", 0}, {"copies", 1}, {"printPart", 1}, {"extractPart", 0},
-                 {"applyFormat", 0}, {"needsRecalc", 0}, {"useAsSmpInst", 0}, {"smartMusicInst", 0},
-                 {"defaultNameStaff", 0}, {"defaultNameGroup", 0}}) {
-            reporting.report().setField(key, member,
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, value});
+        for (const auto& [member, value] : {std::pair<const char*, std::int64_t>{"nameId", 0}, {"partOrder", 0}, {"copies", 1}, {"printPart", 1},
+                 {"extractPart", 0}, {"applyFormat", 0}, {"needsRecalc", 0}, {"useAsSmpInst", 0}, {"smartMusicInst", 0}, {"defaultNameStaff", 0},
+                 {"defaultNameGroup", 0}}) {
+            reporting.report().setField(key, member, typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, value});
         }
     });
 }
 
 /// @brief Decodes one stored part definition.
-void reportPartDefinition(ImportReport& report, const PartDefinitionTarget& target,
-    const records::LegacyRow& row, records::LegacyTag identity, std::uint16_t partId,
-    musx::dom::Cmper cmper, std::int64_t defaultName, bool storesInstrument)
+void reportPartDefinition(ImportReport& report, const PartDefinitionTarget& target, const records::LegacyRow& row, records::LegacyTag identity,
+    std::uint16_t partId, musx::dom::Cmper cmper, std::int64_t defaultName, bool storesInstrument)
 {
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<PartDefinitionTarget>(partId, cmper);
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto reportField = [&](const char* member, std::size_t offset, std::int64_t stored) {
             reporting.report().setField(key, member,
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
-                    row.decodedOffset + offset, stored, identity});
+                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + offset, stored, identity});
         };
         reportField("nameId", nameIdOffset, target.nameId);
         reportField("partOrder", partOrderOffset, target.partOrder);
@@ -110,37 +105,33 @@ void reportPartDefinition(ImportReport& report, const PartDefinitionTarget& targ
         reportField("defaultNameStaff", defaultNameOffset, defaultName);
         reportField("defaultNameGroup", defaultNameOffset, defaultName);
         for (const auto* member : {"needsRecalc", "useAsSmpInst"}) {
-            reporting.report().setField(key, member,
-                typename Reporting::FieldInfo{
-                    Reporting::Origin::LegacyBehavior, 0, 0, !target.isScore()});
+            reporting.report().setField(key, member, typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, !target.isScore()});
         }
         if (storesInstrument) {
             reportField("smartMusicInst", smartMusicInstOffset, target.smartMusicInst);
         } else {
-            reporting.report().setField(key, "smartMusicInst",
-                typename Reporting::FieldInfo{
-                    Reporting::Origin::LegacyBehavior, 0, 0, target.smartMusicInst});
+            reporting.report().setField(
+                key, "smartMusicInst", typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, target.smartMusicInst});
         }
     });
 }
 
-void importOnePartDefinition(const ImportContext& context, const RecordFamilySource& source,
-    const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
+void importOnePartDefinition(
+    const ImportContext& context, const RecordFamilySource& source, const records::LegacyRow& row, std::uint16_t partId, std::uint16_t cmper)
 {
     const auto payload = source.pool->effectivePayloadOf(row);
     if (payload.size() < partDefinitionPayloadSize) {
-        context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
-            "Part definition " + std::to_string(cmper) + " is shorter than its layout."});
+        context.report.diagnostics.push_back(
+            {musx::util::Logger::LogLevel::Info, "Part definition " + std::to_string(cmper) + " is shorter than its layout."});
         return;
     }
-    auto instance = createOthersRecordTarget<PartDefinitionTarget>(
-        context.document, source, row, cmper);
-    if (!instance) return;
+    auto instance = createOthersRecordTarget<PartDefinitionTarget>(context.document, source, row, cmper);
+    if (!instance) {
+        return;
+    }
     auto* target = instance.get();
     const auto byteOrder = context.profile.byteOrder;
-    const auto word = [&](std::size_t offset) {
-        return static_cast<std::int16_t>(payloadWord(payload, offset, byteOrder));
-    };
+    const auto word = [&](std::size_t offset) { return static_cast<std::int16_t>(payloadWord(payload, offset, byteOrder)); };
     const auto flags = static_cast<std::uint16_t>(word(flagsOffset));
     const auto defaultName = word(defaultNameOffset);
     const bool storesInstrument = storesSmartMusicInstrument(context.profile);
@@ -161,13 +152,11 @@ void importOnePartDefinition(const ImportContext& context, const RecordFamilySou
     // behavior, so a bit later found to carry one of them is not silently overridden.
     target->needsRecalc = !target->isScore();
     target->useAsSmpInst = !target->isScore();
-    target->smartMusicInst = storesInstrument ? word(smartMusicInstOffset)
-        : (target->isScore() ? 0 : -1);
+    target->smartMusicInst = storesInstrument ? word(smartMusicInstOffset) : (target->isScore() ? 0 : -1);
     target->defaultNameStaff = defaultNameStaffOf(defaultName);
     target->defaultNameGroup = defaultNameGroupOf(defaultName);
 
-    reportPartDefinition(context.report, *target, row, source.identity, partId, cmper, defaultName,
-        storesInstrument);
+    reportPartDefinition(context.report, *target, row, source.identity, partId, cmper, defaultName, storesInstrument);
     context.document->getOthers()->add(PartDefinitionTarget::XmlNodeName, std::move(instance));
 }
 
@@ -176,8 +165,7 @@ void importOnePartDefinition(const ImportContext& context, const RecordFamilySou
 /// part that has it set from one that does not. Some other record may, which is what
 /// @ref ValueOrigin::Unmapped says and why the member is not synthesized here.
 template <typename Reporting>
-void reportUnmappedMembers(Reporting& reporting, const typename Reporting::InstanceKey& key,
-    const PartDefinitionTarget& target)
+void reportUnmappedMembers(Reporting& reporting, const typename Reporting::InstanceKey& key, const PartDefinitionTarget& target)
 {
     reporting.unmappedField(key, "unlinkInsts", target.unlinkInsts);
 }
@@ -189,13 +177,12 @@ void importPartDefinitions(const ImportContext& context)
     // Named directly rather than through @ref selectRecordFamilySource, because this class has
     // no fixed-row family for that helper to choose between.
     if (sourceMatches(context.profile, EpochMask::Zlib)) {
-        const RecordFamilySource source{
-            .pool = &context.index.getClassOthers(),
-            .identity = partDefinitionClass,
-            .classRecords = true};
+        const RecordFamilySource source{.pool = &context.index.getClassOthers(), .identity = partDefinitionClass, .classRecords = true};
         for (const auto [partId, cmper] : recordKeys(source)) {
             const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
-            if (rows.empty()) continue;
+            if (rows.empty()) {
+                continue;
+            }
             importOnePartDefinition(context, source, rows.front(), partId, cmper);
         }
     }
@@ -206,23 +193,17 @@ void importPartDefinitions(const ImportContext& context)
     // Deliberately not @ref musx::dom::others::PartDefinition::getScore, which raises an integrity
     // error when the score part is absent. Absent is precisely the case being tested for here, and
     // every pre-zlib document would log one on the way to being handled correctly.
-    if (!context.document->getOthers()->get<PartDefinitionTarget>(
-            musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID)) {
-        auto instance = std::make_shared<PartDefinitionTarget>(context.document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All,
-            musx::dom::SCORE_PARTID);
+    if (!context.document->getOthers()->get<PartDefinitionTarget>(musx::dom::SCORE_PARTID, musx::dom::SCORE_PARTID)) {
+        auto instance = std::make_shared<PartDefinitionTarget>(
+            context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::SCORE_PARTID);
         applyScoreBehavior(context, *instance);
-        context.document->getOthers()->add(PartDefinitionTarget::XmlNodeName,
-            std::move(instance));
+        context.document->getOthers()->add(PartDefinitionTarget::XmlNodeName, std::move(instance));
     }
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        for (const auto& instance :
-            context.document->getOthers()->getAllSources<PartDefinitionTarget>()) {
-            reportUnmappedMembers(reporting,
-                reporting.template instanceKey<PartDefinitionTarget>(
-                    instance->getSourcePartId(), instance->getCmper()),
-                *instance);
+        for (const auto& instance : context.document->getOthers()->getAllSources<PartDefinitionTarget>()) {
+            reportUnmappedMembers(
+                reporting, reporting.template instanceKey<PartDefinitionTarget>(instance->getSourcePartId(), instance->getCmper()), *instance);
         }
     });
 }

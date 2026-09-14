@@ -46,28 +46,40 @@ int main(int argc, char** argv)
 
     std::string path;
     while (std::getline(list, path)) {
-        if (path.empty()) continue;
+        if (path.empty()) {
+            continue;
+        }
         std::ifstream in(path, std::ios::binary);
         std::vector<std::uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        if (data.empty()) { ++unreadable; continue; }
+        if (data.empty()) {
+            ++unreadable;
+            continue;
+        }
         try {
             const auto parsed = container::parse(data.data(), data.size());
             const auto index = records::LegacyRecordIndex::build(parsed);
             const auto tag = records::packTag("FN");
             for (const auto cmper : index.getOthers().cmpersForTag(tag)) {
                 const auto fam = index.getOthers().getArray(tag, cmper);
-                if (fam.empty()) continue;
+                if (fam.empty()) {
+                    continue;
+                }
                 const auto w0 = static_cast<std::uint16_t>(fam[0].words[0]);
                 const int nibble = w0 >> 12;
                 // 1 is the Mac bank and 2 the Windows bank; anything else is a
                 // name row rather than the header incidence.
-                if (nibble != 1 && nibble != 2) continue;
+                if (nibble != 1 && nibble != 2) {
+                    continue;
+                }
                 ++headers;
                 const auto w1 = static_cast<std::uint16_t>(fam[0].words[1]);
                 ++word1[w1];
                 byBank[nibble == 1 ? "Mac" : "Win"][w1]++;
-                for (int i = 2; i < 6; ++i)
-                    if (fam[0].words[i]) ++nonzeroSlot[i];
+                for (int i = 2; i < 6; ++i) {
+                    if (fam[0].words[i]) {
+                        ++nonzeroSlot[i];
+                    }
+                }
             }
         } catch (const std::exception&) {
             ++unreadable;
@@ -76,17 +88,23 @@ int main(int argc, char** argv)
 
     std::printf("header incidences examined: %ld  (files skipped: %ld)\n\n", headers, unreadable);
     std::printf("word1 (pitch/family) distribution:\n");
-    for (const auto& [v, n] : word1)
+    for (const auto& [v, n] : word1) {
         std::printf("   0x%04x (%6u)  %8ld  %5.2f%%\n", v, v, n, 100.0 * double(n) / double(headers));
+    }
     std::printf("\nby bank:\n");
     for (const auto& [bank, m] : byBank) {
         std::printf("   %s:", bank.c_str());
-        for (const auto& [v, n] : m) std::printf(" 0x%04x=%ld", v, n);
+        for (const auto& [v, n] : m) {
+            std::printf(" 0x%04x=%ld", v, n);
+        }
         std::printf("\n");
     }
     std::printf("\nnon-zero counts in words 2-5:\n");
-    if (nonzeroSlot.empty()) std::printf("   none  (the unused-words claim still holds)\n");
-    for (const auto& [slot, n] : nonzeroSlot)
+    if (nonzeroSlot.empty()) {
+        std::printf("   none  (the unused-words claim still holds)\n");
+    }
+    for (const auto& [slot, n] : nonzeroSlot) {
         std::printf("   word %d: %ld   <- falsifies the unused-words claim\n", slot, n);
+    }
     return 0;
 }

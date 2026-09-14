@@ -238,30 +238,29 @@ std::vector<CounterMeasurement> Session::counters() const
 }
 
 Scope::Scope(Phase phase)
-    : session_(activeSession), phase_(phase),
-      started_(session_ ? std::chrono::steady_clock::now()
-                       : std::chrono::steady_clock::time_point{})
-{
-}
+    : session_(activeSession), phase_(phase), started_(session_ ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{})
+{}
 
 Scope::~Scope()
 {
-    if (!session_) return;
-    const std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::steady_clock::now() - started_;
+    if (!session_) {
+        return;
+    }
+    const std::chrono::duration<double, std::milli> elapsed = std::chrono::steady_clock::now() - started_;
     session_->record(phase_, elapsed.count());
 }
 
 ContainerAttempt::ContainerAttempt(ContainerCandidate candidate, bool bigEndian)
-    : session_(activeSession), measurement_{.candidate = candidate, .bigEndian = bigEndian},
-      started_(session_ ? std::chrono::steady_clock::now()
-                       : std::chrono::steady_clock::time_point{})
-{
-}
+    : session_(activeSession),
+      measurement_{.candidate = candidate, .bigEndian = bigEndian},
+      started_(session_ ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{})
+{}
 
 ContainerAttempt::~ContainerAttempt()
 {
-    if (!session_ || finished_) return;
+    if (!session_ || finished_) {
+        return;
+    }
     finish(ContainerAttemptResult::Incomplete);
 }
 
@@ -279,10 +278,11 @@ void ContainerAttempt::decompressionSucceeded(std::size_t decompressedBytes)
 
 void ContainerAttempt::finish(ContainerAttemptResult result)
 {
-    if (!session_ || finished_) return;
+    if (!session_ || finished_) {
+        return;
+    }
     measurement_.result = result;
-    const std::chrono::duration<double, std::milli> elapsed =
-        std::chrono::steady_clock::now() - started_;
+    const std::chrono::duration<double, std::milli> elapsed = std::chrono::steady_clock::now() - started_;
     measurement_.durationMs = elapsed.count();
     session_->record(std::move(measurement_));
     finished_ = true;
@@ -290,7 +290,9 @@ void ContainerAttempt::finish(ContainerAttemptResult result)
 
 void increment(Counter counter, std::size_t amount)
 {
-    if (activeSession) activeSession->increment(counter, amount);
+    if (activeSession) {
+        activeSession->increment(counter, amount);
+    }
 }
 
 #else
@@ -313,9 +315,7 @@ std::vector<CounterMeasurement> Session::counters() const
     return {};
 }
 
-void increment(Counter, std::size_t)
-{
-}
+void increment(Counter, std::size_t) {}
 
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 

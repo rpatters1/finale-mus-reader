@@ -13,7 +13,8 @@ namespace {
 
 using namespace finale_mus_reader::coverage;
 
-template <typename Target> Value observeClefOctaveArrays(const SurveyContext& ctx)
+template <typename Target>
+Value observeClefOctaveArrays(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& item : sourceInstances<Target>(ctx)) {
@@ -25,11 +26,9 @@ template <typename Target> Value observeClefOctaveArrays(const SurveyContext& ct
                 {"origin", fieldOrigin<Target>(ctx, member, *item)},
             });
         }
-        result.emplace_back(observe(*item, ctx,
-            field("cmper1", [](const Target& value) { return value.getCmper1(); }),
+        result.emplace_back(observe(*item, ctx, field("cmper1", [](const Target& value) { return value.getCmper1(); }),
             field("cmper2", [](const Target& value) { return value.getCmper2(); }),
-            field(
-                "values", [values = std::move(values)](const Target&) { return Value(values); })));
+            field("values", [values = std::move(values)](const Target&) { return Value(values); })));
     }
     return result;
 }

@@ -51,13 +51,14 @@ int main(int argc, char** argv)
     std::printf("corpus_id\tepoch\tsaving_product\tsource_version\tselector22\tselector43\tselector46\tselectors\n");
     std::string line;
     while (std::getline(list, line)) {
-        if (line.empty() || line.front() == '#') continue;
+        if (line.empty() || line.front() == '#') {
+            continue;
+        }
         const auto tab = line.find('\t');
         const std::string corpusId = tab == std::string::npos ? "" : line.substr(0, tab);
         const std::string path = tab == std::string::npos ? line : line.substr(tab + 1);
         std::ifstream in(path, std::ios::binary);
-        std::vector<std::uint8_t> data(
-            (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::vector<std::uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
         if (data.empty()) {
             std::printf("%s\tUNREADABLE\t\t\t\t\t\n", corpusId.c_str());
             continue;
@@ -73,12 +74,10 @@ int main(int argc, char** argv)
             profile.byteOrder = parsed.byteOrder;
             profile.platform = report.sourcePlatform;
 
-            std::printf("%s\t%d\t%s\t", corpusId.c_str(),
-                static_cast<int>(parsed.formatEpoch), report.savingProduct.c_str());
+            std::printf("%s\t%d\t%s\t", corpusId.c_str(), static_cast<int>(parsed.formatEpoch), report.savingProduct.c_str());
             if (report.sourceVersion) {
                 const auto& version = *report.sourceVersion;
-                std::printf("%u.%u.%u.%u", version.major, version.minor,
-                    version.maint, version.build);
+                std::printf("%u.%u.%u.%u", version.major, version.minor, version.maint, version.build);
             }
             for (const auto selector : alternateNotationProbeSelectors) {
                 std::printf("\t");
@@ -87,7 +86,9 @@ int main(int argc, char** argv)
             std::printf("\t");
             bool firstSelector = true;
             for (std::uint16_t selector = 0; selector < 100; ++selector) {
-                if (!readGlobalWords(index, profile, selector).present) continue;
+                if (!readGlobalWords(index, profile, selector).present) {
+                    continue;
+                }
                 std::printf("%s%u", firstSelector ? "" : ",", selector);
                 firstSelector = false;
             }

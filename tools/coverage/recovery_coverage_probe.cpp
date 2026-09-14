@@ -54,14 +54,14 @@
 #include <sys/xattr.h>
 #endif // defined(__APPLE__)
 
-#include "coverage/context.h"
 #include "coverage/comparison.h"
+#include "coverage/context.h"
 #include "coverage/json.h"
 #include "coverage/registry.h"
 #include "coverage/support/companion_path.h"
 #include "finale_mus_reader/reader.h"
-#include "reader/timing.h"
 #include "musx/musx.h"
+#include "reader/timing.h"
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
 #endif // !defined(MUSX_USE_PUGIXML)
@@ -98,8 +98,7 @@ void writeTimingValue(std::ostream& out, double durationMs)
     out << std::fixed << std::setprecision(3) << durationMs;
 }
 
-void writeSurveyTimings(std::ostream& out,
-    const finale_mus_reader::coverage::SurveyTimings& timings)
+void writeSurveyTimings(std::ostream& out, const finale_mus_reader::coverage::SurveyTimings& timings)
 {
     out << "\"surveyors_ms\":";
     writeTimingValue(out, timings.durationMs);
@@ -113,73 +112,59 @@ void writeSurveyTimings(std::ostream& out,
     out << '}';
 }
 
-void writeReaderPhaseTimings(std::ostream& out,
-    const std::vector<finale_mus_reader::timing::Measurement>& measurements)
+void writeReaderPhaseTimings(std::ostream& out, const std::vector<finale_mus_reader::timing::Measurement>& measurements)
 {
     out << "\"reader_phases\":{";
     bool first = true;
     for (const auto& measurement : measurements) {
-        out << (first ? "" : ",")
-            << finale_mus_reader::coverage::jsonString(
-                   finale_mus_reader::timing::phaseName(measurement.phase))
-            << ':';
+        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(finale_mus_reader::timing::phaseName(measurement.phase)) << ':';
         writeTimingValue(out, measurement.durationMs);
         first = false;
     }
     out << '}';
 }
 
-void writeReaderCounters(std::ostream& out,
-    const std::vector<finale_mus_reader::timing::CounterMeasurement>& counters)
+void writeReaderCounters(std::ostream& out, const std::vector<finale_mus_reader::timing::CounterMeasurement>& counters)
 {
     out << "\"reader_counters\":{";
     bool first = true;
     for (const auto& counter : counters) {
-        out << (first ? "" : ",")
-            << finale_mus_reader::coverage::jsonString(
-                   finale_mus_reader::timing::counterName(counter.counter))
-            << ':' << counter.value;
+        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(finale_mus_reader::timing::counterName(counter.counter)) << ':'
+            << counter.value;
         first = false;
     }
     out << '}';
 }
 
-void writeSurveyErrors(std::ostream& out,
-    const std::map<std::string, std::string>& errors)
+void writeSurveyErrors(std::ostream& out, const std::map<std::string, std::string>& errors)
 {
-    if (errors.empty()) return;
+    if (errors.empty()) {
+        return;
+    }
     out << ",\"survey_errors\":{";
     bool first = true;
     for (const auto& [surveyor, message] : errors) {
-        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(surveyor)
-            << ':' << finale_mus_reader::coverage::jsonString(message);
+        out << (first ? "" : ",") << finale_mus_reader::coverage::jsonString(surveyor) << ':' << finale_mus_reader::coverage::jsonString(message);
         first = false;
     }
     out << '}';
 }
 
-void writeContainerAttempts(std::ostream& out,
-    const std::vector<finale_mus_reader::timing::ContainerAttemptMeasurement>& attempts)
+void writeContainerAttempts(std::ostream& out, const std::vector<finale_mus_reader::timing::ContainerAttemptMeasurement>& attempts)
 {
     out << "\"container_attempts\":[";
     bool first = true;
     for (const auto& attempt : attempts) {
         out << (first ? "" : ",") << '{'
-            << "\"candidate\":" << finale_mus_reader::coverage::jsonString(
-                   finale_mus_reader::timing::containerCandidateName(attempt.candidate))
+            << "\"candidate\":" << finale_mus_reader::coverage::jsonString(finale_mus_reader::timing::containerCandidateName(attempt.candidate))
             << ",\"byte_order\":\"" << (attempt.bigEndian ? "big" : "little") << '"'
-            << ",\"result\":" << finale_mus_reader::coverage::jsonString(
-                   finale_mus_reader::timing::containerAttemptResultName(attempt.result))
+            << ",\"result\":" << finale_mus_reader::coverage::jsonString(finale_mus_reader::timing::containerAttemptResultName(attempt.result))
             << ",\"duration_ms\":";
         writeTimingValue(out, attempt.durationMs);
-        out << ",\"decompression_calls\":" << attempt.decompressionCalls
-            << ",\"successful_blocks\":" << attempt.decompressedBlocks
-            << ",\"compressed_input_bytes\":" << attempt.compressedInputBytes
-            << ",\"decompressed_bytes\":" << attempt.decompressedBytes;
+        out << ",\"decompression_calls\":" << attempt.decompressionCalls << ",\"successful_blocks\":" << attempt.decompressedBlocks
+            << ",\"compressed_input_bytes\":" << attempt.compressedInputBytes << ",\"decompressed_bytes\":" << attempt.decompressedBytes;
         if (attempt.decompressedBlocks != 0) {
-            out << ",\"disposition\":\""
-                << (attempt.result == finale_mus_reader::timing::ContainerAttemptResult::Accepted
-                        ? "retained" : "discarded")
+            out << ",\"disposition\":\"" << (attempt.result == finale_mus_reader::timing::ContainerAttemptResult::Accepted ? "retained" : "discarded")
                 << '"';
         }
         out << '}';
@@ -203,12 +188,11 @@ int diagnosticRank(LogLevel level)
 
 void printUsage()
 {
-    std::fprintf(stderr,
-        "usage: recovery_coverage_probe [-h|--help] "
-        "[--min-diagnostic-level=verbose|info|warning|error] "
-        "[--mac-symbol-fonts=path] [--percussion-mapping-xml=path] [--strict-deferred] "
-        "[--include-timings] [--progress] "
-        "<corpus-tsv> <output-jsonl>\n");
+    std::fprintf(stderr, "usage: recovery_coverage_probe [-h|--help] "
+                         "[--min-diagnostic-level=verbose|info|warning|error] "
+                         "[--mac-symbol-fonts=path] [--percussion-mapping-xml=path] [--strict-deferred] "
+                         "[--include-timings] [--progress] "
+                         "<corpus-tsv> <output-jsonl>\n");
 }
 
 // Keep this in sync with Options and parseOptions(): every flag accepted there must be
@@ -216,55 +200,54 @@ void printUsage()
 // the other silently drifts -- it still works, it just stops being discoverable.
 void printHelp()
 {
-    std::fprintf(stdout,
-        "recovery_coverage_probe -- survey what the reader recovers across a corpus\n"
-        "\n"
-        "usage: recovery_coverage_probe [options] <corpus-tsv> <output-jsonl>\n"
-        "\n"
-        "arguments:\n"
-        "  <corpus-tsv>    TSV of corpus_id<TAB>source_path rows, one per document. A\n"
-        "                  blank line or one starting with '#' is skipped, so a whole\n"
-        "                  corpus can be commented out as a block. A line with no tab\n"
-        "                  instead names another corpus TSV to pull rows from, so this\n"
-        "                  can equally be a manifest selecting among several corpora. A\n"
-        "                  '#root:' line declares that corpus's root directory, used to\n"
-        "                  shorten a FAILED line's path; it is never printed itself. A\n"
-        "                  '#companion:' line, formatted '#companion: <dir-name> <suffix>',\n"
-        "                  declares one of that corpus's companion-naming conventions: a\n"
-        "                  source dir/name.mus pairs with dir/<dir-name>/name<suffix>.\n"
-        "                  If both name and name.mus exist, -finale27 companions use\n"
-        "                  .from-no-extension and .from-mus. An older -exports companion\n"
-        "                  belongs to name.mus; the extensionless source cannot use it.\n"
-        "                  Repeatable, for a corpus whose convention changed over time --\n"
-        "                  each row tries them in the order declared and uses the first\n"
-        "                  whose file actually exists. When one is found and the source\n"
-        "                  imports, that companion is surveyed too and nested under\n"
-        "                  \"companion\" in the same row.\n"
-        "                  A path ending in .mus, or with no extension at all, is read\n"
-        "                  directly as a single source instead of a corpus list.\n"
-        "  <output-jsonl>  Path to write one JSON object per document.\n"
-        "\n"
-        "options:\n"
-        "  --min-diagnostic-level=verbose|info|warning|error\n"
-        "                  Drop reader diagnostics below this level on stderr instead\n"
-        "                  of printing them. Default: verbose (nothing is dropped).\n"
-        "  --strict-deferred\n"
-        "                  Report deferred-recovery differences as unexpected instead of\n"
-        "                  classifying them. A deferred-recovery difference is one a musxdom\n"
-        "                  class the reader does not yet recover would settle, so the count is\n"
-        "                  the recovery work still owed rather than a property of the format.\n"
-        "  --mac-symbol-fonts=path\n"
-        "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
-        "                  contents to the reader for symbol-glyph decoding.\n"
-        "  --percussion-mapping-xml=path\n"
-        "                  Read a Finale MIDI Device Annotation XML file and supply its\n"
-        "                  named percussion tables to the reader. Repeatable.\n"
-        "  --include-timings\n"
-        "                  Include detailed reader, container, and surveyor timings in\n"
-        "                  each JSON row. They are omitted by default.\n"
-        "  --progress      Print \"Processed X of T\" to stdout, updated in place, as\n"
-        "                  documents are read.\n"
-        "  -h, --help      Print this help and exit.\n");
+    std::fprintf(stdout, "recovery_coverage_probe -- survey what the reader recovers across a corpus\n"
+                         "\n"
+                         "usage: recovery_coverage_probe [options] <corpus-tsv> <output-jsonl>\n"
+                         "\n"
+                         "arguments:\n"
+                         "  <corpus-tsv>    TSV of corpus_id<TAB>source_path rows, one per document. A\n"
+                         "                  blank line or one starting with '#' is skipped, so a whole\n"
+                         "                  corpus can be commented out as a block. A line with no tab\n"
+                         "                  instead names another corpus TSV to pull rows from, so this\n"
+                         "                  can equally be a manifest selecting among several corpora. A\n"
+                         "                  '#root:' line declares that corpus's root directory, used to\n"
+                         "                  shorten a FAILED line's path; it is never printed itself. A\n"
+                         "                  '#companion:' line, formatted '#companion: <dir-name> <suffix>',\n"
+                         "                  declares one of that corpus's companion-naming conventions: a\n"
+                         "                  source dir/name.mus pairs with dir/<dir-name>/name<suffix>.\n"
+                         "                  If both name and name.mus exist, -finale27 companions use\n"
+                         "                  .from-no-extension and .from-mus. An older -exports companion\n"
+                         "                  belongs to name.mus; the extensionless source cannot use it.\n"
+                         "                  Repeatable, for a corpus whose convention changed over time --\n"
+                         "                  each row tries them in the order declared and uses the first\n"
+                         "                  whose file actually exists. When one is found and the source\n"
+                         "                  imports, that companion is surveyed too and nested under\n"
+                         "                  \"companion\" in the same row.\n"
+                         "                  A path ending in .mus, or with no extension at all, is read\n"
+                         "                  directly as a single source instead of a corpus list.\n"
+                         "  <output-jsonl>  Path to write one JSON object per document.\n"
+                         "\n"
+                         "options:\n"
+                         "  --min-diagnostic-level=verbose|info|warning|error\n"
+                         "                  Drop reader diagnostics below this level on stderr instead\n"
+                         "                  of printing them. Default: verbose (nothing is dropped).\n"
+                         "  --strict-deferred\n"
+                         "                  Report deferred-recovery differences as unexpected instead of\n"
+                         "                  classifying them. A deferred-recovery difference is one a musxdom\n"
+                         "                  class the reader does not yet recover would settle, so the count is\n"
+                         "                  the recovery work still owed rather than a property of the format.\n"
+                         "  --mac-symbol-fonts=path\n"
+                         "                  Read Finale's MacSymbolFonts.txt from path and supply its\n"
+                         "                  contents to the reader for symbol-glyph decoding.\n"
+                         "  --percussion-mapping-xml=path\n"
+                         "                  Read a Finale MIDI Device Annotation XML file and supply its\n"
+                         "                  named percussion tables to the reader. Repeatable.\n"
+                         "  --include-timings\n"
+                         "                  Include detailed reader, container, and surveyor timings in\n"
+                         "                  each JSON row. They are omitted by default.\n"
+                         "  --progress      Print \"Processed X of T\" to stdout, updated in place, as\n"
+                         "                  documents are read.\n"
+                         "  -h, --help      Print this help and exit.\n");
 }
 
 // Parses argv into Options. An unrecognized value for a recognized option is reported and
@@ -292,14 +275,16 @@ std::optional<Options> parseOptions(int argc, char** argv)
             options.includeTimings = true;
         } else if (arg.substr(0, levelFlag.size()) == levelFlag) {
             const auto value = arg.substr(levelFlag.size());
-            if (value == "verbose") options.minDiagnosticLevel = LogLevel::Verbose;
-            else if (value == "info") options.minDiagnosticLevel = LogLevel::Info;
-            else if (value == "warning") options.minDiagnosticLevel = LogLevel::Warning;
-            else if (value == "error") options.minDiagnosticLevel = LogLevel::Error;
-            else {
-                std::fprintf(stderr,
-                    "unrecognized --min-diagnostic-level value: %.*s (ignoring)\n",
-                    static_cast<int>(value.size()), value.data());
+            if (value == "verbose") {
+                options.minDiagnosticLevel = LogLevel::Verbose;
+            } else if (value == "info") {
+                options.minDiagnosticLevel = LogLevel::Info;
+            } else if (value == "warning") {
+                options.minDiagnosticLevel = LogLevel::Warning;
+            } else if (value == "error") {
+                options.minDiagnosticLevel = LogLevel::Error;
+            } else {
+                std::fprintf(stderr, "unrecognized --min-diagnostic-level value: %.*s (ignoring)\n", static_cast<int>(value.size()), value.data());
             }
         } else if (arg.substr(0, symbolFontsFlag.size()) == symbolFontsFlag) {
             options.macSymbolFontsPath = std::string(arg.substr(symbolFontsFlag.size()));
@@ -327,28 +312,23 @@ std::optional<Options> parseOptions(int argc, char** argv)
     return options;
 }
 
-std::optional<std::vector<std::uint8_t>> readResourceFile(
-    const std::string& path, std::string_view description)
+std::optional<std::vector<std::uint8_t>> readResourceFile(const std::string& path, std::string_view description)
 {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
-        std::fprintf(stderr, "cannot open %.*s file: %s\n",
-            int(description.size()), description.data(), path.c_str());
+        std::fprintf(stderr, "cannot open %.*s file: %s\n", int(description.size()), description.data(), path.c_str());
         return std::nullopt;
     }
     const auto end = input.tellg();
-    if (end < 0 || std::uintmax_t(end)
-            > std::uintmax_t((std::numeric_limits<std::streamsize>::max)())) {
-        std::fprintf(stderr, "%.*s file is too large: %s\n",
-            int(description.size()), description.data(), path.c_str());
+    if (end < 0 || std::uintmax_t(end) > std::uintmax_t((std::numeric_limits<std::streamsize>::max)())) {
+        std::fprintf(stderr, "%.*s file is too large: %s\n", int(description.size()), description.data(), path.c_str());
         return std::nullopt;
     }
     std::vector<std::uint8_t> result(std::size_t(end), std::uint8_t{});
     input.seekg(0);
     input.read(reinterpret_cast<char*>(result.data()), std::streamsize(result.size()));
     if (!input && !result.empty()) {
-        std::fprintf(stderr, "cannot read %.*s file: %s\n",
-            int(description.size()), description.data(), path.c_str());
+        std::fprintf(stderr, "cannot read %.*s file: %s\n", int(description.size()), description.data(), path.c_str());
         return std::nullopt;
     }
     return result;
@@ -416,8 +396,7 @@ bool isSingleMusFile(const std::filesystem::path& path)
 // exist yet. Rows pulled from a referenced file are labeled with its own name rather than
 // the caller's, so nested corpora stay distinguishable from whichever manifest included
 // them, and its own `#root:`/`#companion:` lines (if any) are recorded under that same label.
-std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& label,
-    std::map<std::string, std::filesystem::path>& roots,
+std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& label, std::map<std::string, std::filesystem::path>& roots,
     std::map<std::string, std::vector<CompanionConvention>>& companions)
 {
     constexpr std::string_view rootDirective = "#root:";
@@ -425,7 +404,9 @@ std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& lab
     std::vector<CorpusRow> rows;
     std::string line;
     while (std::getline(list, line)) {
-        if (line.empty()) continue;
+        if (line.empty()) {
+            continue;
+        }
         if (line.substr(0, rootDirective.size()) == rootDirective) {
             auto value = line.substr(rootDirective.size());
             while (!value.empty() && value.front() == ' ') {
@@ -443,13 +424,13 @@ std::vector<CorpusRow> readCorpusRows(std::istream& list, const std::string& lab
             if (space != std::string::npos) {
                 companions[label].push_back({value.substr(0, space), value.substr(space + 1)});
             } else {
-                std::fprintf(stderr,
-                    "malformed #companion: line for %s (want \"<dir-name> <suffix>\")\n",
-                    label.c_str());
+                std::fprintf(stderr, "malformed #companion: line for %s (want \"<dir-name> <suffix>\")\n", label.c_str());
             }
             continue;
         }
-        if (line[0] == '#') continue;
+        if (line[0] == '#') {
+            continue;
+        }
         const auto tab = line.find('\t');
         if (tab == std::string::npos) {
             std::ifstream nested(line);
@@ -482,8 +463,7 @@ struct CorpusSegment
 // Rows pulled from the same corpus are always contiguous -- readCorpusRows() appends one
 // referenced file's rows as one block -- so grouping consecutive equal labels recovers the
 // per-corpus boundaries and counts without readCorpusRows() having to track them itself.
-std::vector<CorpusSegment> segmentByCorpus(const std::vector<CorpusRow>& rows,
-    const std::map<std::string, std::filesystem::path>& roots,
+std::vector<CorpusSegment> segmentByCorpus(const std::vector<CorpusRow>& rows, const std::map<std::string, std::filesystem::path>& roots,
     const std::map<std::string, std::vector<CompanionConvention>>& companions)
 {
     std::vector<CorpusSegment> segments;
@@ -493,10 +473,8 @@ std::vector<CorpusSegment> segmentByCorpus(const std::vector<CorpusRow>& rows,
         } else {
             const auto foundRoot = roots.find(row.corpusLabel);
             const auto foundCompanion = companions.find(row.corpusLabel);
-            segments.push_back({row.corpusLabel, 1,
-                foundRoot != roots.end() ? foundRoot->second : std::filesystem::path{},
-                foundCompanion != companions.end() ? foundCompanion->second
-                    : std::vector<CompanionConvention>{}});
+            segments.push_back({row.corpusLabel, 1, foundRoot != roots.end() ? foundRoot->second : std::filesystem::path{},
+                foundCompanion != companions.end() ? foundCompanion->second : std::vector<CompanionConvention>{}});
         }
     }
     return segments;
@@ -522,19 +500,15 @@ std::string displayPathFor(const std::filesystem::path& path, const std::filesys
 // extensionless and `.mus` source names would map to the same basename, modern companions are
 // differentiated. The older exporter only recognized `.mus` sources, so its undifferentiated
 // candidate remains valid for that source but is never considered for the extensionless one.
-std::optional<std::filesystem::path> companionPathFor(
-    const std::filesystem::path& source, const std::vector<CompanionConvention>& conventions)
+std::optional<std::filesystem::path> companionPathFor(const std::filesystem::path& source, const std::vector<CompanionConvention>& conventions)
 {
     std::error_code conflictError;
-    const auto distinguishFromSibling = std::filesystem::exists(
-        finale_mus_reader::coverage::companionNameConflictFor(source), conflictError) &&
-        !conflictError;
+    const auto distinguishFromSibling =
+        std::filesystem::exists(finale_mus_reader::coverage::companionNameConflictFor(source), conflictError) && !conflictError;
     for (const auto& convention : conventions) {
-        const auto legacyMusCompanion = distinguishFromSibling &&
-            finale_mus_reader::coverage::hasMusExtension(source) &&
-            convention.dirName == "-exports" && convention.suffix == ".fin27.musx";
-        const auto baseName = finale_mus_reader::coverage::companionBaseNameFor(
-            source, distinguishFromSibling && !legacyMusCompanion);
+        const auto legacyMusCompanion = distinguishFromSibling && finale_mus_reader::coverage::hasMusExtension(source)
+                                        && convention.dirName == "-exports" && convention.suffix == ".fin27.musx";
+        const auto baseName = finale_mus_reader::coverage::companionBaseNameFor(source, distinguishFromSibling && !legacyMusCompanion);
         auto candidate = source.parent_path() / convention.dirName / (baseName + convention.suffix);
         std::error_code error;
         if (std::filesystem::exists(candidate, error) && !error) {
@@ -591,8 +565,7 @@ std::optional<std::string> macFinderFileType(const std::string& path)
 {
 #if defined(__APPLE__)
     unsigned char finderInfo[32];
-    const auto size = getxattr(
-        path.c_str(), "com.apple.FinderInfo", finderInfo, sizeof(finderInfo), 0, 0);
+    const auto size = getxattr(path.c_str(), "com.apple.FinderInfo", finderInfo, sizeof(finderInfo), 0, 0);
     if (size < 4) {
         return std::nullopt;
     }
@@ -615,15 +588,13 @@ std::optional<std::string> macFinderFileType(const std::string& path)
 // A mismatch means a row was silently skipped or double-counted somewhere above, which
 // nothing else here would otherwise surface, so it is reported regardless of --progress; it
 // still respects --min-diagnostic-level like any other warning.
-void printSegmentComplete(const std::string& label, std::size_t processedCount,
-    std::size_t expectedTotal, bool& dirty, LogLevel minLevel)
+void printSegmentComplete(const std::string& label, std::size_t processedCount, std::size_t expectedTotal, bool& dirty, LogLevel minLevel)
 {
     std::fprintf(stderr, "%sProcessed %zu of %zu\n", dirty ? "\r" : "", processedCount, expectedTotal);
     dirty = false;
     if (processedCount != expectedTotal && diagnosticRank(LogLevel::Warning) >= diagnosticRank(minLevel)) {
-        std::fprintf(stderr,
-            "[%s] Processed count does not match its expected total: processed %zu, expected %zu.\n",
-            label.c_str(), processedCount, expectedTotal);
+        std::fprintf(stderr, "[%s] Processed count does not match its expected total: processed %zu, expected %zu.\n", label.c_str(), processedCount,
+            expectedTotal);
     }
 }
 
@@ -650,14 +621,18 @@ int main(int argc, char** argv)
     std::vector<std::uint8_t> macSymbolFonts;
     if (!options->macSymbolFontsPath.empty()) {
         const auto contents = readResourceFile(options->macSymbolFontsPath, "MacSymbolFonts");
-        if (!contents) return 2;
+        if (!contents) {
+            return 2;
+        }
         macSymbolFonts = *contents;
     }
     std::vector<std::vector<std::uint8_t>> percussionMappingContents;
     percussionMappingContents.reserve(options->percussionMappingPaths.size());
     for (const auto& path : options->percussionMappingPaths) {
         const auto contents = readResourceFile(path, "percussion mapping XML");
-        if (!contents) return 2;
+        if (!contents) {
+            return 2;
+        }
         percussionMappingContents.push_back(*contents);
     }
     std::vector<std::span<const std::uint8_t>> percussionMappingBuffers;
@@ -665,8 +640,7 @@ int main(int argc, char** argv)
     for (const auto& contents : percussionMappingContents) {
         percussionMappingBuffers.emplace_back(contents);
     }
-    const finale_mus_reader::ReaderOptions readerOptions{
-        macSymbolFonts, percussionMappingBuffers};
+    const finale_mus_reader::ReaderOptions readerOptions{macSymbolFonts, percussionMappingBuffers};
     std::vector<CorpusRow> rows;
     std::map<std::string, std::filesystem::path> corpusRoots;
     std::map<std::string, std::vector<CompanionConvention>> corpusCompanions;
@@ -700,22 +674,22 @@ int main(int argc, char** argv)
             return std::nullopt;
         }
     }();
-    if (!reader) return 2;
+    if (!reader) {
+        return 2;
+    }
 
     std::cout << "Options:\n"
-        << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
-        << "  include timings: " << (options->includeTimings ? "yes" : "no") << '\n'
-        << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
-        << "  deferred recovery: "
-        << (options->strictDeferred ? "reported as unexpected" : "classified") << '\n'
-        << "  MacSymbolFonts: ";
+              << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
+              << "  include timings: " << (options->includeTimings ? "yes" : "no") << '\n'
+              << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
+              << "  deferred recovery: " << (options->strictDeferred ? "reported as unexpected" : "classified") << '\n'
+              << "  MacSymbolFonts: ";
     if (options->macSymbolFontsPath.empty()) {
         std::cout << "not supplied";
     } else {
         std::cout << std::quoted(options->macSymbolFontsPath);
     }
-    std::cout << '\n'
-        << "  percussion mapping XML:";
+    std::cout << '\n' << "  percussion mapping XML:";
     if (options->percussionMappingPaths.empty()) {
         std::cout << " not supplied\n";
     } else {
@@ -766,14 +740,14 @@ int main(int argc, char** argv)
     std::string currentCorpusId;
     std::vector<finale_mus_reader::Diagnostic> loggerCaptured;
     const auto minLevel = options->minDiagnosticLevel;
-    musx::util::Logger::setCallback(
-        [&currentCorpusId, minLevel, &progressLineDirty, &loggerCaptured]
-        (LogLevel level, const std::string& message) {
-            loggerCaptured.push_back({level, message});
-            if (diagnosticRank(level) < diagnosticRank(minLevel)) return;
-            endProgressLine(progressLineDirty);
-            std::fprintf(stderr, "[%s] %s\n", currentCorpusId.c_str(), message.c_str());
-        });
+    musx::util::Logger::setCallback([&currentCorpusId, minLevel, &progressLineDirty, &loggerCaptured](LogLevel level, const std::string& message) {
+        loggerCaptured.push_back({level, message});
+        if (diagnosticRank(level) < diagnosticRank(minLevel)) {
+            return;
+        }
+        endProgressLine(progressLineDirty);
+        std::fprintf(stderr, "[%s] %s\n", currentCorpusId.c_str(), message.c_str());
+    });
 
     for (const auto& row : rows) {
         const auto& corpusId = row.corpusId;
@@ -783,8 +757,7 @@ int main(int argc, char** argv)
 
         if (row.corpusLabel != currentLabel) {
             if (segmentIndex > 0) {
-                printSegmentComplete(currentLabel, processedInSegment, segmentTotal,
-                    progressLineDirty, options->minDiagnosticLevel);
+                printSegmentComplete(currentLabel, processedInSegment, segmentTotal, progressLineDirty, options->minDiagnosticLevel);
             }
             currentLabel = row.corpusLabel;
             const auto& segment = segments.at(segmentIndex++);
@@ -793,8 +766,7 @@ int main(int argc, char** argv)
             currentCompanion = segment.companions;
             segmentProgressWidth = progressLineWidth(segmentTotal);
             processedInSegment = 0;
-            std::cout << "== " << currentLabel << ": " << segmentTotal << " file"
-                << (segmentTotal == 1 ? "" : "s") << " ==\n";
+            std::cout << "== " << currentLabel << ": " << segmentTotal << " file" << (segmentTotal == 1 ? "" : "s") << " ==\n";
             if (options->showProgress) {
                 printProgress(0, segmentTotal, segmentProgressWidth, progressLineDirty);
             }
@@ -823,8 +795,7 @@ int main(int argc, char** argv)
             const auto readerStarted = std::chrono::steady_clock::now();
             timing::Session readerTimingSession;
             const auto result = reader->readWithReport(std::filesystem::path(path));
-            const std::chrono::duration<double, std::milli> readerElapsed =
-                std::chrono::steady_clock::now() - readerStarted;
+            const std::chrono::duration<double, std::milli> readerElapsed = std::chrono::steady_clock::now() - readerStarted;
             readerDurationMs = readerElapsed.count();
             readerPhaseTimings = readerTimingSession.measurements();
             readerCounters = readerTimingSession.counters();
@@ -837,10 +808,8 @@ int main(int argc, char** argv)
             out << ",\"status\":\"ok\""
                 << ",\"epoch\":" << jsonString(epochName(result.report.formatEpoch))
                 << ",\"saving_product\":" << jsonString(result.report.savingProduct)
-                << ",\"source_version\":" << jsonString(versionName(result.report))
-                << ",\"warning_count\":" << loggerCaptured.size();
-            auto survey = runAllSurveyors(
-                SurveyContext{result.document, *sourceReport});
+                << ",\"source_version\":" << jsonString(versionName(result.report)) << ",\"warning_count\":" << loggerCaptured.size();
+            auto survey = runAllSurveyors(SurveyContext{result.document, *sourceReport});
             sourceSurveyTimings = std::move(survey.timings);
             sourceSnapshot = std::move(survey.snapshot);
             writeSurveyErrors(out, survey.errors);
@@ -849,8 +818,7 @@ int main(int argc, char** argv)
             throw;
         } catch (const std::exception& error) {
             if (!readerDurationMs) {
-                const std::chrono::duration<double, std::milli> readerElapsed =
-                    std::chrono::steady_clock::now() - started;
+                const std::chrono::duration<double, std::milli> readerElapsed = std::chrono::steady_clock::now() - started;
                 readerDurationMs = readerElapsed.count();
             }
             ++failed;
@@ -861,8 +829,7 @@ int main(int argc, char** argv)
             // one can't be read, not just that it can't be. Reworded only when the failure
             // is the exact case that identification actually explains -- a library file
             // that happened to fail some other way would be misdescribed by this one.
-            if (finderType == "LIB3"
-                    && message == "This file does not appear to be a Finale MUS document.") {
+            if (finderType == "LIB3" && message == "This file does not appear to be a Finale MUS document.") {
                 message = "Unable to process Finale LIB file.";
             }
             // Console-only, as the survey policy requires for failures -- but relative to
@@ -871,17 +838,14 @@ int main(int argc, char** argv)
             // printing the directory structure above the corpus, so a terminal log or a
             // redirected run that ends up somewhere tracked leaks a lot less if it does.
             endProgressLine(progressLineDirty);
-            std::fprintf(stderr, "FAILED %s: %s\n    %s\n",
-                corpusId.c_str(), message.c_str(),
-                displayPathFor(path, currentRoot).c_str());
+            std::fprintf(stderr, "FAILED %s: %s\n    %s\n", corpusId.c_str(), message.c_str(), displayPathFor(path, currentRoot).c_str());
             out << ",\"status\":\"error\""
                 << ",\"error\":" << jsonString(message);
             if (finderType) {
                 out << ",\"finder_type\":" << jsonString(*finderType);
             }
         }
-        const std::chrono::duration<double, std::milli> elapsed =
-            std::chrono::steady_clock::now() - started;
+        const std::chrono::duration<double, std::milli> elapsed = std::chrono::steady_clock::now() - started;
         if (options->includeTimings) {
             out << ",\"duration_ms\":";
             writeTimingValue(out, elapsed.count());
@@ -927,31 +891,26 @@ int main(int argc, char** argv)
                     const auto documentLoadStarted = std::chrono::steady_clock::now();
                     const auto archiveStarted = std::chrono::steady_clock::now();
                     auto archive = readCompanionArchive(*companionPath);
-                    const std::chrono::duration<double, std::milli> archiveElapsed =
-                        std::chrono::steady_clock::now() - archiveStarted;
+                    const std::chrono::duration<double, std::milli> archiveElapsed = std::chrono::steady_clock::now() - archiveStarted;
                     archiveDurationMs = archiveElapsed.count();
                     const auto documentFactoryStarted = std::chrono::steady_clock::now();
                     musx::factory::DocumentFactory::CreateOptions::EmbeddedGraphicFiles graphicFiles;
                     for (auto& [name, bytes] : archive.embeddedGraphics) {
                         graphicFiles.push_back({std::move(name), std::move(bytes)});
                     }
-                    musx::factory::DocumentFactory::CreateOptions createOptions(*companionPath,
-                        archive.notationMetadata.value_or(std::vector<char>{}),
-                        std::move(graphicFiles));
+                    musx::factory::DocumentFactory::CreateOptions createOptions(
+                        *companionPath, archive.notationMetadata.value_or(std::vector<char>{}), std::move(graphicFiles));
                     companionDocument =
-                        musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(
-                            archive.enigmaXml, std::move(createOptions));
+                        musx::factory::DocumentFactory::create<musx::xml::pugi::Document>(archive.enigmaXml, std::move(createOptions));
                     const std::chrono::duration<double, std::milli> documentFactoryElapsed =
                         std::chrono::steady_clock::now() - documentFactoryStarted;
                     documentFactoryDurationMs = documentFactoryElapsed.count();
-                    const std::chrono::duration<double, std::milli> documentLoadElapsed =
-                        std::chrono::steady_clock::now() - documentLoadStarted;
+                    const std::chrono::duration<double, std::milli> documentLoadElapsed = std::chrono::steady_clock::now() - documentLoadStarted;
                     documentLoadDurationMs = documentLoadElapsed.count();
                     ImportReport emptyReport(sourceReport->formatEpoch);
                     companionOut << "\"status\":\"ok\""
-                        << ",\"warning_count\":" << loggerCaptured.size();
-                    auto survey = runAllSurveyors(
-                        SurveyContext{companionDocument, emptyReport});
+                                 << ",\"warning_count\":" << loggerCaptured.size();
+                    auto survey = runAllSurveyors(SurveyContext{companionDocument, emptyReport});
                     companionSurveyTimings = std::move(survey.timings);
                     companionSnapshot = std::move(survey.snapshot);
                     writeSurveyErrors(companionOut, survey.errors);
@@ -959,10 +918,9 @@ int main(int argc, char** argv)
                     throw;
                 } catch (const std::exception& error) {
                     companionOut << "\"status\":\"error\""
-                        << ",\"error\":" << jsonString(error.what());
+                                 << ",\"error\":" << jsonString(error.what());
                 }
-                const std::chrono::duration<double, std::milli> companionElapsed =
-                    std::chrono::steady_clock::now() - companionStarted;
+                const std::chrono::duration<double, std::milli> companionElapsed = std::chrono::steady_clock::now() - companionStarted;
                 if (options->includeTimings) {
                     companionOut << ",\"duration_ms\":";
                     writeTimingValue(companionOut, companionElapsed.count());
@@ -992,11 +950,9 @@ int main(int argc, char** argv)
                 out << ",\"companion\":{" << companionOut.str() << "}";
                 if (sourceSnapshot && companionSnapshot) {
                     out << ",\"comparison\":{";
-                    const auto comparison = compareSnapshots(*sourceSnapshot, *companionSnapshot,
-                        sourceDocument, companionDocument, sourceReport->formatEpoch,
-                        sourceReport->byteOrder,
-                        sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr,
-                        *sourceReport);
+                    const auto comparison =
+                        compareSnapshots(*sourceSnapshot, *companionSnapshot, sourceDocument, companionDocument, sourceReport->formatEpoch,
+                            sourceReport->byteOrder, sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr, *sourceReport);
                     writeCompactComparison(out, comparison);
                     out << '}';
                 }
@@ -1006,14 +962,12 @@ int main(int argc, char** argv)
         out << '}';
         output << out.str() << '\n';
 
-        if (options->showProgress
-                && (processedInSegment % progressInterval == 0 || processedInSegment == segmentTotal)) {
+        if (options->showProgress && (processedInSegment % progressInterval == 0 || processedInSegment == segmentTotal)) {
             printProgress(processedInSegment, segmentTotal, segmentProgressWidth, progressLineDirty);
         }
     }
     if (!rows.empty()) {
-        printSegmentComplete(currentLabel, processedInSegment, segmentTotal, progressLineDirty,
-            options->minDiagnosticLevel);
+        printSegmentComplete(currentLabel, processedInSegment, segmentTotal, progressLineDirty, options->minDiagnosticLevel);
     }
     std::fprintf(stderr, "read %zu documents, %zu failed\n", total, failed);
     return 0;

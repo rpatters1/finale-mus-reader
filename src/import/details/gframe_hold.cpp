@@ -34,18 +34,18 @@ constexpr std::uint16_t gframeHoldAlternateNotationMask = 0x000f;
 {
     // Preliminary: presumed flags occupy word 4 before Finale 98 and word 1 beginning
     // with Finale 98. No structural discriminator is known; an absent version uses word 4.
-    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale98)
-        ? gframeHoldFinale98FlagsSlot
-        : gframeHoldEarlyFlagsSlot;
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale98) ? gframeHoldFinale98FlagsSlot : gframeHoldEarlyFlagsSlot;
 }
 
-struct AlternateNotationStyle {
+struct AlternateNotationStyle
+{
     StaffStyleAssignStaffTarget::AlternateNotation notation;
     musx::dom::Cmper preferredStyleId;
     std::string_view name;
 };
 
-struct AlternateNotationRun {
+struct AlternateNotationRun
+{
     std::uint16_t partId{};
     musx::dom::Cmper staffId{};
     musx::dom::MeasCmper startMeas{};
@@ -56,36 +56,24 @@ struct AlternateNotationRun {
 };
 
 constexpr std::array canonicalAlternateNotationStyles{
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Normal,
-                           musx::dom::Cmper{1}, "Normal Notation"},
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::SlashBeats,
-                           musx::dom::Cmper{2}, "Slash Notation"},
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Rhythmic,
-                           musx::dom::Cmper{3}, "Rhythmic Notation"},
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::OneBarRepeat,
-                           musx::dom::Cmper{4}, "One Bar Repeats"},
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::TwoBarRepeat,
-                           musx::dom::Cmper{5}, "Two Bar Repeats"},
-    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Blank,
-                           musx::dom::Cmper{6}, "Blank Notation"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Normal, musx::dom::Cmper{1}, "Normal Notation"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::SlashBeats, musx::dom::Cmper{2}, "Slash Notation"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Rhythmic, musx::dom::Cmper{3}, "Rhythmic Notation"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::OneBarRepeat, musx::dom::Cmper{4}, "One Bar Repeats"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::TwoBarRepeat, musx::dom::Cmper{5}, "Two Bar Repeats"},
+    AlternateNotationStyle{StaffStyleAssignStaffTarget::AlternateNotation::Blank, musx::dom::Cmper{6}, "Blank Notation"},
 };
 
 [[nodiscard]] std::optional<AlternateNotationStyle> alternateNotationStyle(std::uint16_t stored)
 {
     switch (stored) {
-    case 1:
-        return canonicalAlternateNotationStyles[1];
-    case 2:
-        return canonicalAlternateNotationStyles[2];
-    case 3:
-        return canonicalAlternateNotationStyles[3];
+    case 1: return canonicalAlternateNotationStyles[1];
+    case 2: return canonicalAlternateNotationStyles[2];
+    case 3: return canonicalAlternateNotationStyles[3];
     case 4:
-    case 5:
-        return canonicalAlternateNotationStyles[4];
-    case 6:
-        return canonicalAlternateNotationStyles[5];
-    default:
-        return std::nullopt;
+    case 5: return canonicalAlternateNotationStyles[4];
+    case 6: return canonicalAlternateNotationStyles[5];
+    default: return std::nullopt;
     }
 }
 
@@ -124,29 +112,22 @@ void applyAlternateNotationStyleBehavior(StaffStyleAssignStyleTarget& target)
         target.hideChords = true;
         target.hideFretboards = true;
         break;
-    case Notation::Blank:
-        target.altHideSmartShapes = true;
-        break;
+    case Notation::Blank: target.altHideSmartShapes = true; break;
     case Notation::Normal:
-    case Notation::BlankWithRests:
-        break;
+    case Notation::BlankWithRests: break;
     }
 }
 
-void reportSynthesizedAlternateNotationStyle(const ImportContext& context,
-                                             const StaffStyleAssignStyleTarget& target)
+void reportSynthesizedAlternateNotationStyle(const ImportContext& context, const StaffStyleAssignStyleTarget& target)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<StaffStyleAssignStyleTarget>(
-            target.getSourcePartId(), target.getCmper());
+        const auto key = reporting.template instanceKey<StaffStyleAssignStyleTarget>(target.getSourcePartId(), target.getCmper());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::Unmapped);
         const auto behavior = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(key, member,
-                                        {Reporting::Origin::LegacyBehavior, 0, 0, value});
+            reporting.report().setField(key, member, {Reporting::Origin::LegacyBehavior, 0, 0, value});
         };
         const auto defaulted = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(key, member,
-                                        {Reporting::Origin::Finale27Default, 0, 0, value});
+            reporting.report().setField(key, member, {Reporting::Origin::Finale27Default, 0, 0, value});
         };
         behavior("styleName", static_cast<std::int64_t>(target.styleName.size()));
         behavior("copyable", target.copyable);
@@ -183,69 +164,57 @@ void reportSynthesizedAlternateNotationStyle(const ImportContext& context,
     });
 }
 
-void reportAlternateNotationStyleSource(const ImportContext& context,
-                                        const StaffStyleAssignStyleTarget& target,
-                                        const records::LegacyRow& row, std::size_t flagsSlot,
-                                        std::uint16_t storedType)
+void reportAlternateNotationStyleSource(const ImportContext& context, const StaffStyleAssignStyleTarget& target, const records::LegacyRow& row,
+    std::size_t flagsSlot, std::uint16_t storedType)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<StaffStyleAssignStyleTarget>(
-            target.getSourcePartId(), target.getCmper());
+        const auto key = reporting.template instanceKey<StaffStyleAssignStyleTarget>(target.getSourcePartId(), target.getCmper());
         reporting.report().setField(key, "altNotation",
-                                    {Reporting::Origin::LegacyMusAdjusted, row.blockOffset,
-                                     row.decodedOffset + flagsSlot * sizeof(std::uint16_t),
-                                     storedType, gframeHoldTag});
+            {Reporting::Origin::LegacyMusAdjusted, row.blockOffset, row.decodedOffset + flagsSlot * sizeof(std::uint16_t), storedType,
+                gframeHoldTag});
     });
 }
 
-[[nodiscard]] std::shared_ptr<const StaffStyleAssignStyleTarget>
-findAlternateNotationStyle(const ImportContext& context,
-                           StaffStyleAssignStaffTarget::AlternateNotation notation)
+[[nodiscard]] std::shared_ptr<const StaffStyleAssignStyleTarget> findAlternateNotationStyle(
+    const ImportContext& context, StaffStyleAssignStaffTarget::AlternateNotation notation)
 {
     const auto styles = context.document->getOthers()->getAllSources<StaffStyleAssignStyleTarget>();
     const auto found = std::ranges::find_if(styles, [&](const auto& style) {
-        return style->getSourcePartId() == musx::dom::SCORE_PARTID && style->masks &&
-               style->masks->altNotation && style->altNotation == notation;
+        return style->getSourcePartId() == musx::dom::SCORE_PARTID && style->masks && style->masks->altNotation && style->altNotation == notation;
     });
     return found == styles.end() ? nullptr : *found;
 }
 
-[[nodiscard]] std::shared_ptr<const StaffStyleAssignStyleTarget>
-ensureAlternateNotationStyle(const ImportContext& context, const AlternateNotationStyle& style,
-                             const records::LegacyRow* sourceRow = nullptr,
-                             std::size_t flagsSlot = 0, std::uint16_t storedType = 0)
+[[nodiscard]] std::shared_ptr<const StaffStyleAssignStyleTarget> ensureAlternateNotationStyle(const ImportContext& context,
+    const AlternateNotationStyle& style, const records::LegacyRow* sourceRow = nullptr, std::size_t flagsSlot = 0, std::uint16_t storedType = 0)
 {
     if (auto existing = findAlternateNotationStyle(context, style.notation)) {
-        if (sourceRow)
-            reportAlternateNotationStyleSource(context, *existing, *sourceRow, flagsSlot,
-                                               storedType);
+        if (sourceRow) {
+            reportAlternateNotationStyleSource(context, *existing, *sourceRow, flagsSlot, storedType);
+        }
         return existing;
     }
 
     auto styleId = style.preferredStyleId;
-    if (context.document->getOthers()->get<StaffStyleAssignStyleTarget>(musx::dom::SCORE_PARTID,
-                                                                        styleId)) {
-        const auto nextStyleId =
-            context.document->getOthers()->nextFreeCmper<StaffStyleAssignStyleTarget>(
-                musx::dom::SCORE_PARTID);
+    if (context.document->getOthers()->get<StaffStyleAssignStyleTarget>(musx::dom::SCORE_PARTID, styleId)) {
+        const auto nextStyleId = context.document->getOthers()->nextFreeCmper<StaffStyleAssignStyleTarget>(musx::dom::SCORE_PARTID);
         if (!nextStyleId) {
-            context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info,
-                 "Alternate notation range has no available Staff Style "
-                 "identifier."});
+            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, "Alternate notation range has no available Staff Style "
+                                                                                      "identifier."});
             return nullptr;
         }
         styleId = *nextStyleId;
     }
-    auto target = std::make_shared<StaffStyleAssignStyleTarget>(
-        context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, styleId);
+    auto target =
+        std::make_shared<StaffStyleAssignStyleTarget>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, styleId);
     target->styleName = style.name;
     target->altNotation = style.notation;
     target->staffLines = 5;
     target->instUuid = std::string(musx::dom::uuid::BlankStaff);
     const auto& defaults = finale27StaffDefaults(context);
-    if (!target->noteFont)
+    if (!target->noteFont) {
         target->noteFont = std::make_shared<musx::dom::FontInfo>(target->getDocument());
+    }
     target->botRepeatDotOff = defaults.botRepeatDotOff;
     target->topRepeatDotOff = defaults.topRepeatDotOff;
     target->dwRestOffset = defaults.dwRestOffset;
@@ -261,47 +230,40 @@ ensureAlternateNotationStyle(const ImportContext& context, const AlternateNotati
     target->masks->hideFretboards = true;
     applyAlternateNotationStyleBehavior(*target);
     reportSynthesizedAlternateNotationStyle(context, *target);
-    if (sourceRow)
+    if (sourceRow) {
         reportAlternateNotationStyleSource(context, *target, *sourceRow, flagsSlot, storedType);
+    }
     context.document->getOthers()->add(StaffStyleAssignStyleTarget::XmlNodeName, target);
     return target;
 }
 
-void reportSynthesizedAlternateNotationAssignment(const ImportContext& context,
-                                                  const StaffStyleAssignTarget& target,
-                                                  const AlternateNotationRun& run,
-                                                  std::uint16_t storedType)
+void reportSynthesizedAlternateNotationAssignment(
+    const ImportContext& context, const StaffStyleAssignTarget& target, const AlternateNotationRun& run, std::uint16_t storedType)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<StaffStyleAssignTarget>(
-            target.getSourcePartId(), target.getCmper(), target.getInci());
+        const auto key = reporting.template instanceKey<StaffStyleAssignTarget>(target.getSourcePartId(), target.getCmper(), target.getInci());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMusAdjusted);
         const auto adjusted = [&](const char* member, std::int64_t value) {
-            reporting.report().setField(key, member,
-                                        {Reporting::Origin::LegacyMusAdjusted,
-                                         run.firstRow->blockOffset, run.firstRow->decodedOffset,
-                                         value, gframeHoldTag});
+            reporting.report().setField(
+                key, member, {Reporting::Origin::LegacyMusAdjusted, run.firstRow->blockOffset, run.firstRow->decodedOffset, value, gframeHoldTag});
         };
         adjusted("styleId", storedType);
         adjusted("startMeas", run.startMeas);
         adjusted("endMeas", run.endMeas);
         reporting.report().setField(key, "startEdu", {Reporting::Origin::LegacyBehavior, 0, 0, 0});
-        reporting.report().setField(key, "endEdu",
-                                    {Reporting::Origin::LegacyBehavior, 0, 0, target.endEdu});
+        reporting.report().setField(key, "endEdu", {Reporting::Origin::LegacyBehavior, 0, 0, target.endEdu});
     });
 }
 
-void addAlternateNotationRun(const ImportContext& context, const AlternateNotationRun& run,
-                             std::uint16_t storedType)
+void addAlternateNotationRun(const ImportContext& context, const AlternateNotationRun& run, std::uint16_t storedType)
 {
-    const auto style =
-        ensureAlternateNotationStyle(context, run.style, run.firstRow, run.flagsSlot, storedType);
-    if (!style) return;
-    const auto existing =
-        context.document->getOthers()->getArray<StaffStyleAssignTarget>(run.partId, run.staffId);
+    const auto style = ensureAlternateNotationStyle(context, run.style, run.firstRow, run.flagsSlot, storedType);
+    if (!style) {
+        return;
+    }
+    const auto existing = context.document->getOthers()->getArray<StaffStyleAssignTarget>(run.partId, run.staffId);
     const auto inci = static_cast<musx::dom::Inci>(existing.size());
-    auto target = std::make_shared<StaffStyleAssignTarget>(
-        context.document, run.partId, musx::dom::EnigmaBase::ShareMode::All, run.staffId, inci);
+    auto target = std::make_shared<StaffStyleAssignTarget>(context.document, run.partId, musx::dom::EnigmaBase::ShareMode::All, run.staffId, inci);
     target->styleId = style->getCmper();
     target->startMeas = run.startMeas;
     target->startEdu = 0;
@@ -309,9 +271,8 @@ void addAlternateNotationRun(const ImportContext& context, const AlternateNotati
     target->endEdu = (std::numeric_limits<musx::dom::Edu>::max)();
     reportSynthesizedAlternateNotationAssignment(context, *target, run, storedType);
     context.document->getOthers()->add(StaffStyleAssignTarget::XmlNodeName, std::move(target));
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.report().expectStaffStyleAssignments(run.partId, run.staffId, 1, false);
-    });
+    withReporting(context.report,
+        [&]<typename Reporting>(Reporting& reporting) { reporting.report().expectStaffStyleAssignments(run.partId, run.staffId, 1, false); });
 }
 
 void synthesizeAlternateNotationRanges(const ImportContext& context)
@@ -319,13 +280,13 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
     // GF is the pre-Finale-2000 representation. The version gate is confined to
     // the uncompressed epoch; every Coda-banner source predates it, and later
     // epochs do not use it.
-    if (!sourcePredatesVersion(context.profile, FormatEpoch::UncompressedLegacy,
-                               versions::finale2000)) {
+    if (!sourcePredatesVersion(context.profile, FormatEpoch::UncompressedLegacy, versions::finale2000)) {
         return;
     }
 
-    for (const auto& style : canonicalAlternateNotationStyles)
+    for (const auto& style : canonicalAlternateNotationStyles) {
         static_cast<void>(ensureAlternateNotationStyle(context, style));
+    }
 
     const RecordFamilySource source{&context.index.getDetails(), gframeHoldTag, false, true};
     std::set<std::uint16_t> unknownTypes;
@@ -333,40 +294,41 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
         std::optional<AlternateNotationRun> run;
         std::uint16_t runStoredType{};
         const auto finishRun = [&] {
-            if (run) addAlternateNotationRun(context, *run, runStoredType);
+            if (run) {
+                addAlternateNotationRun(context, *run, runStoredType);
+            }
             run.reset();
         };
-        for (const auto measure :
-             source.pool->secondCmpersForTag(source.identity, staffId, partId)) {
+        for (const auto measure : source.pool->secondCmpersForTag(source.identity, staffId, partId)) {
             const auto rows = source.pool->getArray(source.identity, staffId, measure, partId);
-            if (rows.empty()) continue;
+            if (rows.empty()) {
+                continue;
+            }
             const auto flagsSlot = gframeHoldFlagsSlot(context.profile);
-            const auto storedType = static_cast<std::uint16_t>(
-                static_cast<std::uint16_t>(rows.front().words[flagsSlot]) &
-                gframeHoldAlternateNotationMask);
+            const auto storedType =
+                static_cast<std::uint16_t>(static_cast<std::uint16_t>(rows.front().words[flagsSlot]) & gframeHoldAlternateNotationMask);
             const auto style = alternateNotationStyle(storedType);
             if (!style) {
                 finishRun();
-                if (storedType != 0) unknownTypes.insert(storedType);
+                if (storedType != 0) {
+                    unknownTypes.insert(storedType);
+                }
                 continue;
             }
             const auto measureId = static_cast<musx::dom::MeasCmper>(measure);
-            if (run && run->style.notation == style->notation &&
-                measureId == static_cast<musx::dom::MeasCmper>(run->endMeas + 1)) {
+            if (run && run->style.notation == style->notation && measureId == static_cast<musx::dom::MeasCmper>(run->endMeas + 1)) {
                 run->endMeas = measureId;
                 continue;
             }
             finishRun();
-            run = AlternateNotationRun{partId, staffId,       measureId, measureId,
-                                       *style, &rows.front(), flagsSlot};
+            run = AlternateNotationRun{partId, staffId, measureId, measureId, *style, &rows.front(), flagsSlot};
             runStoredType = storedType;
         }
         finishRun();
     }
     for (const auto storedType : unknownTypes) {
         context.report.diagnostics.push_back(
-            {musx::util::Logger::LogLevel::Info,
-             "Alternate notation range has unsupported type " + std::to_string(storedType) + "."});
+            {musx::util::Logger::LogLevel::Info, "Alternate notation range has unsupported type " + std::to_string(storedType) + "."});
     }
 }
 
@@ -374,8 +336,7 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
 
 void importGFrameHolds(const ImportContext& context)
 {
-    context.pending.materialize.push_back(
-        [&context] { synthesizeAlternateNotationRanges(context); });
+    context.pending.materialize.push_back([&context] { synthesizeAlternateNotationRanges(context); });
 }
 
 } // namespace details

@@ -22,10 +22,12 @@ namespace coverage {
 /// A text only the companion names is deliberately **not** a part name here. That is a synthesized
 /// score name rather than a name the source stored, and @ref synthesizedScoreNameText identifies it
 /// so it can be classified as what it is.
-[[nodiscard]] inline bool partNameTextMatches(const std::set<std::int64_t>& sourceIds,
-    const std::set<std::int64_t>& companionIds, std::int64_t textId)
+[[nodiscard]] inline bool partNameTextMatches(
+    const std::set<std::int64_t>& sourceIds, const std::set<std::int64_t>& companionIds, std::int64_t textId)
 {
-    if (!sourceIds.contains(textId)) return false;
+    if (!sourceIds.contains(textId)) {
+        return false;
+    }
     return companionIds.empty() || companionIds.contains(textId);
 }
 
@@ -35,53 +37,39 @@ namespace coverage {
 /// Finale during its upgrade and is not in the source. Usually that block is a fresh one the source
 /// side does not have at all; where Finale instead reuses an empty block the source already
 /// carries, the synthesis appears as a text difference on a block both sides have.
-[[nodiscard]] inline bool synthesizedScoreNameText(const std::set<std::int64_t>& sourceIds,
-    const std::set<std::int64_t>& companionIds, std::int64_t textId)
+[[nodiscard]] inline bool synthesizedScoreNameText(
+    const std::set<std::int64_t>& sourceIds, const std::set<std::int64_t>& companionIds, std::int64_t textId)
 {
     return sourceIds.empty() && companionIds.contains(textId);
 }
 
 namespace comparison_text {
 
-enum class ReferentComparison
-{
+enum class ReferentComparison {
     None,
     Matching,
     MatchingPageOnly,
     Renumbered
 };
 
-void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
-                           const musx::dom::DocumentPtr& sourceDocument,
-                           const musx::dom::DocumentPtr& companionDocument,
-                           ComparisonResult& result);
-void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapshot& companion,
-                                          const musx::dom::DocumentPtr& sourceDocument,
-                                          const musx::dom::DocumentPtr& companionDocument,
-                                          ComparisonResult& result);
-std::map<std::string, ReferentComparison>
-compareTextBlockReferents(const musx::dom::DocumentPtr& sourceDocument,
-                          const musx::dom::DocumentPtr& companionDocument);
+void realignCodaBlockTexts(SurveySnapshot& source, SurveySnapshot& companion, const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument, ComparisonResult& result);
+void realignPreFinale37StaffNameBlockTexts(SurveySnapshot& source, SurveySnapshot& companion, const musx::dom::DocumentPtr& sourceDocument,
+    const musx::dom::DocumentPtr& companionDocument, ComparisonResult& result);
+std::map<std::string, ReferentComparison> compareTextBlockReferents(
+    const musx::dom::DocumentPtr& sourceDocument, const musx::dom::DocumentPtr& companionDocument);
 /// @brief Compares a Staff or StaffStyle name reference through its TextBlock and BlockText.
 /// @details A zero comparator, an unresolved reference, and formatting without visible text all
 /// represent an empty Staff name.
 /// @return No value for fields other than Staff names; otherwise, whether the two names are
 /// semantically equivalent.
-std::optional<bool> compareStaffNameReferents(
-    std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
-    const musx::dom::DocumentPtr& sourceDocument,
-    const musx::dom::DocumentPtr& companionDocument);
-bool isPartNameText(const std::string& className, const std::string& path,
-                    const SurveySnapshot& source, const SurveySnapshot& companion);
-bool isSynthesizedScoreNameText(const std::string& className, const std::string& path,
-                                const SurveySnapshot& source, const SurveySnapshot& companion);
-TextClassificationResult compareText(const std::string& className, const std::string& path,
-                                     const std::string& source, const std::string& companion,
-                                     const musx::dom::DocumentPtr& sourceDocument,
-                                     const musx::dom::DocumentPtr& companionDocument,
-                                     bool partNameText, bool synthesizedScoreName);
-bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className,
-                             const std::string& path);
+std::optional<bool> compareStaffNameReferents(std::string_view path, std::int64_t sourceTextBlockId, std::int64_t companionTextBlockId,
+    const musx::dom::DocumentPtr& sourceDocument, const musx::dom::DocumentPtr& companionDocument);
+bool isPartNameText(const std::string& className, const std::string& path, const SurveySnapshot& source, const SurveySnapshot& companion);
+bool isSynthesizedScoreNameText(const std::string& className, const std::string& path, const SurveySnapshot& source, const SurveySnapshot& companion);
+TextClassificationResult compareText(const std::string& className, const std::string& path, const std::string& source, const std::string& companion,
+    const musx::dom::DocumentPtr& sourceDocument, const musx::dom::DocumentPtr& companionDocument, bool partNameText, bool synthesizedScoreName);
+bool hasSynthesizedTextState(const SurveySnapshot& source, const std::string& className, const std::string& path);
 bool isWindowsAnsiReinterpretedAsMacRoman(std::string_view source, std::string_view companion);
 
 } // namespace comparison_text

@@ -17,74 +17,40 @@ std::string_view differenceName(DifferenceClassification classification)
 {
     using enum DifferenceClassification;
     switch (classification) {
-    case Unexpected:
-        return "unexpected";
-    case AccidentalInsert17Byte:
-        return "17-byte-accidental-insert";
-    case CharsetEquivalence:
-        return "charset-equivalence";
-    case CharsetPitchDifference:
-        return "charset-pitch-difference";
-    case FontPlatformShift:
-        return "font-platform-shift";
-    case SymbolFontEquivalence:
-        return "symbol-font-equivalence";
-    case BetaDiscrepancy:
-        return "beta-discrepancy";
-    case CodaTextBlockUpgrade:
-        return "coda-text-block-upgrade";
-    case DefaultShapeId:
-        return "default-shape-id";
-    case DifferentDefaults:
-        return "different_defaults";
-    case AwaitsDependentRecovery:
-        return "awaits-dependent-recovery";
-    case EnigmaTextDifference:
-        return "enigma-text-difference";
-    case FinaleLayoutRecalculation:
-        return "finale-layout-recalculation";
-    case FinaleReplacedLegacyPercussionMap:
-        return "finale-replaced-legacy-percussion-map";
-    case FinaleTextBlockRenumbering:
-        return "finale-text-block-renumbering";
-    case FinaleUpgradeLoss:
-        return "finale-upgrade-loss";
-    case FinaleUpgradeNormalization:
-        return "finale-upgrade-normalization";
-    case FinaleUpgradeSynthesis:
-        return "finale-upgrade-synthesis";
-    case FontMetricApproximation:
-        return "font-metric-approximation";
-    case TextEncodingError:
-        return "text-encoding-error";
-    case LegacyPageParityText:
-        return "legacy-page-parity-text";
-    case MissingAccidentalInsertDefault:
-        return "missing-accidental-insert-default";
-    case MissingSelector:
-        return "missing-selector";
-    case PossiblyUnrecoverable:
-        return "possibly-unrecoverable";
-    case PreConnectionEndpoint:
-        return "pre-connection-endpoint";
-    case ReaderCompletedConnectionArray:
-        return "reader-completed-connection-array";
-    case SetFontSubstitution:
-        return "setfont-font-substitution";
-    case ShapeReclassifiedOther:
-        return "shape-reclassified-other";
-    case SmartLyricsEnabled:
-        return "smart-lyrics-enabled";
-    case StemConnectionPastTerminator:
-        return "stem-connection-past-terminator";
-    case StemHorizontalCorrection:
-        return "stem-horizontal-correction";
-    case SynthesizedScoreName:
-        return "synthesized-score-name";
-    case TransientTextBlock:
-        return "transient-text-block";
-    case WhitespaceControl:
-        return "whitespace-control";
+    case Unexpected: return "unexpected";
+    case AccidentalInsert17Byte: return "17-byte-accidental-insert";
+    case CharsetEquivalence: return "charset-equivalence";
+    case CharsetPitchDifference: return "charset-pitch-difference";
+    case FontPlatformShift: return "font-platform-shift";
+    case SymbolFontEquivalence: return "symbol-font-equivalence";
+    case BetaDiscrepancy: return "beta-discrepancy";
+    case CodaTextBlockUpgrade: return "coda-text-block-upgrade";
+    case DefaultShapeId: return "default-shape-id";
+    case DifferentDefaults: return "different_defaults";
+    case AwaitsDependentRecovery: return "awaits-dependent-recovery";
+    case EnigmaTextDifference: return "enigma-text-difference";
+    case FinaleLayoutRecalculation: return "finale-layout-recalculation";
+    case FinaleReplacedLegacyPercussionMap: return "finale-replaced-legacy-percussion-map";
+    case FinaleTextBlockRenumbering: return "finale-text-block-renumbering";
+    case FinaleUpgradeLoss: return "finale-upgrade-loss";
+    case FinaleUpgradeNormalization: return "finale-upgrade-normalization";
+    case FinaleUpgradeSynthesis: return "finale-upgrade-synthesis";
+    case FontMetricApproximation: return "font-metric-approximation";
+    case TextEncodingError: return "text-encoding-error";
+    case LegacyPageParityText: return "legacy-page-parity-text";
+    case MissingAccidentalInsertDefault: return "missing-accidental-insert-default";
+    case MissingSelector: return "missing-selector";
+    case PossiblyUnrecoverable: return "possibly-unrecoverable";
+    case PreConnectionEndpoint: return "pre-connection-endpoint";
+    case ReaderCompletedConnectionArray: return "reader-completed-connection-array";
+    case SetFontSubstitution: return "setfont-font-substitution";
+    case ShapeReclassifiedOther: return "shape-reclassified-other";
+    case SmartLyricsEnabled: return "smart-lyrics-enabled";
+    case StemConnectionPastTerminator: return "stem-connection-past-terminator";
+    case StemHorizontalCorrection: return "stem-horizontal-correction";
+    case SynthesizedScoreName: return "synthesized-score-name";
+    case TransientTextBlock: return "transient-text-block";
+    case WhitespaceControl: return "whitespace-control";
     }
     throw std::logic_error("unhandled difference classification");
 }
@@ -93,28 +59,17 @@ std::string_view textDifferenceName(TextDifferenceClassification classification)
 {
     using enum TextDifferenceClassification;
     switch (classification) {
-    case AddedFontInfo:
-        return "added font info";
-    case Effects:
-        return "effects";
-    case EmptyPartNameTemplate:
-        return "empty part-name template";
-    case Font:
-        return "font";
-    case KnownEncodingGlitch:
-        return "known encoding glitch";
-    case MissingRun:
-        return "missing run";
-    case Other:
-        return "other";
-    case Size:
-        return "size";
-    case SynthesizedScoreName:
-        return "synthesized score name";
-    case UnresolvedFont:
-        return "unresolved font";
-    case Whitespace:
-        return "whitespace";
+    case AddedFontInfo: return "added font info";
+    case Effects: return "effects";
+    case EmptyPartNameTemplate: return "empty part-name template";
+    case Font: return "font";
+    case KnownEncodingGlitch: return "known encoding glitch";
+    case MissingRun: return "missing run";
+    case Other: return "other";
+    case Size: return "size";
+    case SynthesizedScoreName: return "synthesized score name";
+    case UnresolvedFont: return "unresolved font";
+    case Whitespace: return "whitespace";
     }
     throw std::logic_error("unhandled text difference classification");
 }
@@ -123,24 +78,15 @@ std::string_view transformationName(ComparisonTransformation transformation)
 {
     using enum ComparisonTransformation;
     switch (transformation) {
-    case EquivalentEnigmaFontState:
-        return "Equivalent Enigma font-state serialization";
-    case EquivalentTextBlockReferent:
-        return "Equivalent TextBlock raw-text referent";
-    case FinaleAddedChordSuffixFiller:
-        return "Finale-added chord-suffix filler";
-    case FinaleAddedStartObjectWrapper:
-        return "Finale-added StartObject wrapper";
-    case FinaleDroppedTimeInsert:
-        return "Finale-dropped ^time insert";
-    case FinaleMaterializedPartMeasure:
-        return "finale-materialized-part-measure";
-    case FinaleReformattedPartName:
-        return "Finale-reformatted part-name text";
-    case FinaleSynthesizedPercussionMapNote:
-        return "Finale-synthesized percussion-map note";
-    case SemanticallyPairedPreFinale37BlockText:
-        return "Semantically paired pre-Finale-3.7 block text";
+    case EquivalentEnigmaFontState: return "Equivalent Enigma font-state serialization";
+    case EquivalentTextBlockReferent: return "Equivalent TextBlock raw-text referent";
+    case FinaleAddedChordSuffixFiller: return "Finale-added chord-suffix filler";
+    case FinaleAddedStartObjectWrapper: return "Finale-added StartObject wrapper";
+    case FinaleDroppedTimeInsert: return "Finale-dropped ^time insert";
+    case FinaleMaterializedPartMeasure: return "finale-materialized-part-measure";
+    case FinaleReformattedPartName: return "Finale-reformatted part-name text";
+    case FinaleSynthesizedPercussionMapNote: return "Finale-synthesized percussion-map note";
+    case SemanticallyPairedPreFinale37BlockText: return "Semantically paired pre-Finale-3.7 block text";
     }
     throw std::logic_error("unhandled comparison transformation");
 }
@@ -172,9 +118,8 @@ void writeCompactComparison(std::ostream& out, const ComparisonResult& compariso
         out << (firstPool ? "" : ",") << jsonString(pool) << ":{";
         bool firstClass = true;
         for (const auto& [name, counts] : classes) {
-            out << (firstClass ? "" : ",") << jsonString(name) << ":[" << counts.same << ','
-                << counts.expected << ',' << counts.unexpected << ',' << counts.sourceOnly << ','
-                << counts.sourceOnlyPart << ',' << counts.companionOnly << ']';
+            out << (firstClass ? "" : ",") << jsonString(name) << ":[" << counts.same << ',' << counts.expected << ',' << counts.unexpected << ','
+                << counts.sourceOnly << ',' << counts.sourceOnlyPart << ',' << counts.companionOnly << ']';
             firstClass = false;
         }
         out << '}';
@@ -194,14 +139,12 @@ void writeCompactComparison(std::ostream& out, const ComparisonResult& compariso
         first = false;
     }
     out << '}';
-    const auto writeExamples = [&](std::string_view key,
-                                   const std::vector<DifferenceExample>& examples,
-                                   bool writeOrigin) {
+    const auto writeExamples = [&](std::string_view key, const std::vector<DifferenceExample>& examples, bool writeOrigin) {
         out << ",\"" << key << "\":[";
         bool firstExample = true;
         for (const auto& example : examples) {
-            out << (firstExample ? "" : ",") << '[' << jsonString(example.path) << ','
-                << example.source.toJson() << ',' << example.companion.toJson();
+            out << (firstExample ? "" : ",") << '[' << jsonString(example.path) << ',' << example.source.toJson() << ','
+                << example.companion.toJson();
             if (writeOrigin && !example.origin.empty()) {
                 out << ',' << jsonString(example.origin);
             } else if (!writeOrigin && example.kind) {

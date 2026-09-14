@@ -16,12 +16,11 @@
 #include <unordered_map>
 
 #include "import/support/enigma_text.h"
-#include "reader/timing.h"
 #include "musx/musx.h"
+#include "reader/timing.h"
 
 namespace finale_mus_reader {
 namespace texts {
-
 
 namespace {
 
@@ -45,8 +44,7 @@ using TextFontType = musx::dom::options::FontOptions::FontType;
 struct TextKeyword
 {
     std::string_view keyword;
-    void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
-        Cmper number, std::string&& text);
+    void (*create)(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool, Cmper number, std::string&& text);
     std::string_view nodeName;
     [[no_unique_address]] ReportClass reportClass;
     /// @brief The class default that completes a record's initial formatting state.
@@ -61,21 +59,17 @@ struct TextKeyword
 };
 
 template <typename Target>
-void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool,
-    Cmper number, std::string&& text)
+void createText(const musx::dom::DocumentPtr& document, musx::dom::TextsPool& pool, Cmper number, std::string&& text)
 {
-    auto instance = std::make_shared<Target>(
-        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
+    auto instance = std::make_shared<Target>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(text);
     pool.add(Target::XmlNodeName, std::move(instance));
 }
 
 template <typename Target>
-TextKeyword textKeyword(std::string_view keyword, std::optional<TextFontType> defaultFontType,
-    bool (*accepts)(Cmper) = nullptr)
+TextKeyword textKeyword(std::string_view keyword, std::optional<TextFontType> defaultFontType, bool (*accepts)(Cmper) = nullptr)
 {
-    return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, ReportClass::of<Target>(),
-        defaultFontType, accepts};
+    return TextKeyword{keyword, &createText<Target>, Target::XmlNodeName, ReportClass::of<Target>(), defaultFontType, accepts};
 }
 
 bool isFileInfoType(Cmper number)
@@ -114,8 +108,7 @@ const TextKeyword textKeywords[] = {
     // Where in between the move happens does not matter here: the header pass fills in only
     // the types the pool did not supply, so each document states for itself which way it
     // stores them. The number is musxdom's own `FileInfoText::TextType`.
-    textKeyword<musx::dom::texts::FileInfoText>(
-        "fileInfo", TextFontType::TextBlock, &isFileInfoType),
+    textKeyword<musx::dom::texts::FileInfoText>("fileInfo", TextFontType::TextBlock, &isFileInfoType),
 };
 
 constexpr std::string_view recordTerminator = "^end";
@@ -162,8 +155,7 @@ std::size_t sectionMarkerAt(std::span<const std::uint8_t> stream, std::size_t at
     }
     if (cursor < stream.size() && stream[cursor] == '(') {
         if (cursor + 1 < stream.size() && stream[cursor + 1] == ')') {
-            const std::string_view keyword(
-                reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
+            const std::string_view keyword(reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
             if (keyword == "text" || keyword == "lyrics") {
                 return cursor + 2 - at;
             }
@@ -189,14 +181,11 @@ bool startsKnownRecord(std::span<const std::uint8_t> stream, std::size_t at)
     if (cursor >= stream.size() || stream[cursor] != '(') {
         return false;
     }
-    const std::string_view keyword(
-        reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
-    return std::any_of(std::begin(textKeywords), std::end(textKeywords),
-        [&](const TextKeyword& entry) { return entry.keyword == keyword; });
+    const std::string_view keyword(reinterpret_cast<const char*>(stream.data() + at + 1), cursor - at - 1);
+    return std::any_of(std::begin(textKeywords), std::end(textKeywords), [&](const TextKeyword& entry) { return entry.keyword == keyword; });
 }
 
-std::optional<RawRecord> readRecord(
-    std::span<const std::uint8_t> stream, std::size_t at, bool terminated)
+std::optional<RawRecord> readRecord(std::span<const std::uint8_t> stream, std::size_t at, bool terminated)
 {
     if (at >= stream.size() || stream[at] != '^') {
         return std::nullopt;
@@ -211,21 +200,18 @@ std::optional<RawRecord> readRecord(
     }
     RawRecord record;
     record.start = at;
-    record.keyword = std::string_view(
-        reinterpret_cast<const char*>(stream.data() + keywordStart), cursor - keywordStart);
+    record.keyword = std::string_view(reinterpret_cast<const char*>(stream.data() + keywordStart), cursor - keywordStart);
     ++cursor;
     // A comparator is sixteen bits, so a longer run of digits is not one, whatever it is.
     // Bounding it here is what stops a malformed stream from wrapping into a plausible number.
     constexpr std::size_t maximumComparatorDigits = 5;
     const std::size_t numberStart = cursor;
     std::uint32_t number = 0;
-    while (cursor < stream.size() && stream[cursor] >= '0' && stream[cursor] <= '9'
-        && cursor - numberStart < maximumComparatorDigits) {
+    while (cursor < stream.size() && stream[cursor] >= '0' && stream[cursor] <= '9' && cursor - numberStart < maximumComparatorDigits) {
         number = number * 10 + static_cast<std::uint32_t>(stream[cursor] - '0');
         ++cursor;
     }
-    if (cursor == numberStart || cursor >= stream.size() || stream[cursor] != ')'
-        || number > (std::numeric_limits<std::uint16_t>::max)()) {
+    if (cursor == numberStart || cursor >= stream.size() || stream[cursor] != ')' || number > (std::numeric_limits<std::uint16_t>::max)()) {
         return std::nullopt;
     }
     record.number = static_cast<Cmper>(number);
@@ -234,14 +220,12 @@ std::optional<RawRecord> readRecord(
     // The terminator is a plain search rather than a parse. A caret inside the body is either
     // a command, which cannot spell `end` and then stop, or an escaped `^^`, whose second
     // caret cannot begin `^end` either without the first having consumed it.
-    const std::string_view remaining(
-        reinterpret_cast<const char*>(stream.data() + cursor), stream.size() - cursor);
+    const std::string_view remaining(reinterpret_cast<const char*>(stream.data() + cursor), stream.size() - cursor);
     if (!terminated) {
         // No terminator in this framing: a record runs to the next one, to the marker that
         // opens the next section, or to the end of the stream.
         std::size_t end = cursor;
-        while (end < stream.size() && !startsKnownRecord(stream, end)
-            && sectionMarkerAt(stream, end) == 0) {
+        while (end < stream.size() && !startsKnownRecord(stream, end) && sectionMarkerAt(stream, end) == 0) {
             ++end;
         }
         record.body = stream.subspan(cursor, end - cursor);
@@ -257,12 +241,12 @@ std::optional<RawRecord> readRecord(
     return record;
 }
 
-void reportUnread(ImportReport& report, const std::vector<std::uint8_t>& codes,
-    const std::vector<std::string>& effects, const std::vector<std::string>& keywords)
+void reportUnread(
+    ImportReport& report, const std::vector<std::uint8_t>& codes, const std::vector<std::string>& effects, const std::vector<std::string>& keywords)
 {
     if (!codes.empty()) {
         std::string message = "Legacy text commands this reader could not read were "
-            "dropped; their codes are";
+                              "dropped; their codes are";
         for (const auto code : codes) {
             message += ' ' + std::format("0x{:02x}", code);
         }
@@ -314,9 +298,8 @@ void importLaterTextPool(const ImportContext& context)
     // Finale 2012 converted stored text to Unicode, which is the same boundary the option
     // records cross when a symbol codepoint widens from a word to a long. It is one change to
     // how the file stores characters, so it is asked for once rather than named again here.
-    const text::EnigmaTextSource source{context.document,
-        versions::storesUnicodeCodepoints(context.profile.version),
-        context.profile.platform, nullptr};
+    const text::EnigmaTextSource source{
+        context.document, versions::storesUnicodeCodepoints(context.profile.version), context.profile.platform, nullptr};
 
     // The stream states which of the two framings it uses. The earliest one opens with a
     // `^text` section marker and terminates a record with the start of the next; Finale 97
@@ -330,8 +313,7 @@ void importLaterTextPool(const ImportContext& context)
     text::EnigmaFontResolutionCache fontResolutionCache;
     // Each cache has one initial-font context. The source bytes are therefore the complete
     // key: document, encoding, platform and default font stay fixed for the cache's lifetime.
-    std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>,
-        std::size(textKeywords)> convertedByKeyword;
+    std::array<std::unordered_map<std::string_view, text::ConvertedEnigmaText>, std::size(textKeywords)> convertedByKeyword;
     std::array<std::shared_ptr<const musx::dom::FontInfo>, std::size(textKeywords)> initialFonts;
     std::array<bool, std::size(textKeywords)> initialFontsCached{};
     auto& textPool = *context.document->getTexts();
@@ -351,33 +333,29 @@ void importLaterTextPool(const ImportContext& context)
             // them, so bytes that are not a chunk mean the stream is not a text pool, and
             // scanning ahead for the next plausible keyword would slice some other structure
             // into text blocks that were never there.
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                "The text pool stopped making sense at offset " + std::to_string(at)
-                    + " of " + std::to_string(stream.size())
-                    + "; the text after that point was not imported."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Warning, "The text pool stopped making sense at offset " + std::to_string(at) + " of "
+                                                            + std::to_string(stream.size()) + "; the text after that point was not imported."});
             break;
         }
         at = record->next;
 
-        const auto found = std::find_if(std::begin(textKeywords), std::end(textKeywords),
-            [&](const TextKeyword& entry) { return entry.keyword == record->keyword; });
+        const auto found = std::find_if(
+            std::begin(textKeywords), std::end(textKeywords), [&](const TextKeyword& entry) { return entry.keyword == record->keyword; });
         if (found == std::end(textKeywords)) {
             rememberTextPoolName(unknownKeywords, record->keyword);
             continue;
         }
         if (found->accepts && !found->accepts(record->number)) {
-            rememberTextPoolName(unknownKeywords,
-                std::string(record->keyword) + '(' + std::to_string(record->number) + ')');
+            rememberTextPoolName(unknownKeywords, std::string(record->keyword) + '(' + std::to_string(record->number) + ')');
             continue;
         }
 
         const auto keywordIndex = static_cast<std::size_t>(found - std::begin(textKeywords));
         if (!initialFontsCached[keywordIndex]) {
             FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheMisses, 1);
-            initialFonts[keywordIndex] = found->defaultFontType
-                ? musx::dom::options::FontOptions::getFontInfoOrNull(
-                    context.document, *found->defaultFontType)
-                : nullptr;
+            initialFonts[keywordIndex] =
+                found->defaultFontType ? musx::dom::options::FontOptions::getFontInfoOrNull(context.document, *found->defaultFontType) : nullptr;
             initialFontsCached[keywordIndex] = true;
         } else {
             FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextInitialFontCacheHits, 1);
@@ -386,18 +364,15 @@ void importLaterTextPool(const ImportContext& context)
         recordSource.initialFont = initialFonts[keywordIndex];
         recordSource.fontResolutionCache = &fontResolutionCache;
         FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
-        FINALE_MUS_READER_TIMING_INCREMENT(
-            timing::Counter::TextRecordBytes, record->body.size());
+        FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, record->body.size());
         text::ConvertedEnigmaText converted;
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextConversion);
-            const std::string_view sourceText(
-                reinterpret_cast<const char*>(record->body.data()), record->body.size());
+            const std::string_view sourceText(reinterpret_cast<const char*>(record->body.data()), record->body.size());
             auto& cache = convertedByKeyword[keywordIndex];
             if (const auto cached = cache.find(sourceText); cached != cache.end()) {
                 FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheHits, 1);
-                FINALE_MUS_READER_TIMING_INCREMENT(
-                    timing::Counter::TextCacheAvoidedBytes, record->body.size());
+                FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheAvoidedBytes, record->body.size());
                 converted = cached->second;
             } else {
                 FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextCacheMisses, 1);
@@ -414,24 +389,20 @@ void importLaterTextPool(const ImportContext& context)
             rememberTextPoolName(unknownEffects, effect);
         }
 
-
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextObjectConstruction);
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextReportConstruction);
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const auto instance = reporting.instanceKey(
-                    found->reportClass, musx::dom::SCORE_PARTID, record->number);
-                reporting.report().setField(instance, "text",
-                    {Reporting::Origin::LegacyMus, 0, record->start,
-                        static_cast<std::int64_t>(converted.text.size())});
+                const auto instance = reporting.instanceKey(found->reportClass, musx::dom::SCORE_PARTID, record->number);
+                reporting.report().setField(
+                    instance, "text", {Reporting::Origin::LegacyMus, 0, record->start, static_cast<std::int64_t>(converted.text.size())});
                 reporting.textField(instance, "text", converted);
             });
         }
 
         {
             FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextDomInsertion);
-            found->create(
-                context.document, textPool, record->number, std::move(converted.text));
+            found->create(context.document, textPool, record->number, std::move(converted.text));
         }
     }
 

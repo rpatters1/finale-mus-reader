@@ -36,25 +36,18 @@ const FieldMapping fixedRowAccidentalFields[] = {
 };
 
 const FieldMapping fixedRowCrossLayerFields[] = {
-    MUS_WORD_IF_SOURCE(AccidentalOptionsTarget, "22", GLOBALS_CMPER, 0, 0,
-        sourceStoresCrossLayerPositioning, crossLayerPositioning),
+    MUS_WORD_IF_SOURCE(AccidentalOptionsTarget, "22", GLOBALS_CMPER, 0, 0, sourceStoresCrossLayerPositioning, crossLayerPositioning),
 };
 
 const FieldMapping classRecordAccidentalFields[] = {
-    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalShapeSelector),
-        GLOBALS_CMPER, classWordOffset(3), minOverlap),
-    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalShapeSelector),
-        GLOBALS_CMPER, classWordOffset(5), multiCharSpace),
-    MUS_CLASS_WORD(AccidentalOptionsTarget,
-        numericGlobalClass(accidentalCrossLayerSelector), GLOBALS_CMPER,
-        classWordOffset(0), crossLayerPositioning),
-    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalSpacingSelector),
-        GLOBALS_CMPER, classWordOffset(3), acciNoteSpace),
-    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalSpacingSelector),
-        GLOBALS_CMPER, classWordOffset(4), acciAcciSpace),
-    MUS_CLASS_WORD(AccidentalOptionsTarget,
-        numericGlobalClass(accidentalStartMeasureSelector), GLOBALS_CMPER,
-        classWordOffset(14), startMeasureSepar),
+    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalShapeSelector), GLOBALS_CMPER, classWordOffset(3), minOverlap),
+    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalShapeSelector), GLOBALS_CMPER, classWordOffset(5), multiCharSpace),
+    MUS_CLASS_WORD(
+        AccidentalOptionsTarget, numericGlobalClass(accidentalCrossLayerSelector), GLOBALS_CMPER, classWordOffset(0), crossLayerPositioning),
+    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalSpacingSelector), GLOBALS_CMPER, classWordOffset(3), acciNoteSpace),
+    MUS_CLASS_WORD(AccidentalOptionsTarget, numericGlobalClass(accidentalSpacingSelector), GLOBALS_CMPER, classWordOffset(4), acciAcciSpace),
+    MUS_CLASS_WORD(
+        AccidentalOptionsTarget, numericGlobalClass(accidentalStartMeasureSelector), GLOBALS_CMPER, classWordOffset(14), startMeasureSepar),
 };
 
 const MappingTable& fixedRowAccidentalTable()
@@ -63,14 +56,16 @@ const MappingTable& fixedRowAccidentalTable()
         .epochs = EpochMask::CodaBanner | EpochMask::FixedRow,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<AccidentalOptionsTarget>,
-        .fields = fixedRowAccidentalFields, .fieldCount = std::size(fixedRowAccidentalFields)};
+        .fields = fixedRowAccidentalFields,
+        .fieldCount = std::size(fixedRowAccidentalFields)};
     return table;
 }
 
 const MappingTable& classRecordAccidentalTable()
 {
     static const MappingTable table{.reportPrefix = "options.accidentalOptions",
-        .epochs = EpochMask::Zlib, .encoding = RecordEncoding::ClassRecord,
+        .epochs = EpochMask::Zlib,
+        .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OptionsSingleton,
         .enumerateTargets = &enumerateOptionsTarget<AccidentalOptionsTarget>,
         .fields = classRecordAccidentalFields,
@@ -91,41 +86,44 @@ const MappingTable& fixedRowCrossLayerTable()
 
 void applyPreFinale2004CrossLayerBehavior(const ImportContext& context)
 {
-    if (!sourcePredatesVersion(context.profile,
-            FormatEpoch::DclLegacy, versions::finale2004)) return;
+    if (!sourcePredatesVersion(context.profile, FormatEpoch::DclLegacy, versions::finale2004)) {
+        return;
+    }
 
     const auto pooled = context.document->getOptions()->get<AccidentalOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<AccidentalOptionsTarget>(pooled);
     target->crossLayerPositioning = false;
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.template behaviorField<AccidentalOptionsTarget>("crossLayerPositioning", 0);
-    });
+    withReporting(context.report,
+        [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<AccidentalOptionsTarget>("crossLayerPositioning", 0); });
 }
 
 void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
 {
     // Finale 3.5 introduces adjustable accidental spacing. Believed: when both earlier slots
     // remain zero, Finale uses the hard-coded legacy spacing of 8. A nonzero word remains data.
-    if (!sourcePredatesVersion(context.profile,
-            FormatEpoch::UncompressedLegacy, versions::finale3_5)) return;
+    if (!sourcePredatesVersion(context.profile, FormatEpoch::UncompressedLegacy, versions::finale3_5)) {
+        return;
+    }
 
     const auto family = readNumericGlobalWords(context.index, accidentalSpacingSelector);
-    if (!family.present || family.words.size() <= 4
-        || family.words[3] != 0 || family.words[4] != 0) {
+    if (!family.present || family.words.size() <= 4 || family.words[3] != 0 || family.words[4] != 0) {
         return;
     }
 
     const auto pooled = context.document->getOptions()->get<AccidentalOptionsTarget>();
-    if (!pooled) return;
+    if (!pooled) {
+        return;
+    }
     const auto target = std::const_pointer_cast<AccidentalOptionsTarget>(pooled);
     target->acciNoteSpace = 8;
     target->acciAcciSpace = 8;
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         for (const auto* member : {"acciNoteSpace", "acciAcciSpace"}) {
-            if (auto* info = reporting.report().findField(
-                    reporting.template instanceKey<AccidentalOptionsTarget>(), member)) {
+            if (auto* info = reporting.report().findField(reporting.template instanceKey<AccidentalOptionsTarget>(), member)) {
                 info->origin = Reporting::Origin::LegacyBehavior;
                 info->rawValue = 0;
             }
@@ -137,9 +135,8 @@ void applyEarlyAccidentalSpacingBehavior(const ImportContext& context)
 
 void importAccidentalOptions(const ImportContext& context)
 {
-    applyMappingTables({&fixedRowAccidentalTable(), &fixedRowCrossLayerTable(),
-                           &classRecordAccidentalTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&fixedRowAccidentalTable(), &fixedRowCrossLayerTable(), &classRecordAccidentalTable()}, context.index, context.profile,
+        context.document, context.report);
     applyPreFinale2004CrossLayerBehavior(context);
     applyEarlyAccidentalSpacingBehavior(context);
 }

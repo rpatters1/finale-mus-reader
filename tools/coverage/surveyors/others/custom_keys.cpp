@@ -13,7 +13,8 @@ namespace {
 
 using namespace finale_mus_reader::coverage;
 
-template <typename Target> Value observeCustomKeyArrays(const SurveyContext& ctx)
+template <typename Target>
+Value observeCustomKeyArrays(const SurveyContext& ctx)
 {
     Value::Array result;
     for (const auto& item : sourceInstances<Target>(ctx)) {
@@ -25,10 +26,8 @@ template <typename Target> Value observeCustomKeyArrays(const SurveyContext& ctx
                 {"origin", fieldOrigin<Target>(ctx, member, *item)},
             });
         }
-        result.emplace_back(observe(*item, ctx,
-            field("cmper", [](const Target& value) { return value.getCmper(); }),
-            field(
-                "values", [values = std::move(values)](const Target&) { return Value(values); })));
+        result.emplace_back(observe(*item, ctx, field("cmper", [](const Target& value) { return value.getCmper(); }),
+            field("values", [values = std::move(values)](const Target&) { return Value(values); })));
     }
     return result;
 }
@@ -58,26 +57,15 @@ Value observeKeyAttributes(const SurveyContext& ctx)
     using Target = musx::dom::others::KeyAttributes;
     Value::Array result;
     for (const auto& value : sourceInstances<Target>(ctx)) {
-        result.emplace_back(observe(*value, ctx,
-            field("cmper", [](const Target& item) { return item.getCmper(); }),
-            field("harm_refer", &Target::harmRefer), field("middle_c_key", &Target::middleCKey),
-            field("font_sym", &Target::fontSym), field("goto_key", &Target::gotoKey),
-            field("symbol_list", &Target::symbolList), field("has_clef_octv", &Target::hasClefOctv),
-            field("origin_harmRefer",
-                [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "harmRefer", item); }),
-            field("origin_middleCKey",
-                [&ctx](
-                    const Target& item) { return fieldOrigin<Target>(ctx, "middleCKey", item); }),
-            field("origin_fontSym",
-                [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "fontSym", item); }),
-            field("origin_gotoKey",
-                [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "gotoKey", item); }),
-            field("origin_symbolList",
-                [&ctx](
-                    const Target& item) { return fieldOrigin<Target>(ctx, "symbolList", item); }),
-            field("origin_hasClefOctv", [&ctx](const Target& item) {
-                return fieldOrigin<Target>(ctx, "hasClefOctv", item);
-            })));
+        result.emplace_back(observe(*value, ctx, field("cmper", [](const Target& item) { return item.getCmper(); }),
+            field("harm_refer", &Target::harmRefer), field("middle_c_key", &Target::middleCKey), field("font_sym", &Target::fontSym),
+            field("goto_key", &Target::gotoKey), field("symbol_list", &Target::symbolList), field("has_clef_octv", &Target::hasClefOctv),
+            field("origin_harmRefer", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "harmRefer", item); }),
+            field("origin_middleCKey", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "middleCKey", item); }),
+            field("origin_fontSym", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "fontSym", item); }),
+            field("origin_gotoKey", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "gotoKey", item); }),
+            field("origin_symbolList", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "symbolList", item); }),
+            field("origin_hasClefOctv", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "hasClefOctv", item); })));
     }
     return result;
 }
@@ -87,14 +75,10 @@ Value observeKeyFormats(const SurveyContext& ctx)
     using Target = musx::dom::others::KeyFormat;
     Value::Array result;
     for (const auto& value : sourceInstances<Target>(ctx)) {
-        result.emplace_back(observe(*value, ctx,
-            field("cmper", [](const Target& item) { return item.getCmper(); }),
+        result.emplace_back(observe(*value, ctx, field("cmper", [](const Target& item) { return item.getCmper(); }),
             field("semitones", &Target::semitones), field("scale_tones", &Target::scaleTones),
-            field("origin_semitones",
-                [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "semitones", item); }),
-            field("origin_scaleTones", [&ctx](const Target& item) {
-                return fieldOrigin<Target>(ctx, "scaleTones", item);
-            })));
+            field("origin_semitones", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "semitones", item); }),
+            field("origin_scaleTones", [&ctx](const Target& item) { return fieldOrigin<Target>(ctx, "scaleTones", item); })));
     }
     return result;
 }
@@ -114,8 +98,7 @@ Value observeKeyMapArrays(const SurveyContext& ctx)
                 {"origin_hlevel", fieldOrigin<Target>(ctx, prefix + "hlevel", *value)},
             });
         }
-        result.emplace_back(observe(*value, ctx,
-            field("cmper", [](const Target& item) { return item.getCmper(); }),
+        result.emplace_back(observe(*value, ctx, field("cmper", [](const Target& item) { return item.getCmper(); }),
             field("steps", [steps = std::move(steps)](const Target&) { return Value(steps); })));
     }
     return result;

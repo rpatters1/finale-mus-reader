@@ -9,9 +9,8 @@
 namespace finale_mus_reader {
 
 /// @brief Assigns an unsigned byte font ID and point size from one packed word.
-inline void assignPackedFont(musx::dom::FontInfo& font,
-    musx::factory::ConstructionContext& construction, std::uint16_t packed,
-    bool sizeInLowByte = false)
+inline void assignPackedFont(
+    musx::dom::FontInfo& font, musx::factory::ConstructionContext& construction, std::uint16_t packed, bool sizeInLowByte = false)
 {
     const auto low = packed & 0xffU;
     const auto high = packed >> 8U;

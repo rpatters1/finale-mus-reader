@@ -46,8 +46,7 @@ std::vector<LegacyOther> decodeLegacyOthers(const container::ParsedContainer& pa
             LegacyOther record;
             record.cmper = readUnsignedWord(block.data.data() + offset, parsed.byteOrder);
             record.tag.assign(reinterpret_cast<const char*>(block.data.data() + offset + 2), 2);
-            std::copy_n(block.data.begin() + static_cast<std::ptrdiff_t>(offset + 4),
-                record.payload.size(), record.payload.begin());
+            std::copy_n(block.data.begin() + static_cast<std::ptrdiff_t>(offset + 4), record.payload.size(), record.payload.begin());
             record.blockOffset = block.info.sourceOffset;
             record.decodedOffset = offset;
             auto& incident = nextIncident[{record.tag, record.cmper}];
@@ -58,14 +57,12 @@ std::vector<LegacyOther> decodeLegacyOthers(const container::ParsedContainer& pa
     return result;
 }
 
-std::int16_t readPayloadWord(
-    const LegacyOther& record, std::size_t wordIndex, ByteOrder byteOrder)
+std::int16_t readPayloadWord(const LegacyOther& record, std::size_t wordIndex, ByteOrder byteOrder)
 {
     if (wordIndex >= record.payload.size() / 2) {
         throw std::out_of_range("Legacy payload word index is out of range");
     }
-    return static_cast<std::int16_t>(
-        readUnsignedWord(record.payload.data() + wordIndex * 2, byteOrder));
+    return static_cast<std::int16_t>(readUnsignedWord(record.payload.data() + wordIndex * 2, byteOrder));
 }
 
 } // namespace records

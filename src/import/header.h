@@ -25,8 +25,7 @@ namespace header {
 /// only a standalone caller -- a probe, typically -- can trip over this.
 void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportReport& report);
 
-[[nodiscard]] musx::dom::header::HeaderPtr recover(
-    const std::uint8_t* data, std::size_t size, const ImportReport& report);
+[[nodiscard]] musx::dom::header::HeaderPtr recover(const std::uint8_t* data, std::size_t size, const ImportReport& report);
 
 } // namespace header
 } // namespace finale_mus_reader

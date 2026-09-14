@@ -19,8 +19,8 @@
 #include <vector>
 
 #include "musx/dom/Document.h"
-#include "musx/util/Logger.h"
 #include "musx/factory/DocumentFactory.h"
+#include "musx/util/Logger.h"
 #include "musx/xml/XmlInterface.h"
 
 namespace finale_mus_reader {
@@ -39,8 +39,7 @@ using XmlParser = std::unique_ptr<musx::xml::IXmlDocument> (*)(const char* data,
 /// alongside the filtered pools copied into the import target.
 using DocumentParser = musx::dom::DocumentPtr (*)(const char* data, std::size_t size);
 
-enum class FormatEpoch
-{
+enum class FormatEpoch {
     /// @brief The era before the `ENIGMA BINARY FILE` signature existed.
     /// @details These files are not headerless. They open with a plain-text product
     /// banner of the form `Finale(TM) 2.6 Copyright 1987 by Coda.`, which is where their
@@ -53,23 +52,20 @@ enum class FormatEpoch
     ZlibLegacy
 };
 
-enum class ByteOrder
-{
+enum class ByteOrder {
     Unknown,
     LittleEndian,
     BigEndian
 };
 
-enum class SourcePlatform
-{
+enum class SourcePlatform {
     Unknown,
     MacOS,
     Windows
 };
 
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-enum class ValueOrigin
-{
+enum class ValueOrigin {
     /// @brief No legacy source for this field has been located.
     /// @details The value remains default-initialized for a source-owned object or retains its
     /// seeded value for an options object, so what accompanies this origin is a placeholder that
@@ -169,9 +165,7 @@ struct InstanceKeyHash
     std::size_t operator()(const InstanceKey& key) const noexcept
     {
         auto result = key.classType.hash_code();
-        const auto combine = [&](std::size_t value) {
-            result ^= value + 0x9e3779b9U + (result << 6U) + (result >> 2U);
-        };
+        const auto combine = [&](std::size_t value) { result ^= value + 0x9e3779b9U + (result << 6U) + (result >> 2U); };
         combine(static_cast<std::size_t>(key.partId));
         combine(key.cmper1 ? static_cast<std::size_t>(*key.cmper1) + 1U : 0U);
         combine(key.inci ? static_cast<std::size_t>(*key.inci) + 1U : 0U);
@@ -181,11 +175,8 @@ struct InstanceKeyHash
 };
 
 template <typename T>
-[[nodiscard]] InstanceKey instanceKey(
-    musx::dom::Cmper partId = musx::dom::SCORE_PARTID,
-    std::optional<musx::dom::Cmper> cmper1 = std::nullopt,
-    std::optional<musx::dom::Inci> inci = std::nullopt,
-    std::optional<musx::dom::Cmper> cmper2 = std::nullopt)
+[[nodiscard]] InstanceKey instanceKey(musx::dom::Cmper partId = musx::dom::SCORE_PARTID, std::optional<musx::dom::Cmper> cmper1 = std::nullopt,
+    std::optional<musx::dom::Inci> inci = std::nullopt, std::optional<musx::dom::Cmper> cmper2 = std::nullopt)
 {
     return {typeid(T), partId, cmper1, inci, cmper2};
 }
@@ -193,14 +184,14 @@ template <typename T>
 struct FieldInfo
 {
     FieldInfo() = default;
-    FieldInfo(ValueOrigin fieldOrigin, std::size_t fieldBlockOffset,
-        std::size_t fieldDecodedOffset, std::int64_t fieldRawValue,
+    FieldInfo(ValueOrigin fieldOrigin, std::size_t fieldBlockOffset, std::size_t fieldDecodedOffset, std::int64_t fieldRawValue,
         std::optional<std::uint16_t> fieldSourceIdentity = std::nullopt)
-        : origin(fieldOrigin), blockOffset(fieldBlockOffset),
-          decodedOffset(fieldDecodedOffset), rawValue(fieldRawValue),
+        : origin(fieldOrigin),
+          blockOffset(fieldBlockOffset),
+          decodedOffset(fieldDecodedOffset),
+          rawValue(fieldRawValue),
           sourceIdentity(fieldSourceIdentity)
-    {
-    }
+    {}
 
     ValueOrigin origin = ValueOrigin::Finale27Default;
     std::size_t blockOffset{};
@@ -261,7 +252,9 @@ struct Diagnostic
 
 struct ImportReport
 {
-    explicit ImportReport(FormatEpoch epoch) : formatEpoch(epoch) {}
+    explicit ImportReport(FormatEpoch epoch)
+        : formatEpoch(epoch)
+    {}
 
     FormatEpoch formatEpoch;
     ByteOrder byteOrder = ByteOrder::Unknown;
@@ -291,8 +284,7 @@ struct ImportReport
     /// @brief Provenance shared by every field of a document-pool instance.
     std::unordered_map<InstanceKey, ValueOrigin, InstanceKeyHash> instanceOrigins;
     /// @brief Text conversion provenance keyed first by class instance, then member.
-    std::unordered_map<InstanceKey,
-        std::unordered_map<std::string, TextFieldInfo>, InstanceKeyHash> textFields;
+    std::unordered_map<InstanceKey, std::unordered_map<std::string, TextFieldInfo>, InstanceKeyHash> textFields;
     /// @brief Selector-neutral completeness accounting for staff-style assignment importers.
     std::vector<StaffStyleAssignmentAudit> staffStyleAssignmentAudits;
     /// @brief True only after assignment counts were reconciled against the constructed document.
@@ -320,10 +312,7 @@ struct ImportReport
         return found->second;
     }
 
-    void setInstanceOrigin(const InstanceKey& instance, ValueOrigin origin)
-    {
-        instanceOrigins.insert_or_assign(instance, origin);
-    }
+    void setInstanceOrigin(const InstanceKey& instance, ValueOrigin origin) { instanceOrigins.insert_or_assign(instance, origin); }
 
     [[nodiscard]] const ValueOrigin* findInstanceOrigin(const InstanceKey& instance) const
     {
@@ -331,60 +320,53 @@ struct ImportReport
         return found == instanceOrigins.end() ? nullptr : &found->second;
     }
 
-    void setTextField(
-        const InstanceKey& instance, std::string member, TextFieldInfo info)
+    void setTextField(const InstanceKey& instance, std::string member, TextFieldInfo info)
     {
         textFields[instance].insert_or_assign(std::move(member), std::move(info));
     }
 
-    StaffStyleAssignmentAudit& expectStaffStyleAssignments(musx::dom::Cmper partId,
-        musx::dom::Cmper staffId, std::size_t count, bool malformedSource)
+    StaffStyleAssignmentAudit& expectStaffStyleAssignments(musx::dom::Cmper partId, musx::dom::Cmper staffId, std::size_t count, bool malformedSource)
     {
-        auto found = std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) {
-            return audit.partId == partId && audit.staffId == staffId;
-        });
+        auto found =
+            std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) { return audit.partId == partId && audit.staffId == staffId; });
         if (found == staffStyleAssignmentAudits.end()) {
-            found = staffStyleAssignmentAudits
-                        .insert(staffStyleAssignmentAudits.end(),
-                            StaffStyleAssignmentAudit{partId, staffId});
+            found = staffStyleAssignmentAudits.insert(staffStyleAssignmentAudits.end(), StaffStyleAssignmentAudit{partId, staffId});
         }
         found->expectedAssignments += count;
         found->malformedSource = found->malformedSource || malformedSource;
         return *found;
     }
 
-    [[nodiscard]] const StaffStyleAssignmentAudit* findStaffStyleAssignmentAudit(
-        musx::dom::Cmper partId, musx::dom::Cmper staffId) const
+    [[nodiscard]] const StaffStyleAssignmentAudit* findStaffStyleAssignmentAudit(musx::dom::Cmper partId, musx::dom::Cmper staffId) const
     {
-        const auto found = std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) {
-            return audit.partId == partId && audit.staffId == staffId;
-        });
+        const auto found =
+            std::ranges::find_if(staffStyleAssignmentAudits, [&](const auto& audit) { return audit.partId == partId && audit.staffId == staffId; });
         return found == staffStyleAssignmentAudits.end() ? nullptr : &*found;
     }
 
-    [[nodiscard]] const FieldInfo* findField(
-        const InstanceKey& instance, std::string_view member) const
+    [[nodiscard]] const FieldInfo* findField(const InstanceKey& instance, std::string_view member) const
     {
         const auto foundInstance = fields.find(instance);
-        if (foundInstance == fields.end()) return nullptr;
+        if (foundInstance == fields.end()) {
+            return nullptr;
+        }
         const auto foundField = foundInstance->second.find(std::string(member));
         return foundField == foundInstance->second.end() ? nullptr : &foundField->second;
     }
 
-    [[nodiscard]] FieldInfo* findField(
-        const InstanceKey& instance, std::string_view member)
+    [[nodiscard]] FieldInfo* findField(const InstanceKey& instance, std::string_view member)
     {
         const auto foundInstance = fields.find(instance);
-        if (foundInstance == fields.end()) return nullptr;
+        if (foundInstance == fields.end()) {
+            return nullptr;
+        }
         const auto foundField = foundInstance->second.find(std::string(member));
         return foundField == foundInstance->second.end() ? nullptr : &foundField->second;
     }
 
     template <typename T>
-    [[nodiscard]] const FieldInfo* findField(std::string_view member,
-        musx::dom::Cmper partId = musx::dom::SCORE_PARTID,
-        std::optional<musx::dom::Cmper> cmper1 = std::nullopt,
-        std::optional<musx::dom::Inci> inci = std::nullopt,
+    [[nodiscard]] const FieldInfo* findField(std::string_view member, musx::dom::Cmper partId = musx::dom::SCORE_PARTID,
+        std::optional<musx::dom::Cmper> cmper1 = std::nullopt, std::optional<musx::dom::Inci> inci = std::nullopt,
         std::optional<musx::dom::Cmper> cmper2 = std::nullopt) const
     {
         return findField(InstanceKey{typeid(T), partId, cmper1, inci, cmper2}, member);
@@ -400,7 +382,9 @@ struct ImportReport
 /// accompanies a document that exists.
 struct ImportResult
 {
-    explicit ImportResult(FormatEpoch epoch) : report(epoch) {}
+    explicit ImportResult(FormatEpoch epoch)
+        : report(epoch)
+    {}
 
     /// @brief The imported document, or null when the import failed.
     std::shared_ptr<musx::dom::Document> document;
@@ -433,23 +417,20 @@ public:
     template <typename XmlDocumentType>
     [[nodiscard]] static Reader create(const ReaderOptions& options = {})
     {
-        return createWithParser(
-            options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
+        return createWithParser(options, &parseXml<XmlDocumentType>, &parseDocument<XmlDocumentType>);
     }
 
     [[nodiscard]] musx::dom::DocumentPtr read(const std::filesystem::path& path) const;
     [[nodiscard]] musx::dom::DocumentPtr read(std::span<const std::uint8_t> data) const;
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static musx::dom::DocumentPtr read(const std::filesystem::path& path,
-        const ReaderOptions& options = {})
+    [[nodiscard]] static musx::dom::DocumentPtr read(const std::filesystem::path& path, const ReaderOptions& options = {})
     {
         return create<XmlDocumentType>(options).read(path);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static musx::dom::DocumentPtr read(std::span<const std::uint8_t> data,
-        const ReaderOptions& options = {})
+    [[nodiscard]] static musx::dom::DocumentPtr read(std::span<const std::uint8_t> data, const ReaderOptions& options = {})
     {
         return create<XmlDocumentType>(options).read(data);
     }
@@ -459,32 +440,27 @@ public:
     [[nodiscard]] ImportResult readWithReport(std::span<const std::uint8_t> data) const;
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult readWithReport(const std::filesystem::path& path,
-        const ReaderOptions& options = {})
+    [[nodiscard]] static ImportResult readWithReport(const std::filesystem::path& path, const ReaderOptions& options = {})
     {
         return create<XmlDocumentType>(options).readWithReport(path);
     }
 
     template <typename XmlDocumentType>
-    [[nodiscard]] static ImportResult readWithReport(std::span<const std::uint8_t> data,
-        const ReaderOptions& options = {})
+    [[nodiscard]] static ImportResult readWithReport(std::span<const std::uint8_t> data, const ReaderOptions& options = {})
     {
         return create<XmlDocumentType>(options).readWithReport(data);
     }
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 
 private:
-    Reader(std::shared_ptr<const detail::ReaderResources> resources,
-        XmlParser parseXml, DocumentParser parseDocument)
+    Reader(std::shared_ptr<const detail::ReaderResources> resources, XmlParser parseXml, DocumentParser parseDocument)
         : m_resources(std::move(resources)), m_parseXml(parseXml), m_parseDocument(parseDocument)
-    {
-    }
+    {}
 
     template <typename XmlDocumentType>
     static std::unique_ptr<musx::xml::IXmlDocument> parseXml(const char* data, std::size_t size)
     {
-        static_assert(std::is_base_of_v<musx::xml::IXmlDocument, XmlDocumentType>,
-            "XmlDocumentType must derive from musx::xml::IXmlDocument");
+        static_assert(std::is_base_of_v<musx::xml::IXmlDocument, XmlDocumentType>, "XmlDocumentType must derive from musx::xml::IXmlDocument");
 
         auto xmlDocument = std::make_unique<XmlDocumentType>();
         xmlDocument->loadFromBuffer(data, size);
@@ -497,8 +473,7 @@ private:
         return musx::factory::DocumentFactory::create<XmlDocumentType>(data, size);
     }
 
-    static Reader createWithParser(
-        const ReaderOptions& options, XmlParser parseXml, DocumentParser parseDocument);
+    static Reader createWithParser(const ReaderOptions& options, XmlParser parseXml, DocumentParser parseDocument);
     ImportResult readPrepared(const std::filesystem::path& path) const;
     ImportResult readPrepared(std::span<const std::uint8_t> data) const;
 

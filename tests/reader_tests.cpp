@@ -11,8 +11,8 @@
 #include <filesystem>
 #include <limits>
 #include <map>
-#include <stdexcept>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,8 +21,8 @@
 #include <zlib.h>
 
 #include "finale_mus_reader/reader.h"
-#include "support/finale_version.h"
 #include "musx/musx.h"
+#include "support/finale_version.h"
 
 #ifndef MUSX_USE_PUGIXML
 #define MUSX_USE_PUGIXML
@@ -40,13 +40,13 @@ namespace {
 
 using finale_mus_reader::BlockInfo;
 using finale_mus_reader::ByteOrder;
-using musx::dom::MUSX_GLOBALS_CMPER;
 using finale_mus_reader::FieldInfo;
 using finale_mus_reader::FormatEpoch;
 using finale_mus_reader::ImportResult;
 using finale_mus_reader::Reader;
 using finale_mus_reader::SourcePlatform;
 using finale_mus_reader::ValueOrigin;
+using musx::dom::MUSX_GLOBALS_CMPER;
 using TestXmlDocument = musx::xml::pugi::Document;
 
 void expect(bool condition, const std::string& message)
@@ -82,21 +82,18 @@ void write32(std::vector<std::uint8_t>& output, std::uint32_t value, ByteOrder b
     }
 }
 
-void writeFixed(std::vector<std::uint8_t>& output, std::size_t offset,
-    std::string_view value, std::size_t capacity)
+void writeFixed(std::vector<std::uint8_t>& output, std::size_t offset, std::string_view value, std::size_t capacity)
 {
     expect(offset + capacity <= output.size(), "Synthetic fixed field exceeds its buffer");
     const auto count = (std::min)(value.size(), capacity);
-    std::copy_n(value.begin(), static_cast<std::ptrdiff_t>(count),
-        output.begin() + static_cast<std::ptrdiff_t>(offset));
+    std::copy_n(value.begin(), static_cast<std::ptrdiff_t>(count), output.begin() + static_cast<std::ptrdiff_t>(offset));
 }
 
 // The synthetic Enigma version: major 12, minor 3, maintenance 4, build 5. It is
 // written in the file's own byte order, as Finale writes it.
 constexpr std::uint32_t syntheticVersion = (12U << 24U) | (3U << 20U) | (4U << 16U) | 5U;
 
-void writeVersion(std::vector<std::uint8_t>& output, std::size_t offset,
-    std::uint32_t value, ByteOrder byteOrder)
+void writeVersion(std::vector<std::uint8_t>& output, std::size_t offset, std::uint32_t value, ByteOrder byteOrder)
 {
     for (std::size_t i = 0; i < 4; ++i) {
         const auto shift = byteOrder == ByteOrder::BigEndian ? (3 - i) * 8 : i * 8;
@@ -104,8 +101,7 @@ void writeVersion(std::vector<std::uint8_t>& output, std::size_t offset,
     }
 }
 
-std::vector<std::uint8_t> makeBanner(std::string_view product,
-    std::string_view platform, ByteOrder byteOrder)
+std::vector<std::uint8_t> makeBanner(std::string_view product, std::string_view platform, ByteOrder byteOrder)
 {
     std::vector<std::uint8_t> result(0x200);
     writeFixed(result, 0, "ENIGMA BINARY FILE", 19);
@@ -127,31 +123,25 @@ std::vector<std::uint8_t> makeBanner(std::string_view product,
 }
 
 std::array<std::int16_t, 6> words(
-    std::int16_t first, std::int16_t second, std::int16_t third,
-    std::int16_t fourth, std::int16_t fifth, std::int16_t sixth)
+    std::int16_t first, std::int16_t second, std::int16_t third, std::int16_t fourth, std::int16_t fifth, std::int16_t sixth)
 {
     return {first, second, third, fourth, fifth, sixth};
 }
 
-void appendOther(std::vector<std::uint8_t>& output, std::uint16_t cmper,
-    std::string_view tag, const std::array<std::int16_t, 6>& payload,
-    ByteOrder byteOrder)
+void appendOther(
+    std::vector<std::uint8_t>& output, std::uint16_t cmper, std::string_view tag, const std::array<std::int16_t, 6>& payload, ByteOrder byteOrder)
 {
     expect(tag.size() == 2, "Synthetic other tag must be two bytes");
     write16(output, cmper, byteOrder);
     // The tag is a 16-bit value, so a little-endian file stores "LA" as the bytes "AL".
     // Writing the characters raw would encode a file Finale never produces.
-    write16(output, static_cast<std::uint16_t>(
-        (static_cast<unsigned char>(tag[0]) << 8U) | static_cast<unsigned char>(tag[1])),
-        byteOrder);
+    write16(output, static_cast<std::uint16_t>((static_cast<unsigned char>(tag[0]) << 8U) | static_cast<unsigned char>(tag[1])), byteOrder);
     for (const auto value : payload) {
         write16(output, static_cast<std::uint16_t>(value), byteOrder);
     }
 }
 
-void appendUncompressedBlock(std::vector<std::uint8_t>& output,
-    std::uint16_t type, const std::vector<std::uint8_t>& payload,
-    ByteOrder byteOrder)
+void appendUncompressedBlock(std::vector<std::uint8_t>& output, std::uint16_t type, const std::vector<std::uint8_t>& payload, ByteOrder byteOrder)
 {
     write16(output, type, byteOrder);
     write32(output, static_cast<std::uint32_t>(payload.size() + 6), byteOrder);
@@ -207,26 +197,21 @@ std::vector<std::uint8_t> makeUncompressedMusWithFontOptions()
 // little-endian, anything else is big-endian. Both are built here from one description so the
 // two paths cannot drift apart, and so that neither needs a committed fixture -- the only real
 // Windows documents of this era are Coda's own installer templates.
-std::vector<std::uint8_t> makeCodaBannerMus(
-    ByteOrder byteOrder, std::string_view product, bool includeBlankShape = false)
+std::vector<std::uint8_t> makeCodaBannerMus(ByteOrder byteOrder, std::string_view product, bool includeBlankShape = false)
 {
     std::vector<std::uint8_t> result(0x200, 0);
-    const std::string banner = "Finale(TM) " + std::string(product)
-        + " Copyright 1987 by Coda. All rights reserved.";
+    const std::string banner = "Finale(TM) " + std::string(product) + " Copyright 1987 by Coda. All rights reserved.";
     writeFixed(result, 0, banner, banner.size());
 
     // The era's eight clefs are one single-incidence global each, selectors 28 through 35,
     // holding middle-C position, an unexplained word, the clef character and the staff
     // position. These are the values every surveyed document of the era carries.
     std::vector<std::uint8_t> pool;
-    const std::array<std::array<std::int16_t, 4>, 8> clefs{{{-10, 6, 38, -6}, {-4, 0, 66, -4},
-        {-2, -2, 66, -2}, {2, -6, 63, -2}, {-10, 6, 214, -4}, {-3, -1, 86, -6},
-        {9, -13, 116, -2}, {0, -4, 63, -4}}};
+    const std::array<std::array<std::int16_t, 4>, 8> clefs{{{-10, 6, 38, -6}, {-4, 0, 66, -4}, {-2, -2, 66, -2}, {2, -6, 63, -2}, {-10, 6, 214, -4},
+        {-3, -1, 86, -6}, {9, -13, 116, -2}, {0, -4, 63, -4}}};
     for (std::size_t i = 0; i < clefs.size(); ++i) {
-        const char tag[2] = {static_cast<char>('0' + (28 + i) / 10),
-            static_cast<char>('0' + (28 + i) % 10)};
-        appendOther(pool, MUSX_GLOBALS_CMPER, std::string_view(tag, 2),
-            words(clefs[i][0], clefs[i][1], clefs[i][2], clefs[i][3], 0, 0), byteOrder);
+        const char tag[2] = {static_cast<char>('0' + (28 + i) / 10), static_cast<char>('0' + (28 + i) % 10)};
+        appendOther(pool, MUSX_GLOBALS_CMPER, std::string_view(tag, 2), words(clefs[i][0], clefs[i][1], clefs[i][2], clefs[i][3], 0, 0), byteOrder);
     }
     // Scalars the era does record: the default clef, the end-of-measure percent and offset,
     // and the spacing before and after a clef.
@@ -251,21 +236,18 @@ std::vector<std::uint8_t> compressZlib(const std::vector<std::uint8_t>& input)
 {
     uLongf compressedSize = compressBound(static_cast<uLong>(input.size()));
     std::vector<std::uint8_t> result(compressedSize);
-    const auto code = compress2(result.data(), &compressedSize, input.data(),
-        static_cast<uLong>(input.size()), Z_BEST_COMPRESSION);
+    const auto code = compress2(result.data(), &compressedSize, input.data(), static_cast<uLong>(input.size()), Z_BEST_COMPRESSION);
     expect(code == Z_OK, "Unable to create synthetic zlib member");
     result.resize(compressedSize);
     return result;
 }
 
-void appendZlibBlock(std::vector<std::uint8_t>& output, std::uint16_t type,
-    const std::vector<std::uint8_t>& payload, ByteOrder byteOrder)
+void appendZlibBlock(std::vector<std::uint8_t>& output, std::uint16_t type, const std::vector<std::uint8_t>& payload, ByteOrder byteOrder)
 {
     const auto compressed = compressZlib(payload);
     write16(output, type, byteOrder);
     write32(output, static_cast<std::uint32_t>(compressed.size() + 10), byteOrder);
-    const auto checksum = static_cast<std::uint32_t>(
-        crc32(crc32(0L, Z_NULL, 0), payload.data(), static_cast<uInt>(payload.size())));
+    const auto checksum = static_cast<std::uint32_t>(crc32(crc32(0L, Z_NULL, 0), payload.data(), static_cast<uInt>(payload.size())));
     write32(output, checksum, byteOrder);
     output.insert(output.end(), compressed.begin(), compressed.end());
 }
@@ -286,8 +268,7 @@ std::vector<std::uint8_t> makeZlibMus()
 // The same file, but its terminal block carries an embedded graphic instead of being an
 // empty marker. A stored block has no checksum word and its payload starts right after the
 // six-byte header, so writing one is not appendZlibBlock with compression turned off.
-std::vector<std::uint8_t> makeZlibMusWithGraphic(
-    std::uint16_t terminalType, std::string_view graphic)
+std::vector<std::uint8_t> makeZlibMusWithGraphic(std::uint16_t terminalType, std::string_view graphic)
 {
     constexpr auto byteOrder = ByteOrder::LittleEndian;
     auto result = makeBanner("2012", "MAC", byteOrder);
@@ -322,24 +303,28 @@ const FieldInfo& field(const ImportResult& result, std::string_view target)
     if (target.starts_with("options.fontOptions[")) {
         desiredMember = "fonts[" + std::string(target.substr(std::string_view("options.fontOptions[").size()));
     } else if (target.starts_with("options.fontOptionsPhysical[")) {
-        desiredMember = "physical[" + std::string(
-            target.substr(std::string_view("options.fontOptionsPhysical[").size()));
+        desiredMember = "physical[" + std::string(target.substr(std::string_view("options.fontOptionsPhysical[").size()));
     } else if (target.starts_with("options.")) {
         const auto dot = target.find('.', std::string_view("options.").size());
-        if (dot != std::string_view::npos) desiredMember = target.substr(dot + 1);
+        if (dot != std::string_view::npos) {
+            desiredMember = target.substr(dot + 1);
+        }
     } else if (const auto open = target.find('['); open != std::string_view::npos) {
         const auto close = target.find(']', open);
         const auto dot = close == std::string_view::npos ? close : target.find('.', close);
         if (close != std::string_view::npos && dot != std::string_view::npos) {
-            cmper = static_cast<musx::dom::Cmper>(std::stoul(
-                std::string(target.substr(open + 1, close - open - 1))));
+            cmper = static_cast<musx::dom::Cmper>(std::stoul(std::string(target.substr(open + 1, close - open - 1))));
             desiredMember = target.substr(dot + 1);
         }
     }
     for (const auto& [instance, fields] : result.report.fields) {
-        if (cmper && instance.cmper1 != cmper) continue;
+        if (cmper && instance.cmper1 != cmper) {
+            continue;
+        }
         for (const auto& [member, value] : fields) {
-            if (member == desiredMember) return value;
+            if (member == desiredMember) {
+                return value;
+            }
         }
     }
     throw std::runtime_error(std::string("Missing field report for ").append(target));
@@ -351,7 +336,9 @@ bool anyReportedField(const finale_mus_reader::ImportReport& report, Predicate p
     for (const auto& [instance, fields] : report.fields) {
         (void)instance;
         for (const auto& [member, info] : fields) {
-            if (predicate(member, info)) return true;
+            if (predicate(member, info)) {
+                return true;
+            }
         }
     }
     return false;
@@ -360,18 +347,16 @@ bool anyReportedField(const finale_mus_reader::ImportReport& report, Predicate p
 // Whether the report carries any diagnostic at the given level. Tests assert the level a
 // message was raised at, not merely that some message exists: the whole point of the level
 // is that a routine fallback and an unreadable document must not look alike to a host.
-bool hasDiagnostic(const finale_mus_reader::ImportReport& report,
-    musx::util::Logger::LogLevel level)
+bool hasDiagnostic(const finale_mus_reader::ImportReport& report, musx::util::Logger::LogLevel level)
 {
-    return std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
-        [&](const finale_mus_reader::Diagnostic& entry) { return entry.level == level; });
+    return std::any_of(
+        report.diagnostics.begin(), report.diagnostics.end(), [&](const finale_mus_reader::Diagnostic& entry) { return entry.level == level; });
 }
 
 template <typename T>
 void expectOption(const ImportResult& result)
 {
-    expect(static_cast<bool>(result.document->getOptions()->get<T>()),
-        "Pinned default omitted an expected options instance");
+    expect(static_cast<bool>(result.document->getOptions()->get<T>()), "Pinned default omitted an expected options instance");
 }
 
 // The imported options pool must be structurally complete whatever era the source is.
@@ -417,46 +402,32 @@ void expectNoScoreContent(const ImportResult& result)
     // measure the baseline supplied, and the baseline supplies none: its others allowlist admits
     // layer attributes and nothing else. Every measure in an imported document therefore has to
     // have been built from a source record, which is what its instance origin states.
-    for (const auto& measure :
-             result.document->getOthers()->getArray<others::Measure>(SCORE_PARTID)) {
-        const auto* origin = result.report.findInstanceOrigin(
-            finale_mus_reader::instanceKey<others::Measure>(
-                measure->getSourcePartId(), measure->getCmper()));
-        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
-            "Output contains a measure no source record built");
+    for (const auto& measure : result.document->getOthers()->getArray<others::Measure>(SCORE_PARTID)) {
+        const auto* origin =
+            result.report.findInstanceOrigin(finale_mus_reader::instanceKey<others::Measure>(measure->getSourcePartId(), measure->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains a measure no source record built");
     }
-    for (const auto& staff :
-             result.document->getOthers()->getArray<others::Staff>(SCORE_PARTID)) {
-        const auto* origin = result.report.findInstanceOrigin(
-            finale_mus_reader::instanceKey<others::Staff>(
-                staff->getSourcePartId(), staff->getCmper()));
-        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
-            "Output contains a staff no source record built");
+    for (const auto& staff : result.document->getOthers()->getArray<others::Staff>(SCORE_PARTID)) {
+        const auto* origin =
+            result.report.findInstanceOrigin(finale_mus_reader::instanceKey<others::Staff>(staff->getSourcePartId(), staff->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains a staff no source record built");
     }
-    for (const auto& system :
-             result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID)) {
-        const auto* origin = result.report.findInstanceOrigin(
-            finale_mus_reader::instanceKey<others::StaffSystem>(
-                system->getSourcePartId(), system->getCmper()));
-        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus,
-            "Output contains a staff system no source record built");
+    for (const auto& system : result.document->getOthers()->getArray<others::StaffSystem>(SCORE_PARTID)) {
+        const auto* origin =
+            result.report.findInstanceOrigin(finale_mus_reader::instanceKey<others::StaffSystem>(system->getSourcePartId(), system->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains a staff system no source record built");
     }
-    expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(),
-        "Output contains fallback pages");
+    expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(), "Output contains fallback pages");
     // Part definitions are not absent: musxdom requires a score part, and every era has one
     // whether or not it stored a record. What must not appear is the baseline's, which names a
     // text block this document does not have -- so the reader's own score part carries no name.
     {
-        const auto parts =
-            result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID);
+        const auto parts = result.document->getOthers()->getArray<others::PartDefinition>(SCORE_PARTID);
         expect(!parts.empty(), "Output has no score part definition");
         const auto score = others::PartDefinition::getScore(result.document);
-        expect(score && score->partOrder == 0 && score->copies == 1,
-            "The score part definition is not the one this reader builds");
+        expect(score && score->partOrder == 0 && score->copies == 1, "The score part definition is not the one this reader builds");
         for (const auto& part : parts) {
-            expect(part->nameId == 0
-                    || result.document->getOthers()->get<others::TextBlock>(
-                           SCORE_PARTID, part->nameId) != nullptr,
+            expect(part->nameId == 0 || result.document->getOthers()->get<others::TextBlock>(SCORE_PARTID, part->nameId) != nullptr,
                 "A part definition names a text block the document does not contain");
         }
     }
@@ -470,76 +441,60 @@ void expectNoScoreContent(const ImportResult& result)
     // else may ride along, so every shape present must be one a clef definition names.
     {
         std::set<musx::dom::Cmper> referencedShapes;
-        if (const auto clefs = result.document->getOptions()
-                ->get<musx::dom::options::ClefOptions>()) {
+        if (const auto clefs = result.document->getOptions()->get<musx::dom::options::ClefOptions>()) {
             for (const auto& def : clefs->clefDefs) {
                 if (def->isShape && def->shapeId != 0) {
                     referencedShapes.insert(def->shapeId);
                 }
             }
         }
-        for (const auto& shape : result.document->getOthers()
-                ->getArray<others::ShapeDef>(SCORE_PARTID)) {
-            const auto* shapeField = result.report.findField<others::ShapeDef>(
-                "instructionList", SCORE_PARTID, shape->getCmper());
+        for (const auto& shape : result.document->getOthers()->getArray<others::ShapeDef>(SCORE_PARTID)) {
+            const auto* shapeField = result.report.findField<others::ShapeDef>("instructionList", SCORE_PARTID, shape->getCmper());
             const auto recovered = shapeField && shapeField->origin == ValueOrigin::LegacyMus;
-            expect(recovered || referencedShapes.count(shape->getCmper()) != 0,
-                "Output contains a baseline shape no clef definition references");
+            expect(recovered || referencedShapes.count(shape->getCmper()) != 0, "Output contains a baseline shape no clef definition references");
         }
     }
-    expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(),
-        "Output contains fallback text blocks");
-    expect(result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(),
-        "Output contains fallback measure number regions");
+    expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(), "Output contains fallback text blocks");
+    expect(
+        result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(), "Output contains fallback measure number regions");
     expect(!result.document->getEntries()->get(1), "Output contains fallback entries");
     expect(result.document->getInstruments().empty(), "Output contains fallback instruments");
     // The four option-like layer attributes are always present, seeded or recovered. The count
     // is not asserted: a source is free to carry comparators beyond them, and those are imported
     // rather than discarded, so a total above four is source content and not a fallback leak.
     for (musx::dom::Cmper layer = 0; layer < musx::dom::MAX_LAYERS; ++layer) {
-        expect(static_cast<bool>(result.document->getOthers()
-                   ->get<others::LayerAttributes>(SCORE_PARTID, layer)),
+        expect(static_cast<bool>(result.document->getOthers()->get<others::LayerAttributes>(SCORE_PARTID, layer)),
             "Output is missing option-like layer attributes " + std::to_string(layer));
     }
 }
 
 void testControlledDclFile()
 {
-    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-        / "evidence/F2002/F2002-baseline.mus";
+    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2002/F2002-baseline.mus";
     const auto result = Reader::readWithReport<TestXmlDocument>(path);
-    expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
-        "F2002 fixture was not classified as DCL");
-    expect(result.report.byteOrder == ByteOrder::BigEndian,
-        "F2002 fixture byte order was not recovered");
-    expect(result.report.sourcePlatform == SourcePlatform::MacOS,
-        "F2002 fixture platform was not recovered");
-    expect(result.report.defaultsPlatform == SourcePlatform::MacOS,
-        "F2002 fixture was not seeded from the macOS baseline");
+    expect(result.report.formatEpoch == FormatEpoch::DclLegacy, "F2002 fixture was not classified as DCL");
+    expect(result.report.byteOrder == ByteOrder::BigEndian, "F2002 fixture byte order was not recovered");
+    expect(result.report.sourcePlatform == SourcePlatform::MacOS, "F2002 fixture platform was not recovered");
+    expect(result.report.defaultsPlatform == SourcePlatform::MacOS, "F2002 fixture was not seeded from the macOS baseline");
     expect(result.report.savingProduct == "2002", "F2002 product was not recovered");
     expect(result.report.blocks.size() == 4, "F2002 block count is incorrect");
     expect(std::all_of(result.report.blocks.begin(), result.report.blocks.begin() + 3,
-        [](const BlockInfo& block) { return block.checksumPresent && block.checksumValid; }),
+               [](const BlockInfo& block) { return block.checksumPresent && block.checksumValid; }),
         "F2002 compressed block checksum validation failed");
 
     const auto& header = *result.document->getHeader();
-    expect(header.created.year == 2026 && header.created.month == 8 && header.created.day == 5,
-        "F2002 creation date was not recovered");
+    expect(header.created.year == 2026 && header.created.month == 8 && header.created.day == 5, "F2002 creation date was not recovered");
     expect(header.created.application == "FIN", "F2002 creator application was not recovered");
     expect(header.created.finaleVersion.major == finale_mus_reader::versions::finale2002.major
-            && header.created.finaleVersion.minor == finale_mus_reader::versions::finale2002.minor
-            && header.created.finaleVersion.maint == 1,
+               && header.created.finaleVersion.minor == finale_mus_reader::versions::finale2002.minor && header.created.finaleVersion.maint == 1,
         "F2002 internal creator version was not recovered");
     expect(result.document->getSourcePath() == path, "Source path was not retained");
 
-    const auto spacing = result.document->getOptions()
-        ->get<musx::dom::options::MusicSpacingOptions>();
-    expect(spacing->minWidth == 360 && spacing->maxWidth == 1800,
-        "F2002 music spacing width overlay failed");
-    expect(spacing->minDistance == 12 && spacing->minDistTiedNotes == 48,
-        "F2002 music spacing distance overlay failed");
-    expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
-        "F2002 music spacing overlay was not reported as recovered");
+    const auto spacing = result.document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
+    expect(spacing->minWidth == 360 && spacing->maxWidth == 1800, "F2002 music spacing width overlay failed");
+    expect(spacing->minDistance == 12 && spacing->minDistTiedNotes == 48, "F2002 music spacing distance overlay failed");
+    expect(
+        field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus, "F2002 music spacing overlay was not reported as recovered");
     expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
 }
@@ -548,27 +503,20 @@ void testIndependentImportedDocuments()
 {
     // The reader builds each document with its own construction session, so no pinned
     // fallback document can remain the owner of options placed in an imported document.
-    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-        / "evidence/F2002/F2002-baseline.mus";
+    const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2002/F2002-baseline.mus";
     const auto first = Reader::readWithReport<TestXmlDocument>(path);
     const auto second = Reader::readWithReport<TestXmlDocument>(path);
     expect(first.document != second.document, "Both reads returned the same document");
 
-    const auto firstSpacing = first.document->getOptions()
-        ->get<musx::dom::options::MusicSpacingOptions>();
-    const auto secondSpacing = second.document->getOptions()
-        ->get<musx::dom::options::MusicSpacingOptions>();
+    const auto firstSpacing = first.document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
+    const auto secondSpacing = second.document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
     expect(firstSpacing && secondSpacing, "Music spacing options were not seeded");
-    expect(firstSpacing.get() != secondSpacing.get(),
-        "Imported documents share a music spacing options instance");
+    expect(firstSpacing.get() != secondSpacing.get(), "Imported documents share a music spacing options instance");
 
-    const auto firstLayer = first.document->getOthers()
-        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
-    const auto secondLayer = second.document->getOthers()
-        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
+    const auto firstLayer = first.document->getOthers()->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
+    const auto secondLayer = second.document->getOthers()->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 0);
     expect(firstLayer && secondLayer, "Layer attributes were not seeded");
-    expect(firstLayer.get() != secondLayer.get(),
-        "Imported documents share a layer attributes instance");
+    expect(firstLayer.get() != secondLayer.get(), "Imported documents share a layer attributes instance");
 }
 
 // Selector 24 is the default-font array from well before the DCL era, but the reader used to
@@ -582,13 +530,10 @@ void testUncompressedFontOptionsEpochGate()
     // documents recover a major version far outside the era's own range.
     const auto synthetic = Reader::readWithReport<TestXmlDocument>(makeUncompressedMusWithFontOptions());
     const auto options = synthetic.document->getOptions()->get<FontOptions>();
-    expect(options->getFontInfo(FontType::Music)->fontSize == 28
-            && options->getFontInfo(FontType::Key)->fontSize == 26
-            && options->getFontInfo(FontType::Clef)->fontSize == 24
-            && options->getFontInfo(FontType::Time)->fontSize == 22,
+    expect(options->getFontInfo(FontType::Music)->fontSize == 28 && options->getFontInfo(FontType::Key)->fontSize == 26
+               && options->getFontInfo(FontType::Clef)->fontSize == 24 && options->getFontInfo(FontType::Time)->fontSize == 22,
         "An uncompressed file with an out-of-range major version recovered no font options");
-    expect(options->getFontInfo(FontType::Time)->bold,
-        "A recovered effects mask was not expanded for the uncompressed era");
+    expect(options->getFontInfo(FontType::Time)->bold, "A recovered effects mask was not expanded for the uncompressed era");
 }
 
 // The uncompressed era had no tracked fixture until these: every result for it was
@@ -597,22 +542,17 @@ void testUncompressedFontOptionsEpochGate()
 void testUncompressedFixtures()
 {
     const auto read = [](const char* relative) {
-        return Reader::readWithReport<TestXmlDocument>(
-            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+        return Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
     using musx::dom::others::FontDefinition;
 
     const auto f2000 = read("evidence/F2000/F2000-multilayer.mus");
-    expect(f2000.report.formatEpoch == FormatEpoch::UncompressedLegacy,
-        "Finale 2000 fixture was not classified as uncompressed");
+    expect(f2000.report.formatEpoch == FormatEpoch::UncompressedLegacy, "Finale 2000 fixture was not classified as uncompressed");
     expect(f2000.report.savingProduct == "2000", "Finale 2000 product was not recovered");
-    expect(f2000.report.sourceVersion
-            && f2000.report.sourceVersion->major == finale_mus_reader::versions::finale2000.major,
+    expect(f2000.report.sourceVersion && f2000.report.sourceVersion->major == finale_mus_reader::versions::finale2000.major,
         "Finale 2000 should record internal major version 5");
-    expect(field(f2000, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
-        "Finale 2000 music spacing was not recovered");
-    expect(!f2000.document->getOthers()->getArray<FontDefinition>(
-        musx::dom::SCORE_PARTID).empty(), "Finale 2000 fonts were not recovered");
+    expect(field(f2000, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus, "Finale 2000 music spacing was not recovered");
+    expect(!f2000.document->getOthers()->getArray<FontDefinition>(musx::dom::SCORE_PARTID).empty(), "Finale 2000 fonts were not recovered");
 
     // These two differ only in the length of their file-info text. The long one overruns the
     // customary 0x200 body boundary, so it frames only when the body offset is read from the
@@ -620,52 +560,38 @@ void testUncompressedFixtures()
     const auto shortInfo = read("evidence/F97/F97-fileinfo-short.mus");
     const auto longInfo = read("evidence/F97/F97-fileinfo-long.mus");
     for (const auto* result : {&shortInfo, &longInfo}) {
-        expect(result->report.formatEpoch == FormatEpoch::UncompressedLegacy,
-            "A Finale 97 fixture was not classified as uncompressed");
+        expect(result->report.formatEpoch == FormatEpoch::UncompressedLegacy, "A Finale 97 fixture was not classified as uncompressed");
         expect(result->report.sourceVersion
-                && finale_mus_reader::VersionBound{result->report.sourceVersion->major,
-                       result->report.sourceVersion->minor}
-                    == finale_mus_reader::versions::finale97,
+                   && finale_mus_reader::VersionBound{result->report.sourceVersion->major, result->report.sourceVersion->minor}
+                          == finale_mus_reader::versions::finale97,
             "Finale 97 should record internal version 3.8");
     }
-    expect(longInfo.report.blocks.size() == shortInfo.report.blocks.size(),
-        "The long file-info variant did not frame like its short counterpart");
+    expect(longInfo.report.blocks.size() == shortInfo.report.blocks.size(), "The long file-info variant did not frame like its short counterpart");
 
-    const auto shortFonts = shortInfo.document->getOthers()
-        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    const auto longFonts = longInfo.document->getOthers()
-        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
-    expect(!shortFonts.empty() && shortFonts.size() == longFonts.size(),
-        "The two file-info variants disagree about their font table");
+    const auto shortFonts = shortInfo.document->getOthers()->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    const auto longFonts = longInfo.document->getOthers()->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    expect(!shortFonts.empty() && shortFonts.size() == longFonts.size(), "The two file-info variants disagree about their font table");
     // Finale 97 is internal 3.8, so its font records carry the header incidence.
-    expect(shortFonts[0]->charsetBank == FontDefinition::CharacterSetBank::MacOS,
-        "Finale 97 font character set bank was not recovered");
+    expect(shortFonts[0]->charsetBank == FontDefinition::CharacterSetBank::MacOS, "Finale 97 font character set bank was not recovered");
 }
 
 // The 2007 encoding is a separate pathway: class-identified, length-governed records rather
 // than fixed 16-byte rows. Nothing else in the suite exercises it.
 void testClassRecordEra()
 {
-    const auto result = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2012/F2012-upstem-flags.mus");
-    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
-        "The Finale 2012 fixture was not classified as zlib era");
-    expect(result.report.sourceVersion
-            && result.report.sourceVersion->major == finale_mus_reader::versions::finale2012.major,
+    const auto result =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2012/F2012-upstem-flags.mus");
+    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy, "The Finale 2012 fixture was not classified as zlib era");
+    expect(result.report.sourceVersion && result.report.sourceVersion->major == finale_mus_reader::versions::finale2012.major,
         "Finale 2012 should record internal major version 17");
 
     using musx::dom::others::FontDefinition;
-    const auto fonts = result.document->getOthers()
-        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    const auto fonts = result.document->getOthers()->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
     expect(fonts.size() == 16, "The zlib-era font table size is incorrect");
-    const auto maestro = result.document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 0);
-    expect(maestro && maestro->name == "Maestro",
-        "A zlib-era font name was not recovered");
+    const auto maestro = result.document->getOthers()->get<FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    expect(maestro && maestro->name == "Maestro", "A zlib-era font name was not recovered");
     // The character set encoding survived the 2007 serialization change unchanged.
-    expect(maestro->charsetBank == FontDefinition::CharacterSetBank::MacOS
-            && maestro->charsetVal == 0xfff && maestro->calcIsSymbolFont(),
+    expect(maestro->charsetBank == FontDefinition::CharacterSetBank::MacOS && maestro->charsetVal == 0xfff && maestro->calcIsSymbolFont(),
         "The zlib-era character set was not decoded like the earlier eras");
 }
 
@@ -673,29 +599,20 @@ void testClassRecordEra()
 // encoding follows that byte order, including the payload length in the record header.
 void testBigEndianClassRecords()
 {
-    const auto result = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2007/F2007-lyric-hyphens.mus");
-    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
-        "The Finale 2007 fixture was not classified as zlib era");
-    expect(result.report.byteOrder == ByteOrder::BigEndian,
-        "The Finale 2007 fixture should be big-endian");
-    expect(result.report.sourceVersion
-            && result.report.sourceVersion->major == finale_mus_reader::versions::finale2007.major,
+    const auto result =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2007/F2007-lyric-hyphens.mus");
+    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy, "The Finale 2007 fixture was not classified as zlib era");
+    expect(result.report.byteOrder == ByteOrder::BigEndian, "The Finale 2007 fixture should be big-endian");
+    expect(result.report.sourceVersion && result.report.sourceVersion->major == finale_mus_reader::versions::finale2007.major,
         "Finale 2007 should record internal major version 12");
 
     using musx::dom::others::FontDefinition;
-    const auto fonts = result.document->getOthers()
-        ->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
+    const auto fonts = result.document->getOthers()->getArray<FontDefinition>(musx::dom::SCORE_PARTID);
     // Nine source definitions plus the two typefaces needed by the pre-2009 categories.
-    expect(fonts.size() == 11,
-        "The big-endian font table size is incorrect: " + std::to_string(fonts.size()));
-    const auto maestro = result.document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 0);
-    expect(maestro && maestro->name == "Maestro" && maestro->charsetVal == 0xfff,
-        "A big-endian class record was not decoded");
-    expect(result.document->getOthers()->get<FontDefinition>(
-        musx::dom::SCORE_PARTID, 5)->name == "Maestro Percussion",
+    expect(fonts.size() == 11, "The big-endian font table size is incorrect: " + std::to_string(fonts.size()));
+    const auto maestro = result.document->getOthers()->get<FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    expect(maestro && maestro->name == "Maestro" && maestro->charsetVal == 0xfff, "A big-endian class record was not decoded");
+    expect(result.document->getOthers()->get<FontDefinition>(musx::dom::SCORE_PARTID, 5)->name == "Maestro Percussion",
         "A long name in a big-endian class record was not decoded");
 }
 
@@ -703,24 +620,18 @@ void testBigEndianClassRecords()
 // class-identified records into its blocks: the fixed-row model is unchanged.
 void testFinale2006RemainsFixedRow()
 {
-    const auto result = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2006/F2006-single-title.mus");
-    expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
-        "The Finale 2006 fixture was not classified as DCL");
+    const auto result =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2006/F2006-single-title.mus");
+    expect(result.report.formatEpoch == FormatEpoch::DclLegacy, "The Finale 2006 fixture was not classified as DCL");
     expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
         "Finale 2006 music spacing was not recovered through the fixed-row path");
     // Nine source definitions plus the two typefaces needed by the pre-2009 categories.
-    expect(result.document->getOthers()
-        ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size() == 11,
+    expect(result.document->getOthers()->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size() == 11,
         "The Finale 2006 font table size is incorrect: "
-            + std::to_string(result.document->getOthers()
-                    ->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size()));
+            + std::to_string(result.document->getOthers()->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID).size()));
     // The fifth block is present and empty, which is what distinguishes this era.
-    expect(result.report.blocks.size() == 5,
-        "Finale 2006 should carry a fifth block");
-    expect(result.report.blocks.back().decodedSize == 0,
-        "The Finale 2006 fifth block should be empty");
+    expect(result.report.blocks.size() == 5, "Finale 2006 should carry a fifth block");
+    expect(result.report.blocks.back().decodedSize == 0, "The Finale 2006 fifth block should be empty");
 }
 
 void testControlledDclVersions()
@@ -736,28 +647,17 @@ void testControlledDclVersions()
         std::uint8_t maint;
         std::uint8_t build;
     };
-    const std::array<Expected, 4> versions{{
-        {"F2002", "2002", 7, 0, 1, 2},
-        {"F2003", "2003", 8, 0, 0, 5},
-        {"F2004", "2004b", 9, 0, 0, 58},
-        {"F2005", "2005", 10, 0, 0, 10}}};
+    const std::array<Expected, 4> versions{
+        {{"F2002", "2002", 7, 0, 1, 2}, {"F2003", "2003", 8, 0, 0, 5}, {"F2004", "2004b", 9, 0, 0, 58}, {"F2005", "2005", 10, 0, 0, 10}}};
     for (const auto& [version, savingProduct, major, minor, maint, build] : versions) {
-        const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence" / version / (std::string(version) + "-baseline.mus");
+        const auto path = std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence" / version / (std::string(version) + "-baseline.mus");
         const auto result = Reader::readWithReport<TestXmlDocument>(path);
-        expect(result.report.formatEpoch == FormatEpoch::DclLegacy,
-            std::string(version) + " fixture was not classified as DCL");
-        expect(result.report.byteOrder == ByteOrder::BigEndian,
-            std::string(version) + " fixture byte order was not recovered");
-        expect(result.report.sourcePlatform == SourcePlatform::MacOS,
-            std::string(version) + " fixture platform was not recovered");
-        expect(result.report.savingProduct == savingProduct,
-            std::string(version) + " saving product was not recovered");
-        expect(result.report.sourceVersion
-            && result.report.sourceVersion->major == major
-            && result.report.sourceVersion->minor == minor
-            && result.report.sourceVersion->maint == maint
-            && result.report.sourceVersion->build == build,
+        expect(result.report.formatEpoch == FormatEpoch::DclLegacy, std::string(version) + " fixture was not classified as DCL");
+        expect(result.report.byteOrder == ByteOrder::BigEndian, std::string(version) + " fixture byte order was not recovered");
+        expect(result.report.sourcePlatform == SourcePlatform::MacOS, std::string(version) + " fixture platform was not recovered");
+        expect(result.report.savingProduct == savingProduct, std::string(version) + " saving product was not recovered");
+        expect(result.report.sourceVersion && result.report.sourceVersion->major == major && result.report.sourceVersion->minor == minor
+                   && result.report.sourceVersion->maint == maint && result.report.sourceVersion->build == build,
             std::string(version) + " embedded Finale version was not recovered");
         expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyMus,
             std::string(version) + " music spacing options were not recovered");
@@ -768,51 +668,33 @@ void testControlledDclVersions()
 void testUncompressedEpochAndOverlays()
 {
     const auto result = Reader::readWithReport<TestXmlDocument>(makeUncompressedMus());
-    expect(result.report.formatEpoch == FormatEpoch::UncompressedLegacy,
-        "Synthetic Finale 2000 file was not classified as uncompressed legacy");
-    expect(result.report.byteOrder == ByteOrder::LittleEndian,
-        "Synthetic Windows byte order was not detected");
-    expect(result.report.sourcePlatform == SourcePlatform::Windows,
-        "Synthetic Windows platform was not recovered");
-    expect(result.report.defaultsPlatform == SourcePlatform::Windows,
-        "Windows-sourced file was not seeded from the Windows baseline");
+    expect(result.report.formatEpoch == FormatEpoch::UncompressedLegacy, "Synthetic Finale 2000 file was not classified as uncompressed legacy");
+    expect(result.report.byteOrder == ByteOrder::LittleEndian, "Synthetic Windows byte order was not detected");
+    expect(result.report.sourcePlatform == SourcePlatform::Windows, "Synthetic Windows platform was not recovered");
+    expect(result.report.defaultsPlatform == SourcePlatform::Windows, "Windows-sourced file was not seeded from the Windows baseline");
     // The tuple is stored in the file's byte order, so a little-endian file holds it
     // reversed. Reading it in file order would report the build as the major version.
-    expect(result.report.sourceVersion
-        && result.report.sourceVersion->major == 12
-        && result.report.sourceVersion->minor == 3
-        && result.report.sourceVersion->maint == 4
-        && result.report.sourceVersion->build == 5,
+    expect(result.report.sourceVersion && result.report.sourceVersion->major == 12 && result.report.sourceVersion->minor == 3
+               && result.report.sourceVersion->maint == 4 && result.report.sourceVersion->build == 5,
         "Little-endian header version was not decoded in the file's byte order");
-    const auto layer = result.document->getOthers()
-        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 3);
+    const auto layer = result.document->getOthers()->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, 3);
     expect(layer && layer->restOffset == -14, "Legacy layer attribute overlay failed");
-    const auto spacing = result.document->getOptions()
-        ->get<musx::dom::options::MusicSpacingOptions>();
-    expect(spacing->minWidth == 361 && spacing->maxWidth == 1801,
-        "Uncompressed music spacing overlay failed");
-    expect(field(result, "others.layerAtts[3].restOffset").origin == ValueOrigin::LegacyMus,
-        "Layer overlay was not reported as recovered");
-    const auto fallbackText = result.document->getOptions()
-        ->get<musx::dom::options::FontOptions>()
-        ->getFontInfo(musx::dom::options::FontOptions::FontType::TextBlock);
-    const auto fallbackDefinition = result.document->getOthers()
-        ->get<musx::dom::others::FontDefinition>(
-            musx::dom::SCORE_PARTID, fallbackText->fontId);
+    const auto spacing = result.document->getOptions()->get<musx::dom::options::MusicSpacingOptions>();
+    expect(spacing->minWidth == 361 && spacing->maxWidth == 1801, "Uncompressed music spacing overlay failed");
+    expect(field(result, "others.layerAtts[3].restOffset").origin == ValueOrigin::LegacyMus, "Layer overlay was not reported as recovered");
+    const auto fallbackText =
+        result.document->getOptions()->get<musx::dom::options::FontOptions>()->getFontInfo(musx::dom::options::FontOptions::FontType::TextBlock);
+    const auto fallbackDefinition =
+        result.document->getOthers()->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, fallbackText->fontId);
     // This target recovers no font definitions of its own, so every one below was introduced
     // from the Windows reference. Cmpers 0 and 1 both hold the music font: 0 is the
     // default-music-font sentinel, materialized so that anything storing 0 resolves, and 1 makes
     // the same typeface addressable concretely, since matching never selects 0.
-    const auto zeroDefinition = result.document->getOthers()
-        ->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
-    expect(static_cast<bool>(zeroDefinition),
-        "A document referencing font id 0 was left with no definition at 0");
-    expect(fallbackText->fontId != 0
-            && fallbackDefinition && fallbackDefinition->getCmper() == fallbackText->fontId
-            && fallbackDefinition->name == "Times New Roman"
-            && fallbackDefinition->charsetBank
-                == musx::dom::others::FontDefinition::CharacterSetBank::Windows
-            && fallbackDefinition->pitch == 2,
+    const auto zeroDefinition = result.document->getOthers()->get<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID, 0);
+    expect(static_cast<bool>(zeroDefinition), "A document referencing font id 0 was left with no definition at 0");
+    expect(fallbackText->fontId != 0 && fallbackDefinition && fallbackDefinition->getCmper() == fallbackText->fontId
+               && fallbackDefinition->name == "Times New Roman"
+               && fallbackDefinition->charsetBank == musx::dom::others::FontDefinition::CharacterSetBank::Windows && fallbackDefinition->pitch == 2,
         "A cloned Windows fallback font retained its reference cmper or lost its definition");
     expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
@@ -837,39 +719,28 @@ std::vector<std::uint8_t> makeCodaBannerMus()
 void testCodaBannerEpoch()
 {
     const auto result = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus());
-    expect(result.report.formatEpoch == FormatEpoch::CodaBanner,
-        "Synthetic Coda-banner file was not classified");
-    expect(result.report.savingProduct == "2.6",
-        "Coda-banner product was not recovered from the banner text");
+    expect(result.report.formatEpoch == FormatEpoch::CodaBanner, "Synthetic Coda-banner file was not classified");
+    expect(result.report.savingProduct == "2.6", "Coda-banner product was not recovered from the banner text");
     expect(result.report.sourceVersion
-            && finale_mus_reader::VersionBound{result.report.sourceVersion->major,
-                   result.report.sourceVersion->minor}
-                == finale_mus_reader::versions::finale2_6,
+               && finale_mus_reader::VersionBound{result.report.sourceVersion->major, result.report.sourceVersion->minor}
+                      == finale_mus_reader::versions::finale2_6,
         "Coda-banner version was not recovered from the banner text");
-    expect(result.report.sourceVersion->raw == 0,
-        "A Coda-banner version was reported as though it came from a header tuple");
-    expect(result.report.byteOrder == ByteOrder::BigEndian,
-        "Coda-banner byte order was not classified");
+    expect(result.report.sourceVersion->raw == 0, "A Coda-banner version was reported as though it came from a header tuple");
+    expect(result.report.byteOrder == ByteOrder::BigEndian, "Coda-banner byte order was not classified");
     // This era records its version only in the product banner, and that names the
     // application that wrote the file, so it belongs to the last saver. Nothing identifies
     // the creator, so that block stays empty rather than repeating a version it never held.
     const auto& header = *result.document->getHeader();
     expect(header.modified.finaleVersion.major == finale_mus_reader::versions::finale2_6.major
-            && header.modified.finaleVersion.minor
-                == finale_mus_reader::versions::finale2_6.minor,
+               && header.modified.finaleVersion.minor == finale_mus_reader::versions::finale2_6.minor,
         "The Coda-banner version did not reach the document header");
-    expect(header.created.finaleVersion.major == 0,
-        "A creator version was invented for a file that records none");
-    expect(result.report.sourcePlatform == SourcePlatform::Unknown
-        && result.report.defaultsPlatform == SourcePlatform::MacOS,
+    expect(header.created.finaleVersion.major == 0, "A creator version was invented for a file that records none");
+    expect(result.report.sourcePlatform == SourcePlatform::Unknown && result.report.defaultsPlatform == SourcePlatform::MacOS,
         "An unknown source platform did not fall back to the macOS baseline");
-    expect(field(result, "options.musicSpacing.minWidth").origin
-        == ValueOrigin::LegacyBehavior,
+    expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyBehavior,
         "The Coda-banner minimum-width behavior was not applied");
-    const auto fonts = result.document->getOptions()
-        ->get<musx::dom::options::FontOptions>();
-    expect(fonts && fonts->fontOptions.size() == 45,
-        "Unsupported Coda-banner FontOptions were not safely completed from the baseline");
+    const auto fonts = result.document->getOptions()->get<musx::dom::options::FontOptions>();
+    expect(fonts && fonts->fontOptions.size() == 45, "Unsupported Coda-banner FontOptions were not safely completed from the baseline");
     expectCompleteOptionsPool(result);
     expectNoScoreContent(result);
 }
@@ -877,13 +748,10 @@ void testCodaBannerEpoch()
 void testZlibEpoch()
 {
     const auto result = Reader::readWithReport<TestXmlDocument>(makeZlibMus());
-    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
-        "Synthetic Finale 2012 file was not classified as zlib legacy");
+    expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy, "Synthetic Finale 2012 file was not classified as zlib legacy");
     expect(result.report.blocks.size() == 5, "Synthetic zlib block count is incorrect");
-    expect(result.report.blocks.front().decodedSize == 3,
-        "Synthetic zlib decoded size is incorrect");
-    expect(field(result, "options.musicSpacing.minWidth").origin
-        == ValueOrigin::LegacyBehavior,
+    expect(result.report.blocks.front().decodedSize == 3, "Synthetic zlib decoded size is incorrect");
+    expect(field(result, "options.musicSpacing.minWidth").origin == ValueOrigin::LegacyBehavior,
         "Selector-94-absent music spacing behavior was not applied");
     expectNoScoreContent(result);
 }
@@ -895,37 +763,25 @@ void testZlibEpoch()
 void testEmbeddedGraphics()
 {
     // A PNG signature and an EPS header: the two shapes the corpus actually contains.
-    for (const auto& [terminalType, graphic] :
-         {std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x0013),
-              "\x89PNG\r\n\x1a\n padding"},
-          std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x001d),
-              "%!PS-Adobe-3.0 EPSF-3.0"}}) {
-        const auto result = Reader::readWithReport<TestXmlDocument>(
-            makeZlibMusWithGraphic(terminalType, graphic));
-        expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy,
-            "A file with an embedded graphic was not classified as zlib legacy");
+    for (const auto& [terminalType, graphic] : {std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x0013), "\x89PNG\r\n\x1a\n padding"},
+             std::pair<std::uint16_t, std::string_view>{std::uint16_t(0x001d), "%!PS-Adobe-3.0 EPSF-3.0"}}) {
+        const auto result = Reader::readWithReport<TestXmlDocument>(makeZlibMusWithGraphic(terminalType, graphic));
+        expect(result.report.formatEpoch == FormatEpoch::ZlibLegacy, "A file with an embedded graphic was not classified as zlib legacy");
         // The point of the fix: the four real blocks survive rather than being discarded.
-        expect(result.report.blocks.size() == 5,
-            "A stored terminal block cost the file its already-decoded blocks");
-        expect(result.report.blocks.front().decodedSize == 3,
-            "The record block was not decoded alongside a stored terminal block");
+        expect(result.report.blocks.size() == 5, "A stored terminal block cost the file its already-decoded blocks");
+        expect(result.report.blocks.front().decodedSize == 3, "The record block was not decoded alongside a stored terminal block");
 
         const auto& terminal = result.report.blocks.back();
-        expect(terminal.type == terminalType && terminal.stored,
-            "The graphics block was not reported as stored");
+        expect(terminal.type == terminalType && terminal.stored, "The graphics block was not reported as stored");
         const auto expectedStoredSize = graphic.size() + (terminalType == 0x0013 ? 11 : 0);
-        expect(terminal.decodedSize == expectedStoredSize,
-            "A stored block's payload begins after six header bytes, not ten");
-        expect(!terminal.checksumPresent,
-            "A stored block was reported as carrying a checksum");
+        expect(terminal.decodedSize == expectedStoredSize, "A stored block's payload begins after six header bytes, not ten");
+        expect(!terminal.checksumPresent, "A stored block was reported as carrying a checksum");
         if (terminalType == 0x0013) {
             const auto& embedded = result.document->getEmbeddedGraphics();
-            expect(embedded.size() == 1 && embedded.at(1).bytes.size() == graphic.size()
-                    && embedded.at(1).extension == "png",
+            expect(embedded.size() == 1 && embedded.at(1).bytes.size() == graphic.size() && embedded.at(1).extension == "png",
                 "A framed embedded graphic was not installed in the musxdom document");
         } else {
-            expect(result.document->getEmbeddedGraphics().empty(),
-                "An unrelated stored terminal block was mistaken for embedded graphics");
+            expect(result.document->getEmbeddedGraphics().empty(), "An unrelated stored terminal block was mistaken for embedded graphics");
         }
         expectCompleteOptionsPool(result);
         expectNoScoreContent(result);
@@ -949,49 +805,35 @@ void testCodaBannerByteOrder()
     // A `PC` product states Windows, which is little-endian and seeds from the Windows
     // baseline. A numeric product says nothing about platform, so it stays Unknown and falls
     // back to macOS, exactly as before this era gained a second platform.
-    const std::array<Case, 2> cases{{
-        {ByteOrder::LittleEndian, "PC 1.0+", SourcePlatform::Windows, SourcePlatform::Windows},
+    const std::array<Case, 2> cases{{{ByteOrder::LittleEndian, "PC 1.0+", SourcePlatform::Windows, SourcePlatform::Windows},
         {ByteOrder::BigEndian, "2.6", SourcePlatform::Unknown, SourcePlatform::MacOS}}};
 
     for (const auto& testCase : cases) {
-        const auto result = Reader::readWithReport<TestXmlDocument>(
-            makeCodaBannerMus(testCase.byteOrder, testCase.product));
+        const auto result = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus(testCase.byteOrder, testCase.product));
         const std::string what = std::string("Coda-banner ") + testCase.product;
-        expect(result.report.formatEpoch == FormatEpoch::CodaBanner,
-            what + " was not classified as the Coda-banner era");
-        expect(result.report.byteOrder == testCase.byteOrder,
-            what + " byte order was not taken from the banner product");
-        expect(result.report.sourcePlatform == testCase.platform
-                && result.report.defaultsPlatform == testCase.baseline,
+        expect(result.report.formatEpoch == FormatEpoch::CodaBanner, what + " was not classified as the Coda-banner era");
+        expect(result.report.byteOrder == testCase.byteOrder, what + " byte order was not taken from the banner product");
+        expect(result.report.sourcePlatform == testCase.platform && result.report.defaultsPlatform == testCase.baseline,
             what + " selected the wrong platform or baseline");
-        expect(result.report.savingProduct == testCase.product,
-            what + " did not report its product");
+        expect(result.report.savingProduct == testCase.product, what + " did not report its product");
 
         // Both orders must yield the same logical document, which is what shows the order is
         // being applied rather than the bytes merely being accepted.
         const auto clefs = result.document->getOptions()->get<ClefOptions>();
-        expect(clefs && clefs->clefDefs.size() == 18,
-            what + " did not complete the clef collection");
-        expect(clefs->getClefDef(0)->middleCPos == -10 && clefs->getClefDef(0)->clefChar == 38
-                && clefs->getClefDef(0)->staffPosition == -6,
+        expect(clefs && clefs->clefDefs.size() == 18, what + " did not complete the clef collection");
+        expect(clefs->getClefDef(0)->middleCPos == -10 && clefs->getClefDef(0)->clefChar == 38 && clefs->getClefDef(0)->staffPosition == -6,
             what + " did not recover its first clef");
-        expect(clefs->getClefDef(4)->clefChar == 214 && clefs->getClefDef(7)->staffPosition == -4,
-            what + " did not recover its later clefs");
-        expect(field(result, "options.clefOptions.clefDefs[7].middleCPos").origin
-                == ValueOrigin::LegacyMus,
+        expect(clefs->getClefDef(4)->clefChar == 214 && clefs->getClefDef(7)->staffPosition == -4, what + " did not recover its later clefs");
+        expect(field(result, "options.clefOptions.clefDefs[7].middleCPos").origin == ValueOrigin::LegacyMus,
             what + " reported a stored clef as synthesized");
-        expect(clefs->clefChangePercent == 75 && clefs->clefChangeOffset == -12
-                && clefs->clefFrontSepar == 24,
+        expect(clefs->clefChangePercent == 75 && clefs->clefChangeOffset == -12 && clefs->clefFrontSepar == 24,
             what + " did not recover its clef scalars");
         // The era has no such option, so this is behavior rather than a record or a default.
-        expect(clefs->cautionaryClefChanges
-                && field(result, "options.clefOptions.cautionaryClefChanges").origin
-                    == ValueOrigin::LegacyBehavior,
+        expect(clefs->cautionaryClefChanges && field(result, "options.clefOptions.cautionaryClefChanges").origin == ValueOrigin::LegacyBehavior,
             what + " lost the era's unconditional courtesy clef");
         // These three do not exist in the era either, but the baseline already carries what
         // Finale 27 produces for them, so they are ordinary defaults.
-        expect(clefs->clefKeySepar == 0 && clefs->clefTimeSepar == 0
-                && !clefs->showClefFirstSystemOnly,
+        expect(clefs->clefKeySepar == 0 && clefs->clefTimeSepar == 0 && !clefs->showClefFirstSystemOnly,
             what + " invented a value for an option the era does not have");
         expectNoScoreContent(result);
     }
@@ -1001,36 +843,30 @@ void testMalformedInput()
 {
     bool rejected = false;
     try {
-        static_cast<void>(Reader::readWithReport<TestXmlDocument>(
-            std::vector<std::uint8_t>{1, 2, 3, 4}));
+        static_cast<void>(Reader::readWithReport<TestXmlDocument>(std::vector<std::uint8_t>{1, 2, 3, 4}));
     } catch (const std::invalid_argument&) {
         rejected = true;
     }
     expect(rejected, "Arbitrary input was accepted as a MUS file");
     // Error is the one level with an absolute meaning, so it must not appear when a
     // document was produced. Every other level accompanies a usable result.
-    const auto good = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2012/F2012-upstem-flags.mus");
+    const auto good =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2012/F2012-upstem-flags.mus");
     expect(good.document != nullptr, "A known-good fixture failed to import");
-    expect(!hasDiagnostic(good.report, musx::util::Logger::LogLevel::Error),
-        "A successful import reported an error-level diagnostic");
+    expect(!hasDiagnostic(good.report, musx::util::Logger::LogLevel::Error), "A successful import reported an error-level diagnostic");
 }
 
 void testCodaBlankShapeDefinition()
 {
     using namespace musx::dom;
-    const auto blank = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus(
-        ByteOrder::LittleEndian, "PC 1.0+", true));
-    const auto blankShape = blank.document->getOthers()
-        ->get<others::ShapeDef>(SCORE_PARTID, 19);
-    expect(blankShape && blankShape->instructionList == 19 && blankShape->dataList == 19
-            && blankShape->recognize() == KnownShapeDefType::Blank,
+    const auto blank = Reader::readWithReport<TestXmlDocument>(makeCodaBannerMus(ByteOrder::LittleEndian, "PC 1.0+", true));
+    const auto blankShape = blank.document->getOthers()->get<others::ShapeDef>(SCORE_PARTID, 19);
+    expect(blankShape && blankShape->instructionList == 19 && blankShape->dataList == 19 && blankShape->recognize() == KnownShapeDefType::Blank,
         "An intentionally blank Coda shape was not recognized as Blank without losing its references");
     expect(field(blank, "others.shapeDef[19].instructionList").origin == ValueOrigin::LegacyMus
-            && field(blank, "others.shapeDef[19].instructionList").rawValue == 19
-            && field(blank, "others.shapeDef[19].dataList").origin == ValueOrigin::LegacyMus
-            && field(blank, "others.shapeDef[19].dataList").rawValue == 19,
+               && field(blank, "others.shapeDef[19].instructionList").rawValue == 19
+               && field(blank, "others.shapeDef[19].dataList").origin == ValueOrigin::LegacyMus
+               && field(blank, "others.shapeDef[19].dataList").rawValue == 19,
         "A blank Coda shape did not retain its source references in the report");
 }
 
@@ -1042,9 +878,8 @@ void testLegacyCharacterFonts()
 {
     using namespace musx::dom;
 
-    const auto source = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2002/F2002-clef-stem-font.mus");
+    const auto source =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2002/F2002-clef-stem-font.mus");
 
     // Font 9 is Arial, a Mac-bank text font, so Mac Roman 199 is the code point 171.
     const auto clefs = source.document->getOptions()->get<options::ClefOptions>();
@@ -1089,8 +924,7 @@ void testLegacyCharacterFonts()
     CHECK(flat->second->symChar == U'\u00ab');
     expect(field(source, "options.textOptions.symbolInserts[flat].symChar").rawValue == 199,
         "The symbol-insert report did not keep the byte the source actually stored");
-    const auto natural
-        = texts->symbolInserts.find(options::AccidentalInsertSymbolType::Natural);
+    const auto natural = texts->symbolInserts.find(options::AccidentalInsertSymbolType::Natural);
     REQUIRE(natural != texts->symbolInserts.end());
     REQUIRE(natural->second != nullptr);
     REQUIRE(natural->second->symFont != nullptr);
@@ -1098,9 +932,8 @@ void testLegacyCharacterFonts()
     CHECK(natural->second->symChar == 110);
 
     // Its parent, which differs only by the three edits under test, has neither.
-    const auto parent = Reader::readWithReport<TestXmlDocument>(
-        std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR)
-            / "evidence/F2002/F2002-empty.mus");
+    const auto parent =
+        Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2002/F2002-empty.mus");
     const auto parentStems = parent.document->getOptions()->get<options::StemOptions>();
     REQUIRE(parentStems != nullptr);
     CHECK(parentStems->stemConnections.size() == 1);
@@ -1108,17 +941,32 @@ void testLegacyCharacterFonts()
 
 } // namespace
 
-TEST_CASE("Controlled DCL file", "[reader]") { testControlledDclFile(); }
+TEST_CASE("Controlled DCL file", "[reader]")
+{
+    testControlledDclFile();
+}
 
-TEST_CASE("Legacy character fonts", "[reader]") { testLegacyCharacterFonts(); }
+TEST_CASE("Legacy character fonts", "[reader]")
+{
+    testLegacyCharacterFonts();
+}
 
 TEST_CASE("Uncompressed FontOptions epoch gate", "[reader]")
 {
     testUncompressedFontOptionsEpochGate();
 }
-TEST_CASE("Uncompressed fixtures", "[reader]") { testUncompressedFixtures(); }
-TEST_CASE("Class record era", "[reader]") { testClassRecordEra(); }
-TEST_CASE("Big-endian class records", "[reader]") { testBigEndianClassRecords(); }
+TEST_CASE("Uncompressed fixtures", "[reader]")
+{
+    testUncompressedFixtures();
+}
+TEST_CASE("Class record era", "[reader]")
+{
+    testClassRecordEra();
+}
+TEST_CASE("Big-endian class records", "[reader]")
+{
+    testBigEndianClassRecords();
+}
 TEST_CASE("Finale 2006 remains fixed-row", "[reader]")
 {
     testFinale2006RemainsFixedRow();
@@ -1128,14 +976,26 @@ TEST_CASE("Independent imported documents", "[reader]")
 {
     testIndependentImportedDocuments();
 }
-TEST_CASE("Controlled DCL versions", "[reader]") { testControlledDclVersions(); }
+TEST_CASE("Controlled DCL versions", "[reader]")
+{
+    testControlledDclVersions();
+}
 TEST_CASE("Uncompressed epoch and overlays", "[reader]")
 {
     testUncompressedEpochAndOverlays();
 }
-TEST_CASE("Coda banner epoch", "[reader]") { testCodaBannerEpoch(); }
-TEST_CASE("Zlib epoch", "[reader]") { testZlibEpoch(); }
-TEST_CASE("Embedded graphics", "[reader]") { testEmbeddedGraphics(); }
+TEST_CASE("Coda banner epoch", "[reader]")
+{
+    testCodaBannerEpoch();
+}
+TEST_CASE("Zlib epoch", "[reader]")
+{
+    testZlibEpoch();
+}
+TEST_CASE("Embedded graphics", "[reader]")
+{
+    testEmbeddedGraphics();
+}
 // A Coda-banner document's pools, built directly so the walk can be given an empty one. The
 // era chains pools nose to tail: an 8-byte prologue of page count and page size, then that
 // many 512-byte pages, and the chain ends where the next four bytes are not the page size.
@@ -1162,7 +1022,7 @@ std::vector<std::uint8_t> makeCodaBannerPools(const std::vector<std::uint32_t>& 
 struct LayerFlagMember
 {
     const char* member;
-    bool musx::dom::others::LayerAttributes::*field;
+    bool musx::dom::others::LayerAttributes::* field;
     std::uint16_t mask;
 };
 
@@ -1170,15 +1030,13 @@ const LayerFlagMember layerFlagMembers[] = {
     {"ignoreHiddenLayers", &musx::dom::others::LayerAttributes::ignoreHiddenLayers, 0x0001},
     {"hideLayer", &musx::dom::others::LayerAttributes::hideLayer, 0x0002},
     {"freezTiesToStems", &musx::dom::others::LayerAttributes::freezTiesToStems, 0x0080},
-    {"onlyIfOtherLayersHaveNotes",
-        &musx::dom::others::LayerAttributes::onlyIfOtherLayersHaveNotes, 0x0100},
+    {"onlyIfOtherLayersHaveNotes", &musx::dom::others::LayerAttributes::onlyIfOtherLayersHaveNotes, 0x0100},
     {"useRestOffset", &musx::dom::others::LayerAttributes::useRestOffset, 0x0200},
     {"freezeStemsUp", &musx::dom::others::LayerAttributes::freezeStemsUp, 0x0400},
     {"freezeLayer", &musx::dom::others::LayerAttributes::freezeLayer, 0x0800},
     {"playback", &musx::dom::others::LayerAttributes::playback, 0x1000},
     {"affectSpacing", &musx::dom::others::LayerAttributes::affectSpacing, 0x2000},
-    {"ignoreHiddenNotesOnly",
-        &musx::dom::others::LayerAttributes::ignoreHiddenNotesOnly, 0x4000},
+    {"ignoreHiddenNotesOnly", &musx::dom::others::LayerAttributes::ignoreHiddenNotesOnly, 0x4000},
 };
 
 // Asserts one layer against the record it came from, and asserts that the report carries an
@@ -1190,39 +1048,28 @@ const LayerFlagMember layerFlagMembers[] = {
 // A layer with no record reaches ignoreHiddenLayers and hideLayer without asserting anything,
 // because the baseline already holds false for both, so those stay Finale27Default while the
 // members that disagree become LegacyBehavior.
-const std::map<std::string, ValueOrigin> noRecordOrigins = {
-    {"ignoreHiddenLayers", ValueOrigin::Finale27Default},
-    {"hideLayer", ValueOrigin::Finale27Default},
-    {"playback", ValueOrigin::Finale27Default},
-    {"affectSpacing", ValueOrigin::Finale27Default}};
+const std::map<std::string, ValueOrigin> noRecordOrigins = {{"ignoreHiddenLayers", ValueOrigin::Finale27Default},
+    {"hideLayer", ValueOrigin::Finale27Default}, {"playback", ValueOrigin::Finale27Default}, {"affectSpacing", ValueOrigin::Finale27Default}};
 
 // Playback and music spacing are decided by the era below Finale 2002 whatever the file stores,
 // but the baseline already holds the value the era implies, so nothing is asserted for them.
 const std::map<std::string, ValueOrigin> preFinale2002Origins = {
-    {"playback", ValueOrigin::Finale27Default},
-    {"affectSpacing", ValueOrigin::Finale27Default}};
+    {"playback", ValueOrigin::Finale27Default}, {"affectSpacing", ValueOrigin::Finale27Default}};
 
-void expectLayer(const ImportResult& result, musx::dom::Cmper cmper, int restOffset,
-    std::uint16_t flags, ValueOrigin origin, const std::string& label,
-    const std::map<std::string, ValueOrigin>& overrides = {})
+void expectLayer(const ImportResult& result, musx::dom::Cmper cmper, int restOffset, std::uint16_t flags, ValueOrigin origin,
+    const std::string& label, const std::map<std::string, ValueOrigin>& overrides = {})
 {
-    const auto layer = result.document->getOthers()
-        ->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, cmper);
+    const auto layer = result.document->getOthers()->get<musx::dom::others::LayerAttributes>(musx::dom::SCORE_PARTID, cmper);
     const auto where = label + " layer " + std::to_string(cmper);
     expect(static_cast<bool>(layer), where + " is missing");
     expect(layer->restOffset == restOffset, where + " rest offset is wrong");
-    expect(field(result, "others.layerAtts[" + std::to_string(cmper) + "].restOffset").origin
-            == origin,
-        where + " rest offset origin is wrong");
+    expect(field(result, "others.layerAtts[" + std::to_string(cmper) + "].restOffset").origin == origin, where + " rest offset origin is wrong");
     for (const auto& flag : layerFlagMembers) {
         const bool expected = (flags & flag.mask) != 0;
-        expect(layer.get()->*flag.field == expected,
-            where + " " + flag.member + " is wrong");
+        expect(layer.get()->*flag.field == expected, where + " " + flag.member + " is wrong");
         const auto found = overrides.find(flag.member);
         const auto expectedOrigin = found != overrides.end() ? found->second : origin;
-        expect(field(result,
-                   "others.layerAtts[" + std::to_string(cmper) + "]." + flag.member).origin
-                == expectedOrigin,
+        expect(field(result, "others.layerAtts[" + std::to_string(cmper) + "]." + flag.member).origin == expectedOrigin,
             where + " " + flag.member + " origin is wrong");
     }
 }
@@ -1233,8 +1080,7 @@ void expectLayer(const ImportResult& result, musx::dom::Cmper cmper, int restOff
 void testLayerAttributes()
 {
     const auto read = [](const char* relative) {
-        return Reader::readWithReport<TestXmlDocument>(
-            std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
+        return Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / relative);
     };
 
     // Fixed rows, uncompressed, big-endian. The four flags of the original layer dialog.
@@ -1257,15 +1103,13 @@ void testLayerAttributes()
     // Class records, both byte orders. The payload keeps the six-word stream the rows carried,
     // so the flag word sits at byte offset 10.
     const auto f2007 = read("evidence/F2007/F2007-lyric-hyphens.mus");
-    expect(f2007.report.byteOrder == ByteOrder::BigEndian,
-        "The Finale 2007 fixture is not big-endian");
+    expect(f2007.report.byteOrder == ByteOrder::BigEndian, "The Finale 2007 fixture is not big-endian");
     expectLayer(f2007, 0, 6, 0x7f80, ValueOrigin::LegacyMus, "Finale 2007");
     expectLayer(f2007, 1, -6, 0x7b80, ValueOrigin::LegacyMus, "Finale 2007");
     expectLayer(f2007, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2007");
 
     const auto f2012 = read("evidence/F2012/F2012-baseline.mus");
-    expect(f2012.report.byteOrder == ByteOrder::LittleEndian,
-        "The Finale 2012 fixture is not little-endian");
+    expect(f2012.report.byteOrder == ByteOrder::LittleEndian, "The Finale 2012 fixture is not little-endian");
     expectLayer(f2012, 0, 6, 0x7f80, ValueOrigin::LegacyMus, "Finale 2012");
     expectLayer(f2012, 1, -6, 0x7b80, ValueOrigin::LegacyMus, "Finale 2012");
     expectLayer(f2012, 3, 0, 0x3000, ValueOrigin::LegacyMus, "Finale 2012");
@@ -1274,16 +1118,11 @@ void testLayerAttributes()
     // the same six-word row every later fixed-row release uses. Layers 2 and 3 carry a stored
     // rest offset with the checkbox clear, which no other fixture exercises.
     const auto adjrests = read("evidence/F372/F372-layer-adjrests.mus");
-    expect(adjrests.report.formatEpoch == FormatEpoch::UncompressedLegacy,
-        "The Finale 3.7.2 layer fixture was not classified as uncompressed");
-    expectLayer(adjrests, 0, 2, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
-        preFinale2002Origins);
-    expectLayer(adjrests, 1, -3, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
-        preFinale2002Origins);
-    expectLayer(adjrests, 2, 4, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
-        preFinale2002Origins);
-    expectLayer(adjrests, 3, -5, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests",
-        preFinale2002Origins);
+    expect(adjrests.report.formatEpoch == FormatEpoch::UncompressedLegacy, "The Finale 3.7.2 layer fixture was not classified as uncompressed");
+    expectLayer(adjrests, 0, 2, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests", preFinale2002Origins);
+    expectLayer(adjrests, 1, -3, 0x3200, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests", preFinale2002Origins);
+    expectLayer(adjrests, 2, 4, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests", preFinale2002Origins);
+    expectLayer(adjrests, 3, -5, 0x3000, ValueOrigin::LegacyMus, "Finale 3.7.2 adjusted rests", preFinale2002Origins);
 
     // Its unmodified sibling stores no record at all. Every layer then takes the era's own
     // behavior -- nothing set but playback and music spacing -- rather than the pinned baseline,
@@ -1301,8 +1140,7 @@ void testLayerAttributes()
     // The Coda-banner era stores none either, and its epoch is covered rather than gated out,
     // so the same behavior applies there.
     const auto f263 = read("evidence/F263/F263-baseline.mus");
-    expect(f263.report.formatEpoch == FormatEpoch::CodaBanner,
-        "The Finale 2.6.3 fixture was not classified as Coda-banner");
+    expect(f263.report.formatEpoch == FormatEpoch::CodaBanner, "The Finale 2.6.3 fixture was not classified as Coda-banner");
     expectLayer(f263, 0, 0, 0x3000, ValueOrigin::LegacyBehavior, "Finale 2.6.3", noRecordOrigins);
     expectLayer(f263, 3, 0, 0x3000, ValueOrigin::Finale27Default, "Finale 2.6.3");
 
@@ -1311,21 +1149,15 @@ void testLayerAttributes()
     // The uncompressed epoch is wholly below the Finale 2002 boundary, so playback and music
     // spacing are supplied here too, whatever the banner version claims.
     const auto synthetic = Reader::readWithReport<TestXmlDocument>(makeUncompressedMus());
-    expectLayer(synthetic, 0, 11, 0x3f80, ValueOrigin::LegacyMus, "Synthetic",
-        preFinale2002Origins);
-    expectLayer(synthetic, 1, -12, 0x3000, ValueOrigin::LegacyMus, "Synthetic",
-        preFinale2002Origins);
-    expectLayer(synthetic, 3, -14, 0x7003, ValueOrigin::LegacyMus, "Synthetic",
-        preFinale2002Origins);
+    expectLayer(synthetic, 0, 11, 0x3f80, ValueOrigin::LegacyMus, "Synthetic", preFinale2002Origins);
+    expectLayer(synthetic, 1, -12, 0x3000, ValueOrigin::LegacyMus, "Synthetic", preFinale2002Origins);
+    expectLayer(synthetic, 3, -14, 0x7003, ValueOrigin::LegacyMus, "Synthetic", preFinale2002Origins);
     // The comparator the baseline has no object for is pooled from the record itself, so every
     // member is source-owned and nothing about it can report a retained baseline default.
-    expect(synthetic.document->getOthers()
-            ->getAllSources<musx::dom::others::LayerAttributes>().size()
-                == musx::dom::MAX_LAYERS + 1,
+    expect(synthetic.document->getOthers()->getAllSources<musx::dom::others::LayerAttributes>().size() == musx::dom::MAX_LAYERS + 1,
         "The layer record past the modern range did not reach the document");
     expectLayer(synthetic, musx::dom::MAX_LAYERS, 15, 0x3080, ValueOrigin::LegacyMus, "Synthetic",
-        {{"playback", ValueOrigin::LegacyBehavior},
-            {"affectSpacing", ValueOrigin::LegacyBehavior}});
+        {{"playback", ValueOrigin::LegacyBehavior}, {"affectSpacing", ValueOrigin::LegacyBehavior}});
 }
 
 // An empty pool is an ordinary pool, not the end of the chain. The earliest documents store
@@ -1333,23 +1165,16 @@ void testLayerAttributes()
 // stopped on the first zero-page prologue would never reach it.
 void testCodaBannerEmptyPool()
 {
-    const auto full = finale_mus_reader::container::parse(
-        makeCodaBannerPools({1, 1, 1}).data(), makeCodaBannerPools({1, 1, 1}).size());
-    expect(full.formatEpoch == FormatEpoch::CodaBanner && full.blocks.size() == 3,
-        "Three non-empty pools were not all found");
+    const auto full = finale_mus_reader::container::parse(makeCodaBannerPools({1, 1, 1}).data(), makeCodaBannerPools({1, 1, 1}).size());
+    expect(full.formatEpoch == FormatEpoch::CodaBanner && full.blocks.size() == 3, "Three non-empty pools were not all found");
 
     const auto bytes = makeCodaBannerPools({1, 0, 1});
     const auto parsed = finale_mus_reader::container::parse(bytes.data(), bytes.size());
-    expect(parsed.formatEpoch == FormatEpoch::CodaBanner,
-        "A document with an empty pool was not classified as the Coda-banner era");
-    expect(parsed.blocks.size() == 3,
-        "An empty second pool ended the walk instead of being reported as empty");
-    expect(parsed.blocks[1].data.empty() && parsed.blocks[1].info.decodedSize == 0,
-        "The empty pool was not reported as empty");
-    expect(parsed.blocks[2].data.size() == 0x200,
-        "The pool behind the empty one was not reached");
-    expect(parsed.blocks[0].info.type == 1 && parsed.blocks[1].info.type == 2
-            && parsed.blocks[2].info.type == 3,
+    expect(parsed.formatEpoch == FormatEpoch::CodaBanner, "A document with an empty pool was not classified as the Coda-banner era");
+    expect(parsed.blocks.size() == 3, "An empty second pool ended the walk instead of being reported as empty");
+    expect(parsed.blocks[1].data.empty() && parsed.blocks[1].info.decodedSize == 0, "The empty pool was not reported as empty");
+    expect(parsed.blocks[2].data.size() == 0x200, "The pool behind the empty one was not reached");
+    expect(parsed.blocks[0].info.type == 1 && parsed.blocks[1].info.type == 2 && parsed.blocks[2].info.type == 3,
         "An empty pool did not take its place in the type numbering");
 
     // A run of empty pools advances by the prologue each time rather than spinning, and the
@@ -1359,10 +1184,22 @@ void testCodaBannerEmptyPool()
     expect(walked.blocks.size() == 3, "A run of empty pools was not walked to its end");
 }
 
-TEST_CASE("Coda-banner byte order", "[reader]") { testCodaBannerByteOrder(); }
-TEST_CASE("Coda-banner empty pool", "[reader]") { testCodaBannerEmptyPool(); }
-TEST_CASE("Layer attributes", "[reader]") { testLayerAttributes(); }
-TEST_CASE("Malformed input", "[reader]") { testMalformedInput(); }
+TEST_CASE("Coda-banner byte order", "[reader]")
+{
+    testCodaBannerByteOrder();
+}
+TEST_CASE("Coda-banner empty pool", "[reader]")
+{
+    testCodaBannerEmptyPool();
+}
+TEST_CASE("Layer attributes", "[reader]")
+{
+    testLayerAttributes();
+}
+TEST_CASE("Malformed input", "[reader]")
+{
+    testMalformedInput();
+}
 TEST_CASE("Coda blank shape definition", "[reader]")
 {
     testCodaBlankShapeDefinition();

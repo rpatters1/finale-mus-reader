@@ -19,33 +19,30 @@ TEST_CASE("File locator synthesis requires its same-side referents", "[file_path
     const std::string graphic = "page_graphic_assigns[cmper=1,inci=0].graphic_cmper";
     const std::string alias = "file_aliases[cmper=1]";
     const std::string bookmark = "file_url_bookmarks[cmper=1]";
-    ComparisonLeaves source{
-        {type, {Value(static_cast<int>(PathType::DosPath)), "legacy-mus"}},
-        {"page_graphic_assigns[cmper=1,inci=0].f_desc_id", {Value(1), "legacy-mus"}},
-        {graphic, {Value(2), "legacy-mus"}}};
-    ComparisonLeaves companion{
-        {type, {Value(static_cast<int>(PathType::MacAlias)), ""}},
-        {alias + ".share_mode", {Value(0), ""}}, {alias + ".length", {Value(3), ""}},
-        {alias + ".alias_handle", {Value(Value::Blob{0, 1, 255}), ""}},
+    ComparisonLeaves source{{type, {Value(static_cast<int>(PathType::DosPath)), "legacy-mus"}},
+        {"page_graphic_assigns[cmper=1,inci=0].f_desc_id", {Value(1), "legacy-mus"}}, {graphic, {Value(2), "legacy-mus"}}};
+    ComparisonLeaves companion{{type, {Value(static_cast<int>(PathType::MacAlias)), ""}}, {alias + ".share_mode", {Value(0), ""}},
+        {alias + ".length", {Value(3), ""}}, {alias + ".alias_handle", {Value(Value::Blob{0, 1, 255}), ""}},
         {bookmark + ".share_mode", {Value(0), ""}}, {bookmark + ".length", {Value(3), ""}},
         {bookmark + ".url_bookmark_data", {Value(Value::Blob{0, 2, 255}), ""}}};
     const ComparisonLeaves empty;
     const Value absent;
-    const auto classify = [&](const std::string& object, std::string_view member,
-                              DifferenceCategory category = DifferenceCategory::CompanionOnly) {
+    const auto classify = [&](const std::string& object, std::string_view member, DifferenceCategory category = DifferenceCategory::CompanionOnly) {
         const auto path = object + "." + std::string(member);
         const auto fn = differenceClassifier(object.substr(0, object.find('[')));
         REQUIRE(fn);
-        DifferenceContext context{path, category, "", absent, companion.at(path).first,
-            empty, empty, FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr, report};
+        DifferenceContext context{
+            path, category, "", absent, companion.at(path).first, empty, empty, FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr, report};
         context.sourceDocumentLeaves = &source;
         context.companionDocumentLeaves = &companion;
         return fn(context);
     };
-    for (const auto member : {"share_mode", "length", "alias_handle"})
+    for (const auto member : {"share_mode", "length", "alias_handle"}) {
         CHECK(classify(alias, member) == DifferenceClassification::FinaleUpgradeSynthesis);
-    for (const auto member : {"share_mode", "length", "url_bookmark_data"})
+    }
+    for (const auto member : {"share_mode", "length", "url_bookmark_data"}) {
         CHECK(classify(bookmark, member) == DifferenceClassification::FinaleUpgradeSynthesis);
+    }
     source[graphic].first = Value(0);
     CHECK_FALSE(classify(alias, "alias_handle"));
     source.erase(graphic);
@@ -99,21 +96,17 @@ TEST_CASE("Only embedded graphic path differences are classified", "[file_path][
     REQUIRE(classify);
     ImportReport report(FormatEpoch::ZlibLegacy);
     const Value original("original-image.tiff"), replacement("any-other-filename");
-    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]",
-             "shape_graphic_assigns[cmper=1,inci=0]",
-             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]",
-             "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
+    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]", "shape_graphic_assigns[cmper=1,inci=0]",
+             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]", "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
         const std::string path = "file_paths[cmper=7].path";
         const std::string desc = std::string(assignment) + ".f_desc_id";
         const std::string graphic = std::string(assignment) + ".graphic_cmper";
-        ComparisonLeaves source{{path, {original, "legacy-mus"}},
-            {"file_descriptions[cmper=20].path_id", {Value(7), "legacy-mus"}},
+        ComparisonLeaves source{{path, {original, "legacy-mus"}}, {"file_descriptions[cmper=20].path_id", {Value(7), "legacy-mus"}},
             {desc, {Value(20), "legacy-mus"}}, {graphic, {Value(3), "legacy-mus"}}};
         const ComparisonLeaves companion{{path, {replacement, ""}}};
         const ComparisonLeaves locatorOnly{{path, {original, "legacy-mus"}}};
-        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus",
-            original, replacement, locatorOnly, companion, FormatEpoch::ZlibLegacy,
-            ByteOrder::LittleEndian, nullptr, report};
+        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", original, replacement, locatorOnly, companion,
+            FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr, report};
         context.sourceDocumentLeaves = &source;
         CHECK(classify(context) == DifferenceClassification::FinaleUpgradeNormalization);
         source[graphic].first = Value(0);
@@ -152,22 +145,17 @@ TEST_CASE("Embedded alias normalization excludes linked and missing aliases", "[
     ImportReport report(FormatEpoch::ZlibLegacy);
     Value original(3), replacement(5);
     const std::string lengthPath = "file_aliases[cmper=20].length";
-    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]",
-             "shape_graphic_assigns[cmper=1,inci=0]",
-             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]",
-             "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
+    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]", "shape_graphic_assigns[cmper=1,inci=0]",
+             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]", "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
         const std::string graphic = std::string(assignment) + ".graphic_cmper";
         original = Value(3);
         replacement = Value(5);
-        ComparisonLeaves source{{lengthPath, {original, "legacy-mus"}},
-            {std::string(assignment) + ".f_desc_id", {Value(20), "legacy-mus"}},
-            {"file_descriptions[cmper=20].path_id", {Value(7), "legacy-mus"}},
-            {graphic, {Value(1), "legacy-mus"}}};
+        ComparisonLeaves source{{lengthPath, {original, "legacy-mus"}}, {std::string(assignment) + ".f_desc_id", {Value(20), "legacy-mus"}},
+            {"file_descriptions[cmper=20].path_id", {Value(7), "legacy-mus"}}, {graphic, {Value(1), "legacy-mus"}}};
         ComparisonLeaves companion{{lengthPath, {replacement, ""}}};
         const ComparisonLeaves locatorOnly{{lengthPath, {original, "legacy-mus"}}};
-        DifferenceContext context{lengthPath, DifferenceCategory::Differs, "legacy-mus",
-            original, replacement, locatorOnly, companion, FormatEpoch::ZlibLegacy,
-            ByteOrder::LittleEndian, nullptr, report};
+        DifferenceContext context{lengthPath, DifferenceCategory::Differs, "legacy-mus", original, replacement, locatorOnly, companion,
+            FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr, report};
         context.sourceDocumentLeaves = &source;
         CHECK(classify(context) == DifferenceClassification::FinaleUpgradeNormalization);
         original = Value(Value::Blob{0, 18, 255});
@@ -208,19 +196,15 @@ TEST_CASE("Only embedded DOS or MacFsSpec to MacAlias changes are classified", "
     Value original(static_cast<std::int64_t>(PathType::MacFsSpec));
     Value replacement(static_cast<std::int64_t>(PathType::MacAlias));
     const std::string path = "file_descriptions[cmper=20].path_type";
-    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]",
-             "shape_graphic_assigns[cmper=1,inci=0]",
-             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]",
-             "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
+    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]", "shape_graphic_assigns[cmper=1,inci=0]",
+             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]", "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
         const std::string graphic = std::string(assignment) + ".graphic_cmper";
-        ComparisonLeaves source{{path, {original, "legacy-mus"}},
-            {std::string(assignment) + ".f_desc_id", {Value(20), "legacy-mus"}},
+        ComparisonLeaves source{{path, {original, "legacy-mus"}}, {std::string(assignment) + ".f_desc_id", {Value(20), "legacy-mus"}},
             {graphic, {Value(1), "legacy-mus"}}};
         const ComparisonLeaves locatorOnly{{path, {original, "legacy-mus"}}};
         const ComparisonLeaves companion{{path, {replacement, ""}}};
-        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus",
-            original, replacement, locatorOnly, companion, FormatEpoch::DclLegacy,
-            ByteOrder::BigEndian, nullptr, report};
+        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", original, replacement, locatorOnly, companion,
+            FormatEpoch::DclLegacy, ByteOrder::BigEndian, nullptr, report};
         context.sourceDocumentLeaves = &source;
         CHECK(classify(context) == DifferenceClassification::FinaleUpgradeNormalization);
         source[graphic].first = Value(0);
@@ -236,8 +220,7 @@ TEST_CASE("Only embedded DOS or MacFsSpec to MacAlias changes are classified", "
         context.origin = "unmapped";
         CHECK_FALSE(classify(context));
         context.origin = "legacy-mus";
-        for (const auto type : {PathType::DosPath, PathType::MacFsSpec,
-                 PathType::MacPosixPath, PathType::MacUrlBookmark}) {
+        for (const auto type : {PathType::DosPath, PathType::MacFsSpec, PathType::MacPosixPath, PathType::MacUrlBookmark}) {
             replacement = Value(static_cast<std::int64_t>(type));
             CHECK_FALSE(classify(context));
         }
@@ -267,19 +250,15 @@ TEST_CASE("Embedded directory IDs may change without other locator changes", "[f
     ImportReport report(FormatEpoch::ZlibLegacy);
     const Value original(18115899), replacement(18115896);
     const std::string path = "file_descriptions[cmper=2].dir_id";
-    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]",
-             "shape_graphic_assigns[cmper=1,inci=0]",
-             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]",
-             "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
+    for (const auto assignment : {"page_graphic_assigns[cmper=1,inci=0]", "shape_graphic_assigns[cmper=1,inci=0]",
+             "meas_graphic_assigns[cmper1=1,cmper2=2,inci=0]", "page_graphic_assigns[part_id=2,cmper=1,inci=0]"}) {
         const std::string graphic = std::string(assignment) + ".graphic_cmper";
-        ComparisonLeaves source{{path, {original, "legacy-mus"}},
-            {std::string(assignment) + ".f_desc_id", {Value(2), "legacy-mus"}},
+        ComparisonLeaves source{{path, {original, "legacy-mus"}}, {std::string(assignment) + ".f_desc_id", {Value(2), "legacy-mus"}},
             {graphic, {Value(1), "legacy-mus"}}};
         const ComparisonLeaves locatorOnly{{path, {original, "legacy-mus"}}};
         const ComparisonLeaves companion{{path, {replacement, ""}}};
-        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus",
-            original, replacement, locatorOnly, companion, FormatEpoch::ZlibLegacy,
-            ByteOrder::LittleEndian, nullptr, report};
+        DifferenceContext context{path, DifferenceCategory::Differs, "legacy-mus", original, replacement, locatorOnly, companion,
+            FormatEpoch::ZlibLegacy, ByteOrder::LittleEndian, nullptr, report};
         context.sourceDocumentLeaves = &source;
         CHECK(classify(context) == DifferenceClassification::FinaleUpgradeNormalization);
         source[graphic].first = Value(0);
@@ -303,7 +282,6 @@ TEST_CASE("Embedded directory IDs may change without other locator changes", "[f
         CHECK_FALSE(classify(context));
     }
 }
-
 
 TEST_CASE("Graphic file locators preserve controlled source values", "[file_path]")
 {
@@ -339,16 +317,15 @@ TEST_CASE("Graphic file locators preserve controlled source values", "[file_path
     REQUIRE(alias);
     CHECK(alias->length == 462);
     REQUIRE(alias->aliasHandle.size() == alias->length);
-    CHECK(std::vector<std::uint8_t>(alias->aliasHandle.begin(), alias->aliasHandle.begin() + 8)
-        == std::vector<std::uint8_t>{0, 0, 0, 0, 206, 1, 2, 0});
+    CHECK(
+        std::vector<std::uint8_t>(alias->aliasHandle.begin(), alias->aliasHandle.begin() + 8) == std::vector<std::uint8_t>{0, 0, 0, 0, 206, 1, 2, 0});
     CHECK(dcl.document->getOthers()->get<FileDescription>(0, 1)->dirId == 380256);
     CHECK(dcl.document->getOthers()->getArray<FileUrlBookmark>(0).empty());
 
     const auto zlib = readFixture("evidence/F2012/F2012-graphics-types.mus");
     REQUIRE(zlib.document);
     CHECK(zlib.document->getOthers()->getArray<FileDescription>(0).size() == 6);
-    CHECK(zlib.document->getOthers()->get<FileDescription>(0, 1)->pathType
-        == FileDescription::PathType::MacAlias);
+    CHECK(zlib.document->getOthers()->get<FileDescription>(0, 1)->pathType == FileDescription::PathType::MacAlias);
     CHECK(zlib.document->getOthers()->get<FileDescription>(0, 1)->dirId == 341052);
     CHECK(zlib.document->getOthers()->get<FilePath>(0, 1)->path == "GifSample.gif");
     CHECK(zlib.document->getOthers()->get<FileAlias>(0, 1)->length == 392);
@@ -361,8 +338,7 @@ TEST_CASE("File locator surveyors expose every persisted member", "[file_path][c
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     const auto add = [&]<typename Target>() {
-        auto target = std::make_shared<Target>(document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(1));
+        auto target = std::make_shared<Target>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(1));
         if constexpr (std::is_same_v<Target, FileAlias>) {
             target->aliasHandle = {0, 1, 254, 255};
             target->length = target->aliasHandle.size();
@@ -383,20 +359,19 @@ TEST_CASE("File locator surveyors expose every persisted member", "[file_path][c
         REQUIRE(rows.size() == 1);
         std::set<std::string> members;
         for (const auto& [name, value] : rows.front().asObject()) {
-            if (name != "cmper" && name != "part_id" && name != "share_mode" && name != "origin")
+            if (name != "cmper" && name != "part_id" && name != "share_mode" && name != "origin") {
                 members.insert(name);
+            }
         }
         CHECK(members == expected);
         CHECK(finale_mus_reader::coverage::surveyorPool(key) == "others");
     };
     check("file_aliases", {"length", "origin_length", "alias_handle", "origin_aliasHandle"});
-    check("file_descriptions", {"version", "origin_version", "vol_ref_num", "origin_volRefNum",
-        "dir_id", "origin_dirId", "path_type", "origin_pathType", "path_id", "origin_pathId"});
+    check("file_descriptions", {"version", "origin_version", "vol_ref_num", "origin_volRefNum", "dir_id", "origin_dirId", "path_type",
+                                   "origin_pathType", "path_id", "origin_pathId"});
     check("file_paths", {"path", "origin_path"});
-    check("file_url_bookmarks", {"length", "origin_length", "url_bookmark_data",
-        "origin_urlBookmarkData"});
-    for (const auto& [key, blob] : {std::pair{"file_aliases", "alias_handle"},
-             std::pair{"file_url_bookmarks", "url_bookmark_data"}}) {
+    check("file_url_bookmarks", {"length", "origin_length", "url_bookmark_data", "origin_urlBookmarkData"});
+    for (const auto& [key, blob] : {std::pair{"file_aliases", "alias_handle"}, std::pair{"file_url_bookmarks", "url_bookmark_data"}}) {
         const auto& item = result.snapshot.at(key).asArray().front().asObject();
         REQUIRE(item.at(blob).isBlob());
         CHECK(item.at(blob).asBlob() == finale_mus_reader::coverage::Value::Blob{0, 1, 254, 255});
@@ -407,22 +382,19 @@ TEST_CASE("File locator surveyors expose every persisted member", "[file_path][c
 TEST_CASE("File locators bound opaque lengths and report all fields", "[file_path]")
 {
     using namespace musx::dom::others;
-    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy,
-             FormatEpoch::DclLegacy, FormatEpoch::ZlibLegacy}) {
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy, FormatEpoch::ZlibLegacy}) {
         for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
             const auto pathType = order == ByteOrder::LittleEndian ? std::int16_t{1} : std::int16_t{3};
-            const std::vector<std::int16_t> description{256, pathType, 7, -5,
-                order == ByteOrder::BigEndian ? std::int16_t{1} : std::int16_t{2},
+            const std::vector<std::int16_t> description{256, pathType, 7, -5, order == ByteOrder::BigEndian ? std::int16_t{1} : std::int16_t{2},
                 order == ByteOrder::BigEndian ? std::int16_t{2} : std::int16_t{1}};
-            const auto parsed = epoch == FormatEpoch::ZlibLegacy
-                ? makeClassContainer({SyntheticClassRow{0x008a, description, 7},
-                      SyntheticClassRow{0x0089, {3, 0, 0x1234, 0x5678}, 7},
-                      SyntheticClassRow{0x0089, {100, 0, 0, 0}, 8},
-                      SyntheticClassRow{0x008a, {256}, 8}}, order)
-                : makeContainer({{7, "Fd", {description[0], description[1], description[2],
-                      description[3], description[4], description[5]}},
-                      {7, "Fa", {3, 0, 0x1234, 0x5678, 0, 0}},
-                      {8, "Fa", {100, 0, 0, 0, 0, 0}}}, epoch, order);
+            const auto parsed =
+                epoch == FormatEpoch::ZlibLegacy
+                    ? makeClassContainer({SyntheticClassRow{0x008a, description, 7}, SyntheticClassRow{0x0089, {3, 0, 0x1234, 0x5678}, 7},
+                                             SyntheticClassRow{0x0089, {100, 0, 0, 0}, 8}, SyntheticClassRow{0x008a, {256}, 8}},
+                          order)
+                    : makeContainer({{7, "Fd", {description[0], description[1], description[2], description[3], description[4], description[5]}},
+                                        {7, "Fa", {3, 0, 0x1234, 0x5678, 0, 0}}, {8, "Fa", {100, 0, 0, 0, 0, 0}}},
+                          epoch, order);
             const auto index = LegacyRecordIndex::build(parsed);
             auto session = musx::factory::DocumentFactory::begin();
             const auto document = session.getDocument();
@@ -433,8 +405,7 @@ TEST_CASE("File locators bound opaque lengths and report all fields", "[file_pat
             SourceProfile profile(epoch);
             profile.byteOrder = order;
             musx::factory::ConstructionContext construction;
-            const finale_mus_reader::ImportContext context{
-                index, profile, noSource, document, reference, report, pending, construction};
+            const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
             finale_mus_reader::others::importFilePath(context);
             if (epoch == FormatEpoch::CodaBanner) {
                 CHECK(document->getOthers()->getArray<FileDescription>(0).empty());
@@ -445,17 +416,15 @@ TEST_CASE("File locators bound opaque lengths and report all fields", "[file_pat
             REQUIRE(desc);
             CHECK(desc->dirId == 65538);
             CHECK(desc->volRefNum == -5);
-            CHECK(desc->pathType == (pathType == 1 ? FileDescription::PathType::DosPath
-                                                  : FileDescription::PathType::MacAlias));
+            CHECK(desc->pathType == (pathType == 1 ? FileDescription::PathType::DosPath : FileDescription::PathType::MacAlias));
             const auto alias = document->getOthers()->get<FileAlias>(0, 7);
             REQUIRE(alias);
             CHECK(alias->length == 3);
-            CHECK(alias->aliasHandle == (order == ByteOrder::BigEndian
-                ? std::vector<std::uint8_t>{0x34, 0x12, 0x56}
-                : std::vector<std::uint8_t>{0x12, 0x34, 0x78}));
+            CHECK(alias->aliasHandle
+                  == (order == ByteOrder::BigEndian ? std::vector<std::uint8_t>{0x34, 0x12, 0x56} : std::vector<std::uint8_t>{0x12, 0x34, 0x78}));
 #if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
-            CHECK(report.fields.at(finale_mus_reader::instanceKey<FileAlias>(0, musx::dom::Cmper(7)))
-                .at("aliasHandle").origin == ValueOrigin::LegacyMusAdjusted);
+            CHECK(report.fields.at(finale_mus_reader::instanceKey<FileAlias>(0, musx::dom::Cmper(7))).at("aliasHandle").origin
+                  == ValueOrigin::LegacyMusAdjusted);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
             CHECK_FALSE(document->getOthers()->get<FileAlias>(0, 8));
             CHECK(reportedFieldCount(report) == 7);

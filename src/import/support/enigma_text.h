@@ -11,8 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "musx/dom/CommonClasses.h"
 #include "import/support/text_encoding.h"
+#include "musx/dom/CommonClasses.h"
 #include "musx/dom/Document.h"
 
 namespace finale_mus_reader {
@@ -80,16 +80,13 @@ struct EnigmaTextSource
 
 /// @brief Converts one legacy Enigma text record body to the modern, UTF-8 spelling.
 /// @param body The record's bytes, between its `^keyword(n)` header and its `^end`.
-[[nodiscard]] ConvertedEnigmaText toModernEnigmaText(
-    std::span<const std::uint8_t> body, const EnigmaTextSource& source);
+[[nodiscard]] ConvertedEnigmaText toModernEnigmaText(std::span<const std::uint8_t> body, const EnigmaTextSource& source);
 
 /// @brief Completes the initial face, size, and effects commands from @p defaultFont.
 /// @param value A modern Enigma string whose explicit commands must be preserved.
 /// @param defaultFont The document default for the text class containing @p value.
-[[nodiscard]] std::string initializeEnigmaTextFontState(
-    std::string value, const musx::dom::FontInfo& defaultFont,
-    bool* fontWasSynthesized = nullptr, bool* sizeWasSynthesized = nullptr,
-    bool* effectsWereSynthesized = nullptr);
+[[nodiscard]] std::string initializeEnigmaTextFontState(std::string value, const musx::dom::FontInfo& defaultFont, bool* fontWasSynthesized = nullptr,
+    bool* sizeWasSynthesized = nullptr, bool* effectsWereSynthesized = nullptr);
 
 } // namespace text
 } // namespace finale_mus_reader

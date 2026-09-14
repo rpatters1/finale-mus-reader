@@ -88,8 +88,8 @@ std::vector<StoredName> readStoredNames(const ImportContext& context)
         if (family.empty()) {
             continue;
         }
-        result.push_back({readRowText(tagged, family, 0, bookmarkNameIncidences),
-            family.front().blockOffset, family.front().decodedOffset, bookmarkRecord});
+        result.push_back(
+            {readRowText(tagged, family, 0, bookmarkNameIncidences), family.front().blockOffset, family.front().decodedOffset, bookmarkRecord});
     }
 
     const auto& classed = context.index.getClassOthers();
@@ -105,8 +105,7 @@ std::vector<StoredName> readStoredNames(const ImportContext& context)
         }
         const auto name = payload.first(bookmarkNameBytes);
         const auto terminator = std::find(name.begin(), name.end(), std::uint8_t{0});
-        result.push_back({std::string(reinterpret_cast<const char*>(name.data()),
-                              static_cast<std::size_t>(terminator - name.begin())),
+        result.push_back({std::string(reinterpret_cast<const char*>(name.data()), static_cast<std::size_t>(terminator - name.begin())),
             row->blockOffset, row->decodedOffset, bookmarkClass});
     }
 
@@ -124,8 +123,8 @@ void synthesizeBookmarkTexts(const ImportContext& context)
         }
         const auto number = context.document->getTexts()->nextFreeCmper<BookmarkTarget>();
         if (!number) {
-            context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                "Bookmark text synthesis exhausted the text identifier space."});
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Warning, "Bookmark text synthesis exhausted the text identifier space."});
             return;
         }
         // The name carries no font, so the record is stored as its re-encoded characters and
@@ -133,18 +132,15 @@ void synthesizeBookmarkTexts(const ImportContext& context)
         // font to name a code page, and no formatting state is prepended: Finale 27 writes a
         // bookmark's text the same way, and so does the text pool of the era that stores one
         // there, so a `^font`/`^size`/`^nfx` prefix would be this reader's invention.
-        auto instance = std::make_shared<BookmarkTarget>(context.document,
-            musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, *number);
-        instance->text = text::normalizeLineBreaks(
-            text::toUtf8(stored.raw, context.profile.platform));
+        auto instance = std::make_shared<BookmarkTarget>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, *number);
+        instance->text = text::normalizeLineBreaks(text::toUtf8(stored.raw, context.profile.platform));
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            const auto key = reporting.template instanceKey<BookmarkTarget>(
-                musx::dom::SCORE_PARTID, *number);
+            const auto key = reporting.template instanceKey<BookmarkTarget>(musx::dom::SCORE_PARTID, *number);
             reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
             reporting.textField(key, "text", false, false, false);
             reporting.report().setField(key, "text",
-                {Reporting::Origin::LegacyMus, stored.blockOffset, stored.decodedOffset,
-                    static_cast<std::int64_t>(instance->text.size()), stored.identity});
+                {Reporting::Origin::LegacyMus, stored.blockOffset, stored.decodedOffset, static_cast<std::int64_t>(instance->text.size()),
+                    stored.identity});
         });
         context.document->getTexts()->add(BookmarkTarget::XmlNodeName, std::move(instance));
     }

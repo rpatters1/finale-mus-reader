@@ -20,35 +20,35 @@ constexpr records::LegacyTag clefOctaveFlatsClass = 0x0408;
 constexpr records::LegacyTag clefOctaveSharpsClass = 0x0409;
 
 template <typename Target>
-void importClefOctaveArrays(
-    const ImportContext& context, records::LegacyTag tag, records::LegacyTag classId)
+void importClefOctaveArrays(const ImportContext& context, records::LegacyTag tag, records::LegacyTag classId)
 {
-    const auto source = selectRecordFamilySource(
-        context, context.index.getDetails(), context.index.getClassDetails(), tag, classId, true);
-    if (!source) return;
+    const auto source = selectRecordFamilySource(context, context.index.getDetails(), context.index.getClassDetails(), tag, classId, true);
+    if (!source) {
+        return;
+    }
     for (const auto [partId, cmper1] : recordKeys(*source)) {
-        for (const auto cmper2 :
-            source->pool->secondCmpersForTag(source->identity, cmper1, partId)) {
+        for (const auto cmper2 : source->pool->secondCmpersForTag(source->identity, cmper1, partId)) {
             const auto rows = source->pool->getArray(source->identity, cmper1, cmper2, partId);
-            if (rows.empty()) continue;
+            if (rows.empty()) {
+                continue;
+            }
             const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
-            if (words.size() < 7) continue;
-            auto target = createDetailsRecordTarget<Target>(
-                context.document, *source, rows.front(), cmper1, cmper2);
-            if (!target) continue;
+            if (words.size() < 7) {
+                continue;
+            }
+            auto target = createDetailsRecordTarget<Target>(context.document, *source, rows.front(), cmper1, cmper2);
+            if (!target) {
+                continue;
+            }
             target->values.assign(words.begin(), words.begin() + 7);
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const auto key =
-                    reporting.template instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
+                const auto key = reporting.template instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
                 reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
                 for (std::size_t index = 0; index < target->values.size(); ++index) {
-                    const auto rowIndex =
-                        source->classRecords ? 0 : index / records::detailWordCount;
-                    const auto byteOffset =
-                        source->classRecords ? index * 2 : (index % records::detailWordCount) * 2;
+                    const auto rowIndex = source->classRecords ? 0 : index / records::detailWordCount;
+                    const auto byteOffset = source->classRecords ? index * 2 : (index % records::detailWordCount) * 2;
                     reporting.report().setField(key, "values[" + std::to_string(index) + "]",
-                        {Reporting::Origin::LegacyMus, rows[rowIndex].blockOffset,
-                            rows[rowIndex].decodedOffset + byteOffset, target->values[index],
+                        {Reporting::Origin::LegacyMus, rows[rowIndex].blockOffset, rows[rowIndex].decodedOffset + byteOffset, target->values[index],
                             source->identity});
                 }
             });
@@ -61,14 +61,12 @@ void importClefOctaveArrays(
 
 void importClefOctaveFlats(const ImportContext& context)
 {
-    importClefOctaveArrays<musx::dom::details::ClefOctaveFlats>(
-        context, clefOctaveFlatsTag, clefOctaveFlatsClass);
+    importClefOctaveArrays<musx::dom::details::ClefOctaveFlats>(context, clefOctaveFlatsTag, clefOctaveFlatsClass);
 }
 
 void importClefOctaveSharps(const ImportContext& context)
 {
-    importClefOctaveArrays<musx::dom::details::ClefOctaveSharps>(
-        context, clefOctaveSharpsTag, clefOctaveSharpsClass);
+    importClefOctaveArrays<musx::dom::details::ClefOctaveSharps>(context, clefOctaveSharpsTag, clefOctaveSharpsClass);
 }
 
 } // namespace details

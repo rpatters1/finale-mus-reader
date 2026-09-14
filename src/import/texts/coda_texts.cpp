@@ -76,22 +76,18 @@ constexpr std::string_view codaInsertCommands[] = {"page", "date", "time"};
 /// than in the text, and only what `HS` carries is written. A document whose page offset is
 /// zero still gets `^page(0)` wherever its text holds the insert, the insert being what the
 /// document states.
-std::string spellCodaBlock(
-    const LegacyRow& style, std::string_view characters, bool& unknownInsert)
+std::string spellCodaBlock(const LegacyRow& style, std::string_view characters, bool& unknownInsert)
 {
     const auto packed = static_cast<std::uint16_t>(style.words[codaStyleFontSizeSlot]);
-    std::string result
-        = "^font(Font" + std::to_string(packed >> codaStyleFontShift) + ")";
+    std::string result = "^font(Font" + std::to_string(packed >> codaStyleFontShift) + ")";
     result += "^size(" + std::to_string(packed & codaStyleSizeMask) + ")";
     result += "^nfx(" + std::to_string(style.words[codaStyleEffectsSlot]) + ")";
 
-    const auto selector = static_cast<std::uint16_t>(
-        (static_cast<std::uint16_t>(style.words[codaStyleFlagsSlot]) >> codaInsertSelectorShift)
-        & codaInsertSelectorMask);
+    const auto selector =
+        static_cast<std::uint16_t>((static_cast<std::uint16_t>(style.words[codaStyleFlagsSlot]) >> codaInsertSelectorShift) & codaInsertSelectorMask);
     std::string insert;
     if (selector < std::size(codaInsertCommands)) {
-        insert = '^' + std::string(codaInsertCommands[selector]) + '('
-            + std::to_string(style.words[codaStyleInsertArgumentSlot]) + ')';
+        insert = '^' + std::string(codaInsertCommands[selector]) + '(' + std::to_string(style.words[codaStyleInsertArgumentSlot]) + ')';
     }
     for (std::size_t at = 0; at < characters.size(); ++at) {
         const auto character = characters[at];
@@ -123,28 +119,23 @@ std::string spellCodaBlock(
 
 /// @brief Converts a synthesized Enigma string and adds it to the document.
 template <typename Target>
-void addCodaText(const ImportContext& context, const text::EnigmaTextSource& source,
-    Cmper number, const std::string& spelled, CodaTextFontType defaultFontType)
+void addCodaText(
+    const ImportContext& context, const text::EnigmaTextSource& source, Cmper number, const std::string& spelled, CodaTextFontType defaultFontType)
 {
     FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecords, 1);
     FINALE_MUS_READER_TIMING_INCREMENT(timing::Counter::TextRecordBytes, spelled.size());
     auto recordSource = source;
-    recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(
-        context.document, defaultFontType);
-    auto converted = text::toModernEnigmaText(
-        std::span<const std::uint8_t>(
-            reinterpret_cast<const std::uint8_t*>(spelled.data()), spelled.size()),
-        recordSource);
-    auto instance = std::make_shared<Target>(
-        context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
+    recordSource.initialFont = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, defaultFontType);
+    auto converted =
+        text::toModernEnigmaText(std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(spelled.data()), spelled.size()), recordSource);
+    auto instance = std::make_shared<Target>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
     instance->text = std::move(converted.text);
     context.document->getTexts()->add(Target::XmlNodeName, std::move(instance));
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<Target>(musx::dom::SCORE_PARTID, number);
         reporting.textField(key, "text", converted);
-        reporting.report().setField(key, "text",
-            {Reporting::Origin::LegacyMus, 0, 0, static_cast<std::int64_t>(converted.text.size())});
+        reporting.report().setField(key, "text", {Reporting::Origin::LegacyMus, 0, 0, static_cast<std::int64_t>(converted.text.size())});
     });
 }
 
@@ -154,31 +145,27 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
     Cmper number = 0;
     for (const auto cmper : pool.cmpersForTag(codaTextRecord)) {
         const auto characters = pool.getArray(codaTextRecord, cmper);
-        const auto records
-            = static_cast<std::uint32_t>(characters.size() / codaTextIncidences);
+        const auto records = static_cast<std::uint32_t>(characters.size() / codaTextIncidences);
         for (std::uint32_t record = 0; record < records; ++record) {
             const auto* style = pool.get(codaStyleRecord, cmper, 0, record);
             if (!style) {
                 // Without the style record there is no font, size or page offset to state, and
                 // no way to tell the insert from a literal `#`. Reporting the gap is better
                 // than writing a block that says something the document does not.
-                context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "A legacy text block carries characters with no matching style record and "
-                    "was not imported."});
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "A legacy text block carries characters with no matching style record and "
+                                                            "was not imported."});
                 continue;
             }
             ++number;
             bool unknownInsert = false;
-            auto spelled = spellCodaBlock(*style,
-                readRowText(pool, characters, record * codaTextIncidences, codaTextIncidences),
-                unknownInsert);
+            auto spelled = spellCodaBlock(*style, readRowText(pool, characters, record * codaTextIncidences, codaTextIncidences), unknownInsert);
             if (unknownInsert) {
-                context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Warning,
-                    "A legacy text block carries an insert this reader has no command for; the "
-                    "insert character was kept as it stands."});
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "A legacy text block carries an insert this reader has no command for; the "
+                                                            "insert character was kept as it stands."});
             }
-            addCodaText<musx::dom::texts::BlockText>(
-                context, source, number, spelled, CodaTextFontType::TextBlock);
+            addCodaText<musx::dom::texts::BlockText>(context, source, number, spelled, CodaTextFontType::TextBlock);
         }
     }
 }
@@ -188,8 +175,7 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
 struct CodaLyricKeyword
 {
     std::string_view keyword;
-    void (*add)(const ImportContext&, const text::EnigmaTextSource&, Cmper, const std::string&,
-        CodaTextFontType);
+    void (*add)(const ImportContext&, const text::EnigmaTextSource&, Cmper, const std::string&, CodaTextFontType);
     CodaTextFontType defaultFontType;
 };
 
@@ -214,8 +200,7 @@ std::vector<std::string_view> readCodaChunks(std::span<const std::uint8_t> regio
         if (length > region.size() - at) {
             break;
         }
-        result.emplace_back(
-            reinterpret_cast<const char*>(region.data() + at), length);
+        result.emplace_back(reinterpret_cast<const char*>(region.data() + at), length);
         at += length;
     }
     return result;
@@ -297,8 +282,7 @@ void importCodaStoredTexts(const ImportContext& context)
     }
     // This era predates Unicode by a wide margin, so its bytes are always a code page.
     text::EnigmaFontResolutionCache fontResolutionCache;
-    const text::EnigmaTextSource source{context.document, /*utf8*/ false,
-        context.profile.platform, nullptr, &fontResolutionCache};
+    const text::EnigmaTextSource source{context.document, /*utf8*/ false, context.profile.platform, nullptr, &fontResolutionCache};
     importCodaBlockTexts(context, source);
     importCodaLyricTexts(context, source);
 }

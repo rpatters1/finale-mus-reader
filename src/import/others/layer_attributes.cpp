@@ -44,55 +44,33 @@ constexpr std::uint8_t layerIgnoreHiddenNotesBit = 14;      // 0x4000
 
 // The fixed-row layout, used by every epoch through Finale 2006.
 const FieldMapping layerFields[] = {
-    MUS_WORD(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, /*incidence*/ 0,
-        layerRestOffsetSlot, restOffset),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerIgnoreHiddenLayersBit, ignoreHiddenLayers),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerHideWhenInactiveBit, hideLayer),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerFlipTiesBit, freezTiesToStems),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerFloatLayerBit, onlyIfOtherLayersHaveNotes),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerUseRestOffsetBit, useRestOffset),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerFreezeStemsUpBit, freezeStemsUp),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerFreezeLayerBit, freezeLayer),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerPlaybackBit, playback),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerAffectSpacingBit, affectSpacing),
-    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot,
-        layerIgnoreHiddenNotesBit, ignoreHiddenNotesOnly),
+    MUS_WORD(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, /*incidence*/ 0, layerRestOffsetSlot, restOffset),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerIgnoreHiddenLayersBit, ignoreHiddenLayers),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerHideWhenInactiveBit, hideLayer),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerFlipTiesBit, freezTiesToStems),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerFloatLayerBit, onlyIfOtherLayersHaveNotes),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerUseRestOffsetBit, useRestOffset),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerFreezeStemsUpBit, freezeStemsUp),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerFreezeLayerBit, freezeLayer),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerPlaybackBit, playback),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerAffectSpacingBit, affectSpacing),
+    MUS_BIT(LayerAttributesTarget, "LA", CMPER_FROM_TARGET, 0, layerFlagSlot, layerIgnoreHiddenNotesBit, ignoreHiddenNotesOnly),
 };
 
 // The zlib layout. The class record keeps the same word stream the fixed row carried, so its
 // offsets are the slots above doubled rather than a second statement of the layout.
 const FieldMapping classLayerFields[] = {
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerRestOffsetSlot), 0, 0, restOffset),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerIgnoreHiddenLayersBit, 1, ignoreHiddenLayers),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerHideWhenInactiveBit, 1, hideLayer),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerFlipTiesBit, 1, freezTiesToStems),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerFloatLayerBit, 1, onlyIfOtherLayersHaveNotes),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerUseRestOffsetBit, 1, useRestOffset),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerFreezeStemsUpBit, 1, freezeStemsUp),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerFreezeLayerBit, 1, freezeLayer),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerPlaybackBit, 1, playback),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerAffectSpacingBit, 1, affectSpacing),
-    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass,
-        classWordOffset(layerFlagSlot), layerIgnoreHiddenNotesBit, 1, ignoreHiddenNotesOnly),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerRestOffsetSlot), 0, 0, restOffset),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerIgnoreHiddenLayersBit, 1, ignoreHiddenLayers),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerHideWhenInactiveBit, 1, hideLayer),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerFlipTiesBit, 1, freezTiesToStems),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerFloatLayerBit, 1, onlyIfOtherLayersHaveNotes),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerUseRestOffsetBit, 1, useRestOffset),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerFreezeStemsUpBit, 1, freezeStemsUp),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerFreezeLayerBit, 1, freezeLayer),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerPlaybackBit, 1, playback),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerAffectSpacingBit, 1, affectSpacing),
+    MUS_CLASS_BITS(LayerAttributesTarget, layerAttributesClass, classWordOffset(layerFlagSlot), layerIgnoreHiddenNotesBit, 1, ignoreHiddenNotesOnly),
 };
 
 // The six-word row a release writes for a layer it stores no record for. Every member is clear
@@ -107,10 +85,8 @@ const FieldMapping classLayerFields[] = {
 // has been seen. The test is the row's absence rather than a version, so a later document that
 // omitted it is treated the same way. The cost is that a document whose record pool failed to
 // frame is indistinguishable from one that never stored the row, and both get these values.
-constexpr std::int16_t layerBehaviorFlags = static_cast<std::int16_t>(
-    (1U << layerPlaybackBit) | (1U << layerAffectSpacingBit));
-constexpr std::int16_t layerBehaviorRow[records::otherWordCount] = {
-    0, 0, 0, 0, 0, layerBehaviorFlags};
+constexpr std::int16_t layerBehaviorFlags = static_cast<std::int16_t>((1U << layerPlaybackBit) | (1U << layerAffectSpacingBit));
+constexpr std::int16_t layerBehaviorRow[records::otherWordCount] = {0, 0, 0, 0, 0, layerBehaviorFlags};
 
 // Reads one mapped field out of that row through the field's own slot and bit range, so the
 // layout is stated once in the tables above rather than again here. A class-record field
@@ -130,9 +106,7 @@ constexpr std::int16_t layerBehaviorRow[records::otherWordCount] = {
 // named once in the tables above rather than again here.
 [[nodiscard]] bool isPreFinale2002Setting(const FieldMapping& field)
 {
-    return field.source.bits.bitCount == 1
-        && (field.source.bits.firstBit == layerPlaybackBit
-            || field.source.bits.firstBit == layerAffectSpacingBit);
+    return field.source.bits.bitCount == 1 && (field.source.bits.firstBit == layerPlaybackBit || field.source.bits.firstBit == layerAffectSpacingBit);
 }
 
 // **A version gate, and deliberately so.** The boundary falls inside the DCL epoch, between
@@ -156,17 +130,19 @@ constexpr std::int16_t layerBehaviorRow[records::otherWordCount] = {
 // Identity and share mode of a created object come from the row through the shared helper, so it
 // is built exactly as any other source-owned others class would be -- including the part-scoped
 // row that Finale's own UI cannot produce, since layer attributes are not unlinkable.
-MappingTarget poolOrOverlayLayerTarget(const musx::dom::DocumentPtr& document,
-    const RecordFamilySource& source, const records::LegacyRow& row, std::uint16_t cmper)
+MappingTarget poolOrOverlayLayerTarget(
+    const musx::dom::DocumentPtr& document, const RecordFamilySource& source, const records::LegacyRow& row, std::uint16_t cmper)
 {
-    for (const auto& existing :
-             document->getOthers()->getAllSources<LayerAttributesTarget>(cmper)) {
-        if (existing->getSourcePartId() != row.partId) continue;
-        return makeMappingTarget(row.partId, cmper,
-            const_cast<LayerAttributesTarget*>(existing.get()));
+    for (const auto& existing : document->getOthers()->getAllSources<LayerAttributesTarget>(cmper)) {
+        if (existing->getSourcePartId() != row.partId) {
+            continue;
+        }
+        return makeMappingTarget(row.partId, cmper, const_cast<LayerAttributesTarget*>(existing.get()));
     }
     auto instance = createOthersRecordTarget<LayerAttributesTarget>(document, source, row, cmper);
-    if (!instance) return {};
+    if (!instance) {
+        return {};
+    }
     auto* raw = instance.get();
     document->getOthers()->add(LayerAttributesTarget::XmlNodeName, std::move(instance));
     return makeMappingTarget(row.partId, cmper, raw);
@@ -174,8 +150,7 @@ MappingTarget poolOrOverlayLayerTarget(const musx::dom::DocumentPtr& document,
 
 const MappingTable& layerAttributesTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.layerAtts",
+    static const MappingTable table{.reportPrefix = "others.layerAtts",
         // The Coda-banner epoch is covered deliberately, not by omission. A release writes the
         // row only once a layer setting leaves its default, so a document of any of these eras
         // may carry it or not, and the absence is handled by the pass below rather than by
@@ -192,8 +167,7 @@ const MappingTable& layerAttributesTable()
 
 const MappingTable& classLayerAttributesTable()
 {
-    static const MappingTable table{
-        .reportPrefix = "others.layerAtts",
+    static const MappingTable table{.reportPrefix = "others.layerAtts",
         .epochs = EpochMask::Zlib,
         .encoding = RecordEncoding::ClassRecord,
         .targetKind = TargetKind::OthersFromRecords,
@@ -205,8 +179,7 @@ const MappingTable& classLayerAttributesTable()
 }
 
 /// @brief One instance's values as the pinned baseline seeded them, in the field order below.
-using SeededLayerValues = std::map<std::pair<std::uint16_t, musx::dom::Cmper>,
-    std::vector<std::int64_t>>;
+using SeededLayerValues = std::map<std::pair<std::uint16_t, musx::dom::Cmper>, std::vector<std::int64_t>>;
 
 /// @brief Records what the baseline seeded, before any table overwrites it.
 /// @details The tables reach only the identities the source has a record for, so the objects
@@ -214,8 +187,7 @@ using SeededLayerValues = std::map<std::pair<std::uint16_t, musx::dom::Cmper>,
 /// rather than reading the reference document again is what keeps that comparison a fact about
 /// this document: an identity absent from the result is one the baseline did not seed, and
 /// nothing about it can be reported as a retained baseline default.
-[[nodiscard]] SeededLayerValues captureSeededLayers(const musx::dom::DocumentPtr& document,
-    std::span<const FieldMapping> fields)
+[[nodiscard]] SeededLayerValues captureSeededLayers(const musx::dom::DocumentPtr& document, std::span<const FieldMapping> fields)
 {
     SeededLayerValues result;
     for (const auto& instance : document->getOthers()->getAllSources<LayerAttributesTarget>()) {
@@ -224,8 +196,7 @@ using SeededLayerValues = std::map<std::pair<std::uint16_t, musx::dom::Cmper>,
         for (const auto& field : fields) {
             values.push_back(field.read(instance.get()));
         }
-        result.emplace(std::pair{instance->getSourcePartId(), instance->getCmper()},
-            std::move(values));
+        result.emplace(std::pair{instance->getSourcePartId(), instance->getCmper()}, std::move(values));
     }
     return result;
 }
@@ -239,31 +210,27 @@ using SeededLayerValues = std::map<std::pair<std::uint16_t, musx::dom::Cmper>,
 /// A value the baseline already supplies is not asserted again, per the options fallback rule, so
 /// it stays @ref ValueOrigin::Finale27Default even where this overrode a stored bit to reach it:
 /// the baseline was already right and the file was not.
-void applyLayerEraBehavior(const ImportContext& context, const RecordFamilySource& source,
-    std::span<const FieldMapping> fields, const SeededLayerValues& seeded)
+void applyLayerEraBehavior(
+    const ImportContext& context, const RecordFamilySource& source, std::span<const FieldMapping> fields, const SeededLayerValues& seeded)
 {
     const bool predatesPlayback = sourcePredatesLayerPlaybackSettings(context.profile);
-    for (const auto& instance :
-             context.document->getOthers()->getAllSources<LayerAttributesTarget>()) {
+    for (const auto& instance : context.document->getOthers()->getAllSources<LayerAttributesTarget>()) {
         const auto partId = instance->getSourcePartId();
         const auto cmper = instance->getCmper();
         const bool stored = !source.pool->getArray(source.identity, cmper, 0, partId).empty();
         const auto wasSeeded = seeded.find({partId, cmper});
         for (std::size_t index = 0; index < fields.size(); ++index) {
             const auto& field = fields[index];
-            if (stored && !(predatesPlayback && isPreFinale2002Setting(field))) continue;
+            if (stored && !(predatesPlayback && isPreFinale2002Setting(field))) {
+                continue;
+            }
             const auto value = layerBehaviorValue(field, source.classRecords);
             field.apply(const_cast<LayerAttributesTarget*>(instance.get()), value);
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const bool baselineSupplies =
-                    wasSeeded != seeded.end() && wasSeeded->second[index] == value;
-                reporting.report().setField(
-                    reporting.template instanceKey<LayerAttributesTarget>(partId, cmper),
-                    field.fieldName,
-                    typename Reporting::FieldInfo{baselineSupplies
-                            ? Reporting::Origin::Finale27Default
-                            : Reporting::Origin::LegacyBehavior,
-                        0, 0, value});
+                const bool baselineSupplies = wasSeeded != seeded.end() && wasSeeded->second[index] == value;
+                reporting.report().setField(reporting.template instanceKey<LayerAttributesTarget>(partId, cmper), field.fieldName,
+                    typename Reporting::FieldInfo{
+                        baselineSupplies ? Reporting::Origin::Finale27Default : Reporting::Origin::LegacyBehavior, 0, 0, value});
             });
         }
     }
@@ -273,16 +240,16 @@ void applyLayerEraBehavior(const ImportContext& context, const RecordFamilySourc
 
 void importLayerAttributes(const ImportContext& context)
 {
-    const auto source = selectRecordFamilySource(context, context.index.getOthers(),
-        context.index.getClassOthers(), layerAttributesTag, layerAttributesClass);
-    if (!source) return;
-    const std::span<const FieldMapping> fields = source->classRecords
-        ? std::span<const FieldMapping>(classLayerFields, std::size(classLayerFields))
-        : std::span<const FieldMapping>(layerFields, std::size(layerFields));
+    const auto source =
+        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), layerAttributesTag, layerAttributesClass);
+    if (!source) {
+        return;
+    }
+    const std::span<const FieldMapping> fields = source->classRecords ? std::span<const FieldMapping>(classLayerFields, std::size(classLayerFields))
+                                                                      : std::span<const FieldMapping>(layerFields, std::size(layerFields));
 
     const auto seeded = captureSeededLayers(context.document, fields);
-    applyMappingTables({&layerAttributesTable(), &classLayerAttributesTable()},
-        context.index, context.profile, context.document, context.report);
+    applyMappingTables({&layerAttributesTable(), &classLayerAttributesTable()}, context.index, context.profile, context.document, context.report);
     // The tables reach one destination per source record. Everything left is a layer this file
     // says nothing about, plus the two members its release had no setting for.
     applyLayerEraBehavior(context, *source, fields, seeded);

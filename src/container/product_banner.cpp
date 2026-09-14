@@ -57,8 +57,7 @@ constexpr std::string_view macTrademarkStem = "Finale";
 std::string boundedString(const std::uint8_t* data, std::size_t size)
 {
     const auto* end = std::find(data, data + size, std::uint8_t{0});
-    return std::string(reinterpret_cast<const char*>(data),
-        static_cast<std::size_t>(end - data));
+    return std::string(reinterpret_cast<const char*>(data), static_cast<std::size_t>(end - data));
 }
 
 /// @brief Splits the product out of a banner whose spelling has already been matched.
@@ -90,8 +89,7 @@ ProductBanner parse(const std::uint8_t* data, std::size_t size)
         const auto remaining = size - offset;
 
         for (const auto& pattern : textPatterns) {
-            if (remaining <= pattern.prefix.size()
-                || std::memcmp(data + offset, pattern.prefix.data(), pattern.prefix.size()) != 0) {
+            if (remaining <= pattern.prefix.size() || std::memcmp(data + offset, pattern.prefix.data(), pattern.prefix.size()) != 0) {
                 continue;
             }
             ProductBanner result;
@@ -105,10 +103,8 @@ ProductBanner parse(const std::uint8_t* data, std::size_t size)
         // `Finale` + 0xAA + a space. Checked separately because the trademark sign is a
         // high byte rather than text.
         const std::size_t macPrefixLength = macTrademarkStem.size() + 2;
-        if (remaining > macPrefixLength
-            && std::memcmp(data + offset, macTrademarkStem.data(), macTrademarkStem.size()) == 0
-            && data[offset + macTrademarkStem.size()] == macTrademarkSign
-            && data[offset + macTrademarkStem.size() + 1] == ' ') {
+        if (remaining > macPrefixLength && std::memcmp(data + offset, macTrademarkStem.data(), macTrademarkStem.size()) == 0
+            && data[offset + macTrademarkStem.size()] == macTrademarkSign && data[offset + macTrademarkStem.size() + 1] == ' ') {
             ProductBanner result;
             result.spelling = Spelling::MacTrademark;
             result.offset = offset;
@@ -128,8 +124,7 @@ std::optional<SourceVersion> versionFromProduct(const std::string& product)
     for (auto* component : components) {
         std::size_t digits = 0;
         unsigned value = 0;
-        while (consumed + digits < product.size()
-            && std::isdigit(static_cast<unsigned char>(product[consumed + digits]))) {
+        while (consumed + digits < product.size() && std::isdigit(static_cast<unsigned char>(product[consumed + digits]))) {
             value = value * 10 + static_cast<unsigned>(product[consumed + digits] - '0');
             ++digits;
         }

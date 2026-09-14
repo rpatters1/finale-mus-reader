@@ -24,8 +24,7 @@ auto familyKey(const LegacyRow& row)
 std::int16_t readWord(const std::uint8_t* data, ByteOrder byteOrder)
 {
     if (byteOrder == ByteOrder::BigEndian) {
-        return static_cast<std::int16_t>(
-            (static_cast<std::uint16_t>(data[0]) << 8U) | data[1]);
+        return static_cast<std::int16_t>((static_cast<std::uint16_t>(data[0]) << 8U) | data[1]);
     }
     return static_cast<std::int16_t>(data[0] | (static_cast<std::uint16_t>(data[1]) << 8U));
 }
@@ -38,15 +37,11 @@ std::uint16_t readCmper(const std::uint8_t* data, ByteOrder byteOrder)
 std::uint32_t readLong(const std::uint8_t* data, ByteOrder byteOrder)
 {
     if (byteOrder == ByteOrder::BigEndian) {
-        return (static_cast<std::uint32_t>(data[0]) << 24U)
-            | (static_cast<std::uint32_t>(data[1]) << 16U)
-            | (static_cast<std::uint32_t>(data[2]) << 8U)
-            | data[3];
+        return (static_cast<std::uint32_t>(data[0]) << 24U) | (static_cast<std::uint32_t>(data[1]) << 16U)
+               | (static_cast<std::uint32_t>(data[2]) << 8U) | data[3];
     }
-    return data[0]
-        | (static_cast<std::uint32_t>(data[1]) << 8U)
-        | (static_cast<std::uint32_t>(data[2]) << 16U)
-        | (static_cast<std::uint32_t>(data[3]) << 24U);
+    return data[0] | (static_cast<std::uint32_t>(data[1]) << 8U) | (static_cast<std::uint32_t>(data[2]) << 16U)
+           | (static_cast<std::uint32_t>(data[3]) << 24U);
 }
 
 // Through Finale 2006 the pools appear in a fixed order and only the framing differs, so a
@@ -62,12 +57,9 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
 {
     switch (epoch) {
     case FormatEpoch::CodaBanner:
-    case FormatEpoch::UncompressedLegacy:
-        return PoolTypes{0x0001, 0x0002};
-    case FormatEpoch::DclLegacy:
-        return PoolTypes{0x000f, 0x0010};
-    case FormatEpoch::ZlibLegacy:
-        break;
+    case FormatEpoch::UncompressedLegacy: return PoolTypes{0x0001, 0x0002};
+    case FormatEpoch::DclLegacy: return PoolTypes{0x000f, 0x0010};
+    case FormatEpoch::ZlibLegacy: break;
     }
     return std::nullopt;
 }
@@ -84,14 +76,10 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
 std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
 {
     switch (epoch) {
-    case FormatEpoch::UncompressedLegacy:
-        return 0x0004;
-    case FormatEpoch::DclLegacy:
-        return 0x0012;
-    case FormatEpoch::ZlibLegacy:
-        return 0x0017;
-    case FormatEpoch::CodaBanner:
-        break;
+    case FormatEpoch::UncompressedLegacy: return 0x0004;
+    case FormatEpoch::DclLegacy: return 0x0012;
+    case FormatEpoch::ZlibLegacy: return 0x0017;
+    case FormatEpoch::CodaBanner: break;
     }
     return std::nullopt;
 }
@@ -119,8 +107,8 @@ std::vector<std::uint8_t> collectTexts(const container::ParsedContainer& parsed)
 
 // An other is cmper, tag, six words. A detail carries a second cmper, which pushes the tag
 // two bytes along and leaves five words.
-std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
-    std::uint16_t blockType, bool isDetail, std::vector<std::uint8_t>& payload)
+std::vector<LegacyRow> decodeRows(
+    const container::ParsedContainer& parsed, std::uint16_t blockType, bool isDetail, std::vector<std::uint8_t>& payload)
 {
     std::vector<LegacyRow> result;
     for (const auto& block : parsed.blocks) {
@@ -144,8 +132,7 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
             // everything above this point sees a tag that reads as text.
             const bool bigEndian = parsed.byteOrder == ByteOrder::BigEndian;
             const std::array<char, 2> tagBytes{
-                static_cast<char>(row[tagOffset + (bigEndian ? 0 : 1)]),
-                static_cast<char>(row[tagOffset + (bigEndian ? 1 : 0)])};
+                static_cast<char>(row[tagOffset + (bigEndian ? 0 : 1)]), static_cast<char>(row[tagOffset + (bigEndian ? 1 : 0)])};
             decoded.tag = packTag(std::string_view(tagBytes.data(), tagBytes.size()));
             decoded.wordCount = isDetail ? detailWordCount : otherWordCount;
             const auto* source = row + tagOffset + 2;
@@ -170,8 +157,7 @@ std::vector<LegacyRow> decodeRows(const container::ParsedContainer& parsed,
 // class-specific payload rather than becoming a header dimension.
 // Class 0x041d establishes that the second comparator is the measure. Its payload retains the
 // fixed-detail representation: an 18-word graphic assignment rounded up to four five-word rows.
-std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed,
-    bool details, std::vector<std::uint8_t>& payload)
+std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& parsed, bool details, std::vector<std::uint8_t>& payload)
 {
     constexpr std::uint16_t otherRecordBlockType = 0x001a;
     constexpr std::uint16_t detailRecordBlockType = 0x001b;
@@ -192,8 +178,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
         while (offset + headerSize <= block.data.size()) {
             const auto* header = block.data.data() + offset;
             const auto classId = static_cast<std::uint16_t>(readWord(header, parsed.byteOrder));
-            const auto length =
-                readLong(header + (isDetail ? 8U : 6U), parsed.byteOrder);
+            const auto length = readLong(header + (isDetail ? 8U : 6U), parsed.byteOrder);
             if (classId == 0 || length > block.data.size() - offset - headerSize) {
                 break;
             }
@@ -205,23 +190,20 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             // class/key header, so the normalized row retains it with its primary payload
             // and advances across the segment.
             bool hasContinuation = false;
-            if (length >= 4
-                && length <= block.data.size() - primaryEnd
-                && readLong(block.data.data() + primaryEnd, parsed.byteOrder) == length) {
+            if (length >= 4 && length <= block.data.size() - primaryEnd && readLong(block.data.data() + primaryEnd, parsed.byteOrder) == length) {
                 trailerOffset += length;
                 hasContinuation = true;
             }
-            if (trailerOffset + trailerSize > block.data.size()) break;
-            const auto trailerFirst = readWord(
-                block.data.data() + trailerOffset, parsed.byteOrder);
-            const auto trailerSecond = readWord(
-                block.data.data() + trailerOffset + 2, parsed.byteOrder);
+            if (trailerOffset + trailerSize > block.data.size()) {
+                break;
+            }
+            const auto trailerFirst = readWord(block.data.data() + trailerOffset, parsed.byteOrder);
+            const auto trailerSecond = readWord(block.data.data() + trailerOffset + 2, parsed.byteOrder);
             // Believed: a continued record repurposes the second trailer word as metadata.
             // Observed values are not restricted to a single flag, whereas ordinary records
             // retain the two-word zero trailer. The repeated length above states which form
             // applies, so the metadata need not be interpreted to find the next record.
-            if ((trailerFirst != 0 && !(hasContinuation && trailerFirst == -1))
-                || (!hasContinuation && trailerSecond != 0)) {
+            if ((trailerFirst != 0 && !(hasContinuation && trailerFirst == -1)) || (!hasContinuation && trailerSecond != 0)) {
                 break;
             }
             LegacyRow decoded;
@@ -240,8 +222,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             if (hasContinuation) {
                 decoded.continuationOffset = static_cast<std::uint32_t>(payload.size());
                 decoded.continuationSize = length;
-                payload.insert(payload.end(), block.data.begin() + primaryEnd,
-                               block.data.begin() + trailerOffset);
+                payload.insert(payload.end(), block.data.begin() + primaryEnd, block.data.begin() + trailerOffset);
             }
             decoded.trailerFirst = trailerFirst;
             decoded.trailerSecond = trailerSecond;
@@ -267,17 +248,19 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
     // Incidence is defined by encounter order, so decode order is carried into the sort key
     // rather than left to the algorithm's stability. Relying on std::stable_sort would work
     // but would silently break if the comparator were ever reused with std::sort.
-    for (std::size_t i = 0; i < rows.size(); ++i)
+    for (std::size_t i = 0; i < rows.size(); ++i) {
         rows[i].inci = static_cast<std::uint32_t>(i);
-    std::sort(rows.begin(), rows.end(),
-        [](const LegacyRow& left, const LegacyRow& right) {
-            return std::tuple_cat(familyKey(left), std::tie(left.inci))
-                < std::tuple_cat(familyKey(right), std::tie(right.inci));
-        });
+    }
+    std::sort(rows.begin(), rows.end(), [](const LegacyRow& left, const LegacyRow& right) {
+        return std::tuple_cat(familyKey(left), std::tie(left.inci)) < std::tuple_cat(familyKey(right), std::tie(right.inci));
+    });
     std::uint32_t inci = 0;
     for (std::size_t i = 0; i < rows.size(); ++i) {
-        if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) ++inci;
-        else inci = 0;
+        if (i != 0 && familyKey(rows[i]) == familyKey(rows[i - 1])) {
+            ++inci;
+        } else {
+            inci = 0;
+        }
         rows[i].inci = inci;
     }
 
@@ -286,27 +269,23 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
     result.m_payload = std::move(payload);
     constexpr std::size_t continuationPrefixSize = 4;
     for (auto& row : result.m_rows) {
-        if (row.partId == musx::dom::SCORE_PARTID || row.continuationSize == 0) continue;
-        const auto* score = result.get(
-            row.tag, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
-        if (!score || score->payloadSize != row.payloadSize
-            || row.continuationSize != row.payloadSize
+        if (row.partId == musx::dom::SCORE_PARTID || row.continuationSize == 0) {
+            continue;
+        }
+        const auto* score = result.get(row.tag, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
+        if (!score || score->payloadSize != row.payloadSize || row.continuationSize != row.payloadSize
             || row.continuationSize < continuationPrefixSize) {
             continue;
         }
         const auto partPayload = result.payloadOf(row);
         const auto scorePayload = result.payloadOf(*score);
         const auto continuation = result.continuationOf(row);
-        row.effectivePayloadOffset = static_cast<std::uint32_t>(
-            result.m_effectivePartPayloads.size());
-        result.m_effectivePartPayloads.insert(
-            result.m_effectivePartPayloads.end(), scorePayload.begin(), scorePayload.end());
+        row.effectivePayloadOffset = static_cast<std::uint32_t>(result.m_effectivePartPayloads.size());
+        result.m_effectivePartPayloads.insert(result.m_effectivePartPayloads.end(), scorePayload.begin(), scorePayload.end());
         auto* effective = result.m_effectivePartPayloads.data() + row.effectivePayloadOffset;
-        for (std::size_t offset = 0;
-                offset < continuation.size() - continuationPrefixSize; ++offset) {
+        for (std::size_t offset = 0; offset < continuation.size() - continuationPrefixSize; ++offset) {
             const auto mask = continuation[continuationPrefixSize + offset];
-            effective[offset] = static_cast<std::uint8_t>(
-                (scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
+            effective[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
         }
         row.continuationOverlayReady = true;
     }
@@ -315,65 +294,58 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
 
 std::span<const std::uint8_t> LegacyRowPool::effectivePayloadOf(const LegacyRow& row) const
 {
-    const bool unresolvedContinuation = row.partId != musx::dom::SCORE_PARTID
-        && row.continuationSize != 0 && !row.continuationOverlayReady;
-    MUSX_ASSERT_IF(unresolvedContinuation) {
-        musx::util::Logger::log(musx::util::Logger::LogLevel::Warning,
-            "A continued part record has no structurally compatible score record.");
+    const bool unresolvedContinuation = row.partId != musx::dom::SCORE_PARTID && row.continuationSize != 0 && !row.continuationOverlayReady;
+    MUSX_ASSERT_IF(unresolvedContinuation)
+    {
+        musx::util::Logger::log(musx::util::Logger::LogLevel::Warning, "A continued part record has no structurally compatible score record.");
         return payloadOf(row);
     }
-    if (!row.continuationOverlayReady) return payloadOf(row);
-    return std::span<const std::uint8_t>(
-        m_effectivePartPayloads.data() + row.effectivePayloadOffset, row.payloadSize);
+    if (!row.continuationOverlayReady) {
+        return payloadOf(row);
+    }
+    return std::span<const std::uint8_t>(m_effectivePartPayloads.data() + row.effectivePayloadOffset, row.payloadSize);
 }
 
-std::span<const LegacyRow> LegacyRowPool::getArray(
-    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint16_t partId) const
+std::span<const LegacyRow> LegacyRowPool::getArray(LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint16_t partId) const
 {
     const auto key = std::tie(tag, cmper1, cmper2, partId);
-    const auto range = std::equal_range(m_rows.begin(), m_rows.end(), key,
-        [](const auto& left, const auto& right) {
-            if constexpr (std::is_same_v<std::decay_t<decltype(left)>, LegacyRow>) {
-                return familyKey(left) < right;
-            } else {
-                return left < familyKey(right);
-            }
-        });
-    if (range.first == range.second) return {};
-    return std::span<const LegacyRow>(&*range.first,
-        static_cast<std::size_t>(std::distance(range.first, range.second)));
+    const auto range = std::equal_range(m_rows.begin(), m_rows.end(), key, [](const auto& left, const auto& right) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(left)>, LegacyRow>) {
+            return familyKey(left) < right;
+        } else {
+            return left < familyKey(right);
+        }
+    });
+    if (range.first == range.second) {
+        return {};
+    }
+    return std::span<const LegacyRow>(&*range.first, static_cast<std::size_t>(std::distance(range.first, range.second)));
 }
 
-const LegacyRow* LegacyRowPool::get(
-    LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci,
-    std::uint16_t partId) const
+const LegacyRow* LegacyRowPool::get(LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint32_t inci, std::uint16_t partId) const
 {
     const auto family = getArray(tag, cmper1, cmper2, partId);
-    const auto found = std::lower_bound(family.begin(), family.end(), inci,
-        [](const LegacyRow& row, std::uint32_t value) { return row.inci < value; });
+    const auto found =
+        std::lower_bound(family.begin(), family.end(), inci, [](const LegacyRow& row, std::uint32_t value) { return row.inci < value; });
     return found != family.end() && found->inci == inci ? &*found : nullptr;
 }
 
-std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(
-    LegacyTag tag, std::uint16_t partId) const
+std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
     for (const auto& row : m_rows) {
-        if (row.tag == tag && row.partId == partId
-            && (result.empty() || result.back() != row.cmper1)) {
+        if (row.tag == tag && row.partId == partId && (result.empty() || result.back() != row.cmper1)) {
             result.push_back(row.cmper1);
         }
     }
     return result;
 }
 
-std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(
-    LegacyTag tag, std::uint16_t cmper1, std::uint16_t partId) const
+std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(LegacyTag tag, std::uint16_t cmper1, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
     for (const auto& row : m_rows) {
-        if (row.tag == tag && row.partId == partId && row.cmper1 == cmper1
-            && (result.empty() || result.back() != row.cmper2)) {
+        if (row.tag == tag && row.partId == partId && row.cmper1 == cmper1 && (result.empty() || result.back() != row.cmper2)) {
             result.push_back(row.cmper2);
         }
     }
@@ -390,8 +362,12 @@ std::vector<std::uint16_t> LegacyRowPool::partIdsForTag(LegacyTag tag) const
         result.push_back(row.partId);
     }
     std::sort(result.begin(), result.end(), [](auto left, auto right) {
-        if (left == musx::dom::SCORE_PARTID) return true;
-        if (right == musx::dom::SCORE_PARTID) return false;
+        if (left == musx::dom::SCORE_PARTID) {
+            return true;
+        }
+        if (right == musx::dom::SCORE_PARTID) {
+            return false;
+        }
         return left < right;
     });
     return result;
@@ -411,20 +387,17 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
         std::vector<std::uint8_t> othersPayload;
         auto othersRows = decodeClassRecords(parsed, false, othersPayload);
-        result.m_classOthers = LegacyRowPool::build(
-            std::move(othersRows), std::move(othersPayload));
+        result.m_classOthers = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload));
 
         std::vector<std::uint8_t> detailsPayload;
         auto detailRows = decodeClassRecords(parsed, true, detailsPayload);
-        result.m_classDetails = LegacyRowPool::build(
-            std::move(detailRows), std::move(detailsPayload));
+        result.m_classDetails = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload));
     }
     result.m_texts = collectTexts(parsed);
     return result;
 }
 
-std::optional<RecordWord> LegacyRecordIndex::word(
-    LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const
+std::optional<RecordWord> LegacyRecordIndex::word(LegacyTag tag, std::uint16_t cmper, std::size_t wordIndex) const
 {
     const auto family = m_others.getArray(tag, cmper);
     if (family.empty()) {

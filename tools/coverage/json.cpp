@@ -20,8 +20,7 @@ std::string jsonString(std::string_view value)
         default:
             if (static_cast<unsigned char>(ch) < 0x20) {
                 char buffer[8];
-                std::snprintf(buffer, sizeof(buffer), "\\u%04x",
-                    static_cast<unsigned>(static_cast<unsigned char>(ch)));
+                std::snprintf(buffer, sizeof(buffer), "\\u%04x", static_cast<unsigned>(static_cast<unsigned char>(ch)));
                 result += buffer;
             } else {
                 result += ch;
@@ -82,8 +81,8 @@ std::string versionName(const ImportReport& report)
         return {};
     }
     const auto& version = *report.sourceVersion;
-    return std::to_string(version.major) + '.' + std::to_string(version.minor) + '.'
-        + std::to_string(version.maint) + '.' + std::to_string(version.build);
+    return std::to_string(version.major) + '.' + std::to_string(version.minor) + '.' + std::to_string(version.maint) + '.'
+           + std::to_string(version.build);
 }
 
 std::string importError(const ImportReport& report)
