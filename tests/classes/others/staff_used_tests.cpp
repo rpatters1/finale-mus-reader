@@ -88,7 +88,7 @@ TEST_CASE("StaffUsed recovers every represented physical layout", "[class][staff
             auto profile = SourceProfile(FormatEpoch::CodaBanner);
             profile.byteOrder = byteOrder;
             auto imported = importStaffUsed(parsed, profile);
-            const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 0);
+            const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
             REQUIRE(values.size() == 2);
             CHECK(values[0]->staffId == 1);
             CHECK(values[0]->distFromTop == 0);
@@ -109,7 +109,7 @@ TEST_CASE("StaffUsed recovers every represented physical layout", "[class][staff
             auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
             profile.byteOrder = byteOrder;
             auto imported = importStaffUsed(parsed, profile);
-            const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 0);
+            const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
             REQUIRE(values.size() == 2);
             CHECK(values[0]->distFromTop == 0);
             CHECK(values[1]->distFromTop == -300);
@@ -122,7 +122,7 @@ TEST_CASE("StaffUsed recovers every represented physical layout", "[class][staff
             auto profile = SourceProfile(FormatEpoch::DclLegacy);
             profile.byteOrder = byteOrder;
             auto imported = importStaffUsed(makeContainer(rows, FormatEpoch::DclLegacy, byteOrder), profile);
-            const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 0);
+            const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
             REQUIRE(values.size() == 2);
             CHECK(values[0]->distFromTop == -80);
             CHECK(values[1]->distFromTop == -380);
@@ -139,12 +139,13 @@ TEST_CASE("StaffUsed recovers every represented physical layout", "[class][staff
             auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
             profile.byteOrder = byteOrder;
             auto imported = importStaffUsed(makeClassContainer(0x009f, words, byteOrder, 0), profile);
-            const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 0);
+            const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
             REQUIRE(values.size() == 2);
             CHECK(values[0]->distFromTop == -80);
             CHECK(values[1]->distFromTop == -380);
             CHECK(values[1]->range->endEdu == 1024);
-            const auto* source = imported.report.findField<StaffUsed>("range.endEdu", 0, 0, musx::dom::Inci(1));
+            const auto* source =
+                imported.report.findField<StaffUsed>("range.endEdu", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), musx::dom::Inci(1));
             REQUIRE(source);
             CHECK(source->origin == ValueOrigin::LegacyMus);
             CHECK(source->rawValue == 1024);
@@ -160,7 +161,7 @@ TEST_CASE("StaffUsed two-entry IU layout ends at Finale 3.5", "[class][staff-use
         finale32Profile.version = SourceVersion{.major = 3, .minor = 2};
         finale32Profile.byteOrder = byteOrder;
         const auto finale32 = importStaffUsed(earlyParsed, finale32Profile);
-        const auto earlyValues = finale32.document->getOthers()->getArray<StaffUsed>(0, 0);
+        const auto earlyValues = finale32.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
         REQUIRE(earlyValues.size() == 2);
         CHECK(earlyValues[0]->staffId == 1);
         CHECK(earlyValues[0]->distFromTop == 0);
@@ -179,7 +180,7 @@ TEST_CASE("StaffUsed two-entry IU layout ends at Finale 3.5", "[class][staff-use
         finale35Profile.version = SourceVersion{.major = 3, .minor = 5};
         finale35Profile.byteOrder = byteOrder;
         const auto finale35 = importStaffUsed(laterParsed, finale35Profile);
-        const auto laterValues = finale35.document->getOthers()->getArray<StaffUsed>(0, 0);
+        const auto laterValues = finale35.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
         REQUIRE(laterValues.size() == 2);
         CHECK(laterValues[0]->staffId == 1);
         CHECK(laterValues[0]->distFromTop == 0);
@@ -193,14 +194,15 @@ TEST_CASE("Coda StaffUsed remaps the four early Staff Set comparators", "[class]
     const auto parsed =
         makeContainer({{65530, "IU", {1, 0, -80, 0, 0, 0}}, {65533, "IU", {2, 0, -160, 0, 0, 0}}}, FormatEpoch::CodaBanner, ByteOrder::BigEndian);
     auto coda = importStaffUsed(parsed, SourceProfile(FormatEpoch::CodaBanner));
-    CHECK(coda.document->getOthers()->getArray<StaffUsed>(0, musx::dom::STAFF_SET_1_SYSTEM_ID).size() == 1);
-    CHECK(coda.document->getOthers()->getArray<StaffUsed>(0, musx::dom::Cmper(musx::dom::STAFF_SET_1_SYSTEM_ID + 3)).size() == 1);
-    CHECK(coda.document->getOthers()->getArray<StaffUsed>(0, 65530).empty());
-    CHECK(coda.document->getOthers()->getArray<StaffUsed>(0, 65533).empty());
+    CHECK(coda.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::STAFF_SET_1_SYSTEM_ID).size() == 1);
+    CHECK(
+        coda.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(musx::dom::STAFF_SET_1_SYSTEM_ID + 3)).size() == 1);
+    CHECK(coda.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(65530)).empty());
+    CHECK(coda.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(65533)).empty());
 
     const auto laterParsed = makeContainer({{65530, "IU", {1, 0, 0, 0, -1, -80}}}, FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian);
     auto later = importStaffUsed(laterParsed, SourceProfile(FormatEpoch::UncompressedLegacy));
-    CHECK(later.document->getOthers()->getArray<StaffUsed>(0, 65530).size() == 1);
+    CHECK(later.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(65530)).size() == 1);
 }
 
 TEST_CASE("StaffUsed completes systems from the extraction list and preserves authored lists", "[class][staff-used]")
@@ -216,32 +218,32 @@ TEST_CASE("StaffUsed completes systems from the extraction list and preserves au
     profile.byteOrder = ByteOrder::BigEndian;
     auto imported = importStaffUsed(makeContainer(rows), profile, true);
 
-    REQUIRE(imported.document->getOthers()->get<StaffSystem>(0, 1));
-    REQUIRE(imported.document->getOthers()->get<StaffSystem>(0, 2));
-    const auto firstList = imported.document->getOthers()->getArray<StaffUsed>(0, 1);
+    REQUIRE(imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1)));
+    REQUIRE(imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2)));
+    const auto firstList = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(firstList.size() == 1);
     CHECK(firstList[0]->staffId == 2);
     CHECK(firstList[0]->distFromTop == 0);
-    const auto secondList = imported.document->getOthers()->getArray<StaffUsed>(0, 2);
+    const auto secondList = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     REQUIRE(secondList.size() == 1);
     CHECK(secondList[0]->staffId == 3);
     CHECK(secondList[0]->distFromTop == 0);
 
-    const auto firstSystem = imported.document->getOthers()->get<StaffSystem>(0, 1);
-    const auto secondSystem = imported.document->getOthers()->get<StaffSystem>(0, 2);
+    const auto firstSystem = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    const auto secondSystem = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     REQUIRE(firstSystem);
     REQUIRE(secondSystem);
     CHECK(firstSystem->top == -210);
     CHECK(secondSystem->top == -300);
     CHECK(firstSystem->distanceToPrev == 0);
     CHECK(secondSystem->distanceToPrev == -20);
-    const auto* synthesized = imported.report.findField<StaffUsed>("staffId", 0, 1, musx::dom::Inci(0));
+    const auto* synthesized = imported.report.findField<StaffUsed>("staffId", musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0));
     REQUIRE(synthesized);
     CHECK(synthesized->origin == ValueOrigin::LegacyBehavior);
-    const auto* authored = imported.report.findField<StaffUsed>("staffId", 0, 2, musx::dom::Inci(0));
+    const auto* authored = imported.report.findField<StaffUsed>("staffId", musx::dom::SCORE_PARTID, musx::dom::Cmper(2), musx::dom::Inci(0));
     REQUIRE(authored);
     CHECK(authored->origin == ValueOrigin::LegacyMus);
-    const auto* top = imported.report.findField<StaffSystem>("top", 0, 1);
+    const auto* top = imported.report.findField<StaffSystem>("top", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(top);
     CHECK(top->origin == ValueOrigin::LegacyMusAdjusted);
     CHECK(top->rawValue == -200);
@@ -265,7 +267,7 @@ TEST_CASE("Unoptimized StaffUsed systems ignore stale system lists", "[class][st
     profile.byteOrder = ByteOrder::BigEndian;
     auto imported = importStaffUsed(makeContainer(rows), profile, true);
 
-    const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 2);
+    const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     REQUIRE(values.size() == 3);
     CHECK(values[0]->staffId == 1);
     CHECK(values[0]->distFromTop == 0);
@@ -273,10 +275,10 @@ TEST_CASE("Unoptimized StaffUsed systems ignore stale system lists", "[class][st
     CHECK(values[1]->distFromTop == -288);
     CHECK(values[2]->staffId == 3);
     CHECK(values[2]->distFromTop == -576);
-    const auto system = imported.document->getOthers()->get<StaffSystem>(0, 2);
+    const auto system = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     REQUIRE(system);
     CHECK(system->top == -188);
-    const auto* synthesized = imported.report.findField<StaffUsed>("staffId", 0, 2, musx::dom::Inci(2));
+    const auto* synthesized = imported.report.findField<StaffUsed>("staffId", musx::dom::SCORE_PARTID, musx::dom::Cmper(2), musx::dom::Inci(2));
     REQUIRE(synthesized);
     CHECK(synthesized->origin == ValueOrigin::LegacyBehavior);
 }
@@ -295,19 +297,19 @@ TEST_CASE("DCL StaffUsed preserves the authored list origin", "[class][staff-use
     profile.byteOrder = ByteOrder::BigEndian;
     auto imported = importStaffUsed(makeContainer(rows, FormatEpoch::DclLegacy), profile, true);
 
-    const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 1);
+    const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(values.size() == 4);
     CHECK(values[0]->distFromTop == -98);
     CHECK(values[1]->distFromTop == 0);
     CHECK(values[2]->distFromTop == -206);
     CHECK(values[3]->distFromTop == -530);
-    const auto system = imported.document->getOthers()->get<StaffSystem>(0, 1);
+    const auto system = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(system);
     CHECK(system->top == -188);
-    const auto* distance = imported.report.findField<StaffUsed>("distFromTop", 0, 1, musx::dom::Inci(0));
+    const auto* distance = imported.report.findField<StaffUsed>("distFromTop", musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0));
     REQUIRE(distance);
     CHECK(distance->origin == ValueOrigin::LegacyMus);
-    const auto* top = imported.report.findField<StaffSystem>("top", 0, 1);
+    const auto* top = imported.report.findField<StaffSystem>("top", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(top);
     CHECK(top->origin == ValueOrigin::LegacyMus);
 }
@@ -319,13 +321,13 @@ TEST_CASE("Compact StaffUsed lists normalize from their highest stored position"
     auto profile = SourceProfile(FormatEpoch::CodaBanner);
     profile.byteOrder = ByteOrder::BigEndian;
     const auto imported = importStaffUsed(parsed, profile, true);
-    const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 1);
+    const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(values.size() == 2);
     CHECK(values[0]->staffId == 4);
     CHECK(values[0]->distFromTop == -21);
     CHECK(values[1]->staffId == 12);
     CHECK(values[1]->distFromTop == 0);
-    const auto system = imported.document->getOthers()->get<StaffSystem>(0, 1);
+    const auto system = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(system);
     CHECK(system->top == -187);
 }
@@ -346,20 +348,22 @@ TEST_CASE("StaffUsed normalization ends in the DCL epoch", "[class][staff-used]"
     };
 
     const auto finale2000 = importAt(FormatEpoch::UncompressedLegacy);
-    const auto normalized = finale2000.document->getOthers()->getArray<StaffUsed>(0, 0);
+    const auto normalized = finale2000.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
     REQUIRE(normalized.size() == 2);
     CHECK(normalized[0]->distFromTop == 0);
     CHECK(normalized[1]->distFromTop == -300);
-    const auto* normalizedDistance = finale2000.report.findField<StaffUsed>("distFromTop", 0, 0, musx::dom::Inci(0));
+    const auto* normalizedDistance =
+        finale2000.report.findField<StaffUsed>("distFromTop", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), musx::dom::Inci(0));
     REQUIRE(normalizedDistance);
     CHECK(normalizedDistance->origin == ValueOrigin::LegacyMusAdjusted);
 
     const auto finale2001 = importAt(FormatEpoch::DclLegacy);
-    const auto preserved = finale2001.document->getOthers()->getArray<StaffUsed>(0, 0);
+    const auto preserved = finale2001.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
     REQUIRE(preserved.size() == 2);
     CHECK(preserved[0]->distFromTop == -80);
     CHECK(preserved[1]->distFromTop == -380);
-    const auto* preservedDistance = finale2001.report.findField<StaffUsed>("distFromTop", 0, 0, musx::dom::Inci(0));
+    const auto* preservedDistance =
+        finale2001.report.findField<StaffUsed>("distFromTop", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), musx::dom::Inci(0));
     REQUIRE(preservedDistance);
     CHECK(preservedDistance->origin == ValueOrigin::LegacyMus);
 }
@@ -380,17 +384,17 @@ TEST_CASE("Finale 2011 StaffUsed systems use their system lists without the lega
     profile.byteOrder = ByteOrder::LittleEndian;
     auto imported = importStaffUsed(parsed, profile, true);
 
-    const auto values = imported.document->getOthers()->getArray<StaffUsed>(0, 1);
+    const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(values.size() == 1);
     CHECK(values.front()->staffId == 2);
     CHECK(values.front()->distFromTop == -400);
-    const auto system = imported.document->getOthers()->get<StaffSystem>(0, 1);
+    const auto system = imported.document->getOthers()->get<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(system);
     CHECK(system->top == 0);
-    const auto* authored = imported.report.findField<StaffUsed>("staffId", 0, 1, musx::dom::Inci(0));
+    const auto* authored = imported.report.findField<StaffUsed>("staffId", musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0));
     REQUIRE(authored);
     CHECK(authored->origin == ValueOrigin::LegacyMus);
-    const auto* distance = imported.report.findField<StaffUsed>("distFromTop", 0, 1, musx::dom::Inci(0));
+    const auto* distance = imported.report.findField<StaffUsed>("distFromTop", musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0));
     REQUIRE(distance);
     CHECK(distance->origin == ValueOrigin::LegacyMus);
 }
@@ -406,8 +410,8 @@ TEST_CASE("StaffUsed synthesizes score and linked-part systems with their owning
     profile.byteOrder = ByteOrder::LittleEndian;
     auto imported = importStaffUsed(parsed, profile, true);
 
-    const auto score = imported.document->getOthers()->getArray<StaffUsed>(0, 1);
-    const auto part = imported.document->getOthers()->getArray<StaffUsed>(1, 1);
+    const auto score = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    const auto part = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::Cmper(1), musx::dom::Cmper(1));
     REQUIRE(score.size() == 1);
     REQUIRE(part.size() == 1);
     CHECK(score.front()->getShareMode() == musx::dom::EnigmaBase::ShareMode::All);
@@ -422,9 +426,9 @@ TEST_CASE("StaffUsed ignores system-range lists without a corresponding StaffSys
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     auto imported = importStaffUsed(makeContainer(rows), profile, true);
-    CHECK(imported.document->getOthers()->getArray<StaffUsed>(0, 2).size() == 1);
-    CHECK(imported.document->getOthers()->getArray<StaffUsed>(0, 3).empty());
-    CHECK(imported.document->getOthers()->getArray<StaffUsed>(0, musx::dom::STUDIO_VIEW_SYSTEM_ID).size() == 1);
+    CHECK(imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2)).size() == 1);
+    CHECK(imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(3)).empty());
+    CHECK(imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::STUDIO_VIEW_SYSTEM_ID).size() == 1);
 }
 
 TEST_CASE("StaffUsed retains complete elements before a truncated tail", "[class][staff-used]")
@@ -434,7 +438,7 @@ TEST_CASE("StaffUsed retains complete elements before a truncated tail", "[class
     auto profile = SourceProfile(FormatEpoch::ZlibLegacy);
     profile.byteOrder = ByteOrder::LittleEndian;
     auto imported = importStaffUsed(makeClassContainer(0x009f, words, ByteOrder::LittleEndian, 0), profile);
-    CHECK(imported.document->getOthers()->getArray<StaffUsed>(0, 0).size() == 1);
+    CHECK(imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0)).size() == 1);
     CHECK(imported.report.diagnostics.size() == 1);
 }
 
@@ -663,22 +667,23 @@ TEST_CASE("StaffUsed recovers the controlled source layouts", "[class][staff-use
     for (const auto* relative : {"evidence/F97/F97-1stsys-top.mus", "evidence/F2000/F2000-update-layout.mus", "evidence/F2006/F2006-empty.mus",
              "evidence/F2012/F2012-baseline.mus"}) {
         const auto imported = readFixture(relative);
-        const auto scrollView = imported.document->getOthers()->getArray<StaffUsed>(0, musx::dom::BASE_SYSTEM_ID);
+        const auto scrollView = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID);
         REQUIRE_FALSE(scrollView.empty());
         CHECK(scrollView.front()->distFromTop == 0);
         checkWholeDocumentRange(*scrollView.front());
-        for (const auto& system : imported.document->getOthers()->getArray<StaffSystem>(0)) {
-            const auto list = imported.document->getOthers()->getArray<StaffUsed>(0, system->getCmper());
+        for (const auto& system : imported.document->getOthers()->getArray<StaffSystem>(musx::dom::SCORE_PARTID)) {
+            const auto list = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, system->getCmper());
             REQUIRE_FALSE(list.empty());
             CHECK(list.front()->distFromTop == 0);
         }
     }
 
     const auto codaStaffSet = readFixture("evidence/F100/F100-quartet-oboeview.mus");
-    const auto oboeOnly = codaStaffSet.document->getOthers()->getArray<StaffUsed>(0, musx::dom::Cmper(musx::dom::STAFF_SET_1_SYSTEM_ID + 1));
+    const auto oboeOnly =
+        codaStaffSet.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(musx::dom::STAFF_SET_1_SYSTEM_ID + 1));
     REQUIRE(oboeOnly.size() == 1);
     CHECK(oboeOnly.front()->staffId == 2);
-    CHECK(codaStaffSet.document->getOthers()->getArray<StaffUsed>(0, 65531).empty());
+    CHECK(codaStaffSet.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(65531)).empty());
 }
 
 } // namespace
