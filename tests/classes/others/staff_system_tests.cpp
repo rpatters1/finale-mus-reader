@@ -475,7 +475,7 @@ TEST_CASE("StaffSystem comparison recognizes Finale layout recalculation", "[cov
     CHECK_FALSE(classifyValues("top", Value(0), Value(-80)));
     auto topInfo = FieldInfo{ValueOrigin::LegacyMusAdjusted, 0, 0, -165};
     topInfo.finaleUpgradeLossValue = -192;
-    report.setField(finale_mus_reader::instanceKey<StaffSystem>(0, 1), "top", topInfo);
+    report.setField(finale_mus_reader::instanceKey<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1)), "top", topInfo);
     CHECK(classifyValues("top", Value(-165), Value(-192), DifferenceCategory::Differs, "legacy-mus-adjusted")
           == DifferenceClassification::FinaleUpgradeLoss);
     CHECK_FALSE(classifyValues("top", Value(-165), Value(-191), DifferenceCategory::Differs, "legacy-mus-adjusted"));
