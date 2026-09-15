@@ -128,8 +128,8 @@ Explanation added here has to be removed again.
     [ ] StaffPlayData
     [x] StaffStyle                              staff.cpp
     [x] StaffStyleAssign                        staff_style_assign.cpp
-    [~] StaffSystem                             staff_system.cpp                top/scaling await StaffUsed
-    [ ] StaffUsed
+    [~] StaffSystem                             staff_system.cpp                hasStaffScaling awaits StaffSize
+    [x] StaffUsed                               staff_used.cpp
     [ ] SystemLock
     [ ] TempoChange
     [x] TextBlock                               text_blocks.cpp

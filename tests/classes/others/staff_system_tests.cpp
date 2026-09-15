@@ -133,10 +133,10 @@ TEST_CASE("Fixed-row staff systems recover the base and Finale 2005 layouts", "[
             auto profile = SourceProfile(epoch);
             profile.byteOrder = byteOrder;
             const auto report = importStaffSystems(makeContainer(rows, epoch, byteOrder), profile, document);
-            const int expectedTop = epoch == FormatEpoch::UncompressedLegacy ? 0 : -12;
+            const int expectedTop = -12;
             const int expectedDistance = -490;
-            const auto expectedTopOrigin = epoch == FormatEpoch::UncompressedLegacy ? ValueOrigin::Unmapped : ValueOrigin::LegacyMus;
-            const int expectedTopRaw = epoch == FormatEpoch::UncompressedLegacy ? 0 : -12;
+            const auto expectedTopOrigin = ValueOrigin::LegacyMus;
+            const int expectedTopRaw = -12;
             checkStaffSystem(document, report, expectedTop, expectedDistance, expectedTopOrigin, expectedTopRaw);
         }
     }
@@ -148,7 +148,7 @@ TEST_CASE("Fixed-row staff systems recover the base and Finale 2005 layouts", "[
     addStaffSystemTestMeasures(document, 8);
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
-    checkStaffSystem(document, importStaffSystems(parsed, profile, document), 0, -490, ValueOrigin::Unmapped, 0, musx::dom::Cmper(1), false);
+    checkStaffSystem(document, importStaffSystems(parsed, profile, document), -12, -490, ValueOrigin::LegacyMus, -12, musx::dom::Cmper(1), false);
 }
 
 TEST_CASE("Uncompressed staff-system distance uses the first word after system one", "[class][staff-system]")
@@ -160,7 +160,7 @@ TEST_CASE("Uncompressed staff-system distance uses the first word after system o
     addStaffSystemTestMeasures(document, 8);
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
-    checkStaffSystem(document, importStaffSystems(parsed, profile, document), 0, -490, ValueOrigin::Unmapped, 0, musx::dom::Cmper(1), false);
+    checkStaffSystem(document, importStaffSystems(parsed, profile, document), -12, -490, ValueOrigin::LegacyMus, -12, musx::dom::Cmper(1), false);
 }
 
 TEST_CASE("Zlib staff systems recover both byte orders and ignore retired flag bits", "[class][staff-system]")
@@ -228,7 +228,7 @@ TEST_CASE("Compact staff systems recover independently of their container epoch"
         const auto second = document->getOthers()->get<StaffSystem>(0, 2);
         REQUIRE(first);
         REQUIRE(second);
-        CHECK(first->top == 0);
+        CHECK(first->top == -257);
         CHECK(first->left == 389);
         CHECK(first->right == -247);
         CHECK(first->bottom == -299);
@@ -255,7 +255,7 @@ TEST_CASE("Compact staff systems recover independently of their container epoch"
         };
         CHECK(fieldOrigin("left", 1) == ValueOrigin::LegacyMus);
         CHECK(fieldOrigin("endMeas", 1) == ValueOrigin::LegacyMusAdjusted);
-        CHECK(fieldOrigin("top", 1) == ValueOrigin::Unmapped);
+        CHECK(fieldOrigin("top", 1) == ValueOrigin::LegacyMus);
         CHECK(fieldOrigin("horzPercent", 1) == ValueOrigin::Unmapped);
         CHECK(fieldOrigin("ssysPercent", 1) == ValueOrigin::LegacyBehavior);
         CHECK(fieldOrigin("staffHeight", 1) == ValueOrigin::LegacyBehavior);
@@ -473,6 +473,12 @@ TEST_CASE("StaffSystem comparison recognizes Finale layout recalculation", "[cov
     CHECK(classifyValues("distance_to_prev", Value(-72), Value(-80), DifferenceCategory::Differs, "legacy-mus-adjusted")
           == DifferenceClassification::AwaitsDependentRecovery);
     CHECK_FALSE(classifyValues("top", Value(0), Value(-80)));
+    auto topInfo = FieldInfo{ValueOrigin::LegacyMusAdjusted, 0, 0, -165};
+    topInfo.finaleUpgradeLossValue = -192;
+    report.setField(finale_mus_reader::instanceKey<StaffSystem>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1)), "top", topInfo);
+    CHECK(classifyValues("top", Value(-165), Value(-192), DifferenceCategory::Differs, "legacy-mus-adjusted")
+          == DifferenceClassification::FinaleUpgradeLoss);
+    CHECK_FALSE(classifyValues("top", Value(-165), Value(-191), DifferenceCategory::Differs, "legacy-mus-adjusted"));
     CHECK_FALSE(classifyLayout("end_meas", {3}, {2, 3}, musx::dom::Cmper(1), musx::dom::Cmper(2), DifferenceCategory::ReaderOnly));
     CHECK(classifyValues("horz_percent", Value(0.0), Value(107.11), DifferenceCategory::Differs, "unmapped")
           == DifferenceClassification::FinaleLayoutRecalculation);
@@ -483,6 +489,28 @@ TEST_CASE("StaffSystem comparison recognizes Finale layout recalculation", "[cov
     CHECK_FALSE(classifyValues("distance_to_prev", Value(-72), Value(-80)));
     setDeferredRecoveryClassified(true);
     CHECK_FALSE(classifyValues("distance_to_prev", Value(-72), Value(-80), DifferenceCategory::ReaderOnly));
+}
+
+TEST_CASE("StaffSystem comparison isolates a companion with a damaged page layout", "[class][staff-system][coverage]")
+{
+    using namespace finale_mus_reader::coverage;
+    ComparisonLeaves source;
+    ComparisonLeaves companion;
+    ImportReport report(FormatEpoch::UncompressedLegacy);
+    const auto classify = differenceClassifier("staff_systems");
+    REQUIRE(classify);
+    const auto topPath = std::string("staff_systems[cmper=10].top");
+    source.emplace(topPath, std::pair{Value(-188), std::string("legacy-mus-adjusted")});
+    companion.emplace(topPath, std::pair{Value(-700), std::string("enigma-xml")});
+    const auto classifyPath = [&](std::string_view path, std::string_view corpusId) {
+        return classify(
+            DifferenceContext{path, DifferenceCategory::Differs, "legacy-mus-adjusted", source.at(topPath).first, companion.at(topPath).first, source,
+                companion, FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian, nullptr, report, {}, {}, nullptr, nullptr, nullptr, corpusId});
+    };
+
+    CHECK(classifyPath(topPath, "mus-13e307b184ece4d2") == DifferenceClassification::FinaleLayoutRecalculation);
+    CHECK_FALSE(classifyPath(topPath, "mus-another-fixture"));
+    CHECK_FALSE(classifyPath("staff_systems[cmper=10].left", "mus-13e307b184ece4d2"));
 }
 
 TEST_CASE("Controlled fixtures recover staff systems across supported physical "
@@ -498,9 +526,9 @@ TEST_CASE("Controlled fixtures recover staff systems across supported physical "
         int endMeas;
         double horzPercent;
     };
-    for (const auto& expected : {FixtureCase{"evidence/F97/Fin97-baseline.mus", 0, 288, -144, 2, 111.99},
-             FixtureCase{"evidence/F98/F98-baseline.mus", 0, 288, -200, 4, 110.94},
-             FixtureCase{"evidence/F2000/F2000-update-layout.mus", 0, 0, -200, 2, 331.5},
+    for (const auto& expected : {FixtureCase{"evidence/F97/Fin97-baseline.mus", -260, 288, -144, 2, 111.99},
+             FixtureCase{"evidence/F98/F98-baseline.mus", -630, 288, -200, 4, 110.94},
+             FixtureCase{"evidence/F2000/F2000-update-layout.mus", -80, 0, -200, 2, 331.5},
              FixtureCase{"evidence/F2006/F2006-empty.mus", -463, 144, -200, 2, 0.0},
              FixtureCase{"evidence/F2007/F2007-lyric-hyphens.mus", -463, 144, -200, 3, 153.25},
              FixtureCase{"evidence/F2012/F2012-baseline.mus", -463, 144, -200, 2, 307.17}}) {
@@ -521,13 +549,13 @@ TEST_CASE("Controlled fixtures recover staff systems across supported physical "
     const auto finale97MultipleSystems = readFixture("evidence/F97/F97-altnotation.mus");
     const auto laterSystem = finale97MultipleSystems.document->getOthers()->get<StaffSystem>(0, 2);
     REQUIRE(laterSystem);
-    CHECK(laterSystem->top == 0);
+    CHECK(laterSystem->top == -188);
     CHECK(laterSystem->distanceToPrev == -72);
 
     const auto finale372Compact = readFixture("evidence/F372/F372-fileinfo-text.mus");
     const auto finale372System = finale372Compact.document->getOthers()->get<StaffSystem>(0, 1);
     REQUIRE(finale372System);
-    CHECK(finale372System->top == 0);
+    CHECK(finale372System->top == -80);
     CHECK(finale372System->left == 0);
     CHECK(finale372System->right == 0);
     CHECK(finale372System->bottom == -200);
@@ -567,15 +595,17 @@ TEST_CASE("Controlled fixtures recover staff systems across supported physical "
         int fifthStartMeas;
         int fifthEndMeas;
         int fifthDistance;
+        int firstTop;
+        int fifthTop;
     };
-    for (const auto& expected : {CodaFixtureCase{"evidence/F100/F100-chg-sys.mus", 389, -247, -299, 2, 517, -499, -521, 11, 12, -481},
-             CodaFixtureCase{"evidence/F263/F263-chg-sys.mus", 173, -420, -207, 4, 641, -34, -244, 16, 19, -151}}) {
+    for (const auto& expected : {CodaFixtureCase{"evidence/F100/F100-chg-sys.mus", 389, -247, -299, 2, 517, -499, -521, 11, 12, -481, -337, -80},
+             CodaFixtureCase{"evidence/F263/F263-chg-sys.mus", 173, -420, -207, 4, 641, -34, -244, 16, 19, -151, -349, -188}}) {
         const auto result = readFixture(expected.path);
         const auto first = result.document->getOthers()->get<StaffSystem>(0, 1);
         const auto fifth = result.document->getOthers()->get<StaffSystem>(0, 5);
         REQUIRE(first);
         REQUIRE(fifth);
-        CHECK(first->top == 0);
+        CHECK(first->top == expected.firstTop);
         CHECK(first->left == expected.firstLeft);
         CHECK(first->right == expected.firstRight);
         CHECK(first->bottom == expected.firstBottom);
@@ -583,7 +613,7 @@ TEST_CASE("Controlled fixtures recover staff systems across supported physical "
         CHECK(first->endMeas == expected.firstEndMeas);
         CHECK(first->distanceToPrev == 0);
         CHECK(first->holdMargins);
-        CHECK(fifth->top == 0);
+        CHECK(fifth->top == expected.fifthTop);
         CHECK(fifth->left == expected.fifthLeft);
         CHECK(fifth->right == expected.fifthRight);
         CHECK(fifth->bottom == expected.fifthBottom);
@@ -603,6 +633,9 @@ TEST_CASE("Controlled fixtures recover staff systems across supported physical "
     REQUIRE(first);
     REQUIRE(second);
     REQUIRE(third);
+    CHECK(first->top == -188);
+    CHECK(second->top == -188);
+    CHECK(third->top == -164);
     CHECK(first->ssysPercent == 83);
     CHECK_FALSE(first->holdMargins);
     CHECK_FALSE(first->scaleVert);

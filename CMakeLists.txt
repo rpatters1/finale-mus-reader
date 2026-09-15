@@ -135,7 +135,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/openmusx/musxdom.git
-            GIT_TAG 122aaa24c32e4c796fbce959818f39f5b2186dee
+            GIT_TAG 49d0de8f020f65769e5d10b2f086252427bf423a
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -226,6 +226,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/staff_list.cpp
     src/import/others/staff_style_assign.cpp
     src/import/others/staff_system.cpp
+    src/import/others/staff_used.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
     src/import/support/embedded_graphics.cpp

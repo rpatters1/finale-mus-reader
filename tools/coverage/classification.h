@@ -149,6 +149,7 @@ struct DifferenceContext
     const ComparisonLeaves* sourceDocumentLeaves{}; ///< Cross-class source referents, when available.
     const ComparisonLeaves* companionDocumentLeaves{}; ///< Cross-class companion referents, when available.
     const musx::dom::Document* companionDocument{}; ///< Companion document, when available.
+    std::string_view corpusId{};
 };
 
 using DifferenceClassifierFn = std::optional<DifferenceClassification> (*)(const DifferenceContext& context);

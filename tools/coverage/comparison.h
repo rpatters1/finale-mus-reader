@@ -17,6 +17,8 @@
 namespace finale_mus_reader {
 namespace coverage {
 
+inline constexpr std::size_t DEFAULT_MAXIMUM_DIFFERENCE_EXAMPLES_PER_ROW = 20;
+
 struct ClassComparison
 {
     std::uint64_t same{};
@@ -50,7 +52,8 @@ struct ComparisonResult
 
 ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion, const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument, FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
-    const ImportReport& sourceReport);
+    const ImportReport& sourceReport, std::size_t maximumDifferenceExamples = DEFAULT_MAXIMUM_DIFFERENCE_EXAMPLES_PER_ROW,
+    std::string_view corpusId = {});
 
 void writeCompactComparison(std::ostream& out, const ComparisonResult& comparison);
 

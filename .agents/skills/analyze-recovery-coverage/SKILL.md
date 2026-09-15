@@ -72,8 +72,9 @@ JSONL, rendered report, probe stdout/stderr, and report stderr. A later run of t
 replaces that family's files in place. Do not create report subdirectories or encode a hypothesis,
 date, sequence number, or result label in a filename. Put unrequested focused cohorts, record dumps,
 disposable manifests, and every other intermediate artifact under `/tmp`, then remove them after
-answering the immediate question. These files are working evidence, not survey state or a historical
-archive.
+answering the immediate question. The standing tracked-evidence selection is kept in
+`private/tracked-evidence-corpora.txt` beside the user-managed all-corpus manifest. These files are
+working evidence, not survey state or a historical archive.
 
 Treat `private/active_corpora.txt` as user-managed state: do not use or modify it unless the user
 explicitly asks for that exact manifest. The probe CLI already accepts the full range of useful
@@ -91,8 +92,8 @@ Do not edit generated per-corpus TSVs to select a cohort. Put disposable manifes
 Always build and run the coverage probe from the instrumented Release
 tree, normally `build-release`; the Debug probe is never appropriate for coverage captures. Coverage
 and timing use the same instrumentation. Inspect `--help`, and write every capture stream to
-`private/reports/`. For the development capture, create `/tmp/tracked-evidence-corpora.txt`
-with one absolute generated corpus-TSV path per line for the two surveys named above:
+`private/reports/`. For the development capture, use `private/tracked-evidence-corpora.txt`, which
+selects the two surveys named above:
 
 ```bash
 mkdir -p private/reports
@@ -110,7 +111,7 @@ fi
 build-release/tools/coverage/recovery_coverage_probe --progress \
   --mac-symbol-fonts="${HOME}/Library/Application Support/MakeMusic/Finale 27/Configuration Files/MacSymbolFonts.txt" \
   "${percussion_mapping_args[@]}" \
-  /tmp/tracked-evidence-corpora.txt \
+  private/tracked-evidence-corpora.txt \
   private/reports/tracked-evidence.recovery_coverage.jsonl \
   > private/reports/tracked-evidence.probe.stdout.txt \
   2> private/reports/tracked-evidence.probe.stderr.txt

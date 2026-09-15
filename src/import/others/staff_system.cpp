@@ -49,6 +49,7 @@ constexpr std::uint16_t holdMarginsMask = 0x0001;
 constexpr std::uint16_t scaleVertMask = 0x0002;
 constexpr std::uint16_t noNamesMask = 0x0008;
 constexpr std::uint16_t placeEndSpaceBeforeBarlineMask = 0x0010;
+constexpr std::uint16_t ownStaffListMask = 0x4000;
 constexpr std::uint16_t compactScaleVertMask = 0x2000;
 constexpr std::uint16_t compactScalingHoldMarginsMask = 0x4000;
 
@@ -179,7 +180,7 @@ void reportStaffSystem(const ImportContext& context, const RecordFamilySource& s
             reportStaffSystemSourceField(reporting, key, source, rows, member, offset, value, Reporting::Origin::LegacyMus);
         };
 
-        if (uncompressed) {
+        if (uncompressed && target.getCmper() != 1) {
             reporting.unmappedField(key, "top", target.top);
         } else {
             reportStaffSystemSourceField(reporting, key, source, rows, "top", topOffset, storedTop, Reporting::Origin::LegacyMus);
@@ -231,7 +232,11 @@ void reportCompactStaffSystem(const ImportContext& context, const RecordFamilySo
             reporting.report().setField(key, member, typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, value});
         };
 
-        reporting.unmappedField(key, "top", target.top);
+        if (target.getCmper() == 1) {
+            sourceField("top", topOffset, storedTopOrDistance);
+        } else {
+            reporting.unmappedField(key, "top", target.top);
+        }
         sourceField("left", leftOffset, target.left);
         sourceField("right", rightOffset, target.right);
         sourceField("bottom", bottomOffset, target.bottom);
@@ -322,6 +327,10 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
         };
         const auto storedTopOrDistance = signedWord(topOffset);
         const auto scaling = readCompactSystemScaling(context, musx::dom::Cmper(partId), systemId);
+        const auto flags = payloadWord(payload, flagsOffset, context.profile.byteOrder);
+        if ((flags & ownStaffListMask) != 0) {
+            context.pending.staffSystemsWithOwnStaffLists.emplace(partId, systemId);
+        }
         target->left = signedWord(leftOffset);
         target->right = signedWord(rightOffset);
         target->bottom = signedWord(bottomOffset);
@@ -336,17 +345,15 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
         }
         if (systemId != 1) {
             target->distanceToPrev = storedTopOrDistance;
+        } else {
+            target->top = storedTopOrDistance;
         }
 
-        // Compact system top and staff-scaling presence depend on selecting and
-        // normalizing the applicable StaffUsed array. Optimized systems and
-        // special extraction use distinct arrays, so neither value is
-        // synthesized until StaffUsed recovery can select one.
         systems.push_back({std::move(target), rows.front(), storedTopOrDistance, scaling});
     }
 
     if (!systems.empty()) {
-        context.pending.checks.push_back(
+        context.pending.materialize.push_back(
             [&context, source, systems = std::move(systems)]() mutable { finishCompactStaffSystems(context, source, std::move(systems)); });
     }
 }
@@ -398,7 +405,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
         const auto signedWord = [&](std::size_t offset) { return static_cast<std::int16_t>(word(offset)); };
 
         const auto storedTop = signedWord(topOffset);
-        if (!uncompressed) {
+        if (!uncompressed || systemId == 1) {
             target->top = storedTop;
         }
         target->left = signedWord(leftOffset);
@@ -419,6 +426,9 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
         target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : 4 * musx::dom::EFIX_PER_SPACE;
 
         const auto flags = word(flagsOffset);
+        if ((flags & ownStaffListMask) != 0 || sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)) {
+            context.pending.staffSystemsWithOwnStaffLists.emplace(partId, systemId);
+        }
         target->noNames = (flags & noNamesMask) != 0;
         target->placeEndSpaceBeforeBarline = (flags & placeEndSpaceBeforeBarlineMask) != 0;
         target->scaleVert = (flags & scaleVertMask) != 0;
@@ -435,7 +445,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
     }
 
     if (!systems.empty()) {
-        context.pending.checks.push_back([&context, source, uncompressed, systems = std::move(systems)]() mutable {
+        context.pending.materialize.push_back([&context, source, uncompressed, systems = std::move(systems)]() mutable {
             finishExpandedStaffSystems(context, source, uncompressed, std::move(systems));
         });
     }

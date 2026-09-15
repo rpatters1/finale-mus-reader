@@ -30,7 +30,7 @@ The `PG` spelling in historical plug-in mappings is therefore a logical API sele
 that pre-zlib files contain a literal `PG` row. The exact layout and confidence labels are recorded
 in [`../format/others/part_globals.md`](../format/others/part_globals.md).
 
-## 2026-09-04 — Coda Scroll View state is a disposable UI cache
+## 2026-09-04 — Coda Scroll View list identity
 
 **Question.** Does the extra `IU(65531)` family in the new Coda quartet pair supply
 `scrollViewIUlist`, and should the reader preserve it?
@@ -40,10 +40,12 @@ in [`../format/others/part_globals.md`](../format/others/part_globals.md).
 against their ETF exports and Finale 27 companions. The baseline has no `IU(65531)` family; the
 oboe-view edit adds one incidence selecting only staff 2. No other PartGlobals candidate changes.
 
-**Result.** The family records the saved Scroll View subset, but both Finale 27 companions omit
-`scrollViewIUlist`. The value is document-specific UI cache state, not score semantics. The reader
-therefore ignores the family and supplies `BASE_SYSTEM_ID` throughout the pre-zlib epochs. The two
-fixtures have public evidence tokens `mus-f38017dde5514645` and `mus-e62f183d5d078d2a`.
+**Superseded result.** Both Finale 27 companions omit `scrollViewIUlist`, which initially suggested
+that 65531 was disposable UI cache state. StaffUsed recovery later exposed that Finale retains the
+oboe list itself at comparator 65501. The list is therefore authored data, while the meaning and
+versioned namespace of its comparator remain open. The reader preserves the list but still
+supplies `BASE_SYSTEM_ID` because no pre-zlib source reference selecting it has been located. The
+two fixtures have public evidence tokens `mus-f38017dde5514645` and `mus-e62f183d5d078d2a`.
 
 ## 2026-09-04 — Missing linked-part records and corpus validation
 
@@ -58,7 +60,8 @@ The musxdom factory test and the reader's linked-part fixture test cover the res
 
 **Result.** The three previously differing linked-part instances now match their companions. The
 tracked capture compared 226 instances across 223 source/companion pairs with no PartGlobals
-difference. The authorized all-corpus capture then compared 6,711 instances across 4,631
-source/companion pairs, again with every PartGlobals leaf matching. Of 16,320 selected occurrences,
-16,231 imported; the other 89 were 58 Finale libraries and 31 files that did not classify as MUS,
-so none supplies contrary PartGlobals evidence.
+difference. The authorized all-corpus capture compared 7,021 instances across 4,941
+source/companion pairs, again with every PartGlobals leaf matching. Of 16,433 selected occurrences,
+16,343 imported; the other 90 were 58 Finale libraries, 31 files that did not classify as MUS, and
+one unrelated duplicate single-instrument identifier, so none supplies contrary PartGlobals
+evidence.

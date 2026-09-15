@@ -84,6 +84,7 @@ struct Options
     LogLevel minDiagnosticLevel = LogLevel::Verbose;
     bool showProgress = false;
     bool includeTimings = false;
+    bool allDifferenceExamples = false;
     // Deferred-recovery differences are classified unless this is set, which is the default
     // because they are understood. Setting it is how the outstanding work is counted.
     bool strictDeferred = false;
@@ -245,6 +246,9 @@ void printHelp()
                          "  --include-timings\n"
                          "                  Include detailed reader, container, and surveyor timings in\n"
                          "                  each JSON row. They are omitted by default.\n"
+                         "  --all-difference-examples\n"
+                         "                  Retain every unexpected and text-difference example instead\n"
+                         "                  of limiting each collection to 20 examples per document.\n"
                          "  --progress      Print \"Processed X of T\" to stdout, updated in place, as\n"
                          "                  documents are read.\n"
                          "  -h, --help      Print this help and exit.\n");
@@ -273,6 +277,8 @@ std::optional<Options> parseOptions(int argc, char** argv)
             options.strictDeferred = true;
         } else if (arg == "--include-timings") {
             options.includeTimings = true;
+        } else if (arg == "--all-difference-examples") {
+            options.allDifferenceExamples = true;
         } else if (arg.substr(0, levelFlag.size()) == levelFlag) {
             const auto value = arg.substr(levelFlag.size());
             if (value == "verbose") {
@@ -681,6 +687,7 @@ int main(int argc, char** argv)
     std::cout << "Options:\n"
               << "  min diagnostic level: " << diagnosticLevelName(options->minDiagnosticLevel) << '\n'
               << "  include timings: " << (options->includeTimings ? "yes" : "no") << '\n'
+              << "  difference examples: " << (options->allDifferenceExamples ? "all" : "up to 20 per document") << '\n'
               << "  progress: " << (options->showProgress ? "on" : "off") << '\n'
               << "  deferred recovery: " << (options->strictDeferred ? "reported as unexpected" : "classified") << '\n'
               << "  MacSymbolFonts: ";
@@ -950,9 +957,11 @@ int main(int argc, char** argv)
                 out << ",\"companion\":{" << companionOut.str() << "}";
                 if (sourceSnapshot && companionSnapshot) {
                     out << ",\"comparison\":{";
-                    const auto comparison =
-                        compareSnapshots(*sourceSnapshot, *companionSnapshot, sourceDocument, companionDocument, sourceReport->formatEpoch,
-                            sourceReport->byteOrder, sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr, *sourceReport);
+                    const auto maximumDifferenceExamples =
+                        options->allDifferenceExamples ? (std::numeric_limits<std::size_t>::max)() : DEFAULT_MAXIMUM_DIFFERENCE_EXAMPLES_PER_ROW;
+                    const auto comparison = compareSnapshots(*sourceSnapshot, *companionSnapshot, sourceDocument, companionDocument,
+                        sourceReport->formatEpoch, sourceReport->byteOrder, sourceReport->sourceVersion ? &*sourceReport->sourceVersion : nullptr,
+                        *sourceReport, maximumDifferenceExamples, corpusId);
                     writeCompactComparison(out, comparison);
                     out << '}';
                 }

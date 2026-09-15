@@ -75,6 +75,7 @@ add_executable(finale_mus_reader_tests
     classes/others/staff_list_tests.cpp
     classes/others/staff_style_assign_tests.cpp
     classes/others/staff_system_tests.cpp
+    classes/others/staff_used_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
     classes/texts/text_pool_tests.cpp
@@ -95,6 +96,7 @@ add_executable(finale_mus_reader_tests
     ../tools/coverage/surveyors/others/staff_style.cpp
     ../tools/coverage/surveyors/others/staff_style_assign.cpp
     ../tools/coverage/surveyors/others/staff_system.cpp
+    ../tools/coverage/surveyors/others/staff_used.cpp
     ../tools/coverage/surveyors/others/text_expression_defs.cpp
     ../tools/coverage/surveyors/texts/text_pool.cpp
     reader_tests.cpp

@@ -689,9 +689,19 @@ fixed tags in those epochs, nor whether the pre-zlib `KeyMapArray` pair reversal
 Finale 1.0. A minimal controlled pair would settle both questions and could become the public
 fixture needed to raise the current weak layout confidence.
 
+### X9 — Field evidence only — linked-part Special Part Extraction
+
+The working assumption and its precise refutation condition are documented in
+[`staff_used.md`](../format/others/staff_used.md#remaining-scope). No controlled fixture is requested
+while Finale is believed unable to create that state. If a field document contradicts the
+assumption, preserve its source and make a Finale 27 companion without changing the extraction
+setup; also preserve an early MUSX copy if one already exists.
+
 ## Status legend
 
 - **Proposed:** documented but not yet requested/supplied.
+- **Field evidence only:** the believed source state cannot be deliberately authored; retain a
+  naturally occurring counterexample if encountered.
 - **Requested:** user has initiated the evidence creation.
 - **Supplied:** file is present but not analyzed.
 - **Analyzed:** incorporated into the notes and catalog.

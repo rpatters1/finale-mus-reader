@@ -63,9 +63,10 @@ companion has `top = -337`; edited system 5 has byte 0 = -481, `top = -80`, and
 `distanceToPrev = -481`. Finale 2.6.3 likewise uses base -188: its corresponding values are
 -161/-349 for system 1 and -151/-188/-151 for system 5. In every ordinary upgraded system the
 first `instUsed.distFromTop` is zero, with later positions shifted by the same first-distance
-amount. This confirms the ordinary-system formula but not which legacy array applies to an
-optimized system or how comparator 65400 special extraction is synthesized. Recovery therefore
-leaves `top` and `hasStaffScaling` unmapped until `StaffUsed` can select and normalize the array.
+amount. This confirmed the ordinary-system formula but did not establish which legacy array
+applies to an optimized system or how special extraction is synthesized. The deferred top
+conclusion is **superseded** by the completed [`StaffUsed` investigation](staff_used.md);
+`hasStaffScaling` remains separate work that depends on `StaffSize`.
 
 The base Coda row contains no horizontal percentage, system percentage, staff height, end
 measure, or extra-system-space words. Finale recalculates horizontal percentages; recovery
@@ -226,7 +227,7 @@ records whose separately recovered system-top margin was `-80`, and four were ac
 later-system arithmetic matches. The controlled Update Layout fixture remains valid evidence for
 its exact source and companion values, but not for a universal conversion.
 
-## 2026-09-13 — Uncompressed vertical-layout synthesis (top recovery deferred)
+## 2026-09-13 — Uncompressed vertical-layout synthesis (top conclusion superseded)
 
 **Question.** Do the raw uncompressed `top` and `distanceToPrev` words instead feed different
 modern fields according to system position?
@@ -250,8 +251,8 @@ The source's `IU(35)` incidence 0 stores staff 39 followed by the signed long `-
 delta `-116`. This makes the first `StaffUsed` position a plausible source of the effective system
 top and means zero-normalization in `SS` cannot be excluded. Top synthesis from page format is
 therefore withdrawn pending `StaffUsed` recovery, while the later-system byte-0
-`distanceToPrev` mapping remains implemented. **Strong** for the distance mapping; the complete
-top formula remains **open**.
+`distanceToPrev` mapping remains implemented. **Strong** for the distance mapping. The deferred
+top conclusion is **superseded** by [`staff_used.md`](staff_used.md).
 
 The refreshed production capture selected 325 public and six private occurrences, representing
 328 distinct contents; all 331 sources and companions imported. StaffSystem has 10,058 equal

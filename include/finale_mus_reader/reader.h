@@ -199,6 +199,10 @@ struct FieldInfo
     std::int64_t rawValue{};
     /// @brief The normalized tag or class id of the record that supplied the value.
     std::optional<std::uint16_t> sourceIdentity;
+#if defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+    /// @brief A source-derived value that identifies a known lossy Finale upgrade substitution.
+    std::optional<std::int64_t> finaleUpgradeLossValue;
+#endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
 };
 
 /// @brief Provenance for formatting commands completed on one imported text field.
