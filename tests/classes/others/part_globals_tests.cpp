@@ -96,7 +96,7 @@ TEST_CASE("A short zlib part-globals record is rejected without a partial object
     expect(report.diagnostics.size() == 1, "A truncated PartGlobals record was not diagnosed once");
 }
 
-TEST_CASE("Coda part globals ignore the persisted Scroll View UI cache")
+TEST_CASE("Coda part globals do not infer the current Staff Set from an authored list")
 {
     const auto parsed =
         makeContainer({{GLOBALS_CMPER, "12", {1, 0, 0, 0, 0, 0}}, {GLOBALS_CMPER, "23", {0, 0, 0, 0, 0, 0}}, {65531, "IU", {2, 0, -80, 0, 0, 0}}},
@@ -104,9 +104,9 @@ TEST_CASE("Coda part globals ignore the persisted Scroll View UI cache")
     const auto document = emptyPartGlobalsDocument();
     const auto report = partGlobalsImport(parsed, SourceProfile(FormatEpoch::CodaBanner), document);
     const auto globals = document->getOthers()->get<PartGlobals>(musx::dom::SCORE_PARTID, GLOBALS_CMPER);
-    expect(globals && globals->scrollViewIUlist == musx::dom::BASE_SYSTEM_ID, "The Coda Scroll View UI cache affected the document model");
+    expect(globals && globals->scrollViewIUlist == musx::dom::BASE_SYSTEM_ID, "A Coda Staff Set list was mistaken for the current view selection");
     const auto& source = field(report, "others.partGlobals[65534].scrollViewIUlist");
-    expect(source.origin == ValueOrigin::LegacyBehavior, "The ignored Coda Scroll View UI cache was reported as recovered content");
+    expect(source.origin == ValueOrigin::LegacyBehavior, "The absent Coda view selection was reported as recovered content");
 }
 
 TEST_CASE("Part globals recover from controlled fixtures across every physical "
@@ -133,9 +133,9 @@ TEST_CASE("Part globals recover from controlled fixtures across every physical "
     const auto oboeView = readFixture("evidence/F100/F100-quartet-oboeview.mus");
     const auto oboeViewGlobals = oboeView.document->getOthers()->get<PartGlobals>(musx::dom::SCORE_PARTID, GLOBALS_CMPER);
     expect(oboeViewGlobals && oboeViewGlobals->scrollViewIUlist == musx::dom::BASE_SYSTEM_ID,
-        "The Coda quartet's oboe-only Scroll View cache affected the document model");
+        "The Coda quartet's authored Staff Set affected the current view selection");
     const auto* oboeViewSource = oboeView.report.findField<PartGlobals>("scrollViewIUlist", musx::dom::SCORE_PARTID, GLOBALS_CMPER);
-    expect(oboeViewSource && oboeViewSource->origin == ValueOrigin::LegacyBehavior, "The ignored oboe-only Scroll View cache has the wrong origin");
+    expect(oboeViewSource && oboeViewSource->origin == ValueOrigin::LegacyBehavior, "The absent Coda view selection has the wrong origin");
 
     const auto linked = readFixture("evidence/F2012/F2012-noteartexp.mus");
     const auto instances = linked.document->getOthers()->getAllSources<PartGlobals>();

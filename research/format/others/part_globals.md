@@ -32,14 +32,15 @@ Every recovered zlib field is reported as `LegacyMus`. The two synthesized pre-z
 members are reported as `LegacyBehavior`; the other two members retain their numeric-global
 source offsets and identities.
 
-## Scroll View state is intentionally not preserved before zlib
+## Pre-zlib Scroll View selection remains unresolved
 
 The controlled Coda pair
 `tests/evidence/F100/F100-quartet.mus` and
 `tests/evidence/F100/F100-quartet-oboeview.mus` differs by an `IU(65531)` family selecting the
-oboe in Scroll View. Both Finale 27 companions omit `scrollViewIUlist`. This is document-specific
-UI cache state rather than score semantics, so the reader deliberately supplies
-`BASE_SYSTEM_ID` throughout the pre-zlib epochs instead of importing that family.
+oboe in Scroll View. Finale 27 retains that list at comparator 65501 but writes no
+`scrollViewIUlist`. Whether 65531 is a Coda-era Staff Set comparator or another saved view-list
+identity is open. No pre-zlib source field referencing the selected list has been located, so the
+reader supplies `BASE_SYSTEM_ID` while preserving the StaffUsed list itself.
 
 ## Missing linked-part records
 
@@ -53,10 +54,10 @@ as recovered source fields.
 
 **Confirmed.** The 2026-09-04 tracked capture imported all 223 occurrences (221 distinct source
 contents) and compared 226 PartGlobals instances, totaling 1,130 matching identity/member leaves
-with no differences. The authorized all-corpus capture covered all three registered surveys:
-16,320 occurrences, 16,231 successful imports, and 4,631 successful companion comparisons. Its
-6,711 compared PartGlobals instances produced 33,555 matching identity/member leaves and no
-unexpected, expected, reader-only, or companion-only differences.
+with no differences. The authorized all-corpus capture covered all four selected surveys: 16,433
+occurrences, 16,343 successful imports, and 4,941 successful companion comparisons. Its 7,021
+compared PartGlobals instances produced 35,105 matching identity/member leaves and no unexpected,
+expected, reader-only, or companion-only differences.
 
 All four persisted musxdom members are accounted for in every epoch. None is `Unmapped` or
 `MusxOnly`.

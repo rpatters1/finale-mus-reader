@@ -8,6 +8,7 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <set>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -770,6 +771,8 @@ struct PendingReferences
 {
     std::vector<PendingShapeReference> shapes; ///< Shape definitions requested by recovered classes.
     std::vector<PendingCustomLineReference> customLines; ///< Custom lines requested by recovered classes.
+    /// @brief Legacy staff systems whose flags select a system-specific StaffUsed list.
+    std::set<std::pair<musx::dom::Cmper, musx::dom::Cmper>> staffSystemsWithOwnStaffLists;
     /// @brief Completes source-owned pools before checks allocate or resolve their referents.
     std::vector<std::function<void()>> materialize;
     /// @brief Checks to run once every importer has finished, in the order they were registered.

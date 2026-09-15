@@ -458,7 +458,22 @@ void expectNoScoreContent(const ImportResult& result)
     expect(
         result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(), "Output contains fallback measure number regions");
     expect(!result.document->getEntries()->get(1), "Output contains fallback entries");
-    expect(result.document->getInstruments().empty(), "Output contains fallback instruments");
+    {
+        const auto scrollView = result.document->getScrollViewStaves(SCORE_PARTID);
+        std::set<StaffCmper> recoveredStaffIds;
+        for (const auto& staffUsed : scrollView) {
+            recoveredStaffIds.insert(staffUsed->staffId);
+        }
+        std::set<StaffCmper> instrumentStaffIds;
+        for (const auto& [instrumentId, instrument] : result.document->getInstruments()) {
+            static_cast<void>(instrumentId);
+            for (const auto& [staffId, staffIndex] : instrument.staves) {
+                static_cast<void>(staffIndex);
+                instrumentStaffIds.insert(staffId);
+            }
+        }
+        expect(instrumentStaffIds == recoveredStaffIds, "Computed instruments do not match the recovered scroll-view staves");
+    }
     // The four option-like layer attributes are always present, seeded or recovered. The count
     // is not asserted: a source is free to carry comparators beyond them, and those are imported
     // rather than discarded, so a total above four is source content and not a fallback leak.

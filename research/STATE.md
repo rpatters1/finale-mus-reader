@@ -5,7 +5,7 @@ Compact working state. Every line links to its detail; none of the analysis live
 
 ## What is implemented
 
-- **83 done, 7 partial, 100 to do, 190 registered musxdom classes** (verified against the registry
+- **84 done, 7 partial, 99 to do, 190 registered musxdom classes** (verified against the registry
   2026-09-05). Options are complete: 28 of 28. Per-class status:
   [`state/MUSXDOM_CLASS_COVERAGE.md`](state/MUSXDOM_CLASS_COVERAGE.md).
 - Container classification, byte-order trialling, and framing work for all four epochs; DCL and
@@ -14,7 +14,7 @@ Compact working state. Every line links to its detail; none of the analysis live
   graphic assignments, custom smart-shape lines, category and repeat staff lists, Staffs, Staff
   Styles and direct or pre-Finale-2000 alternate-notation-derived Staff Style assignments, text
   blocks, part definitions, part globals, marking
-  categories, staff systems in every epoch, the custom-key cluster, and the text pool classes.
+  categories, staff systems and StaffUsed lists in every epoch, the custom-key cluster, and the text pool classes.
 - Measures and Staffs are recovered in every represented epoch, score and unlinked part alike.
   Entries and their details are **not** imported.
 - Graphic file locators are complete within their [legacy scope](format/others/file_path.md#remaining-scope).

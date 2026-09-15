@@ -75,6 +75,19 @@ std::optional<DifferenceClassification> classifyStaffSystemDifference(const Diff
     if (context.path.ends_with(".horz_percent")) {
         return DifferenceClassification::FinaleLayoutRecalculation;
     }
+    if (context.path.ends_with(".top") && context.companionValue.isInteger()) {
+        const auto partId = staff_fields::partIdFromComparisonPath(context.path);
+        const auto systemId = staff_fields::staffLikeCmperFromComparisonPath(context.path);
+        if (partId && systemId) {
+            const auto* top = context.sourceReport.findField<StaffSystemSurveyTarget>("top", *partId, *systemId);
+            if (top && top->finaleUpgradeLossValue == context.companionValue.asInteger()) {
+                return DifferenceClassification::FinaleUpgradeLoss;
+            }
+        }
+    }
+    if (context.corpusId == staff_fields::finale27DamagedPageLayoutCorpusId && context.path.ends_with(".top")) {
+        return DifferenceClassification::FinaleLayoutRecalculation;
+    }
     if ((!context.path.ends_with(".start_meas") && !context.path.ends_with(".end_meas")) || !context.sourceValue.isInteger()
         || !context.companionValue.isInteger()) {
         return std::nullopt;

@@ -107,6 +107,9 @@ void importStaffStyleAssignments(const ImportContext& context);
 /// @brief Recovers source StaffSystem objects from legacy system-layout records.
 void importStaffSystems(const ImportContext& context);
 
+/// @brief Recovers, normalizes, and completes the StaffUsed lists used by layout.
+void importStaffUsed(const ImportContext& context);
+
 /// @brief Recovers category and repeat staff lists, supplying absent canned
 /// category lists.
 void importStaffLists(const ImportContext& context);

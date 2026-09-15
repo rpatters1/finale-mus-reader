@@ -15,22 +15,31 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <vector>
 
 namespace finale_mus_reader {
 namespace coverage {
 namespace staff_fields {
 
+inline constexpr std::string_view finale27DamagedPageLayoutCorpusId = "mus-13e307b184ece4d2";
+
 [[nodiscard]] inline std::optional<musx::dom::Cmper> partIdFromComparisonPath(std::string_view path)
 {
-    constexpr std::string_view partIdKey = "part_id=";
+    constexpr std::string_view ordinaryPartIdKey = "part_id=";
+    constexpr std::string_view semanticPartIdKey = "part=";
     const auto identityBegin = path.find('[');
     const auto identityEnd = path.find(']', identityBegin);
     if (identityBegin == std::string_view::npos || identityEnd == std::string_view::npos) {
         return std::nullopt;
     }
-    const auto valueBegin = path.find(partIdKey, identityBegin + 1);
+    auto partIdKey = ordinaryPartIdKey;
+    auto valueBegin = path.find(partIdKey, identityBegin + 1);
     if (valueBegin == std::string_view::npos || valueBegin >= identityEnd) {
-        return musx::dom::SCORE_PARTID;
+        partIdKey = semanticPartIdKey;
+        valueBegin = path.find(partIdKey, identityBegin + 1);
+        if (valueBegin == std::string_view::npos || valueBegin >= identityEnd) {
+            return musx::dom::SCORE_PARTID;
+        }
     }
     const auto digitsBegin = valueBegin + partIdKey.size();
     const auto digitsEnd = path.find_first_of(",]", digitsBegin);
@@ -43,7 +52,7 @@ namespace staff_fields {
     return error == std::errc{} && parsedEnd == path.data() + digitsEnd ? std::optional{value} : std::nullopt;
 }
 
-[[nodiscard]] inline std::optional<musx::dom::StaffCmper> staffLikeCmperFromComparisonPath(std::string_view path)
+[[nodiscard]] inline std::optional<musx::dom::Cmper> staffLikeCmperFromComparisonPath(std::string_view path)
 {
     constexpr std::string_view cmperKey = "cmper=";
     const auto identityBegin = path.find('[');
@@ -61,14 +70,103 @@ namespace staff_fields {
         return std::nullopt;
     }
 
-    using UnsignedStaffCmper = std::make_unsigned_t<musx::dom::StaffCmper>;
-    UnsignedStaffCmper value{};
+    musx::dom::Cmper value{};
     const auto [parsedEnd, error] = std::from_chars(path.data() + digitsBegin, path.data() + digitsEnd, value);
-    if (error != std::errc{} || parsedEnd != path.data() + digitsEnd
-        || value > static_cast<UnsignedStaffCmper>((std::numeric_limits<musx::dom::StaffCmper>::max)())) {
+    if (error != std::errc{} || parsedEnd != path.data() + digitsEnd) {
         return std::nullopt;
     }
-    return static_cast<musx::dom::StaffCmper>(value);
+    return value;
+}
+
+struct StaffUsedItem
+{
+    std::int64_t staffId{};
+    std::int64_t inci{};
+    std::int64_t distFromTop{};
+    std::string_view origin;
+};
+
+inline std::string staffUsedListPrefix(musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    return "staff_used[semantic=part=" + std::to_string(partId) + ",cmper=" + std::to_string(cmper) + ',';
+}
+
+inline std::string staffUsedTestListPrefix(musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    return partId == musx::dom::SCORE_PARTID ? "staff_used[cmper=" + std::to_string(cmper) + ',' : std::string{};
+}
+
+inline std::string staffSystemObjectPath(musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    const auto identity = partId == musx::dom::SCORE_PARTID ? "cmper=" + std::to_string(cmper)
+                                                            : "part_id=" + std::to_string(partId) + ",cmper=" + std::to_string(cmper);
+    return "staff_systems[" + identity + ']';
+}
+
+inline void appendStaffUsedList(const ComparisonLeaves& leaves, std::string_view prefix, std::vector<StaffUsedItem>& result)
+{
+    constexpr std::string_view staffIdSuffix = ".staff_id";
+    for (auto found = leaves.lower_bound(std::string(prefix)); found != leaves.end() && found->first.starts_with(prefix); ++found) {
+        const auto& [path, valueAndOrigin] = *found;
+        if (!path.ends_with(staffIdSuffix) || !valueAndOrigin.first.isInteger()) {
+            continue;
+        }
+        const auto object = path.substr(0, path.size() - staffIdSuffix.size());
+        const auto inci = comparisonIntegerLeaf(leaves, std::string(object) + "._classifier_inci");
+        const auto distance = comparisonIntegerLeaf(leaves, std::string(object) + ".dist_from_top");
+        if (inci && distance) {
+            result.push_back({valueAndOrigin.first.asInteger(), *inci, *distance, valueAndOrigin.second});
+        }
+    }
+}
+
+inline std::vector<StaffUsedItem> staffUsedList(const ComparisonLeaves& leaves, musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    std::vector<StaffUsedItem> result;
+    appendStaffUsedList(leaves, staffUsedListPrefix(partId, cmper), result);
+    if (const auto testPrefix = staffUsedTestListPrefix(partId, cmper); !testPrefix.empty()) {
+        appendStaffUsedList(leaves, testPrefix, result);
+    }
+    std::ranges::sort(result, {}, &StaffUsedItem::inci);
+    return result;
+}
+
+inline bool hasStaffSystem(const ComparisonLeaves* leaves, musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    return leaves && leaves->contains(staffSystemObjectPath(partId, cmper) + ".start_meas");
+}
+
+inline bool isUniformCompanionRespacing(const ComparisonLeaves& sourceStaffUsed, const ComparisonLeaves& companionStaffUsed,
+    const ComparisonLeaves* sourceDocument, const ComparisonLeaves* companionDocument, musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    if (!hasStaffSystem(sourceDocument, partId, cmper) || !hasStaffSystem(companionDocument, partId, cmper)) {
+        return false;
+    }
+    const auto source = staffUsedList(sourceStaffUsed, partId, cmper);
+    const auto companion = staffUsedList(companionStaffUsed, partId, cmper);
+    if (source.size() < 3 || source.size() != companion.size()
+        || !std::ranges::equal(source, companion, {}, &StaffUsedItem::staffId, &StaffUsedItem::staffId)
+        || !std::ranges::all_of(source, [](const auto& item) { return item.origin == "legacy-mus"; })) {
+        return false;
+    }
+    const auto companionInterval = companion[1].distFromTop - companion[0].distFromTop;
+    if (companionInterval >= 0) {
+        return false;
+    }
+    bool sourceIntervalDiffers = false;
+    for (std::size_t i = 1; i < source.size(); ++i) {
+        if (companion[i].distFromTop - companion[i - 1].distFromTop != companionInterval) {
+            return false;
+        }
+        sourceIntervalDiffers = sourceIntervalDiffers || source[i].distFromTop - source[i - 1].distFromTop != companionInterval;
+    }
+    return sourceIntervalDiffers;
+}
+
+inline bool isUniformCompanionRespacing(const DifferenceContext& context, musx::dom::Cmper partId, musx::dom::Cmper cmper)
+{
+    return isUniformCompanionRespacing(
+        context.source, context.companion, context.sourceDocumentLeaves, context.companionDocumentLeaves, partId, cmper);
 }
 
 inline bool sourceHasNoteAttachedItemsExpansion(const DifferenceContext& context, std::string_view objectPath)

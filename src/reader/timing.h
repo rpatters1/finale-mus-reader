@@ -85,6 +85,7 @@ enum class Phase : std::size_t {
     ImportStaffStyleAssignments,
     ImportStaffStyles,
     ImportStaffSystems,
+    ImportStaffUsed,
     ImportSmartShapeOptions,
     ImportStaffOptions,
     ImportStemOptions,

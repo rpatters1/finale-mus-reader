@@ -35,7 +35,6 @@ ClassComparison& classComparison(ComparisonResult& result, std::string_view clas
 }
 
 using Leaves = ComparisonLeaves;
-constexpr std::size_t maximumExamplesPerRow = 20;
 
 const std::unordered_set<std::string> metadataKeys = {"corpus_id", "status", "epoch", "saving_product", "source_version", "header", "warning_count",
     "diagnostics", "duration_ms", "timings", "companion", "finder_type", "error"};
@@ -289,7 +288,7 @@ bool comparisonEqualSurrounding(const ComparisonLeaves& source, const Comparison
 
 ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companion, const musx::dom::DocumentPtr& sourceDocument,
     const musx::dom::DocumentPtr& companionDocument, FormatEpoch sourceEpoch, ByteOrder sourceByteOrder, const SourceVersion* sourceVersion,
-    const ImportReport& sourceReport)
+    const ImportReport& sourceReport, std::size_t maximumDifferenceExamples, std::string_view corpusId)
 {
     ComparisonResult result;
     ComparisonPreparationContext preparation{source, companion, result.transformations, sourceEpoch, sourceVersion, &sourceReport};
@@ -417,7 +416,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                     ++stats.expected;
                     ++result.expected[DifferenceClassification::EnigmaTextDifference];
                     ++result.textDifferences[className][TextDifferenceClassification::AddedFontInfo];
-                    if (result.textExamples.size() < maximumExamplesPerRow) {
+                    if (result.textExamples.size() < maximumDifferenceExamples) {
                         result.textExamples.push_back({path, sourceFound->second.first, companionFound->second.first,
                             DifferenceClassification::EnigmaTextDifference, TextDifferenceClassification::AddedFontInfo, {}});
                     }
@@ -435,7 +434,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                             ++result.expected[DifferenceClassification::EnigmaTextDifference];
                         }
                         ++result.textDifferences[className][kind];
-                        if (result.textExamples.size() < maximumExamplesPerRow) {
+                        if (result.textExamples.size() < maximumDifferenceExamples) {
                             result.textExamples.push_back({path, sourceFound->second.first, companionFound->second.first,
                                 kind == TextDifferenceClassification::Other ? DifferenceClassification::Unexpected
                                                                             : DifferenceClassification::EnigmaTextDifference,
@@ -458,7 +457,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
                                                                                             : RelatedDifference::RenumberedTextBlockReferent;
             const DifferenceContext differenceContext{path, category, origin, sourceValue, companionValue, sourceLeaves, companionLeaves, sourceEpoch,
                 sourceByteOrder, sourceVersion, sourceReport, relatedDifference, companionFontIdentity, &sourceDocumentLeaves,
-                &companionDocumentLeaves, companionDocument.get()};
+                &companionDocumentLeaves, companionDocument.get(), corpusId};
             const auto equivalence = differenceEquivalence(className);
             if (equivalence && equivalence(differenceContext)) {
                 ++stats.same;
@@ -468,7 +467,7 @@ ComparisonResult compareSnapshots(SurveySnapshot source, SurveySnapshot companio
             const auto classExpected = classifier ? classifier(differenceContext) : std::nullopt;
             const auto recordUnexpected = [&] {
                 ++stats.unexpected;
-                if (result.unexpectedExamples.size() < maximumExamplesPerRow) {
+                if (result.unexpectedExamples.size() < maximumDifferenceExamples) {
                     result.unexpectedExamples.push_back({path, sourceValue, companionValue, DifferenceClassification::Unexpected, {}, origin});
                 }
             };

@@ -4,9 +4,9 @@
 persisted `musx::dom::others::StaffSystem` fields.
 **Read when:** Working on selector `SS`, class `0x00df`, system layout, or a StaffSystem
 source/companion difference.
-**Confidence:** `confirmed` for represented compact geometry, Coda system options, and expanded
-field layouts; `public-PDK-derived` for expanded-layout flag meanings not isolated by a controlled
-edit; `open` for the remaining compact flags and StaffUsed-dependent synthesis.
+**Confidence:** `confirmed` for represented compact geometry, Coda system options, expanded field
+layouts, and StaffUsed-dependent top synthesis; `public-PDK-derived` for expanded-layout flag
+meanings not isolated by a controlled edit; `open` for the remaining compact flags and staff scaling.
 
 ## Identity and scope
 
@@ -50,13 +50,14 @@ Up Space control) and `0x4000 holdMargins`. Systems with an `SP` row also set `S
 record's presence is the stronger structural selector. `horzPercent` is not synthesized from the
 duplicate percentage word. **Confirmed** by independent edits in the Finale 2.6.3 fixture.
 
-Complete `top` recovery waits for `StaffUsed`. In ordinary systems, the first stored `IU` distance
+Complete `top` recovery uses `StaffUsed`. Before the DCL epoch, the maximum stored `IU` distance
 is the base system top; system 1 adds byte 0, while later systems retain that base and use byte 0
-as `distanceToPrev`. Finale normalizes the selected `IU` array by subtracting its first distance.
-Optimized systems and special extraction require choosing or synthesizing a different array, so
-`top` remains unmapped until that selection is implemented. `hasStaffScaling` has the same
-dependency. **Confirmed** for ordinary systems; optimized and extraction behavior remains
-`open`.
+as `distanceToPrev`. Finale normalizes the selected `IU` array by subtracting that maximum.
+DCL and zlib lists retain their stored origin and do not transfer a value into `top`. Optimized
+systems and special extraction select or synthesize the applicable list as described in
+[`staff_used.md`](staff_used.md). Resize Vertical Space scales a transferred value by the system
+percentage. **Confirmed** for represented ordinary and system-scaled layouts; active extraction
+is **strong** from the real-file evidence detailed in [`staff_used.md`](staff_used.md).
 
 The common Coda `SS 0x0080` bit does not vary with Hold Margins and has no assigned meaning.
 Earlier evidence associating it with `holdMargins` was coincidental: the no-`SP` behavior supplies
@@ -89,20 +90,18 @@ as zlib class `0x00df`. Payload size, not a saving-version gate, selects the ext
 The horizontal-percentage long is high-word-first in both byte orders. Individual words still use
 the container byte order. In uncompressed files, byte 0 supplies `distanceToPrev` after system 1;
 system 1 retains the byte-20 value. DCL and zlib records store `top` and `distanceToPrev` directly
-at bytes 0 and 20. Uncompressed `top` remains unmapped until `StaffUsed` recovery can account for
-per-system staff positions; the near-complete page-format formula is retained in the
-[investigation](../../investigations/staff_system.md#2026-09-13--uncompressed-vertical-layout-synthesis-top-recovery-deferred).
+at bytes 0 and 20. StaffUsed normalization supplies the remaining uncompressed top contribution.
 The uncompressed byte-20 word has not been identified beyond being zero in the represented
 comparisons. A zero stored staff height in represented early post-Coda files denotes the standard
 four-space height; recovery supplies `4 * EFIX_PER_SPACE` as `LegacyBehavior`. Nonzero values are
-source-owned quarter-Efix units. **Confirmed** for the distance mapping in the public Finale 97,
-98, and 2000 fixtures; uncompressed top recovery is **open**.
+source-owned quarter-Efix units. **Confirmed** for the distance and top mappings in the public
+Finale 97, 98, and 2000 fixtures.
 
 The flag word maps `0x0001 holdMargins`, `0x0002 scaleVert`, `0x0008 noNames`, and
 `0x0010 placeEndSpaceBeforeBarline`. `hasStaffScaling` is an aggregate presence value and remains
-unmapped until it can be recalculated from recovered `StaffUsed` records in every version. Recovery
-deliberately discards `0x4000` until that same work. It also discards `0x8000`; Finale did not use
-that bit for page breaks, which are persisted on `Measure`.
+unmapped until `StaffSize` recovery can recalculate it. Recovery deliberately discards `0x4000`;
+tracked uncompressed files set it on systems whose companions have no staff scaling. It also
+discards `0x8000`; Finale did not use that bit for page breaks, which are persisted on `Measure`.
 
 ## System-grid normalization
 
@@ -124,11 +123,10 @@ difference in `horzPercent` is classified as `finale-layout-recalculation`. A di
 `endMeas` receives that classification when the source grid begins at measure 1 and its final
 system ends one past the last source measure, regardless of the companion value. A middle
 `startMeas` or `endMeas` difference additionally requires the companion grid to begin at measure
-1 and end at or beyond the correct source end. Differences in uncompressed `top`,
-`distanceToPrev`, and `hasStaffScaling` are classified as awaiting dependent `StaffUsed`
-recovery; differences in other fields remain unexpected. Counts and representative
+1 and end at or beyond the correct source end. Differences in `distanceToPrev` and unmapped
+`hasStaffScaling` remain classified as awaiting dependent recovery; differences in other fields
+remain unexpected. Counts and representative
 transformations are in
 [`../../investigations/staff_system.md`](../../investigations/staff_system.md).
 
-The class remains partial until compact and expanded `top`, `hasStaffScaling`, optimized-system
-selection, and special extraction are implemented with `StaffUsed`.
+The class remains partial until `hasStaffScaling` can be recalculated from recovered `StaffSize`.
