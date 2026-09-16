@@ -1,0 +1,144 @@
+Version 2002a.r1
+Mac OS 9.0.4 running in SheepShaver
+
+F2002-exp-unbalanced.mus
+    sha256 8f6acf6facf8a4fd15a8a027cf8647f3d3acd5966c2f5da87dd328c87cc06b06
+F2002-exp-unbalanced.etf
+    sha256 a6dfa42948a7db8ad3487d15dc2e1f7e95086da8b77c77b0a1ad385f0140ef0e
+-finale27/F2002-exp-unbalanced.musx
+    sha256 6605d0d80028be33a4d93786093dea48392b5959fbb5f450c340bcb56b41f61b
+    Changes the partial-hide fixture's closing bracket to a question mark,
+    yielding "test is <hidden?". The DT header is unchanged; decoded byte
+    0x1553 changes from 0x3e to 0x3f. The companion hides "hidden?" through
+    end of text, so an opening bracket does not require a matching close.
+
+F2002-exp-hidepartial.mus
+    sha256 0b8c0890375c91a2fdd5c1ca7585fd4ba110f48f2d8192f980b770b0b9934f9b
+F2002-exp-hidepartial.etf
+    sha256 8be74d6ee89c2a4f8363a6cb8f51f5a8c07bdd16ab411841078dd049493b1f7a
+-finale27/F2002-exp-hidepartial.musx
+    sha256 d6aa8512fa6498183951979969c021bbb810b31c322274a6d1130c00f08fc352
+    User-authored partial-hidden expression. DT comparator 1 has packed font/size
+    0x0c01, effects zero, flags 0xc200, and inline text "test is <hidden>".
+    The header begins at block 0x200, decoded offset 0x1530. The companion
+    removes the brackets and applies the hidden style only to "hidden";
+    "test is " remains visible. This verifies the F2002 behavior, not the
+    exact F2001/F2002 boundary.
+
+F2002-norevstem-len96.mus
+    sha256 4f3603b58bee6f24a475f895346c98df887a0699cde50bbbeff8d3c7d81b67d6
+    2,649 bytes. Changes the normal stem length from 84 to 96 and switches off
+    "Display Reverse Stemming". Both option words move and no others:
+    `20(65534)` word 4 goes 84 -> 96, and `41(65534)` word 1 goes 26 -> 30, a
+    gain of 4. The companion follows with `<stemLength>96</stemLength>` and
+    `<noReverseStems/>`.
+    This pair locates the normal stem length and bit 2 of the packed beam-flags
+    word. It also fixes the boundary from the other side: Finale 1.0.0 and 3.7.2
+    spell the same flag in bit 0.
+
+F2002-norevstem-len96.etf
+    sha256 0e5c93ce954b7c27eb8bee9f4ce682c6cebaaa9bce0ceb4a9444678e6910847c
+    The matching Finale 2002 ETF export, whose `^20(65534)` and `^41(65534)` rows
+    confirm both edited words independently of the MUS decoding.
+
+F2002-fileinfo-text.mus
+    sha256 1df01c0fc5212f682daed1d17b410422d6f39c9f04fdd961ec98220939186059
+F2002-fileinfo-text.etf
+    sha256 ca9e4249affa357b680192e00b1ab25ba574c3dc8e03e682adb0f6b82f1bad77
+F2002-fileinfo-text.musx
+    sha256 14f0b0acec06b84891e693e802603a324c5be42bc0edc70c7ee941f5aead50b2
+    An authored score with a real page-text layout, to which the four File Info
+    fields were added and labeled. It settles that **the header offsets still hold
+    across the DCL epoch**: all four are recovered from them here and confirmed
+    field for field by the companion, so File Info moves into the text pool
+    somewhere after Finale 2002 rather than at the epoch boundary.
+
+    Its twelve block texts are the incidental value and a wider exercise of the
+    pool than a purpose-built fixture gives. They carry `^title`, `^composer`,
+    `^copyright` and `^description` inserts, several of them mid-sentence and one
+    inside parentheses; a block that changes size and style partway through; and a
+    long paragraph with curly quotes and an italic run. All twelve agree with the
+    companion apart from the font-command spelling.
+
+F2002-empty.mus
+    sha256 9f96657cab89b15ae6c992aec3f98042f699294dd19c9484ed22d3e01342904b
+    An untouched new Finale 2002 document, authored in Finale 2002 itself running under
+    SheepShaver by this repository's author, and kept there as the parent of every fixture
+    derived from it so that each one's diff against it is exactly the edit under test.
+
+F2002-clef-stem-font.mus
+    sha256 ebc53a02b6fc8e1c1ffef49d72ce7eb2448dea56d0eca935af3025502f5f585f
+    From F2002-empty, with three edits, each pointing one of the three record types that store
+    a bare character at a font of its own: clef index 4 given Arial, bold and italic, at size
+    23; a second stem connection added naming the same font; and the flat symbol insert of Text
+    Options moved to it. Finale 2002 is the earliest available release whose clef dialog allows
+    a font override at all, which is why this document is not a Finale 2000 one like the other
+    fixtures authored this way.
+    All three edits set the same character, and all three records store it as 199. Finale 27
+    reads all three as 171, which is `U+00AB`: the byte is Mac Roman, the encoding of the Arial
+    definition each record names, and not a code point. This is the fixture that established
+    that a stored character belongs to its own font's encoding rather than to the document, and
+    it establishes it for every class that stores one.
+    Each edit leaves its own control beside it. The first stem connection still names font 0,
+    the default music font, and the four symbol inserts other than the flat still name it too.
+    Font 0 is a symbol font whose byte is a glyph number: the connection stores 192 and the
+    inserts store 35, 110, 186 and 220, and every one of them must read back unchanged, where
+    decoding 192 through Mac Roman would name an infinity sign. Every clef, connection and
+    insert in every other fixture is of that kind, which is why no earlier document showed the
+    difference.
+
+F2002-slursavoid-no-acci.mus
+    sha256 5ce382eb880cc1cf7f7869b1400c8036e1a74c829cd225e4ce42db703d8ce201
+F2002-slursavoid-no-acci.etf
+    sha256 dcd2c908d0909cb774db4a48623951c3e14957ee503530dd170a473315313bf3
+F2002-slursavoid-no-acci.musx
+    sha256 89b8722768a37e18499a9d43d9fda3dc8bacae7fdd383b8b57e448b27d971643
+    From F2002-empty, with Slur Padding changed from 18 to 37 and Avoid
+    Accidentals disabled. The source changes only selector 53 incidence 0 word 4
+    from 18 to 37 and selector 50 word 4 from 2 to 1. Selector 53 retains its
+    single incidence. The modern companion preserves general padding 37, copies
+    it to accidental padding despite avoidance being disabled, and leaves Initial
+    Adjustment: Stretch false. Together with the other Finale 2002 companions,
+    this distinguishes copied padding values 12, 18, and 37.
+
+F2002-tips-avoid-stafflines.mus
+    sha256 467e64324757b3d17e277a39fd3103d4c5853c14277f855f1c7c1b67426c4eab
+F2002-tips-avoid-stafflines.etf
+    sha256 b359505ca3cc4a37478e30aa15dcbe563da06b85878fd13a1429a36f911477f9
+F2002-tips-avoid-stafflines.musx
+    sha256 aa6b5a7d7374ef390c2f47f944d5c76b7cb2cc738f052113d0db73128d7cad23
+    From F2002-empty, with Avoid Staff Lines By changed from 8 to 17. The
+    source changes only selector 50 incidence 0 word 5, from 9 to 18. The
+    modern companion preserves the displayed value 17, confirming that a
+    positive stored amount is one greater than the option value.
+
+F2002-ignore-key.mus
+    sha256 64e8611a96e8eebdf397fa3281ad382ec507ef3ab75ae412bdaa6e71048eb129
+F2002-ignore-key.etf
+    sha256 dca0929ba86b21b89a654d3ec5682a3a557a008f6771934baf6c0b7a68821a93
+-finale27/F2002-ignore-key.musx
+    sha256 c76bc4bdbe1eae0c9d18dd94c45f0a4969f9e746b002b9f2c0a4fcb746b85d29
+    From F2002-baseline, with Ignore Key Signatures enabled on Staff 1. `IS(1)`
+    incidence 1 word 5 changes from `0x0000` to `0x0001`. Saving through the
+    Staff dialog also materializes a dormant note-font tuple and matching `NS`
+    and `ns` rows; the companion confirms `noKey` true.
+
+F2002-tablature.mus
+    sha256 5f8f89d043360b01f4fd050ac0a32ebaa2add1a9d7bdda46cbcbe1ca1755073f
+F2002-tablature.etf
+    sha256 fe5467151a260939abfc601be4f4a3fd0b986d9d1ed24d90fe5440ee57edb2bd
+-finale27/F2002-tablature.musx
+    sha256 2232852f707833cb10b2ddf8f276645860e310a5a337a0a1d79b5aa353eee4ad
+    From F2002-baseline, with tablature notation enabled on Staff 1. The
+    18-word `IS(1)` sets word 5 to `0x0200`, and the companion creates a
+    one-string fret instrument at MIDI pitch 0.
+
+F2002-tablature-basekey47.mus
+    sha256 143921b2f4dbb001f22eee0b1b3790b62b8ee205d7d664a22f5e4daf624cb36f
+F2002-tablature-basekey47.etf
+    sha256 11dd5303b087050564b4ff9005a02a35468c6181b1208f546a288c95506e96e5
+-finale27/F2002-tablature-basekey47.musx
+    sha256 57904683f28ac23c68fac7bdb334f7b20e476fd14f1f3703a1b9fae4c01666a7
+    From F2002-tablature, changing only Base Key to 47. `IS(1)` word 1 changes
+    from 0 to 47, and the companion changes only the synthesized instrument's
+    string pitch and derived name, to MIDI pitch 47 and `B2`.
