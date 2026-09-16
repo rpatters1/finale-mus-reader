@@ -29,6 +29,8 @@ constexpr std::size_t compactStaffSystemBytes = staffSystemRowBytes;
 constexpr std::size_t staffSystemBaseBytes = 24;
 constexpr std::size_t staffSystemExtendedBytes = 28;
 constexpr musx::dom::Efix staffHeightEfixPerLegacyUnit = 4;
+/// @brief The height of a standard five-line staff, which a record without a stored height takes.
+constexpr auto standardStaffHeightEfix = static_cast<musx::dom::Efix>(4 * musx::dom::EFIX_PER_SPACE);
 constexpr int compactStaffSystemPercent = 100;
 
 constexpr std::size_t topOffset = 0;
@@ -331,7 +333,7 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
         target->startMeas = static_cast<musx::dom::MeasCmper>(payloadWord(payload, startMeasOffset, context.profile.byteOrder));
         target->hasStaffScaling = (flags & hasStaffScalingMask) != 0;
         target->ssysPercent = compactStaffSystemPercent;
-        target->staffHeight = 4 * musx::dom::EFIX_PER_SPACE;
+        target->staffHeight = standardStaffHeightEfix;
         target->holdMargins = true;
         if (scaling) {
             target->ssysPercent = scaling->percent;
@@ -418,7 +420,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
 
         const auto storedStaffHeight = signedWord(staffHeightOffset);
         const bool hasStoredStaffHeight = storedStaffHeight != 0;
-        target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : 4 * musx::dom::EFIX_PER_SPACE;
+        target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : standardStaffHeightEfix;
 
         const auto flags = word(flagsOffset);
         if ((flags & ownStaffListMask) != 0 || sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)) {
