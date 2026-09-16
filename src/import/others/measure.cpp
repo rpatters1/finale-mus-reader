@@ -17,7 +17,50 @@
 
 namespace finale_mus_reader {
 namespace others {
+namespace measure_internal {
+
+// Named rather than anonymous: ReportState<DecodedMeasureFields<Reporting>> holds these by
+// value and has external linkage, and under the unity build GCC rejects an anonymous-namespace
+// member there (-Wsubobject-linkage). The names stay distinctive for the same reason every
+// file-local name does.
+
+/// @brief One measure's words together with the physical row each of them came from.
+/// @details A fixed-row era spreads the stream over incidences and the zlib era coalesces it into
+/// one payload, so every offset the report cites is taken from the row that actually holds the
+/// word rather than computed from the start of the family.
+struct MeasureRecord
+{
+    std::vector<std::uint16_t> words;
+    std::vector<std::size_t> blockOffsets;
+    std::vector<std::size_t> decodedOffsets;
+
+    [[nodiscard]] std::uint16_t word(std::size_t slot) const { return slot < words.size() ? words[slot] : 0; }
+
+    [[nodiscard]] std::int16_t signedWord(std::size_t slot) const { return static_cast<std::int16_t>(word(slot)); }
+};
+
+/// @brief One decoded member, with the word it came from and what that word held.
+template <typename Reporting>
+struct DecodedMeasureField
+{
+    const char* member{};
+    typename Reporting::Origin origin = Reporting::Origin::LegacyMus;
+    std::size_t slot{};
+    std::int64_t stored{};
+    /// @brief The record the value came from, when it is not the measure's own.
+    const MeasureRecord* record{};
+};
+
+template <typename Reporting>
+using DecodedMeasureFields = std::vector<DecodedMeasureField<Reporting>>;
+
+} // namespace measure_internal
+
 namespace {
+
+using measure_internal::DecodedMeasureField;
+using measure_internal::DecodedMeasureFields;
+using measure_internal::MeasureRecord;
 
 using MeasureTarget = musx::dom::others::Measure;
 
@@ -189,21 +232,6 @@ struct MeasureLayout
     [[nodiscard]] bool hasBackSpaceExtra() const { return slots >= measureWordsFromFinale2005; }
 };
 
-/// @brief One measure's words together with the physical row each of them came from.
-/// @details A fixed-row era spreads the stream over incidences and the zlib era coalesces it into
-/// one payload, so every offset the report cites is taken from the row that actually holds the
-/// word rather than computed from the start of the family.
-struct MeasureRecord
-{
-    std::vector<std::uint16_t> words;
-    std::vector<std::size_t> blockOffsets;
-    std::vector<std::size_t> decodedOffsets;
-
-    [[nodiscard]] std::uint16_t word(std::size_t slot) const { return slot < words.size() ? words[slot] : 0; }
-
-    [[nodiscard]] std::int16_t signedWord(std::size_t slot) const { return static_cast<std::int16_t>(word(slot)); }
-};
-
 /// @brief Reads one measure's whole word stream, in whichever encoding the source uses.
 /// @details A fixed row arrives with its words already normalized to the container's byte order,
 /// so they are taken as they stand; a class record is raw bytes and is normalized here. That is
@@ -279,21 +307,6 @@ inline constexpr std::uint16_t invalidMeasureCmper = 0;
     const auto flags = context.profile.epoch == FormatEpoch::CodaBanner ? MeasureFlagLayout::Coda : MeasureFlagLayout::Later;
     return {slots, flags, sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)};
 }
-
-/// @brief One decoded member, with the word it came from and what that word held.
-template <typename Reporting>
-struct DecodedMeasureField
-{
-    const char* member{};
-    typename Reporting::Origin origin = Reporting::Origin::LegacyMus;
-    std::size_t slot{};
-    std::int64_t stored{};
-    /// @brief The record the value came from, when it is not the measure's own.
-    const MeasureRecord* record{};
-};
-
-template <typename Reporting>
-using DecodedMeasureFields = std::vector<DecodedMeasureField<Reporting>>;
 
 /// @brief Collects the decoded members of one measure so they can be reported in one pass.
 class MeasureDecoder
@@ -730,7 +743,7 @@ void importMeasures(const ImportContext& context)
 
     // Score first, which @ref recordKeys guarantees, because a part record overlays the score
     // object of the same comparator and cannot be built before it exists.
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

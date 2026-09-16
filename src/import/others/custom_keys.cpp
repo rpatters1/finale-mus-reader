@@ -17,7 +17,12 @@
 
 namespace finale_mus_reader {
 namespace others {
-namespace {
+namespace custom_keys_internal {
+
+// Named rather than anonymous: ReportState<CustomKeyMapReportData<Reporting>> holds this by
+// value and has external linkage, and under the unity build GCC rejects an anonymous-namespace
+// member there (-Wsubobject-linkage). The name stays distinctive for the same reason every
+// file-local name does.
 
 template <typename Reporting>
 struct CustomKeyMapReportData
@@ -25,6 +30,12 @@ struct CustomKeyMapReportData
     RecordFamilySource source;
     std::vector<records::LegacyRow> rows;
 };
+
+} // namespace custom_keys_internal
+
+namespace {
+
+using custom_keys_internal::CustomKeyMapReportData;
 
 template <typename Target>
 void reportCustomKeyValue(const ImportContext& context, const Target& target, const RecordFamilySource& source, const records::LegacyRow& row,
@@ -42,11 +53,10 @@ template <typename Target>
 void reportCustomKeyArray(
     const ImportContext& context, const Target& target, const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t count)
 {
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+    withReporting(context.report, [&]<typename Reporting>(Reporting&) {
         for (std::size_t index = 0; index < count; ++index) {
-            const auto rowIndex = source.classRecords ? 0 : index / records::otherWordCount;
-            const auto byteOffset = source.classRecords ? index * 2 : (index % records::otherWordCount) * 2;
-            reportCustomKeyValue(context, target, source, rows[rowIndex], "values[" + std::to_string(index) + "]", byteOffset, target.values[index]);
+            reportCustomKeyValue(context, target, source, source.rowOfWord(rows, index), "values[" + std::to_string(index) + "]",
+                source.byteOffsetInRow(index * 2), target.values[index]);
         }
     });
 }
@@ -59,7 +69,7 @@ void importCustomKeyArray(const ImportContext& context, records::LegacyTag tag, 
         return;
     }
     using Element = typename std::remove_reference_t<decltype(std::declval<Target>().values)>::value_type;
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -172,7 +182,7 @@ void importKeyAttributes(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -213,7 +223,7 @@ void importKeyFormats(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -241,7 +251,7 @@ void importKeyMapArrays(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -278,9 +288,8 @@ void importKeyMapArrays(const ImportContext& context)
                     const auto firstWord = stepIndex * 2;
                     const auto indices = customKeyMapWordIndices(context.profile.byteOrder, firstWord);
                     const auto reportStepWord = [&](std::string member, std::size_t wordIndex, std::int64_t value) {
-                        const auto rowIndex = source.classRecords ? 0 : wordIndex / records::otherWordCount;
-                        const auto byteOffset = source.classRecords ? wordIndex * 2 : (wordIndex % records::otherWordCount) * 2;
-                        reportCustomKeyValue(context, *target, source, rows[rowIndex], std::move(member), byteOffset, value);
+                        reportCustomKeyValue(context, *target, source, source.rowOfWord(rows, wordIndex), std::move(member),
+                            source.byteOffsetInRow(wordIndex * 2), value);
                     };
                     reportStepWord("steps[" + std::to_string(stepIndex) + "].hlevel", indices.hlevel, target->steps[stepIndex]->hlevel);
                     reportStepWord("steps[" + std::to_string(stepIndex) + "].diatonic", indices.flag, target->steps[stepIndex]->diatonic);

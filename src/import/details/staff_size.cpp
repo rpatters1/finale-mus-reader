@@ -31,7 +31,7 @@ void reportStaffSize(const ImportContext& context, const StaffSizeTarget& target
 
 void importStaffSizeFamily(const ImportContext& context, const RecordFamilySource& source)
 {
-    for (const auto [partId, systemId] : recordKeys(source)) {
+    for (const auto& [partId, systemId] : recordKeys(source)) {
         for (const auto staffId : source.pool->secondCmpersForTag(source.identity, systemId, partId)) {
             const auto* row = source.pool->get(source.identity, systemId, staffId, 0, partId);
             if (!row) {

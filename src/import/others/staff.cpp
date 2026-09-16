@@ -25,11 +25,12 @@
 
 namespace finale_mus_reader {
 namespace others {
-namespace {
+namespace staff_internal {
 
-using StaffTarget = musx::dom::others::Staff;
-using StaffStyleTarget = musx::dom::others::StaffStyle;
-using FretInstrumentTarget = musx::dom::others::FretInstrument;
+// Named rather than anonymous: these types are captured by the reporting lambdas of
+// importStaffFamily<Target>, which have external linkage, and under the unity build GCC rejects
+// an anonymous-namespace member there (-Wsubobject-linkage). The names stay distinctive for the
+// same reason every file-local name does.
 
 enum class StaffRepeatDotFallback {
     None,
@@ -63,6 +64,18 @@ struct StaffLegacySemantics
     std::optional<std::uint8_t> singleStringTabPitch;
     bool legacySingleStringTabForm{};
 };
+
+} // namespace staff_internal
+
+namespace {
+
+using StaffTarget = musx::dom::others::Staff;
+using StaffStyleTarget = musx::dom::others::StaffStyle;
+using FretInstrumentTarget = musx::dom::others::FretInstrument;
+
+using staff_internal::StaffFallbackSelection;
+using staff_internal::StaffLegacySemantics;
+using staff_internal::StaffRepeatDotFallback;
 
 struct StaffBooleanLegacyDefault
 {
@@ -1441,7 +1454,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
         return;
     }
     const auto& source = *selected;
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
             continue;

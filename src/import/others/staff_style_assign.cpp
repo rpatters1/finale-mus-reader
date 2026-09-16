@@ -23,7 +23,6 @@ using StaffStyleAssignStaffTarget = musx::dom::others::Staff;
 
 constexpr auto staffStyleAssignTag = records::packTag("Sy");
 constexpr records::LegacyTag staffStyleAssignClass = 0x00e9;
-constexpr std::size_t staffStyleAssignRowBytes = records::otherWordCount * sizeof(std::uint16_t);
 constexpr std::size_t staffStyleAssignBytes = 24;
 constexpr std::size_t staffStyleAssignStyleOffset = 0;
 constexpr std::size_t staffStyleAssignStartMeasOffset = 12;
@@ -31,20 +30,14 @@ constexpr std::size_t staffStyleAssignStartEduOffset = 14;
 constexpr std::size_t staffStyleAssignEndMeasOffset = 18;
 constexpr std::size_t staffStyleAssignEndEduOffset = 20;
 
-const records::LegacyRow& staffStyleAssignSourceRow(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t byteOffset)
-{
-    return rows[source.classRecords ? 0 : byteOffset / staffStyleAssignRowBytes];
-}
-
 template <typename Reporting>
-void reportStaffStyleAssignField(Reporting& reporting, const StaffStyleAssignTarget& target, const records::LegacyRow& row, std::string member,
-    std::size_t byteOffset, std::int64_t value, records::LegacyTag identity, bool classRecords)
+void reportStaffStyleAssignField(Reporting& reporting, const StaffStyleAssignTarget& target, const RecordFamilySource& source,
+    std::span<const records::LegacyRow> rows, std::string member, std::size_t byteOffset, std::int64_t value)
 {
+    const auto& row = source.rowOfByte(rows, byteOffset);
     reporting.report().setField(reporting.template instanceKey<StaffStyleAssignTarget>(target.getSourcePartId(), target.getCmper(), target.getInci()),
         std::move(member),
-        {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + (classRecords ? byteOffset : byteOffset % staffStyleAssignRowBytes),
-            value, identity});
+        {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + source.byteOffsetInRow(byteOffset), value, source.identity});
 }
 
 void reportStaffStyleAssign(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
@@ -54,8 +47,7 @@ void reportStaffStyleAssign(const ImportContext& context, const RecordFamilySour
         const auto key = reporting.template instanceKey<StaffStyleAssignTarget>(target.getSourcePartId(), target.getCmper(), target.getInci());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto report = [&](const char* member, std::size_t offset, std::int64_t value) {
-            reportStaffStyleAssignField(reporting, target, staffStyleAssignSourceRow(source, rows, at + offset), member, at + offset, value,
-                source.identity, source.classRecords);
+            reportStaffStyleAssignField(reporting, target, source, rows, member, at + offset, value);
         };
         report("styleId", staffStyleAssignStyleOffset, target.styleId);
         report("startMeas", staffStyleAssignStartMeasOffset, target.startMeas);
@@ -115,7 +107,7 @@ void refreshStaffHasStyles(const ImportContext& context)
 
 void importStaffStyleAssignFamily(const ImportContext& context, const RecordFamilySource& source)
 {
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
             continue;

@@ -20,7 +20,7 @@ void importFileRecords(const ImportContext& context, records::LegacyTag tag, rec
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         const auto payload = collectRecordPayload(*source, rows);
         auto target = createOthersRecordTarget<Target>(context.document, *source, rows.front(), cmper);
@@ -32,7 +32,7 @@ void importFileRecords(const ImportContext& context, records::LegacyTag tag, rec
                 const auto origin = !mapped    ? Reporting::Origin::Unmapped
                                     : adjusted ? Reporting::Origin::LegacyMusAdjusted
                                                : Reporting::Origin::LegacyMus;
-                const auto& row = rows[source->classRecords ? 0 : offset / (records::otherWordCount * sizeof(std::int16_t))];
+                const auto& row = source->rowOfByte(rows, offset);
                 reporting.report().setField(reporting.template instanceKey<Target>(partId, cmper), member,
                     {origin, row.blockOffset, row.decodedOffset, raw, source->identity});
             });

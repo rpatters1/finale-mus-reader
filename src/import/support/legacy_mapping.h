@@ -124,7 +124,29 @@ struct RecordFamilySource
     records::LegacyTag identity{};
     bool classRecords{};
     bool details{};
-    std::span<const CompactPartLayout> compactPartLayouts;
+    std::span<const CompactPartLayout> compactPartLayouts{};
+
+    /// @brief Returns how many payload words one fixed row of this family holds.
+    [[nodiscard]] std::size_t fixedRowWords() const { return details ? records::detailWordCount : records::otherWordCount; }
+
+    /// @brief Returns the row that stores the given word of the family's collected word stream:
+    /// the one class record, or the fixed row whose incidence the index falls in.
+    [[nodiscard]] const records::LegacyRow& rowOfWord(std::span<const records::LegacyRow> rows, std::size_t wordIndex) const
+    {
+        return rows[classRecords ? 0 : wordIndex / fixedRowWords()];
+    }
+
+    /// @brief Returns the row that stores the given byte of the family's collected payload.
+    [[nodiscard]] const records::LegacyRow& rowOfByte(std::span<const records::LegacyRow> rows, std::size_t byteOffset) const
+    {
+        return rowOfWord(rows, byteOffset / sizeof(std::uint16_t));
+    }
+
+    /// @brief Returns the given payload byte's offset within the row that stores it.
+    [[nodiscard]] std::size_t byteOffsetInRow(std::size_t byteOffset) const
+    {
+        return classRecords ? byteOffset : byteOffset % (fixedRowWords() * sizeof(std::uint16_t));
+    }
 };
 
 /// @brief Returns the source parts that a selected family contains, score
@@ -745,7 +767,7 @@ struct PendingShapeReference
     musx::dom::Cmper referenceShapeId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-    [[no_unique_address]] DeferredFieldReport reportField;
+    [[no_unique_address]] DeferredFieldReport reportField{};
 };
 
 /// @brief A reference-document custom line a target field needs, resolved after all source pools.
@@ -755,7 +777,7 @@ struct PendingCustomLineReference
     musx::dom::Cmper referenceLineId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-    [[no_unique_address]] DeferredFieldReport reportField;
+    [[no_unique_address]] DeferredFieldReport reportField{};
 };
 
 /// @brief Work deferred until every source pool is filled, and drained in one phase afterwards.

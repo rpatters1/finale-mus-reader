@@ -96,7 +96,7 @@ void importChordSuffixElements(const ImportContext& context)
 
     const bool wide = source->classRecords && versions::storesUnicodeCodepoints(context.profile.version);
     const auto stride = wide ? chordSuffixWideStride : chordSuffixNarrowTupleSize;
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

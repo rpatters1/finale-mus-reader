@@ -178,7 +178,7 @@ void importPartDefinitions(const ImportContext& context)
     // no fixed-row family for that helper to choose between.
     if (sourceMatches(context.profile, EpochMask::Zlib)) {
         const RecordFamilySource source{.pool = &context.index.getClassOthers(), .identity = partDefinitionClass, .classRecords = true};
-        for (const auto [partId, cmper] : recordKeys(source)) {
+        for (const auto& [partId, cmper] : recordKeys(source)) {
             const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
             if (rows.empty()) {
                 continue;

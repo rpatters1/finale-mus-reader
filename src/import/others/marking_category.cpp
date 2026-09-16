@@ -141,7 +141,7 @@ void importSourceMarkingCategories(const ImportContext& context)
     }
     const RecordFamilySource categorySource{.pool = &context.index.getClassOthers(), .identity = markingCategoryClass, .classRecords = true};
     const RecordFamilySource nameSource{.pool = &context.index.getClassOthers(), .identity = markingCategoryNameClass, .classRecords = true};
-    for (const auto [partId, cmper] : recordKeys(categorySource)) {
+    for (const auto& [partId, cmper] : recordKeys(categorySource)) {
         const auto rows = categorySource.pool->getArray(categorySource.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
