@@ -10,6 +10,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -337,8 +338,10 @@ public:
     }
 
     /// @brief Assigns a member no layout of this era stores, at the value the era behaved as.
-    template <typename Member, typename Value>
-    void behavior(const char* name, Member& member, Value value)
+    /// @details The value takes the member's own type, so a literal converts at the call rather
+    /// than narrowing inside the assignment.
+    template <typename Member>
+    void behavior(const char* name, Member& member, std::type_identity_t<Member> value)
     {
         member = value;
         noteBehavior(name, static_cast<std::int64_t>(value));
