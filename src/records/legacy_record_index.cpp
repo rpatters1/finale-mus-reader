@@ -76,9 +76,9 @@ std::optional<PoolTypes> poolTypesFor(FormatEpoch epoch)
 std::optional<std::uint16_t> textBlockTypeFor(FormatEpoch epoch)
 {
     switch (epoch) {
-    case FormatEpoch::UncompressedLegacy: return 0x0004;
-    case FormatEpoch::DclLegacy: return 0x0012;
-    case FormatEpoch::ZlibLegacy: return 0x0017;
+    case FormatEpoch::UncompressedLegacy: return std::uint16_t(0x0004);
+    case FormatEpoch::DclLegacy: return std::uint16_t(0x0012);
+    case FormatEpoch::ZlibLegacy: return std::uint16_t(0x0017);
     case FormatEpoch::CodaBanner: break;
     }
     return std::nullopt;

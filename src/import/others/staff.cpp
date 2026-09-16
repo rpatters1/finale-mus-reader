@@ -61,7 +61,7 @@ struct StaffLegacySemantics
     bool usesBooleanHideMode{};
     bool hideNoteAttachedItems{};
     bool noteShapeNotation{};
-    std::optional<std::uint8_t> singleStringTabPitch;
+    std::optional<std::uint8_t> singleStringTabPitch{};
     bool legacySingleStringTabForm{};
 };
 

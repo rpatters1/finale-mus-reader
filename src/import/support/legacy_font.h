@@ -12,8 +12,8 @@ namespace finale_mus_reader {
 inline void assignPackedFont(
     musx::dom::FontInfo& font, musx::factory::ConstructionContext& construction, std::uint16_t packed, bool sizeInLowByte = false)
 {
-    const auto low = packed & 0xffU;
-    const auto high = packed >> 8U;
+    const auto low = static_cast<std::uint16_t>(packed & 0xffU);
+    const auto high = static_cast<std::uint16_t>(packed >> 8U);
     font.fontId = construction.assignFontId(sizeInLowByte ? high : low);
     font.fontSize = sizeInLowByte ? low : high;
 }
