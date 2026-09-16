@@ -122,7 +122,7 @@ void insertRecoveredConnection(const musx::dom::DocumentPtr& document, const std
 
 // One staff position is one half space, so the pre-3.5 lengths convert through musxdom's own
 // constant rather than through a 12 written here.
-constexpr int evpuPerStaffPosition = musx::dom::EVPU_PER_STAFF_POSITION;
+constexpr int evpuPerStaffPosition = static_cast<int>(musx::dom::EVPU_PER_STAFF_POSITION);
 
 // Finale 3.5 and later, and the DCL epoch entire.
 const FieldMapping stemScalarFields[] = {

@@ -542,9 +542,10 @@ struct ResolvedValue
 [[nodiscard]] std::optional<ResolvedValue> readSourceValue(const records::LegacyRecordIndex& index, RecordEncoding encoding, std::uint16_t cmper,
     const SourceLocation& source, ByteOrder byteOrder, std::uint16_t partId = musx::dom::SCORE_PARTID);
 
-/// @brief Assigns a decoded value to a member, converting through the member's own type.
-template <typename T>
-void assignFrom(T& target, std::int64_t value)
+/// @brief Assigns a decoded or converted value to a member, converting through the member's own
+/// type, so that the assignment itself never narrows.
+template <typename T, typename Value>
+void assignFrom(T& target, Value value)
 {
     target = static_cast<T>(value);
 }
@@ -555,8 +556,8 @@ void assignFrom(T& target, std::int64_t value)
 /// A table row that reaches such a member has by definition found the value in the source,
 /// so the member is engaged; leaving a member disengaged is the business of whatever decides
 /// the row does not apply.
-template <typename T>
-void assignFrom(std::optional<T>& target, std::int64_t value)
+template <typename T, typename Value>
+void assignFrom(std::optional<T>& target, Value value)
 {
     target = static_cast<T>(value);
 }
@@ -957,7 +958,8 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, ::finale_mus_reader::FieldKind::Number,                                                                                            \
             ::finale_mus_reader::SourceLocation{(identityValue), static_cast<std::uint16_t>(selectorValue), 0,                                      \
                 static_cast<std::uint32_t>(byteOffset), (widthValue), (orderValue), (bitsValue)},                                                   \
-            nullptr, [](void* instance, std::int64_t value) { static_cast<Class*>(instance)->member = (__VA_ARGS__); },                             \
+            nullptr,                                                                                                                                \
+            [](void* instance, std::int64_t value) { ::finale_mus_reader::assignFrom(static_cast<Class*>(instance)->member, (__VA_ARGS__)); },      \
             [](const void* instance) -> std::int64_t { return ::finale_mus_reader::readAs(static_cast<const Class*>(instance)->member); }, nullptr, \
             (appliesValue)                                                                                                                          \
     }
@@ -1020,7 +1022,8 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, ::finale_mus_reader::FieldKind::Number,                                                                                            \
             ::finale_mus_reader::SourceLocation{(identityValue), static_cast<std::uint16_t>(selectorValue),                                         \
                 static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), (widthValue), (orderValue), (bitsValue)},        \
-            (sourceGateValue), [](void* instance, std::int64_t value) { static_cast<Class*>(instance)->member = (__VA_ARGS__); },                   \
+            (sourceGateValue),                                                                                                                      \
+            [](void* instance, std::int64_t value) { ::finale_mus_reader::assignFrom(static_cast<Class*>(instance)->member, (__VA_ARGS__)); },      \
             [](const void* instance) -> std::int64_t { return ::finale_mus_reader::readAs(static_cast<const Class*>(instance)->member); }, nullptr, \
             (appliesValue)                                                                                                                          \
     }
