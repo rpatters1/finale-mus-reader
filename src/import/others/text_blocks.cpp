@@ -45,11 +45,6 @@ std::int32_t highFirstLong(std::int16_t high, std::int16_t low)
     return static_cast<std::int32_t>((static_cast<std::uint32_t>(static_cast<std::uint16_t>(high)) << 16U) | static_cast<std::uint16_t>(low));
 }
 
-const records::LegacyRow& textBlockRow(const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t wordIndex)
-{
-    return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
-}
-
 void reportValue(const ImportContext& context, std::uint16_t partId, musx::dom::Cmper cmper, const char* field, std::int64_t rawValue,
     const records::LegacyRow& row)
 {
@@ -83,22 +78,22 @@ void reportTextBlockFields(const ImportContext& context, const RecordFamilySourc
     withReporting(context.report, [&](auto&) {
         constexpr const char* directNames[] = {"textId", "width", "height", "shapeId"};
         for (std::size_t slot = 0; slot < std::size(directNames); ++slot) {
-            reportValue(context, partId, cmper, directNames[slot], words[slot], textBlockRow(source, rows, slot));
+            reportValue(context, partId, cmper, directNames[slot], words[slot], source.rowOfWord(rows, slot));
         }
         reportValue(
-            context, partId, cmper, hasPercentageLineSpacing ? "lineSpacingPercentage" : "lineSpacingEvpu", words[4], textBlockRow(source, rows, 4));
+            context, partId, cmper, hasPercentageLineSpacing ? "lineSpacingPercentage" : "lineSpacingEvpu", words[4], source.rowOfWord(rows, 4));
         if (upgradesZeroPercentToEvpu) {
             reportBehavior(context, partId, cmper, "lineSpacingEvpu", 0);
         }
-        reportValue(context, partId, cmper, "xAdd", words[5], textBlockRow(source, rows, 5));
-        reportValue(context, partId, cmper, "yAdd", words[6], textBlockRow(source, rows, 6));
+        reportValue(context, partId, cmper, "xAdd", words[5], source.rowOfWord(rows, 5));
+        reportValue(context, partId, cmper, "yAdd", words[6], source.rowOfWord(rows, 6));
         constexpr const char* flagNames[] = {"justify", "newPos36", "showShape", "noExpandSingleWord", "wordWrap"};
         const std::int64_t flagValues[] = {flags & 0x0007U, (flags >> 3U) & 1U, (flags >> 9U) & 1U, (flags >> 10U) & 1U, (flags >> 11U) & 1U};
         for (std::size_t index = 0; index < std::size(flagNames); ++index) {
-            reportValue(context, partId, cmper, flagNames[index], flagValues[index], textBlockRow(source, rows, 7));
+            reportValue(context, partId, cmper, flagNames[index], flagValues[index], source.rowOfWord(rows, 7));
         }
-        reportValue(context, partId, cmper, "inset", highFirstLong(words[8], words[9]), textBlockRow(source, rows, 8));
-        reportValue(context, partId, cmper, "stdLineThickness", highFirstLong(words[10], words[11]), textBlockRow(source, rows, 10));
+        reportValue(context, partId, cmper, "inset", highFirstLong(words[8], words[9]), source.rowOfWord(rows, 8));
+        reportValue(context, partId, cmper, "stdLineThickness", highFirstLong(words[10], words[11]), source.rowOfWord(rows, 10));
     });
 }
 
@@ -145,7 +140,7 @@ void populateStoredTextBlock(
         if (const auto textType = textTypeFromLegacy(words[textTypeWord])) {
             target->textType = *textType;
             withReporting(context.report,
-                [&](auto&) { reportValue(context, partId, cmper, "textType", words[textTypeWord], textBlockRow(source, rows, textTypeWord)); });
+                [&](auto&) { reportValue(context, partId, cmper, "textType", words[textTypeWord], source.rowOfWord(rows, textTypeWord)); });
         } else if (words[textTypeWord] != 0) {
             context.report.diagnostics.push_back(
                 {musx::util::Logger::LogLevel::Info, "Text block " + std::to_string(cmper) + " has an unrecognized text-family discriminator "
@@ -163,7 +158,7 @@ void importStoredTextBlocks(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         populateStoredTextBlock(context, cmper, source->pool->getArray(source->identity, cmper, 0, partId), *source);
     }
 }

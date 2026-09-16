@@ -112,7 +112,7 @@ std::map<musx::dom::Cmper, std::string> legacyPercussionMapNames(const ImportCon
         return result;
     }
     const auto& source = *selected;
-    for (const auto [partId, mapId] : recordKeys(source)) {
+    for (const auto& [partId, mapId] : recordKeys(source)) {
         if (partId != musx::dom::SCORE_PARTID) {
             continue;
         }
@@ -134,7 +134,7 @@ std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>> selectedLegacyPercussionR
         return result;
     }
     const auto& source = *selected;
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
             continue;
@@ -244,7 +244,7 @@ void importPercussionNoteInfo(const ImportContext& context)
     const auto percussionFont = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, PercussionFontType::Percussion);
     const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::Cmper{};
 
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

@@ -290,7 +290,7 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
 
     const RecordFamilySource source{&context.index.getDetails(), gframeHoldTag, false, true};
     std::set<std::uint16_t> unknownTypes;
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         std::optional<AlternateNotationRun> run;
         std::uint16_t runStoredType{};
         const auto finishRun = [&] {

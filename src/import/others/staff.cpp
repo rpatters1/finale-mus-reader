@@ -25,11 +25,12 @@
 
 namespace finale_mus_reader {
 namespace others {
-namespace {
+namespace staff_internal {
 
-using StaffTarget = musx::dom::others::Staff;
-using StaffStyleTarget = musx::dom::others::StaffStyle;
-using FretInstrumentTarget = musx::dom::others::FretInstrument;
+// Named rather than anonymous: these types are captured by the reporting lambdas of
+// importStaffFamily<Target>, which have external linkage, and under the unity build GCC rejects
+// an anonymous-namespace member there (-Wsubobject-linkage). The names stay distinctive for the
+// same reason every file-local name does.
 
 enum class StaffRepeatDotFallback {
     None,
@@ -60,9 +61,21 @@ struct StaffLegacySemantics
     bool usesBooleanHideMode{};
     bool hideNoteAttachedItems{};
     bool noteShapeNotation{};
-    std::optional<std::uint8_t> singleStringTabPitch;
+    std::optional<std::uint8_t> singleStringTabPitch{};
     bool legacySingleStringTabForm{};
 };
+
+} // namespace staff_internal
+
+namespace {
+
+using StaffTarget = musx::dom::others::Staff;
+using StaffStyleTarget = musx::dom::others::StaffStyle;
+using FretInstrumentTarget = musx::dom::others::FretInstrument;
+
+using staff_internal::StaffFallbackSelection;
+using staff_internal::StaffLegacySemantics;
+using staff_internal::StaffRepeatDotFallback;
 
 struct StaffBooleanLegacyDefault
 {
@@ -1229,8 +1242,8 @@ void reportStaffFallbacks(Reporting& reporting, const Target& target, const Staf
     }
 }
 
-StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget>& targetPtr, std::span<const std::uint8_t> payload,
-    const SourceProfile& profile, StaffLegacySemantics legacySemantics, musx::factory::ConstructionContext& construction)
+void decodeStaffBase(const std::shared_ptr<StaffTarget>& targetPtr, std::span<const std::uint8_t> payload, const SourceProfile& profile,
+    StaffLegacySemantics& legacySemantics, musx::factory::ConstructionContext& construction)
 {
     auto& target = *targetPtr;
     const auto byteOrder = profile.byteOrder;
@@ -1307,7 +1320,7 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget>& targetP
     const auto oneLineStaff = target.staffLines == 1 || (target.customStaff && target.customStaff->size() == 1);
     const auto legacyTabPositions = wordCount == staffBaseWords && target.notationStyle == StaffTarget::NotationStyle::Tablature;
     if (legacyTabPositions) {
-        legacySemantics.singleStringTabPitch = tablaturePositions & 0xffU;
+        legacySemantics.singleStringTabPitch = static_cast<std::uint8_t>(tablaturePositions & 0xffU);
         target.vertTabNumOff = static_cast<std::int16_t>(tablaturePositions & 0xff00U);
         target.capoPos = 0;
         target.lowestFret = 0;
@@ -1428,7 +1441,6 @@ StaffLegacySemantics decodeStaffBase(const std::shared_ptr<StaffTarget>& targetP
         target.useAutoNumbering = autoNumbering & autoNumberingEnabledMask;
         target.instUuid = instrumentUuid(payload);
     }
-    return legacySemantics;
 }
 
 } // namespace
@@ -1441,7 +1453,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
         return;
     }
     const auto& source = *selected;
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
             continue;
@@ -1574,7 +1586,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
                     // Coda tablature stores a MIDI base key rather than a modern
                     // fret-instrument reference. The referent is synthesized after all
                     // stored fret instruments exist.
-                    legacySemantics.singleStringTabPitch = attributeWord(codaVerticalTabOffsetSlot) & 0xffU;
+                    legacySemantics.singleStringTabPitch = static_cast<std::uint8_t>(attributeWord(codaVerticalTabOffsetSlot) & 0xffU);
                     target->fretInstId = 0;
                 }
             } else {
@@ -1697,7 +1709,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
                                                              + std::to_string(staffId) + " is shorter than its base layout."});
                 continue;
             }
-            legacySemantics = decodeStaffBase(target, payload, context.profile, legacySemantics, context.construction);
+            decodeStaffBase(target, payload, context.profile, legacySemantics, context.construction);
             const auto adjustedFontSize = resolveStaffNoteFontSize(context, *target);
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
                 reportMappedStaff(reporting, *target, source, rows, payload, context.profile.byteOrder, legacySemantics, adjustedFontSize);

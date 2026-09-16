@@ -149,6 +149,24 @@ std::string payloadString(std::span<const std::uint8_t> payload, std::size_t off
     return result;
 }
 
+namespace legacy_mapping_internal {
+
+// Named rather than anonymous: ReportState<MappedFieldData<Reporting>> holds this by value and
+// has external linkage, and under the unity build GCC rejects an anonymous-namespace member
+// there (-Wsubobject-linkage). The name stays distinctive for the same reason every file-local
+// name does.
+
+template <typename Reporting>
+struct MappedFieldData
+{
+    typename Reporting::InstanceKey instance;
+    std::string member;
+    typename Reporting::FieldInfo info;
+    bool preserveExisting{};
+};
+
+} // namespace legacy_mapping_internal
+
 namespace {
 
 /// @brief Every musxdom class this reader recovers, one entry each, grouped by pool.
@@ -391,14 +409,7 @@ struct EffectiveField
     const FieldMapping* readable{};
 };
 
-template <typename Reporting>
-struct MappedFieldData
-{
-    typename Reporting::InstanceKey instance;
-    std::string member;
-    typename Reporting::FieldInfo info;
-    bool preserveExisting{};
-};
+using legacy_mapping_internal::MappedFieldData;
 
 /// @brief Preserves a field's pre-overlay default and records the source selected by decoding.
 class MappedFieldReport
@@ -779,7 +790,7 @@ void applyMappingTables(const std::vector<const MappingTable*>& tables, const re
             if (effective.applicable) {
                 const RecordFamilySource source{
                     &pool, table.recordIdentity, table.encoding == RecordEncoding::ClassRecord, false, table.compactPartLayouts};
-                for (const auto [partId, cmper] : recordKeys(source)) {
+                for (const auto& [partId, cmper] : recordKeys(source)) {
                     const auto rows = pool.getArray(table.recordIdentity, cmper, 0, partId);
                     if (rows.empty()) {
                         continue;

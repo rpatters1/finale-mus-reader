@@ -46,7 +46,7 @@ void importDrumStaff(const ImportContext& context)
     }
     const auto& source = *selected;
 
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
             continue;

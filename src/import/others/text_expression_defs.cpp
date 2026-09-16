@@ -218,7 +218,7 @@ void importTextExpressionDefs(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         bool completeRows = !rows.empty();
         for (std::size_t index = 0; index < rows.size() && !source->classRecords; ++index) {
@@ -246,8 +246,8 @@ void importTextExpressionDefs(const ImportContext& context)
         const auto assign = [&](auto member, const char* name, auto value, std::size_t slot, bool adjusted = false) {
             target.get()->*member = value;
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const auto& row = rows[source->classRecords ? 0 : slot / records::otherWordCount];
-                const auto offset = source->classRecords ? slot * 2 : (slot % records::otherWordCount) * 2;
+                const auto& row = source->rowOfWord(rows, slot);
+                const auto offset = source->byteOffsetInRow(slot * 2);
                 reporting.report().setField(reporting.instanceKey(reportInstance), name,
                     typename Reporting::FieldInfo{adjusted ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus, row.blockOffset,
                         row.decodedOffset + offset, words[slot], source->identity});

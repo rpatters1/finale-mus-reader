@@ -157,13 +157,13 @@ const MappingTable& classTieScalarTable()
     return table;
 }
 
-void reportRecoveredTieField(
-    const ImportContext& context, std::string_view member, std::int64_t value, std::size_t blockOffset, std::size_t decodedOffset)
+// Called from inside reporting callbacks, so it takes the callback's writer rather than opening
+// a nested one.
+template <typename Reporting>
+void reportRecoveredTieField(Reporting& reporting, std::string_view member, std::int64_t value, std::size_t blockOffset, std::size_t decodedOffset)
 {
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.report().setField(reporting.template instanceKey<TieOptionsTarget>(), std::string(member),
-            {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, value});
-    });
+    reporting.report().setField(
+        reporting.template instanceKey<TieOptionsTarget>(), std::string(member), {Reporting::Origin::LegacyMus, blockOffset, decodedOffset, value});
 }
 
 void reportAdjustedTieField(
@@ -181,10 +181,10 @@ void reportTieBehaviorField(const ImportContext& context, std::string_view membe
         [&]<typename Reporting>(Reporting& reporting) { reporting.template behaviorField<TieOptionsTarget>(std::string(member), value); });
 }
 
-void reportDefaultTieField(const ImportContext& context, std::string_view member, std::int64_t value)
+template <typename Reporting>
+void reportDefaultTieField(Reporting& reporting, std::string_view member, std::int64_t value)
 {
-    withReporting(context.report,
-        [&]<typename Reporting>(Reporting& reporting) { reporting.template defaultField<TieOptionsTarget>(std::string(member), value); });
+    reporting.template defaultField<TieOptionsTarget>(std::string(member), value);
 }
 
 void captureTieConnections(const ImportContext& context, const std::shared_ptr<TieOptionsTarget>& target)
@@ -200,10 +200,10 @@ void captureTieConnections(const ImportContext& context, const std::shared_ptr<T
         auto style = std::make_shared<TieOptionsTarget::ConnectStyle>();
         style->offsetX = wordAt(family.words, index * 2);
         style->offsetY = wordAt(family.words, index * 2 + 1);
-        withReporting(context.report, [&](auto&) {
+        withReporting(context.report, [&](auto& reporting) {
             const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
-            reportRecoveredTieField(context, prefix + "offsetX", style->offsetX, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "offsetY", style->offsetY, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "offsetX", style->offsetX, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "offsetY", style->offsetY, family.blockOffset, family.decodedOffset);
         });
         target->tieConnectStyles.emplace(type, std::move(style));
     }
@@ -229,15 +229,15 @@ void captureTieContours(const ImportContext& context, const std::shared_ptr<TieO
         style->cp2->insetRatio = wordAt(family.words, first + 4);
         style->cp2->height = wordAt(family.words, first + 5);
         style->cp2->insetFixed = wordAt(family.words, first + 6);
-        withReporting(context.report, [&](auto&) {
+        withReporting(context.report, [&](auto& reporting) {
             const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
-            reportRecoveredTieField(context, prefix + "span", style->span, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp1.insetRatio", style->cp1->insetRatio, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp1.height", style->cp1->height, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp1.insetFixed", style->cp1->insetFixed, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp2.insetRatio", style->cp2->insetRatio, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp2.height", style->cp2->height, family.blockOffset, family.decodedOffset);
-            reportRecoveredTieField(context, prefix + "cp2.insetFixed", style->cp2->insetFixed, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "span", style->span, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp1.insetRatio", style->cp1->insetRatio, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp1.height", style->cp1->height, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp1.insetFixed", style->cp1->insetFixed, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp2.insetRatio", style->cp2->insetRatio, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp2.height", style->cp2->height, family.blockOffset, family.decodedOffset);
+            reportRecoveredTieField(reporting, prefix + "cp2.insetFixed", style->cp2->insetFixed, family.blockOffset, family.decodedOffset);
         });
         target->tieControlStyles.emplace(static_cast<TieOptionsTarget::ControlStyleType>(index), std::move(style));
     }
@@ -300,9 +300,9 @@ void captureEarlyTieOptions(const ImportContext& context, const std::shared_ptr<
                 continue;
             }
             found->second->offsetX = value;
-            withReporting(context.report, [&](auto&) {
+            withReporting(context.report, [&](auto& reporting) {
                 const auto member = "tieConnectStyles[" + std::to_string(static_cast<std::size_t>(type)) + "].offsetX";
-                reportRecoveredTieField(context, member, value, placement.blockOffset, placement.decodedOffset);
+                reportRecoveredTieField(reporting, member, value, placement.blockOffset, placement.decodedOffset);
             });
         }
     };
@@ -314,7 +314,7 @@ void captureEarlyTieOptions(const ImportContext& context, const std::shared_ptr<
         const auto basePosition = wordAt(shortTie.words, 4);
         const auto recoverVertical = [&](musx::dom::TieConnectStyleType overType, musx::dom::TieConnectStyleType underType, std::int16_t adjustment) {
             const auto position = static_cast<std::int16_t>(basePosition + adjustment);
-            for (const auto [type, value] : std::array{std::pair{overType, position}, std::pair{underType, static_cast<std::int16_t>(-position)}}) {
+            for (const auto& [type, value] : std::array{std::pair{overType, position}, std::pair{underType, static_cast<std::int16_t>(-position)}}) {
                 const auto found = target->tieConnectStyles.find(type);
                 if (found == target->tieConnectStyles.end()) {
                     continue;
@@ -435,10 +435,10 @@ void reportRemainingTieFields(const ImportContext& context, const TieOptionsTarg
             }
             const auto prefix = "tieConnectStyles[" + std::to_string(index) + "].";
             if (!reporting.report().findField(instance, prefix + "offsetX")) {
-                reportDefaultTieField(context, prefix + "offsetX", found->second->offsetX);
+                reportDefaultTieField(reporting, prefix + "offsetX", found->second->offsetX);
             }
             if (!reporting.report().findField(instance, prefix + "offsetY")) {
-                reportDefaultTieField(context, prefix + "offsetY", found->second->offsetY);
+                reportDefaultTieField(reporting, prefix + "offsetY", found->second->offsetY);
             }
         }
         for (std::size_t index = 0; index < tieContourCount; ++index) {
@@ -449,7 +449,7 @@ void reportRemainingTieFields(const ImportContext& context, const TieOptionsTarg
             const auto prefix = "tieControlStyles[" + std::to_string(index) + "].";
             const auto reportDefault = [&](std::string_view member, std::int64_t value) {
                 if (!reporting.report().findField(instance, member)) {
-                    reportDefaultTieField(context, member, value);
+                    reportDefaultTieField(reporting, member, value);
                 }
             };
             reportDefault(prefix + "span", found->second->span);

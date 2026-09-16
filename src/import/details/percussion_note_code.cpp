@@ -46,7 +46,7 @@ void importPercussionNoteCodes(const ImportContext& context)
     }
 
     const RecordFamilySource source{&context.index.getClassDetails(), percussionNoteCodeClass, true, true};
-    for (const auto [partId, entryHigh] : recordKeys(source)) {
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
         for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
             const auto rows = source.pool->getArray(source.identity, entryHigh, entryLow, partId);
             if (rows.empty()) {

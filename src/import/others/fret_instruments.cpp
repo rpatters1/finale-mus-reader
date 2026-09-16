@@ -47,7 +47,7 @@ void importFretInstruments(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

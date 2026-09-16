@@ -124,7 +124,29 @@ struct RecordFamilySource
     records::LegacyTag identity{};
     bool classRecords{};
     bool details{};
-    std::span<const CompactPartLayout> compactPartLayouts;
+    std::span<const CompactPartLayout> compactPartLayouts{};
+
+    /// @brief Returns how many payload words one fixed row of this family holds.
+    [[nodiscard]] std::size_t fixedRowWords() const { return details ? records::detailWordCount : records::otherWordCount; }
+
+    /// @brief Returns the row that stores the given word of the family's collected word stream:
+    /// the one class record, or the fixed row whose incidence the index falls in.
+    [[nodiscard]] const records::LegacyRow& rowOfWord(std::span<const records::LegacyRow> rows, std::size_t wordIndex) const
+    {
+        return rows[classRecords ? 0 : wordIndex / fixedRowWords()];
+    }
+
+    /// @brief Returns the row that stores the given byte of the family's collected payload.
+    [[nodiscard]] const records::LegacyRow& rowOfByte(std::span<const records::LegacyRow> rows, std::size_t byteOffset) const
+    {
+        return rowOfWord(rows, byteOffset / sizeof(std::uint16_t));
+    }
+
+    /// @brief Returns the given payload byte's offset within the row that stores it.
+    [[nodiscard]] std::size_t byteOffsetInRow(std::size_t byteOffset) const
+    {
+        return classRecords ? byteOffset : byteOffset % (fixedRowWords() * sizeof(std::uint16_t));
+    }
 };
 
 /// @brief Returns the source parts that a selected family contains, score
@@ -520,9 +542,10 @@ struct ResolvedValue
 [[nodiscard]] std::optional<ResolvedValue> readSourceValue(const records::LegacyRecordIndex& index, RecordEncoding encoding, std::uint16_t cmper,
     const SourceLocation& source, ByteOrder byteOrder, std::uint16_t partId = musx::dom::SCORE_PARTID);
 
-/// @brief Assigns a decoded value to a member, converting through the member's own type.
-template <typename T>
-void assignFrom(T& target, std::int64_t value)
+/// @brief Assigns a decoded or converted value to a member, converting through the member's own
+/// type, so that the assignment itself never narrows.
+template <typename T, typename Value>
+void assignFrom(T& target, Value value)
 {
     target = static_cast<T>(value);
 }
@@ -533,8 +556,8 @@ void assignFrom(T& target, std::int64_t value)
 /// A table row that reaches such a member has by definition found the value in the source,
 /// so the member is engaged; leaving a member disengaged is the business of whatever decides
 /// the row does not apply.
-template <typename T>
-void assignFrom(std::optional<T>& target, std::int64_t value)
+template <typename T, typename Value>
+void assignFrom(std::optional<T>& target, Value value)
 {
     target = static_cast<T>(value);
 }
@@ -745,7 +768,7 @@ struct PendingShapeReference
     musx::dom::Cmper referenceShapeId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-    [[no_unique_address]] DeferredFieldReport reportField;
+    [[no_unique_address]] DeferredFieldReport reportField{};
 };
 
 /// @brief A reference-document custom line a target field needs, resolved after all source pools.
@@ -755,7 +778,7 @@ struct PendingCustomLineReference
     musx::dom::Cmper referenceLineId{};
     /// @brief Writes the resolved target comparator into the field that needs it.
     std::function<void(musx::dom::Cmper)> assign;
-    [[no_unique_address]] DeferredFieldReport reportField;
+    [[no_unique_address]] DeferredFieldReport reportField{};
 };
 
 /// @brief Work deferred until every source pool is filled, and drained in one phase afterwards.
@@ -935,7 +958,8 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, ::finale_mus_reader::FieldKind::Number,                                                                                            \
             ::finale_mus_reader::SourceLocation{(identityValue), static_cast<std::uint16_t>(selectorValue), 0,                                      \
                 static_cast<std::uint32_t>(byteOffset), (widthValue), (orderValue), (bitsValue)},                                                   \
-            nullptr, [](void* instance, std::int64_t value) { static_cast<Class*>(instance)->member = (__VA_ARGS__); },                             \
+            nullptr,                                                                                                                                \
+            [](void* instance, std::int64_t value) { ::finale_mus_reader::assignFrom(static_cast<Class*>(instance)->member, (__VA_ARGS__)); },      \
             [](const void* instance) -> std::int64_t { return ::finale_mus_reader::readAs(static_cast<const Class*>(instance)->member); }, nullptr, \
             (appliesValue)                                                                                                                          \
     }
@@ -998,7 +1022,8 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
         #member, ::finale_mus_reader::FieldKind::Number,                                                                                            \
             ::finale_mus_reader::SourceLocation{(identityValue), static_cast<std::uint16_t>(selectorValue),                                         \
                 static_cast<std::uint32_t>(incidenceValue), static_cast<std::uint32_t>(slotValue), (widthValue), (orderValue), (bitsValue)},        \
-            (sourceGateValue), [](void* instance, std::int64_t value) { static_cast<Class*>(instance)->member = (__VA_ARGS__); },                   \
+            (sourceGateValue),                                                                                                                      \
+            [](void* instance, std::int64_t value) { ::finale_mus_reader::assignFrom(static_cast<Class*>(instance)->member, (__VA_ARGS__)); },      \
             [](const void* instance) -> std::int64_t { return ::finale_mus_reader::readAs(static_cast<const Class*>(instance)->member); }, nullptr, \
             (appliesValue)                                                                                                                          \
     }

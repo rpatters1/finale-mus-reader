@@ -29,6 +29,8 @@ constexpr std::size_t compactStaffSystemBytes = staffSystemRowBytes;
 constexpr std::size_t staffSystemBaseBytes = 24;
 constexpr std::size_t staffSystemExtendedBytes = 28;
 constexpr musx::dom::Efix staffHeightEfixPerLegacyUnit = 4;
+/// @brief The height of a standard five-line staff, which a record without a stored height takes.
+constexpr auto standardStaffHeightEfix = static_cast<musx::dom::Efix>(4 * musx::dom::EFIX_PER_SPACE);
 constexpr int compactStaffSystemPercent = 100;
 
 constexpr std::size_t topOffset = 0;
@@ -148,12 +150,6 @@ void finishStaffSystemGrid(const ImportContext& context, std::vector<Entry> syst
     }
 }
 
-[[nodiscard]] const records::LegacyRow& staffSystemSourceRow(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t byteOffset)
-{
-    return rows[source.classRecords ? 0 : byteOffset / staffSystemRowBytes];
-}
-
 template <typename Reporting>
 void reportStaffSystemRowField(Reporting& reporting, const typename Reporting::InstanceKey& key, const records::LegacyRow& row,
     records::LegacyTag identity, const char* member, std::size_t byteOffset, std::int64_t value, typename Reporting::Origin origin)
@@ -165,9 +161,8 @@ template <typename Reporting>
 void reportStaffSystemSourceField(Reporting& reporting, const typename Reporting::InstanceKey& key, const RecordFamilySource& source,
     std::span<const records::LegacyRow> rows, const char* member, std::size_t byteOffset, std::int64_t value, typename Reporting::Origin origin)
 {
-    const auto& row = staffSystemSourceRow(source, rows, byteOffset);
-    reportStaffSystemRowField(
-        reporting, key, row, source.identity, member, source.classRecords ? byteOffset : byteOffset % staffSystemRowBytes, value, origin);
+    const auto& row = source.rowOfByte(rows, byteOffset);
+    reportStaffSystemRowField(reporting, key, row, source.identity, member, source.byteOffsetInRow(byteOffset), value, origin);
 }
 
 void reportStaffSystem(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
@@ -310,7 +305,7 @@ void finishCompactStaffSystems(const ImportContext& context, const RecordFamilyS
 void importCompactStaffSystemFamily(const ImportContext& context, const RecordFamilySource& source)
 {
     std::vector<CompactStaffSystemEntry> systems;
-    for (const auto [partId, systemId] : recordKeys(source)) {
+    for (const auto& [partId, systemId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
         if (rows.empty()) {
             continue;
@@ -338,7 +333,7 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
         target->startMeas = static_cast<musx::dom::MeasCmper>(payloadWord(payload, startMeasOffset, context.profile.byteOrder));
         target->hasStaffScaling = (flags & hasStaffScalingMask) != 0;
         target->ssysPercent = compactStaffSystemPercent;
-        target->staffHeight = 4 * musx::dom::EFIX_PER_SPACE;
+        target->staffHeight = standardStaffHeightEfix;
         target->holdMargins = true;
         if (scaling) {
             target->ssysPercent = scaling->percent;
@@ -362,7 +357,7 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
 
 std::optional<StaffSystemLayout> selectStaffSystemLayout(const RecordFamilySource& source)
 {
-    for (const auto [partId, systemId] : recordKeys(source)) {
+    for (const auto& [partId, systemId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
         if (rows.empty()) {
             continue;
@@ -390,7 +385,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
 {
     std::vector<ExpandedStaffSystemEntry> systems;
     const bool uncompressed = context.profile.epoch == FormatEpoch::UncompressedLegacy;
-    for (const auto [partId, systemId] : recordKeys(source)) {
+    for (const auto& [partId, systemId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, systemId, 0, partId);
         if (rows.empty()) {
             continue;
@@ -425,7 +420,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
 
         const auto storedStaffHeight = signedWord(staffHeightOffset);
         const bool hasStoredStaffHeight = storedStaffHeight != 0;
-        target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : 4 * musx::dom::EFIX_PER_SPACE;
+        target->staffHeight = hasStoredStaffHeight ? storedStaffHeight * staffHeightEfixPerLegacyUnit : standardStaffHeightEfix;
 
         const auto flags = word(flagsOffset);
         if ((flags & ownStaffListMask) != 0 || sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2011)) {

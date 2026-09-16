@@ -81,7 +81,7 @@ void importFretboardDiagrams(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper1] : recordKeys(*source)) {
+    for (const auto& [partId, cmper1] : recordKeys(*source)) {
         for (const auto cmper2 : source->pool->secondCmpersForTag(source->identity, cmper1, partId)) {
             const auto rows = source->pool->getArray(source->identity, cmper1, cmper2, partId);
             if (rows.empty()) {

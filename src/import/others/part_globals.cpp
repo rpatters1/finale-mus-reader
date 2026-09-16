@@ -102,7 +102,7 @@ void importFixedRowPartGlobals(const ImportContext& context)
 void importClassPartGlobals(const ImportContext& context)
 {
     const RecordFamilySource source{.pool = &context.index.getClassOthers(), .identity = partGlobalsClass, .classRecords = true};
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

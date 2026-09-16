@@ -420,12 +420,12 @@ private:
         flushLiteral();
         m_at = end;
         if (!m_effects) {
-            m_effects = 0;
+            m_effects = Cmper(0);
         }
         // `plain` clears the accumulated bits rather than setting one, making the run a
         // complete statement of the style rather than a change to whatever came before.
         if (*arguments == "plain") {
-            m_effects = 0;
+            m_effects = Cmper(0);
             return true;
         }
         const auto found =

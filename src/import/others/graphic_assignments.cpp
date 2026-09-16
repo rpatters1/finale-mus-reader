@@ -25,11 +25,6 @@ constexpr auto shapeGraphicTag = records::packTag("sg");
 constexpr records::LegacyTag pageGraphicClass = 0x00bc;
 constexpr records::LegacyTag shapeGraphicClass = 0x00d8;
 
-const records::LegacyRow& sourceRow(const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t wordIndex)
-{
-    return rows[source.classRecords ? 0 : wordIndex / records::otherWordCount];
-}
-
 template <typename Target, typename Reporting>
 void reportAssignmentValue(Reporting& reporting, musx::dom::Cmper cmper, musx::dom::Inci inci, std::uint16_t partId, std::string member,
     std::int64_t value, const records::LegacyRow& row)
@@ -106,7 +101,7 @@ void importPageFamily(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
         if (words.size() % graphicAssignmentWordCount != 0) {
@@ -135,13 +130,13 @@ void importPageFamily(const ImportContext& context)
                     continue;
                 }
                 withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, names[slot], tuple[slot], sourceRow(*source, rows, at + slot));
+                    reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, names[slot], tuple[slot], source->rowOfWord(rows, at + slot));
                 });
             }
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, "hidden", tuple[7], sourceRow(*source, rows, at + 7));
-                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "", tuple[8], sourceRow(*source, rows, at + 8), true);
-                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "rightPg", tuple[16], sourceRow(*source, rows, at + 16), true);
+                reportAssignmentValue<PageTarget>(reporting, cmper, inci, partId, "hidden", tuple[7], source->rowOfWord(rows, at + 7));
+                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "", tuple[8], source->rowOfWord(rows, at + 8), true);
+                reportPositionValues<PageTarget>(reporting, cmper, inci, partId, "rightPg", tuple[16], source->rowOfWord(rows, at + 16), true);
                 reporting.report().setInstanceOrigin(reporting.template instanceKey<PageTarget>(partId, cmper, inci), Reporting::Origin::LegacyMus);
             });
             context.document->getOthers()->add(PageTarget::XmlNodeName, std::move(target));
@@ -156,7 +151,7 @@ void importShapeFamily(const ImportContext& context)
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper] : recordKeys(*source)) {
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
         if (words.size() % graphicAssignmentWordCount != 0) {
@@ -178,12 +173,11 @@ void importShapeFamily(const ImportContext& context)
             for (std::size_t index = 0; index < std::size(importedSlots); ++index) {
                 const auto slot = importedSlots[index];
                 withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportAssignmentValue<ShapeTarget>(
-                        reporting, cmper, inci, partId, names[index], tuple[slot], sourceRow(*source, rows, at + slot));
+                    reportAssignmentValue<ShapeTarget>(reporting, cmper, inci, partId, names[index], tuple[slot], source->rowOfWord(rows, at + slot));
                 });
             }
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                reportPositionValues<ShapeTarget>(reporting, cmper, inci, partId, "", tuple[8], sourceRow(*source, rows, at + 8), false);
+                reportPositionValues<ShapeTarget>(reporting, cmper, inci, partId, "", tuple[8], source->rowOfWord(rows, at + 8), false);
                 reporting.report().setInstanceOrigin(reporting.template instanceKey<ShapeTarget>(partId, cmper, inci), Reporting::Origin::LegacyMus);
             });
             context.document->getOthers()->add(ShapeTarget::XmlNodeName, std::move(target));

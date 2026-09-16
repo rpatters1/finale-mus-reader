@@ -22,13 +22,14 @@ constexpr records::LegacyTag measureGraphicAssignClass = 0x041d;
 constexpr std::size_t measureGraphicAssignWordCount =
     ((graphicAssignmentWordCount + records::detailWordCount - 1) / records::detailWordCount) * records::detailWordCount;
 
-void reportMeasureGraphicValue(const ImportContext& context, musx::dom::Cmper staffId, musx::dom::Cmper meas, musx::dom::Inci inci,
-    std::uint16_t partId, const char* name, std::int64_t value, const records::LegacyRow& row)
+// Called from inside a reporting callback, so it takes the callback's writer rather than opening
+// a nested one.
+template <typename Reporting>
+void reportMeasureGraphicValue(Reporting& reporting, musx::dom::Cmper staffId, musx::dom::Cmper meas, musx::dom::Inci inci, std::uint16_t partId,
+    const char* name, std::int64_t value, const records::LegacyRow& row)
 {
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        reporting.report().setField(reporting.template instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas), name,
-            {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
-    });
+    reporting.report().setField(reporting.template instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas), name,
+        {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset, value});
 }
 
 void reportMeasureGraphicTuple(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
@@ -40,21 +41,21 @@ void reportMeasureGraphicTuple(const ImportContext& context, const RecordFamilyS
             "version", "left", "bottom", "width", "height", "fDescId", "hidden", "savedRecord", "origWidth", "origHeight", "graphicCmper"};
         for (std::size_t index = 0; index < std::size(slots); ++index) {
             const auto slot = slots[index];
-            const auto& sourceRow = rows[source.classRecords ? 0 : (at + slot) / records::detailWordCount];
-            reportMeasureGraphicValue(context, staffId, meas, inci, partId, names[index], tuple[slot], sourceRow);
+            const auto& sourceRow = source.rowOfWord(rows, at + slot);
+            reportMeasureGraphicValue(reporting, staffId, meas, inci, partId, names[index], tuple[slot], sourceRow);
         }
         const auto reportInstance = reporting.template instanceKey<MeasureGraphicTarget>(partId, staffId, inci, meas);
         reporting.report().setInstanceOrigin(reportInstance, Reporting::Origin::LegacyMus);
-        const auto& positionRow = rows[source.classRecords ? 0 : (at + 8) / records::detailWordCount];
+        const auto& positionRow = source.rowOfWord(rows, at + 8);
         for (const auto* member : {"hAlign", "vAlign", "posFrom", "fixedPerc"}) {
-            reportMeasureGraphicValue(context, staffId, meas, inci, partId, member, tuple[8], positionRow);
+            reportMeasureGraphicValue(reporting, staffId, meas, inci, partId, member, tuple[8], positionRow);
         }
     });
 }
 
 void importMeasureGraphicFamily(const ImportContext& context, const RecordFamilySource& source)
 {
-    for (const auto [partId, staffId] : recordKeys(source)) {
+    for (const auto& [partId, staffId] : recordKeys(source)) {
         for (const auto meas : source.pool->secondCmpersForTag(source.identity, staffId, partId)) {
             const auto rows = source.pool->getArray(source.identity, staffId, meas, partId);
             const auto words = collectRecordWords(source, rows, context.profile.byteOrder);

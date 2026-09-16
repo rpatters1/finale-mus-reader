@@ -77,7 +77,7 @@ bool sourceStoresCategoryLists(const ImportContext& context)
 void reportUnsupportedOverrides(const ImportContext& context, records::LegacyTag identity, std::string_view component)
 {
     const RecordFamilySource source{.pool = &context.index.getClassOthers(), .identity = identity, .classRecords = true};
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         context.report.diagnostics.push_back(
             {musx::util::Logger::LogLevel::Info, "Category " + std::string(component) + " staff-list override " + std::to_string(cmper) + " for part "
                                                      + std::to_string(partId) + " is unsupported and was ignored."});
@@ -87,7 +87,7 @@ void reportUnsupportedOverrides(const ImportContext& context, records::LegacyTag
 template <typename Target, typename OnImported>
 void importStaffListArrays(const ImportContext& context, const RecordFamilySource& source, OnImported&& onImported)
 {
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -139,7 +139,7 @@ std::string staffListNameBytes(std::span<const std::uint8_t> payload)
 template <typename Target, typename OnImported>
 void importStaffListNames(const ImportContext& context, const RecordFamilySource& source, OnImported&& onImported)
 {
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;

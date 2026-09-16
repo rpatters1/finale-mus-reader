@@ -26,7 +26,7 @@ void importClefOctaveArrays(const ImportContext& context, records::LegacyTag tag
     if (!source) {
         return;
     }
-    for (const auto [partId, cmper1] : recordKeys(*source)) {
+    for (const auto& [partId, cmper1] : recordKeys(*source)) {
         for (const auto cmper2 : source->pool->secondCmpersForTag(source->identity, cmper1, partId)) {
             const auto rows = source->pool->getArray(source->identity, cmper1, cmper2, partId);
             if (rows.empty()) {
@@ -45,11 +45,10 @@ void importClefOctaveArrays(const ImportContext& context, records::LegacyTag tag
                 const auto key = reporting.template instanceKey<Target>(partId, cmper1, std::nullopt, cmper2);
                 reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
                 for (std::size_t index = 0; index < target->values.size(); ++index) {
-                    const auto rowIndex = source->classRecords ? 0 : index / records::detailWordCount;
-                    const auto byteOffset = source->classRecords ? index * 2 : (index % records::detailWordCount) * 2;
+                    const auto& row = source->rowOfWord(rows, index);
+                    const auto byteOffset = source->byteOffsetInRow(index * 2);
                     reporting.report().setField(key, "values[" + std::to_string(index) + "]",
-                        {Reporting::Origin::LegacyMus, rows[rowIndex].blockOffset, rows[rowIndex].decodedOffset + byteOffset, target->values[index],
-                            source->identity});
+                        {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + byteOffset, target->values[index], source->identity});
                 }
             });
             context.document->getDetails()->add(Target::XmlNodeName, std::move(target));

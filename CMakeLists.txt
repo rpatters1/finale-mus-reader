@@ -246,6 +246,13 @@ add_library(finale_mus_reader STATIC
 finale_mus_reader_enable_unity(finale_mus_reader)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 
+# The same warning policy as the tests: every diagnostic is a build break.
+if(MSVC)
+    target_compile_options(finale_mus_reader PRIVATE /W4 /WX)
+else()
+    target_compile_options(finale_mus_reader PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 set(FINALE_MUS_READER_INSTRUMENTATION_ENABLED OFF)
 if(FINALE_MUS_READER_INSTRUMENTATION STREQUAL "ON"
         OR (FINALE_MUS_READER_INSTRUMENTATION STREQUAL "AUTO" AND FINALE_MUS_READER_BUILD_TESTING))

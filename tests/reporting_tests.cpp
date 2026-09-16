@@ -8,6 +8,20 @@
 
 #include "musx/dom/Others.h"
 
+namespace reporting_test_internal {
+
+// Named rather than anonymous: ReportState<TestReportData<Reporting>> holds this by value and
+// has external linkage, and under the unity build GCC rejects an anonymous-namespace member
+// there (-Wsubobject-linkage).
+
+template <typename Reporting>
+struct TestReportData
+{
+    typename Reporting::FieldInfo info;
+};
+
+} // namespace reporting_test_internal
+
 namespace {
 
 using namespace finale_mus_reader;
@@ -22,11 +36,7 @@ constexpr bool enabled = false;
 template <typename T>
 concept HasFieldReports = requires(T report) { report.fields; };
 
-template <typename Reporting>
-struct TestReportData
-{
-    typename Reporting::FieldInfo info;
-};
+using reporting_test_internal::TestReportData;
 
 void require(bool condition, const char* message)
 {

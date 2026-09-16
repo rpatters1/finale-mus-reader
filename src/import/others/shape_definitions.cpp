@@ -162,7 +162,7 @@ ShapeInstructionType instructionType(records::LegacyTag tag, bool early)
 void importShapeData(const ShapeSourceFamily& source, const ImportContext& context)
 {
     const RecordFamilySource recordSource{source.pool, source.data, source.classRecords};
-    for (const auto [partId, cmper] : recordKeys(recordSource)) {
+    for (const auto& [partId, cmper] : recordKeys(recordSource)) {
         if (cmper == 0) {
             // Comparator 0 means "no data" wherever a ShapeDef stores it, so nothing ever
             // resolves this comparator; a physical record here is leftover bytes from a
@@ -217,7 +217,7 @@ void importShapeData(const ShapeSourceFamily& source, const ImportContext& conte
 void importShapeInstructions(const ShapeSourceFamily& source, const ImportContext& context)
 {
     const RecordFamilySource recordSource{source.pool, source.instructions, source.classRecords};
-    for (const auto [partId, cmper] : recordKeys(recordSource)) {
+    for (const auto& [partId, cmper] : recordKeys(recordSource)) {
         if (cmper == 0) {
             // Comparator 0 means "no instructions" wherever a ShapeDef stores it (see
             // ShapeDef::isBlank(), which returns true on sight without resolving it), so
@@ -272,7 +272,7 @@ void importShapeInstructions(const ShapeSourceFamily& source, const ImportContex
 void importShapeDefs(const ShapeSourceFamily& source, const ImportContext& context)
 {
     const RecordFamilySource recordSource{source.pool, source.definition, source.classRecords};
-    for (const auto [partId, cmper] : recordKeys(recordSource)) {
+    for (const auto& [partId, cmper] : recordKeys(recordSource)) {
         if (cmper == 0) {
             // Comparator 0 means "no shape" wherever it is stored (ClefDef::shapeId,
             // MultimeasureRestOptions::shapeDef, and so on all treat 0 as absent before
@@ -335,7 +335,7 @@ void validateShapeDefinitions(const ShapeSourceFamily& source, const ImportConte
     std::size_t externalGraphics = 0;
     std::size_t unresolvedGraphicAssignments = 0;
     const RecordFamilySource recordSource{source.pool, source.definition, source.classRecords};
-    for (const auto [partId, cmper] : recordKeys(recordSource)) {
+    for (const auto& [partId, cmper] : recordKeys(recordSource)) {
         const auto shape = context.document->getOthers()->get<ShapeDefTarget>(partId, cmper);
         if (!shape || shape->isBlank()) {
             continue;

@@ -57,10 +57,10 @@ struct StaffUsedEntry
     std::shared_ptr<StaffUsedTarget> target;
     StaffUsedSourcePosition staffIdSource;
     StaffUsedSourcePosition distanceSource;
-    std::optional<StaffUsedSourcePosition> startMeasSource;
-    std::optional<StaffUsedSourcePosition> startEduSource;
-    std::optional<StaffUsedSourcePosition> endMeasSource;
-    std::optional<StaffUsedSourcePosition> endEduSource;
+    std::optional<StaffUsedSourcePosition> startMeasSource{};
+    std::optional<StaffUsedSourcePosition> startEduSource{};
+    std::optional<StaffUsedSourcePosition> endMeasSource{};
+    std::optional<StaffUsedSourcePosition> endEduSource{};
 };
 
 struct StaffUsedListSource
@@ -84,8 +84,8 @@ musx::dom::Cmper modernStaffUsedCmper(const ImportContext& context, musx::dom::C
 StaffUsedSourcePosition sourcePosition(
     const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t byteOffset, std::int64_t rawValue)
 {
-    const auto& row = rows[source.classRecords ? 0 : byteOffset / rowBytes];
-    return {row.blockOffset, row.decodedOffset + (source.classRecords ? byteOffset : byteOffset % rowBytes), source.identity, rawValue};
+    const auto& row = source.rowOfByte(rows, byteOffset);
+    return {row.blockOffset, row.decodedOffset + source.byteOffsetInRow(byteOffset), source.identity, rawValue};
 }
 
 template <typename Reporting>
@@ -208,7 +208,7 @@ void importStaffUsedFamily(const ImportContext& context, const RecordFamilySourc
     const bool storesRange = source.classRecords || source.identity == rangedStaffUsedTag;
     const bool earlyLayout = !storesRange && sourcePredatesVersion(context.profile, FormatEpoch::UncompressedLegacy, versions::finale3_5);
     const std::size_t elementBytes = earlyLayout ? earlyElementBytes : storesRange ? rangedElementBytes : rowBytes;
-    for (const auto [partId, cmper] : recordKeys(source)) {
+    for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
         if (rows.empty()) {
             continue;
@@ -219,7 +219,7 @@ void importStaffUsedFamily(const ImportContext& context, const RecordFamilySourc
         const auto completeSize = payload.size() - payload.size() % elementBytes;
         for (std::size_t offset = 0; offset < completeSize; offset += elementBytes) {
             const auto rowCount = source.classRecords ? 1 : (std::max)(std::size_t(1), elementBytes / rowBytes);
-            const auto firstRow = std::span<const records::LegacyRow>(rows.data() + (source.classRecords ? 0 : offset / rowBytes), rowCount);
+            const auto firstRow = std::span<const records::LegacyRow>(&source.rowOfByte(rows, offset), rowCount);
             auto entry = readStaffUsedEntry(context, source, firstRow, std::span(payload).subspan(offset, elementBytes),
                 source.classRecords ? offset
                 : earlyLayout       ? offset % rowBytes
