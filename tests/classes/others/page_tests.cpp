@@ -49,7 +49,7 @@ TEST_CASE("Page recovers the complete fixed-row layout")
     expect(page != nullptr, "The fixed-row Page was not constructed");
     expectCompletePage(*page);
     for (const auto* member : {"height", "width", "percent", "firstSystemId", "holdMargins", "margTop", "margLeft", "margBottom", "margRight"}) {
-        const auto* source = report.findField<Page>(member, musx::dom::SCORE_PARTID, 1);
+        const auto* source = report.findField<Page>(member, musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
         expect(source && source->origin == ValueOrigin::LegacyMus, std::string("A Page member has the wrong origin: ") + member);
     }
     expect(reportedFieldCount(report) == Page::xmlMappingArray().size(), "The Page report does not exhaust its persisted field manifest");
@@ -70,7 +70,7 @@ TEST_CASE("Page recovers compact auxiliary records in either byte order")
         REQUIRE(page);
         expectCompletePage(*page);
         for (const auto* member : {"percent", "holdMargins", "margTop", "margLeft", "margBottom", "margRight"}) {
-            const auto* source = report.findField<Page>(member, musx::dom::SCORE_PARTID, 1);
+            const auto* source = report.findField<Page>(member, musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
             CHECK(source);
             CHECK(source->origin == ValueOrigin::LegacyMus);
         }
@@ -116,7 +116,7 @@ TEST_CASE("Page preserves independent score and part pagination")
     CHECK(part->width == 2500);
     CHECK(part->firstSystemId == 4);
     CHECK(part->percent == 85);
-    const auto* source = report.findField<Page>("width", 3, 1);
+    const auto* source = report.findField<Page>("width", musx::dom::Cmper(3), musx::dom::Cmper(1));
     REQUIRE(source);
     CHECK(source->origin == ValueOrigin::LegacyMus);
 }
@@ -149,7 +149,7 @@ TEST_CASE("Page recovers controlled fixtures across every epoch")
                && page100Edited->margLeft == 146 && page100Edited->margBottom == 148 && page100Edited->margRight == -147,
         "Finale 1.0 auxiliary Page fields were not recovered");
     for (const auto* member : {"percent", "holdMargins", "margTop", "margLeft", "margBottom", "margRight"}) {
-        const auto* source = coda100Edited.report.findField<Page>(member, musx::dom::SCORE_PARTID, 1);
+        const auto* source = coda100Edited.report.findField<Page>(member, musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
         expect(source && source->origin == ValueOrigin::LegacyMus, std::string("An auxiliary Page member has the wrong origin: ") + member);
     }
 
@@ -158,10 +158,10 @@ TEST_CASE("Page recovers controlled fixtures across every epoch")
     expect(page100Held && page100Held->percent == 91 && page100Held->holdMargins && page100Held->margTop == -145 && page100Held->margLeft == 146
                && page100Held->margBottom == 148 && page100Held->margRight == -147,
         "Finale 1.0 Page Hold Margins was not recovered independently");
-    const auto* heldMargins = coda100Held.report.findField<Page>("holdMargins", musx::dom::SCORE_PARTID, 1);
+    const auto* heldMargins = coda100Held.report.findField<Page>("holdMargins", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     expect(heldMargins && heldMargins->origin == ValueOrigin::LegacyMus, "Finale 1.0 Page Hold Margins has the wrong origin");
 
-    const auto* unscaledPercent = coda100.report.findField<Page>("percent", musx::dom::SCORE_PARTID, 1);
+    const auto* unscaledPercent = coda100.report.findField<Page>("percent", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     expect(unscaledPercent && unscaledPercent->origin == ValueOrigin::LegacyBehavior,
         "A Page without a percentage record did not report its unscaled behavior");
 
@@ -171,10 +171,10 @@ TEST_CASE("Page recovers controlled fixtures across every epoch")
                && page263->margBottom == 144 && page263->margRight == -144,
         "Finale 2.6.3 Page behavior was not recovered");
     for (const auto* member : {"percent", "margTop", "margLeft", "margBottom", "margRight"}) {
-        const auto* source = coda263.report.findField<Page>(member, musx::dom::SCORE_PARTID, 1);
+        const auto* source = coda263.report.findField<Page>(member, musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
         expect(source && source->origin == ValueOrigin::LegacyMus, std::string("A compact Page member has the wrong origin: ") + member);
     }
-    const auto* holdMargins = coda263.report.findField<Page>("holdMargins", musx::dom::SCORE_PARTID, 1);
+    const auto* holdMargins = coda263.report.findField<Page>("holdMargins", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     expect(holdMargins && holdMargins->origin == ValueOrigin::LegacyMus, "Compact Page Hold Margins has the wrong origin");
 
     for (const auto* relative : {"evidence/F372/F372-4systems.mus", "evidence/F2002/F2002-empty.mus", "evidence/F2007/F2007-lyric-hyphens.mus",
