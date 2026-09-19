@@ -67,6 +67,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMusicSymbolOptions: return "music_symbol_options";
     case Phase::ImportNoteRestOptions: return "note_rest_options";
     case Phase::ImportPageFormatOptions: return "page_format_options";
+    case Phase::ImportPages: return "pages";
     case Phase::ImportPageGraphicAssignments: return "page_graphic_assigns";
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportPartDefinitions: return "part_defs";

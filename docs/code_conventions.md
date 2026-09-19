@@ -88,6 +88,8 @@ retains a field awaiting reference resolution. Class-specific accumulated metada
 These wrappers have no payload with instrumentation disabled. Do not create parallel origin
 enums or recompute decoding decisions to construct reports; pass the decoder's existing outcomes.
 
-Validate reporting changes with the instrumented suite and a complete non-instrumented library
-build. `FINALE_MUS_READER_BUILD_REPORTING_TESTING=ON` enables the standalone `reporting` test
-in either configuration without requiring an XML backend.
+Validate reporting changes with the instrumented suite. Do not run a complete non-instrumented
+library build during ordinary implementation or validation. That build is required only by the
+`prepare-pull-request` skill when opening a pull request, or when the user explicitly requests it.
+`FINALE_MUS_READER_BUILD_REPORTING_TESTING=ON` enables the standalone `reporting` test in either
+configuration without requiring an XML backend.
