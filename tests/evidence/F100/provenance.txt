@@ -17,6 +17,27 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-baseline-recalc.mus / .etf / -finale27/F100-baseline-recalc.musx
+    sha256 0a96195954bd024ba331496b17ae61f2930eb6863a974aabb4b1762119f7570f (.mus)
+    sha256 00d790b075dda917f0dfa5577c49e921794d2c1472a2df9905f699eb16ed7503 (.etf)
+    sha256 f21c4a146e2e3a83ca1da2e5bebfbcbe1877df82319c5d5d29e16749e37ad1f1 (.musx)
+    Derived from F100-baseline by invoking Update Layout to materialize Page 1 without changing
+    its default dimensions, margins, or scaling.
+
+F100-page-margin-percent.mus / .etf / -finale27/F100-page-margin-percent.musx
+    sha256 58cee27a1f9dc83344955d50e276449a8e5685e333ed5d236e7294eba54cfce8 (.mus)
+    sha256 defebfd08612735b384aa58b0da5f950d4814808e09ae7bc280ba77de1df8084 (.etf)
+    sha256 d2cb42f9b9cf5ced3bb51bd20af45ea612931513fbb90d2f6260f30777071532 (.musx)
+    Derived from F100-baseline-recalc by setting Page 1's top, left, bottom, and right margins to
+    -145, 146, 148, and -147 EVPUs and its page scaling to 91 percent.
+
+F100-page-91hold.mus / .etf / -finale27/F100-page-91hold.musx
+    sha256 eeb2323fbb24bb095987720343f46fbac69fe6a2963c5016d121925c414151fe (.mus)
+    sha256 1cf87252c3e70403dbecc7a39a118b50f1caa105d5e2c998e855ffd5a99db0e0 (.etf)
+    sha256 f5b6788d11ce0b9bc5be40a76e0d777bc1cbb532f4078def89a4794bba2e3d08 (.musx)
+    Derived from F100-page-margin-percent by changing only Hold Margins. The `PP(1)` final word
+    changes from zero to `0x4000`; the companion adds `scaleContentOnly`.
+
 F100-4systems.mus / .etf / -finale27/F100-4systems.musx
     sha256 df6bcfe8a7865384b184caf96bdd8eef4884fcb73381c2a9c7f28cf2f4edcc3e (.mus)
     sha256 222149b1e45c3a8d60676a4b557cefc433f260f1ae45c47e683ce3217084b681 (.etf)

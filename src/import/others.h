@@ -77,6 +77,9 @@ void importMarkingCategories(const ImportContext& context);
 /// @brief Recovers page graphic assignments and their embedded-graphic references.
 void importPageGraphicAssignments(const ImportContext& context);
 
+/// @brief Recovers page-layout objects and their first-system references.
+void importPages(const ImportContext& context);
+
 /// @brief Recovers PartDefinition objects, and supplies the score part every era has.
 void importPartDefinitions(const ImportContext& context);
 

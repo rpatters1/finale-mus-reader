@@ -417,7 +417,11 @@ void expectNoScoreContent(const ImportResult& result)
             result.report.findInstanceOrigin(finale_mus_reader::instanceKey<others::StaffSystem>(system->getSourcePartId(), system->getCmper()));
         expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains a staff system no source record built");
     }
-    expect(result.document->getOthers()->getArray<others::Page>(SCORE_PARTID).empty(), "Output contains fallback pages");
+    for (const auto& page : result.document->getOthers()->getArray<others::Page>(SCORE_PARTID)) {
+        const auto* origin =
+            result.report.findInstanceOrigin(finale_mus_reader::instanceKey<others::Page>(page->getSourcePartId(), page->getCmper()));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains a page no source record built");
+    }
     // Part definitions are not absent: musxdom requires a score part, and every era has one
     // whether or not it stored a record. What must not appear is the baseline's, which names a
     // text block this document does not have -- so the reader's own score part carries no name.
