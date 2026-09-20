@@ -57,18 +57,18 @@ void importCodaBeatChartFamily(const ImportContext& context, const RecordFamilyS
         const auto& endPosRow = source.rowOfWord(rows, at / 2 + 3);
         const auto& trailingRow = source.rowOfWord(rows, at / 2 + 4);
         if (sourceInci == 0) {
-            auto control = createOthersRecordTarget<BeatChartTarget>(context.document, source, rows.front(), cmper, 0);
+            auto control = createOthersRecordTarget<BeatChartTarget>(context.document, source, rows.front(), cmper, sourceInci);
             if (control) {
                 control->control = std::make_shared<BeatChartTarget::Control>();
                 control->control->totalDur = edu;
                 control->control->totalWidth = trailing;
                 withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                    reportBeatChartField<Reporting>(reporting, partId, cmper, 0, "control.totalDur", edu, longRow);
-                    reportBeatChartField<Reporting>(reporting, partId, cmper, 0, "control.totalWidth", trailing, trailingRow);
-                    reportDefaultBeatChartField<Reporting>(reporting, partId, cmper, 0, "control.minWidth");
-                    reportDefaultBeatChartField<Reporting>(reporting, partId, cmper, 0, "control.allotWidth");
+                    reportBeatChartField<Reporting>(reporting, partId, cmper, sourceInci, "control.totalDur", edu, longRow);
+                    reportBeatChartField<Reporting>(reporting, partId, cmper, sourceInci, "control.totalWidth", trailing, trailingRow);
+                    reportDefaultBeatChartField<Reporting>(reporting, partId, cmper, sourceInci, "control.minWidth");
+                    reportDefaultBeatChartField<Reporting>(reporting, partId, cmper, sourceInci, "control.allotWidth");
                     reporting.report().setInstanceOrigin(
-                        reporting.template instanceKey<BeatChartTarget>(partId, cmper, 0), Reporting::Origin::LegacyMus);
+                        reporting.template instanceKey<BeatChartTarget>(partId, cmper, sourceInci), Reporting::Origin::LegacyMus);
                 });
                 context.document->getOthers()->add(BeatChartTarget::XmlNodeName, std::move(control));
             }
