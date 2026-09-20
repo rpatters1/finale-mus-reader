@@ -8,6 +8,8 @@ namespace {
 
 using namespace classes;
 using BeatChartElement = musx::dom::others::BeatChartElement;
+constexpr musx::dom::Cmper syntheticCmper = 7;
+constexpr musx::dom::Cmper fixtureCmper = 1;
 
 ImportReport importBeatChart(const finale_mus_reader::container::ParsedContainer& parsed, musx::dom::DocumentPtr& document)
 {
@@ -28,8 +30,8 @@ ImportReport importBeatChart(const finale_mus_reader::container::ParsedContainer
 
 void checkBeatChart(const musx::dom::DocumentPtr& document, const ImportReport& report)
 {
-    const auto control = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(0));
-    const auto element = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(1));
+    const auto control = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(0));
+    const auto element = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(1));
     REQUIRE(control);
     REQUIRE(control->control);
     CHECK(control->control->totalDur == 4096);
@@ -43,8 +45,8 @@ void checkBeatChart(const musx::dom::DocumentPtr& document, const ImportReport& 
     CHECK(element->endPos == 168);
     CHECK(element->minPos == -59);
 
-    const auto controlKey = finale_mus_reader::instanceKey<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(0));
-    const auto elementKey = finale_mus_reader::instanceKey<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(1));
+    const auto controlKey = finale_mus_reader::instanceKey<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(0));
+    const auto elementKey = finale_mus_reader::instanceKey<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(1));
     REQUIRE(report.fields.contains(controlKey));
     REQUIRE(report.fields.contains(elementKey));
     CHECK(report.fields.at(controlKey).size() == BeatChartElement::Control::xmlMappingArray().size());
@@ -55,7 +57,8 @@ void checkBeatChart(const musx::dom::DocumentPtr& document, const ImportReport& 
 
 TEST_CASE("BeatChartElement recovers its row tuple in every epoch", "[class][beat-chart-element]")
 {
-    const std::vector<SyntheticRow> fixedRows{{7, "BC", {0, 4096, 304, 155, 189, 1}}, {7, "BC", {0, 1024, -84, 168, -59, 0}}};
+    const std::vector<SyntheticRow> fixedRows{
+        {syntheticCmper, "BC", {0, 4096, 304, 155, 189, 1}}, {syntheticCmper, "BC", {0, 1024, -84, 168, -59, 0}}};
     const std::vector<std::int16_t> classWords{4096, 0, 304, 155, 189, 1, 1024, 0, -84, 168, -59, 0};
     for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         musx::dom::DocumentPtr document;
@@ -63,18 +66,18 @@ TEST_CASE("BeatChartElement recovers its row tuple in every epoch", "[class][bea
         checkBeatChart(document, report);
     }
     musx::dom::DocumentPtr document;
-    const auto report = importBeatChart(makeClassContainer(0x007a, classWords, ByteOrder::LittleEndian, 7), document);
+    const auto report = importBeatChart(makeClassContainer(0x007a, classWords, ByteOrder::LittleEndian, syntheticCmper), document);
     checkBeatChart(document, report);
 }
 
 TEST_CASE("Coda BeatChartElement separates the control and first positioned element", "[class][beat-chart-element]")
 {
-    const std::vector<SyntheticRow> rows{{7, "BC", {0, 4096, 44, 92, 839, 0}}, {7, "BC", {0, 256, 147, 195, 588, 0}}};
+    const std::vector<SyntheticRow> rows{{syntheticCmper, "BC", {0, 4096, 44, 92, 839, 0}}, {syntheticCmper, "BC", {0, 256, 147, 195, 588, 0}}};
     musx::dom::DocumentPtr document;
     const auto report = importBeatChart(makeContainer(rows, FormatEpoch::CodaBanner), document);
-    const auto control = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(0));
-    const auto first = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(1));
-    const auto second = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(2));
+    const auto control = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(0));
+    const auto first = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(1));
+    const auto second = document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(2));
     REQUIRE(control);
     REQUIRE(control->control);
     CHECK(control->control->totalDur == 4096);
@@ -99,8 +102,8 @@ TEST_CASE("Coda BeatChartElement separates the control and first positioned elem
 TEST_CASE("BeatChartElement recovers tracked fixed-row fixtures", "[class][beat-chart-element][fixture]")
 {
     const auto uncompressed = readFixture("evidence/F97/F97-disptime.mus");
-    const auto first = uncompressed.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
-    const auto last = uncompressed.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(12));
+    const auto first = uncompressed.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, fixtureCmper, musx::dom::Inci(0));
+    const auto last = uncompressed.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, fixtureCmper, musx::dom::Inci(12));
     REQUIRE(first);
     REQUIRE(first->control);
     CHECK(first->control->totalDur == 4096);
@@ -114,8 +117,8 @@ TEST_CASE("BeatChartElement recovers tracked fixed-row fixtures", "[class][beat-
     CHECK(last->minPos == 578);
 
     const auto dcl = readFixture("evidence/F2004/F2004-brakpos-17.mus");
-    const auto dclControl = dcl.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(0));
-    const auto dclElement = dcl.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 1, musx::dom::Inci(2));
+    const auto dclControl = dcl.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, fixtureCmper, musx::dom::Inci(0));
+    const auto dclElement = dcl.document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, fixtureCmper, musx::dom::Inci(2));
     REQUIRE(dclControl);
     REQUIRE(dclControl->control);
     CHECK(dclControl->control->totalDur == 4096);
@@ -130,9 +133,10 @@ TEST_CASE("BeatChartElement recovers tracked fixed-row fixtures", "[class][beat-
 TEST_CASE("BeatChartElement rejects an incomplete trailing tuple", "[class][beat-chart-element]")
 {
     musx::dom::DocumentPtr document;
-    const auto report = importBeatChart(makeClassContainer(0x007a, {4096, 0, 304, 155, 189, 1, 99}, ByteOrder::LittleEndian, 7), document);
-    CHECK(document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(0)));
-    CHECK_FALSE(document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, 7, musx::dom::Inci(1)));
+    const auto report =
+        importBeatChart(makeClassContainer(0x007a, {4096, 0, 304, 155, 189, 1, 99}, ByteOrder::LittleEndian, syntheticCmper), document);
+    CHECK(document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(0)));
+    CHECK_FALSE(document->getOthers()->get<BeatChartElement>(musx::dom::SCORE_PARTID, syntheticCmper, musx::dom::Inci(1)));
     CHECK(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
         [](const auto& diagnostic) { return diagnostic.message.find("incomplete trailing element") != std::string::npos; }));
 }
