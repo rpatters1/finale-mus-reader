@@ -64,6 +64,14 @@ F2012-baseline.mus
     sha256 aa95324d39ef94f1340133d637b52206eeddaf1c7442fb0ac1a81c3e444639f3
     The unedited control for the Finale 2012 text saves below.
 
+F2012-piano.mus
+    sha256 490270f73e3f31b28ffabb87d52f36896264065e24e6634a05445bce327a6560
+-finale27/F2012-piano.musx
+    sha256 f7ba88aa769b39dea7b9b9ce8102b26f944e89b8aa8347818b6ecf306386cb12
+    From F2012-baseline, changed the single-staff instrument to piano. The source
+    contains two staves in one multi-staff instrument and its staff-group reference;
+    the Finale 27 companion preserves both objects.
+
 F2012-hidestafflines.mus
     sha256 fc124ac5f2bd9094acf3b720bce80a90e6eaff61132f7d413176f17eb8551c75
 -finale27/F2012-hidestafflines.musx
