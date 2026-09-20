@@ -13,13 +13,15 @@ inline musx::dom::DocumentPtr baselineReferenceDocument()
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     const auto addExpression = [&]<typename T>(musx::dom::Evpu displacement) {
-        auto value = std::make_shared<T>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 0, 0);
+        auto value = std::make_shared<T>(
+            document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{0}, musx::dom::Cmper{0});
         value->baselineDisplacement = displacement;
         document->getDetails()->add(T::XmlNodeName, std::move(value));
     };
     const auto add = [&]<typename T>() {
         for (musx::dom::Inci inci = 0; inci < 10; ++inci) {
-            auto value = std::make_shared<T>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 0, 0, inci);
+            auto value = std::make_shared<T>(
+                document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{0}, musx::dom::Cmper{0}, inci);
             value->baselineDisplacement = -144 - 40 * inci;
             value->lyricNumber = static_cast<musx::dom::Cmper>(inci + 1);
             document->getDetails()->add(T::XmlNodeName, std::move(value));

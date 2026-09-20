@@ -12,6 +12,13 @@ namespace {
 using namespace classes;
 using namespace musx::dom::details;
 
+constexpr musx::dom::Cmper cmperZero = 0;
+constexpr musx::dom::Cmper cmperOne = 1;
+constexpr musx::dom::Cmper cmperTwo = 2;
+constexpr musx::dom::Cmper cmperEight = 8;
+constexpr musx::dom::Inci inciZero = 0;
+constexpr musx::dom::Inci inciNine = 9;
+
 musx::dom::DocumentPtr baselineDocument()
 {
     return musx::factory::DocumentFactory::begin().getDocument();
@@ -119,7 +126,7 @@ void checkShortPartialGlobalLyricArray(std::uint16_t classId)
     profile.byteOrder = byteOrder;
     const auto document = baselineDocument();
     const auto report = importBaselines(parsed, profile, document);
-    const auto values = document->getDetails()->getArray<T>(2, 0, 0);
+    const auto values = document->getDetails()->getArray<T>(cmperTwo, cmperZero, cmperZero);
     REQUIRE(values.size() == 10);
     for (std::size_t index = 0; index < values.size(); ++index) {
         const auto expected = index == 2 ? -165 : index == 5 ? -144 : -144 - 40 * static_cast<std::int32_t>(index);
@@ -127,27 +134,27 @@ void checkShortPartialGlobalLyricArray(std::uint16_t classId)
         CHECK(values[index]->lyricNumber == index + 1);
         CHECK(values[index]->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial);
     }
-    CHECK(report.findField<T>("baselineDisplacement", 2, 0, 9, 0)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<T>("baselineDisplacement", cmperTwo, cmperZero, inciNine, cmperZero)->origin == ValueOrigin::LegacyMus);
 }
 
 template <typename GlobalT, typename SystemT>
-void checkSharedFixedSelector(const char* tag, std::optional<std::uint16_t> lyricNumber = std::nullopt)
+void checkSharedFixedSelector(const char* tag, std::optional<musx::dom::Cmper> lyricNumber = std::nullopt)
 {
     constexpr musx::dom::Cmper system = 8;
     constexpr musx::dom::Cmper staff = 1;
     const auto parsed = makeDetailContainer(FormatEpoch::UncompressedLegacy, system, staff,
-        baselineWords(-222, lyricNumber.value_or(0), ByteOrder::BigEndian), tag, ByteOrder::BigEndian);
+        baselineWords(-222, lyricNumber.value_or(cmperZero), ByteOrder::BigEndian), tag, ByteOrder::BigEndian);
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     const auto document = baselineDocument();
     const auto report = importBaselines(parsed, profile, document);
 
-    CHECK(document->getDetails()->getArray<GlobalT>(0, system, staff).empty());
-    const auto values = document->getDetails()->getArray<SystemT>(0, system, staff);
+    CHECK(document->getDetails()->getArray<GlobalT>(cmperZero, system, staff).empty());
+    const auto values = document->getDetails()->getArray<SystemT>(cmperZero, system, staff);
     REQUIRE(values.size() == 1);
     CHECK(values.front()->baselineDisplacement == -222);
     CHECK(values.front()->lyricNumber == lyricNumber);
-    CHECK(report.findField<SystemT>("baselineDisplacement", 0, system, values.front()->getInci(), staff)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<SystemT>("baselineDisplacement", cmperZero, system, values.front()->getInci(), staff)->origin == ValueOrigin::LegacyMus);
 }
 
 TEST_CASE("Baseline families recover the common struct in every located epoch", "[class][baseline]")
@@ -186,7 +193,7 @@ TEST_CASE("Baseline rejects an incomplete coalesced struct", "[class][baseline]"
     const auto document = baselineDocument();
     const auto report = importBaselines(
         makeDetailClassContainer(0, 0, musx::dom::SCORE_PARTID, {144, 0, 1, 0, 0, 7}, ByteOrder::LittleEndian, 0x03f6), profile, document);
-    CHECK(document->getDetails()->getArray<BaselineLyricsChorus>(0, 0, 0).empty());
+    CHECK(document->getDetails()->getArray<BaselineLyricsChorus>(cmperZero, cmperZero, cmperZero).empty());
     CHECK(report.diagnostics.size() == 1);
 }
 
@@ -205,15 +212,15 @@ TEST_CASE("Baseline leaves absent global lyric families absent", "[class][baseli
     const auto report = importBaselines(
         makeDetailClassContainer(0, 0, musx::dom::SCORE_PARTID, baselineWords(-777, 7, ByteOrder::LittleEndian), ByteOrder::LittleEndian, 0x03f8),
         profile, document);
-    const auto verses = document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto verses = document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     REQUIRE(verses.size() == 1);
     CHECK(verses.front()->baselineDisplacement == -777);
     CHECK(verses.front()->lyricNumber == 7);
-    CHECK(report.findField<BaselineLyricsVerse>("baselineDisplacement", 0, 0, 0, 0)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<BaselineLyricsVerse>("baselineDisplacement", cmperZero, cmperZero, inciZero, cmperZero)->origin == ValueOrigin::LegacyMus);
 
-    const auto choruses = document->getDetails()->getArray<BaselineLyricsChorus>(0, 0, 0);
+    const auto choruses = document->getDetails()->getArray<BaselineLyricsChorus>(cmperZero, cmperZero, cmperZero);
     CHECK(choruses.empty());
-    CHECK(document->getDetails()->getArray<BaselineLyricsSection>(0, 0, 0).empty());
+    CHECK(document->getDetails()->getArray<BaselineLyricsSection>(cmperZero, cmperZero, cmperZero).empty());
 }
 
 TEST_CASE("Extended lyric baseline number comes from the integer tag component", "[class][baseline]")
@@ -232,13 +239,13 @@ TEST_CASE("Extended lyric baseline number comes from the integer tag component",
     auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
     profile.byteOrder = ByteOrder::BigEndian;
     const auto report = importBaselines(parsed, profile, document);
-    const auto verses = document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto verses = document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     REQUIRE(verses.size() == 1);
     CHECK(verses.front()->getInci() == 0);
     CHECK(verses.front()->baselineDisplacement == -222);
     CHECK(verses.front()->lyricNumber == 3);
-    CHECK(report.findField<BaselineLyricsVerse>("lyricNumber", 0, 0, 0, 0)->origin == ValueOrigin::LegacyMus);
-    const auto systemVerses = document->getDetails()->getArray<BaselineSystemLyricsVerse>(0, 8, 1);
+    CHECK(report.findField<BaselineLyricsVerse>("lyricNumber", cmperZero, cmperZero, inciZero, cmperZero)->origin == ValueOrigin::LegacyMus);
+    const auto systemVerses = document->getDetails()->getArray<BaselineSystemLyricsVerse>(cmperZero, cmperEight, cmperOne);
     REQUIRE(systemVerses.size() == 2);
     CHECK(systemVerses[0]->getInci() == 0);
     CHECK(systemVerses[0]->baselineDisplacement == 0);
@@ -257,39 +264,43 @@ TEST_CASE("Baseline supplies each missing global expression family independently
         makeDetailClassContainer(0, 0, musx::dom::SCORE_PARTID, baselineWords(321, 0, ByteOrder::LittleEndian), ByteOrder::LittleEndian, 0x03f3),
         profile, document);
 
-    const auto above = document->getDetails()->getArray<BaselineExpressionsAbove>(0, 0, 0);
+    const auto above = document->getDetails()->getArray<BaselineExpressionsAbove>(cmperZero, cmperZero, cmperZero);
     REQUIRE(above.size() == 1);
     CHECK(above.front()->baselineDisplacement == 321);
-    CHECK(report.findField<BaselineExpressionsAbove>("baselineDisplacement", 0, 0, std::nullopt, 0)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<BaselineExpressionsAbove>("baselineDisplacement", cmperZero, cmperZero, std::nullopt, cmperZero)->origin
+        == ValueOrigin::LegacyMus);
 
-    const auto below = document->getDetails()->getArray<BaselineExpressionsBelow>(0, 0, 0);
+    const auto below = document->getDetails()->getArray<BaselineExpressionsBelow>(cmperZero, cmperZero, cmperZero);
     REQUIRE(below.size() == 1);
     CHECK(below.front()->baselineDisplacement == -144);
-    CHECK(report.findField<BaselineExpressionsBelow>("baselineDisplacement", 0, 0, std::nullopt, 0)->origin == ValueOrigin::Finale27Default);
-    CHECK(report.findField<BaselineExpressionsBelow>("lyricNumber", 0, 0, std::nullopt, 0)->origin == ValueOrigin::LegacyBehavior);
+    CHECK(report.findField<BaselineExpressionsBelow>("baselineDisplacement", cmperZero, cmperZero, std::nullopt, cmperZero)->origin
+        == ValueOrigin::Finale27Default);
+    CHECK(report.findField<BaselineExpressionsBelow>("lyricNumber", cmperZero, cmperZero, std::nullopt, cmperZero)->origin
+        == ValueOrigin::LegacyBehavior);
 }
 
 TEST_CASE("Controlled fixtures recover global baseline defaults", "[class][baseline]")
 {
     const auto earliest = readFixture("evidence/F100/F100-global-lyric-baseline.mus");
-    const auto earliestVerses = earliest.document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto earliestVerses = earliest.document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     REQUIRE(earliestVerses.size() == 1);
     CHECK(earliestVerses.front()->baselineDisplacement == -120);
     CHECK(earliestVerses.front()->lyricNumber == 1);
-    CHECK(earliest.report.findField<BaselineLyricsVerse>("baselineDisplacement", 0, 0, 0, 0)->origin == ValueOrigin::LegacyMus);
+    CHECK(earliest.report.findField<BaselineLyricsVerse>("baselineDisplacement", cmperZero, cmperZero, inciZero, cmperZero)->origin
+        == ValueOrigin::LegacyMus);
 
     const auto coda = readFixture("evidence/F263/F263-fretboards.mus");
-    const auto codaChords = coda.document->getDetails()->get<BaselineChords>(0, 0, 0);
-    const auto codaFretboards = coda.document->getDetails()->get<BaselineFretboards>(0, 0, 0);
+    const auto codaChords = coda.document->getDetails()->get<BaselineChords>(cmperZero, cmperZero, cmperZero);
+    const auto codaFretboards = coda.document->getDetails()->get<BaselineFretboards>(cmperZero, cmperZero, cmperZero);
     REQUIRE(codaChords);
     REQUIRE(codaFretboards);
     CHECK(codaChords->baselineDisplacement == 288);
     CHECK(codaFretboards->baselineDisplacement == 144);
 
     const auto fixedFretboards = readFixture("evidence/F372/F372-fretboard-baselines.mus");
-    const auto globalFretboard = fixedFretboards.document->getDetails()->get<BaselineFretboards>(0, 0, 0);
-    const auto staffFretboard = fixedFretboards.document->getDetails()->get<BaselineFretboards>(0, 0, 1);
-    const auto systemFretboard = fixedFretboards.document->getDetails()->get<BaselineSystemFretboards>(0, 1, 1);
+    const auto globalFretboard = fixedFretboards.document->getDetails()->get<BaselineFretboards>(cmperZero, cmperZero, cmperZero);
+    const auto staffFretboard = fixedFretboards.document->getDetails()->get<BaselineFretboards>(cmperZero, cmperZero, cmperOne);
+    const auto systemFretboard = fixedFretboards.document->getDetails()->get<BaselineSystemFretboards>(cmperZero, cmperOne, cmperOne);
     REQUIRE(globalFretboard);
     REQUIRE(staffFretboard);
     REQUIRE(systemFretboard);
@@ -297,12 +308,13 @@ TEST_CASE("Controlled fixtures recover global baseline defaults", "[class][basel
     CHECK(staffFretboard->baselineDisplacement == -48);
     CHECK(systemFretboard->baselineDisplacement == 24);
     CHECK(
-        fixedFretboards.report.findField<BaselineSystemFretboards>("baselineDisplacement", 0, 1, std::nullopt, 1)->origin == ValueOrigin::LegacyMus);
+        fixedFretboards.report.findField<BaselineSystemFretboards>("baselineDisplacement", cmperZero, cmperOne, std::nullopt, cmperOne)->origin
+        == ValueOrigin::LegacyMus);
 
     const auto fixed = readFixture("evidence/F2005/F2005-baseline.mus");
-    const auto chords = fixed.document->getDetails()->get<BaselineChords>(0, 0, 0);
-    const auto above = fixed.document->getDetails()->get<BaselineExpressionsAbove>(0, 0, 0);
-    const auto below = fixed.document->getDetails()->get<BaselineExpressionsBelow>(0, 0, 0);
+    const auto chords = fixed.document->getDetails()->get<BaselineChords>(cmperZero, cmperZero, cmperZero);
+    const auto above = fixed.document->getDetails()->get<BaselineExpressionsAbove>(cmperZero, cmperZero, cmperZero);
+    const auto below = fixed.document->getDetails()->get<BaselineExpressionsBelow>(cmperZero, cmperZero, cmperZero);
     REQUIRE(chords);
     REQUIRE(above);
     REQUIRE(below);
@@ -311,14 +323,15 @@ TEST_CASE("Controlled fixtures recover global baseline defaults", "[class][basel
     CHECK(below->baselineDisplacement == -144);
 
     const auto legacySystem = readFixture("evidence/F98/F98-baseline.mus");
-    const auto legacySystemChord = legacySystem.document->getDetails()->get<BaselineSystemChords>(0, 8, 1);
+    const auto legacySystemChord = legacySystem.document->getDetails()->get<BaselineSystemChords>(cmperZero, cmperEight, cmperOne);
     REQUIRE(legacySystemChord);
     CHECK(legacySystemChord->baselineDisplacement == 0);
-    CHECK_FALSE(legacySystem.document->getDetails()->get<BaselineChords>(0, 8, 1));
-    CHECK(legacySystem.report.findField<BaselineSystemChords>("baselineDisplacement", 0, 8, std::nullopt, 1)->origin == ValueOrigin::LegacyMus);
+    CHECK_FALSE(legacySystem.document->getDetails()->get<BaselineChords>(cmperZero, cmperEight, cmperOne));
+    CHECK(legacySystem.report.findField<BaselineSystemChords>("baselineDisplacement", cmperZero, cmperEight, std::nullopt, cmperOne)->origin
+        == ValueOrigin::LegacyMus);
 
     const auto classRecords = readFixture("evidence/F2012/F2012-baseline.mus");
-    const auto verses = classRecords.document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto verses = classRecords.document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     REQUIRE(verses.size() == 10);
     CHECK(verses.front()->baselineDisplacement == -144);
     CHECK(verses.front()->lyricNumber == 1);
@@ -326,7 +339,7 @@ TEST_CASE("Controlled fixtures recover global baseline defaults", "[class][basel
     CHECK(verses.back()->lyricNumber == 10);
 
     const auto extended = readFixture("evidence/F97/F97-altnotation.mus");
-    const auto extendedVerses = extended.document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto extendedVerses = extended.document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     REQUIRE(extendedVerses.size() == 10);
     CHECK(extendedVerses.front()->baselineDisplacement == -144);
     CHECK(extendedVerses.front()->lyricNumber == 1);
@@ -334,16 +347,18 @@ TEST_CASE("Controlled fixtures recover global baseline defaults", "[class][basel
     CHECK(extendedVerses.back()->lyricNumber == 10);
 
     const auto oldest = readFixture("evidence/F100/F100-baseline.mus");
-    const auto defaultVerses = oldest.document->getDetails()->getArray<BaselineLyricsVerse>(0, 0, 0);
+    const auto defaultVerses = oldest.document->getDetails()->getArray<BaselineLyricsVerse>(cmperZero, cmperZero, cmperZero);
     CHECK(defaultVerses.empty());
-    const auto defaultAbove = oldest.document->getDetails()->get<BaselineExpressionsAbove>(0, 0, 0);
-    const auto defaultBelow = oldest.document->getDetails()->get<BaselineExpressionsBelow>(0, 0, 0);
+    const auto defaultAbove = oldest.document->getDetails()->get<BaselineExpressionsAbove>(cmperZero, cmperZero, cmperZero);
+    const auto defaultBelow = oldest.document->getDetails()->get<BaselineExpressionsBelow>(cmperZero, cmperZero, cmperZero);
     REQUIRE(defaultAbove);
     REQUIRE(defaultBelow);
     CHECK(defaultAbove->baselineDisplacement == 144);
     CHECK(defaultBelow->baselineDisplacement == -144);
-    CHECK(oldest.report.findField<BaselineExpressionsAbove>("baselineDisplacement", 0, 0, std::nullopt, 0)->origin == ValueOrigin::Finale27Default);
-    CHECK(oldest.report.findField<BaselineExpressionsBelow>("baselineDisplacement", 0, 0, std::nullopt, 0)->origin == ValueOrigin::Finale27Default);
+    CHECK(oldest.report.findField<BaselineExpressionsAbove>("baselineDisplacement", cmperZero, cmperZero, std::nullopt, cmperZero)->origin
+        == ValueOrigin::Finale27Default);
+    CHECK(oldest.report.findField<BaselineExpressionsBelow>("baselineDisplacement", cmperZero, cmperZero, std::nullopt, cmperZero)->origin
+        == ValueOrigin::Finale27Default);
 }
 
 TEST_CASE("Baseline reporting covers the inherited persisted fields", "[class][baseline]")
