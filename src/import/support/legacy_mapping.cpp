@@ -242,6 +242,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportAcciAmountSharps, &others::importAcciAmountSharps),
         FINALE_MUS_READER_IMPORTER(ImportAcciOrderFlats, &others::importAcciOrderFlats),
         FINALE_MUS_READER_IMPORTER(ImportAcciOrderSharps, &others::importAcciOrderSharps),
+        FINALE_MUS_READER_IMPORTER(ImportBeatChartElements, &others::importBeatChartElements),
         FINALE_MUS_READER_IMPORTER(ImportBookmarks, &others::importBookmarks),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixElements, &others::importChordSuffixElements),
         FINALE_MUS_READER_IMPORTER(ImportChordSuffixPlayback, &others::importChordSuffixPlayback),
