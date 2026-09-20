@@ -34,6 +34,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportBarlineOptions: return "barline_options";
     case Phase::ImportBaselines: return "baselines";
     case Phase::ImportBeamOptions: return "beam_options";
+    case Phase::ImportBeatChartElements: return "beat_chart_elements";
     case Phase::ImportBookmarks: return "bookmarks";
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportChordSuffixElements: return "chord_suffix_elements";

@@ -55,6 +55,7 @@ add_executable(finale_mus_reader_tests
     classes/options/tie_options_tests.cpp
     classes/options/time_signature_options_tests.cpp
     classes/options/tuplet_options_tests.cpp
+    classes/others/beat_chart_element_tests.cpp
     classes/others/chord_suffix_tests.cpp
     classes/others/custom_keys_tests.cpp
     classes/others/drum_staff_tests.cpp
