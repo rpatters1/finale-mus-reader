@@ -13,8 +13,8 @@ inline musx::dom::DocumentPtr baselineReferenceDocument()
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     const auto addExpression = [&]<typename T>(musx::dom::Evpu displacement) {
-        auto value = std::make_shared<T>(
-            document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{0}, musx::dom::Cmper{0});
+        auto value =
+            std::make_shared<T>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{0}, musx::dom::Cmper{0});
         value->baselineDisplacement = displacement;
         document->getDetails()->add(T::XmlNodeName, std::move(value));
     };
