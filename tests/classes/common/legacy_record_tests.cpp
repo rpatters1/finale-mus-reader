@@ -80,6 +80,82 @@ void testClassRecordContinuationSegment()
     verify(ByteOrder::BigEndian);
     verify(ByteOrder::LittleEndian);
 }
+
+void testDetailClassRecordContinuationMetadata()
+{
+    const auto verify = [](ByteOrder byteOrder) {
+        finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::ZlibLegacy);
+        parsed.byteOrder = byteOrder;
+
+        finale_mus_reader::container::DecodedBlock block;
+        block.info.type = 0x001b;
+        const auto push16 = [&](std::uint16_t value) {
+            if (byteOrder == ByteOrder::BigEndian) {
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+                block.data.push_back(static_cast<std::uint8_t>(value));
+            } else {
+                block.data.push_back(static_cast<std::uint8_t>(value));
+                block.data.push_back(static_cast<std::uint8_t>(value >> 8U));
+            }
+        };
+        const auto push32 = [&](std::uint32_t value) {
+            if (byteOrder == ByteOrder::BigEndian) {
+                push16(static_cast<std::uint16_t>(value >> 16U));
+                push16(static_cast<std::uint16_t>(value));
+            } else {
+                push16(static_cast<std::uint16_t>(value));
+                push16(static_cast<std::uint16_t>(value >> 16U));
+            }
+        };
+        const auto appendHeader = [&](std::uint16_t classId, std::uint16_t cmper1, std::uint16_t cmper2, std::uint16_t partId, std::uint32_t length) {
+            push16(classId);
+            push16(cmper1);
+            push16(cmper2);
+            push16(partId);
+            push32(length);
+        };
+
+        appendHeader(0x041c, 1, 2, 2, 12);
+        block.data.insert(block.data.end(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+        push32(12);
+        block.data.insert(block.data.end(), {21, 22, 23, 24, 25, 26, 27, 28});
+        push16(0);
+        push16(0);
+
+        appendHeader(0x041c, 2, 3, 2, 12);
+        block.data.insert(block.data.end(), {41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52});
+        push32(12);
+        block.data.insert(block.data.end(), {61, 62, 63, 64, 65, 66, 67, 68});
+        push16(1);
+        push16(0);
+
+        appendHeader(0x0444, 3, 4, 0, 10);
+        block.data.insert(block.data.end(), {31, 32, 33, 34, 35, 36, 37, 38, 39, 40});
+        block.data.insert(block.data.end(), 4, 0);
+        block.info.decodedSize = block.data.size();
+        parsed.blocks.push_back(std::move(block));
+
+        const auto index = LegacyRecordIndex::build(parsed);
+        const auto* zeroMetadata = index.getClassDetails().get(0x041c, 1, 2, 0, 2);
+        const auto zeroContinuation = zeroMetadata ? index.getClassDetails().continuationOf(*zeroMetadata) : std::span<const std::uint8_t>{};
+        expectMapping(zeroContinuation.size() == 12 && zeroContinuation[4] == 21 && zeroContinuation.back() == 28 && zeroMetadata->trailerFirst == 0
+                          && zeroMetadata->trailerSecond == 0,
+            "A continued detail record did not retain its zero metadata words");
+        const auto* nonzeroMetadata = index.getClassDetails().get(0x041c, 2, 3, 0, 2);
+        const auto nonzeroContinuation = nonzeroMetadata ? index.getClassDetails().continuationOf(*nonzeroMetadata) : std::span<const std::uint8_t>{};
+        expectMapping(nonzeroContinuation.size() == 12 && nonzeroContinuation[4] == 61 && nonzeroContinuation.back() == 68
+                          && nonzeroMetadata->trailerFirst == 1 && nonzeroMetadata->trailerSecond == 0,
+            "A continued detail record did not retain its nonzero metadata word");
+        const auto* following = index.getClassDetails().get(0x0444, 3, 4, 0);
+        const auto followingPayload = following ? index.getClassDetails().payloadOf(*following) : std::span<const std::uint8_t>{};
+        expectMapping(followingPayload.size() == 10 && followingPayload.front() == 31 && followingPayload.back() == 40,
+            "A detail continuation consumed the next record header");
+    };
+
+    verify(ByteOrder::BigEndian);
+    verify(ByteOrder::LittleEndian);
+}
+
 void testDetailRowShape()
 {
     finale_mus_reader::container::ParsedContainer parsed(FormatEpoch::UncompressedLegacy);
@@ -206,6 +282,10 @@ void testOtherRowsRemainSearchable()
 TEST_CASE("Class-record continuation segment", "[class]")
 {
     testClassRecordContinuationSegment();
+}
+TEST_CASE("Detail class-record continuation metadata", "[class]")
+{
+    testDetailClassRecordContinuationMetadata();
 }
 TEST_CASE("Class-record sharing modes", "[class]")
 {

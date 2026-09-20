@@ -275,6 +275,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterFlats, &others::importTonalCenterFlats),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterSharps, &others::importTonalCenterSharps),
         // details
+        FINALE_MUS_READER_IMPORTER(ImportBaselines, &details::importBaselines),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveFlats, &details::importClefOctaveFlats),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveSharps, &details::importClefOctaveSharps),
         FINALE_MUS_READER_IMPORTER(ImportFretboardDiagrams, &details::importFretboardDiagrams),

@@ -24,6 +24,7 @@ finale_mus_reader_keep_out_of_unity(Catch2WithMain)
 add_executable(finale_mus_reader_tests
     classes/common/legacy_record_tests.cpp
     classes/common/mapping_framework_tests.cpp
+    classes/details/baseline_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
     classes/details/percussion_note_code_tests.cpp
     classes/details/staff_size_tests.cpp
