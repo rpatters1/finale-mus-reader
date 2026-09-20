@@ -64,6 +64,7 @@ add_executable(finale_mus_reader_tests
     classes/others/graphic_assignments_tests.cpp
     classes/others/marking_category_tests.cpp
     classes/others/measure_tests.cpp
+    classes/others/multistaff_instrument_group_tests.cpp
     classes/others/page_tests.cpp
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp

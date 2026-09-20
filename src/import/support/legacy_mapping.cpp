@@ -257,6 +257,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportLayerAttributes, &others::importLayerAttributes),
         FINALE_MUS_READER_IMPORTER(ImportMarkingCategories, &others::importMarkingCategories),
         FINALE_MUS_READER_IMPORTER(ImportMeasures, &others::importMeasures),
+        FINALE_MUS_READER_IMPORTER(ImportMultiStaffGroupIds, &others::importMultiStaffGroupIds),
+        FINALE_MUS_READER_IMPORTER(ImportMultiStaffInstrumentGroups, &others::importMultiStaffInstrumentGroups),
         FINALE_MUS_READER_IMPORTER(ImportPages, &others::importPages),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),

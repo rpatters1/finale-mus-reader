@@ -67,6 +67,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";
     case Phase::ImportMusicSymbolOptions: return "music_symbol_options";
+    case Phase::ImportMultiStaffGroupIds: return "multi_staff_group_ids";
+    case Phase::ImportMultiStaffInstrumentGroups: return "multi_staff_instrument_groups";
     case Phase::ImportNoteRestOptions: return "note_rest_options";
     case Phase::ImportPageFormatOptions: return "page_format_options";
     case Phase::ImportPages: return "pages";

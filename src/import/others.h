@@ -77,6 +77,12 @@ void importMeasures(const ImportContext& context);
 /// when the source predates Finale 2009.
 void importMarkingCategories(const ImportContext& context);
 
+/// @brief Recovers the part-specific staff-group reference for each multi-staff instrument.
+void importMultiStaffGroupIds(const ImportContext& context);
+
+/// @brief Recovers the staff membership of each multi-staff instrument.
+void importMultiStaffInstrumentGroups(const ImportContext& context);
+
 /// @brief Recovers page graphic assignments and their embedded-graphic references.
 void importPageGraphicAssignments(const ImportContext& context);
 
