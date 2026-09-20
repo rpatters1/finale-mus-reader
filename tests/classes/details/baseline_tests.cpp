@@ -45,8 +45,9 @@ void checkNonLyricFamily(const char* tag, std::uint16_t classId, musx::dom::Cmpe
             REQUIRE(target);
             CHECK(target->baselineDisplacement == displacement);
             CHECK_FALSE(target->lyricNumber);
-            const auto* displacementField = report.findField<T>("baselineDisplacement", musx::dom::SCORE_PARTID, cmper1, std::nullopt, cmper2);
-            const auto* lyricField = report.findField<T>("lyricNumber", musx::dom::SCORE_PARTID, cmper1, std::nullopt, cmper2);
+            const auto* displacementField =
+                report.template findField<T>("baselineDisplacement", musx::dom::SCORE_PARTID, cmper1, std::nullopt, cmper2);
+            const auto* lyricField = report.template findField<T>("lyricNumber", musx::dom::SCORE_PARTID, cmper1, std::nullopt, cmper2);
             REQUIRE(displacementField);
             REQUIRE(lyricField);
             CHECK(displacementField->origin == ValueOrigin::LegacyMus);
@@ -79,8 +80,8 @@ void checkLyricFamily(const char* tag, std::uint16_t classId, musx::dom::Cmper c
             CHECK(targets[1]->baselineDisplacement == -184);
             CHECK(targets[1]->lyricNumber == 2);
             for (musx::dom::Inci inci = 0; inci < 2; ++inci) {
-                const auto* displacement = report.findField<T>("baselineDisplacement", musx::dom::SCORE_PARTID, cmper1, inci, cmper2);
-                const auto* lyric = report.findField<T>("lyricNumber", musx::dom::SCORE_PARTID, cmper1, inci, cmper2);
+                const auto* displacement = report.template findField<T>("baselineDisplacement", musx::dom::SCORE_PARTID, cmper1, inci, cmper2);
+                const auto* lyric = report.template findField<T>("lyricNumber", musx::dom::SCORE_PARTID, cmper1, inci, cmper2);
                 REQUIRE(displacement);
                 REQUIRE(lyric);
                 CHECK(displacement->origin == ValueOrigin::LegacyMus);
@@ -173,9 +174,9 @@ TEST_CASE("Fixed-row baseline selectors distinguish global and system identities
     checkSharedFixedSelector<BaselineExpressionsAbove, BaselineSystemExpressionsAbove>("XA");
     checkSharedFixedSelector<BaselineExpressionsBelow, BaselineSystemExpressionsBelow>("XB");
     checkSharedFixedSelector<BaselineFretboards, BaselineSystemFretboards>("GL");
-    checkSharedFixedSelector<BaselineLyricsChorus, BaselineSystemLyricsChorus>("Bc", 3);
-    checkSharedFixedSelector<BaselineLyricsSection, BaselineSystemLyricsSection>("Bs", 3);
-    checkSharedFixedSelector<BaselineLyricsVerse, BaselineSystemLyricsVerse>("Bv", 3);
+    checkSharedFixedSelector<BaselineLyricsChorus, BaselineSystemLyricsChorus>("Bc", musx::dom::Cmper{3});
+    checkSharedFixedSelector<BaselineLyricsSection, BaselineSystemLyricsSection>("Bs", musx::dom::Cmper{3});
+    checkSharedFixedSelector<BaselineLyricsVerse, BaselineSystemLyricsVerse>("Bv", musx::dom::Cmper{3});
 }
 
 TEST_CASE("Baseline rejects an incomplete coalesced struct", "[class][baseline]")

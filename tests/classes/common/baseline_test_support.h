@@ -21,7 +21,7 @@ inline musx::dom::DocumentPtr baselineReferenceDocument()
         for (musx::dom::Inci inci = 0; inci < 10; ++inci) {
             auto value = std::make_shared<T>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 0, 0, inci);
             value->baselineDisplacement = -144 - 40 * inci;
-            value->lyricNumber = inci + 1;
+            value->lyricNumber = static_cast<musx::dom::Cmper>(inci + 1);
             document->getDetails()->add(T::XmlNodeName, std::move(value));
         }
     };
