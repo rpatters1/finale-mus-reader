@@ -17,6 +17,13 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-global-lyric-baseline.mus / .etf / -finale27/F100-global-lyric-baseline.musx
+    sha256 05711965535413d49e1977e1fa3494a45b4f83978d9bb25c6dfd9fcaa1bc3b11 (.mus)
+    sha256 bc3f563f38b6098a5c903df11e1fb907a3358e5215b6fae1ce6462e0dc43a6ca (.etf)
+    sha256 a144735782a7fef901f240e905bb6d4cd9a6254ad4f159fb1c2b87c0acd9b019 (.musx)
+    Derived from F100-baseline by setting the first global verse baseline to -120 EVPUs without
+    creating verse text. The Finale 27 companion exports the baseline as lyric number 1.
+
 F100-baseline-recalc.mus / .etf / -finale27/F100-baseline-recalc.musx
     sha256 0a96195954bd024ba331496b17ae61f2930eb6863a974aabb4b1762119f7570f (.mus)
     sha256 00d790b075dda917f0dfa5577c49e921794d2c1472a2df9905f699eb16ed7503 (.etf)

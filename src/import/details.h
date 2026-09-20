@@ -8,6 +8,9 @@
 namespace finale_mus_reader {
 namespace details {
 
+/// @brief Recovers staff and system baseline displacements.
+void importBaselines(const ImportContext& context);
+
 /// @brief Recovers per-clef flat octave placements for custom key signatures.
 void importClefOctaveFlats(const ImportContext& context);
 

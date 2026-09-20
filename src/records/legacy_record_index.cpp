@@ -199,11 +199,11 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
             }
             const auto trailerFirst = readWord(block.data.data() + trailerOffset, parsed.byteOrder);
             const auto trailerSecond = readWord(block.data.data() + trailerOffset + 2, parsed.byteOrder);
-            // Believed: a continued record repurposes the second trailer word as metadata,
-            // whereas ordinary records retain the two-word zero trailer. The repeated length
-            // above states which form applies, so the metadata need not be interpreted to find
-            // the next record.
-            if ((trailerFirst != 0 && !(hasContinuation && trailerFirst == -1)) || (!hasContinuation && trailerSecond != 0)) {
+            // A continued record repurposes its trailer words as metadata, whereas
+            // ordinary records retain the two-word zero trailer. The repeated length
+            // above states which form applies, so the metadata need not be interpreted
+            // to find the next record.
+            if (!hasContinuation && (trailerFirst != 0 || trailerSecond != 0)) {
                 break;
             }
             LegacyRow decoded;

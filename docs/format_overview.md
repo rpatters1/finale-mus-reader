@@ -56,6 +56,11 @@ length. For numeric global options the class id is the numeric selector plus `0x
 incidences coalesced into one payload; that relationship is not assumed for named tags or other
 pools.
 
+A zlib part record may carry a same-sized continuation whose initial 32-bit value repeats the
+payload length and whose remaining bytes form an editable mask. For global lyric baseline arrays,
+a shorter part payload is a prefix of the score payload: masked bytes in that prefix come from the
+part, while unmasked bytes and the omitted score suffix remain inherited.
+
 ## Terminology
 
 - **Epoch** — one of the four container families above.

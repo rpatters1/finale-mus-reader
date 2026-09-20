@@ -8,6 +8,14 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-fretboard-baselines.mus / .etf / -finale27/F372-fretboard-baselines.musx
+    sha256 980b3a757fb00b4008d36a00f8734fe407cf4cc8e14c0cae33a36ff277bb336d (.mus)
+    sha256 bac9ffb40be40b8f836c5947953102d5939b97638a1865e52d4838915aab58fb (.etf)
+    sha256 2cd8f79c081b7d1facb5c9953be8f40589520b2e8029c8727abd125c4ef2d2de (.musx)
+    Adds fretboards and sets their global, staff-1, and system-1/staff-1 baselines to 164, -48,
+    and 24 EVPUs. The ETF carries all three rows and the Finale 27 conversion preserves the
+    corresponding three logical objects.
+
 F372-4systems.mus / .etf / -finale27/F372-4systems.musx
     sha256 f275a1ae718606779ee470a91aa0406ebddbf03a6b79eb8abc8b5ef49c054887 (.mus)
     sha256 28eeb956f44f121a93557d6755f95cc2636a4d7861ea807fae712d8c79a18b0c (.etf)

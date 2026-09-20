@@ -34,6 +34,7 @@ enum class Phase : std::size_t {
     ImportAlternateNotationOptions,
     ImportAugmentationDotOptions,
     ImportBarlineOptions,
+    ImportBaselines,
     ImportBeamOptions,
     ImportBookmarks,
     ImportChordOptions,
