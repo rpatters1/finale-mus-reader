@@ -133,7 +133,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/openmusx/musxdom.git
-            GIT_TAG aff4981ce1915721cc1c6d2b31c7cea0d21f96da
+            GIT_TAG 041212dbd62c8bef41c7943019d26a26cc806c64
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -173,6 +173,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/key_symbol_list.cpp
     src/import/details/measure_graphic_assign.cpp
     src/import/details/percussion_note_code.cpp
+    src/import/details/staff_group.cpp
     src/import/details/staff_size.cpp
     src/import/header/header.cpp
     src/import/options/accidental_options.cpp

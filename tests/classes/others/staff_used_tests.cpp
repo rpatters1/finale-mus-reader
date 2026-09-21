@@ -143,6 +143,23 @@ TEST_CASE("StaffUsed two-entry IU layout ends at Finale 3.5", "[class][staff-use
     }
 }
 
+TEST_CASE("Finale 3.5 StaffUsed layout is independent of GS membership", "[class][staff-used]")
+{
+    const auto parsed = makeContainer({{0, "IU", {1, 2, 0, 0, -1, -188}}, {0, "IU", {2, 2, 0, 0, -1, -488}}, {2, "GS", {2, -20, 0, 0, 0, 0}}},
+        FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian);
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = 3, .minor = 5};
+    profile.byteOrder = ByteOrder::BigEndian;
+
+    const auto imported = importStaffUsed(parsed, profile);
+    const auto values = imported.document->getOthers()->getArray<StaffUsed>(musx::dom::SCORE_PARTID, musx::dom::Cmper(0));
+    REQUIRE(values.size() == 2);
+    CHECK(values[0]->staffId == 1);
+    CHECK(values[0]->distFromTop == 0);
+    CHECK(values[1]->staffId == 2);
+    CHECK(values[1]->distFromTop == -300);
+}
+
 TEST_CASE("Coda StaffUsed remaps the four early Staff Set comparators", "[class][staff-used]")
 {
     const auto parsed =

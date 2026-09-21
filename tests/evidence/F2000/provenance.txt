@@ -40,6 +40,14 @@ F2000-empty.mus
     It carries the two custom line styles Finale 2000 puts in every new document, cmpers 1
     and 2, which is what makes an added third one unambiguous.
 
+F2000-group-custbar.mus / .etf / .musx
+    sha256 6f5916fb42c59e72e29578edb0544b6429a1c3e1f0c34d32939bf3f97abfa82f (.mus)
+    sha256 74a8ea0e6a40d7d97d29e80396dd723c8d57598b9f365b965e4cd35685f9d68c (.etf)
+    sha256 fd65c81ecd3450f5506d39bfb7afae1023d9fe727563e2d8fbc0d5b4b34593e2 (.musx)
+    From F2000-empty, with Staff 1 placed in a group whose barline is custom shape 2. The source
+    adds NG(0,1); its fourth incidence begins with 2, and the ETF repeats the complete four-row
+    record. The Finale 27 companion retains customBarShape 2.
+
 F2000-update-layout.mus / .etf / .musx
     sha256 ce7a8a997ec2b7728166023f702050572688294801fffad883a2cc07bb48abf3 (.mus)
     sha256 a14e29429d5a0c0cace3dbc3a018f61575eec9769b22fa5fbf344f2e42069fe9 (.etf)

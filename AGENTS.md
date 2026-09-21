@@ -20,6 +20,12 @@ The reader recovers what it has verified and reports everything else as a synthe
 Implement narrow, verified vertical slices and do not present partial format coverage as a
 universal reader.
 
+**An assignment scoped to one importer never authorizes changing another, settled importer.**
+This remains true when the new class shares records, exposes a dependency, or appears to require
+different behavior from the settled importer. Stop before editing it, show the user the concrete
+dependency and proposed change, and obtain explicit permission. Tests and corpus differences are
+evidence to report, not implicit authorization to expand the implementation scope.
+
 ## Skills
 
 Task-specific procedures live in `.agents/skills/<name>/SKILL.md`, kept tool-neutral so any
