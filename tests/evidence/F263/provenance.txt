@@ -9,6 +9,27 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-bracket-thickbar.mus / .etf / .musx
+    sha256 133dfe195bafd048b43782c894f7d2f42d1c1befa02c708f1e3f39b58127fffa (.mus)
+    sha256 bf4eba6dc3035c29b255697becab15381a2c69c57f8c408412118662c769779b (.etf)
+    sha256 07642e440a58feceac583f0e377a15314d438fff416ca73c6e4bae50e0729228 (.musx)
+    From F263-baseline, adds the thick-bar bracket to Staff 1. The source and ETF add
+    `GS(1) 1 -20 24 -304 0 0`; the companion retains bracket style 1 and its positions.
+
+F263-bracket.mus / .etf / .musx
+    sha256 226667874a422ed81b41d1776c0a6308ab5145fc3d2e4c8a6f88d80982c76e25 (.mus)
+    sha256 fa56104d47618503dbb9e25f6485abb67b845894bb583bf704b435388a7393b5 (.etf)
+    sha256 49acc415001c70fb78d2a5f75cd327870c9b504ebfb6d642dc2c8ab1074b5137 (.musx)
+    From F263-baseline, adds the small-wing bracket to Staff 1. The source and ETF add
+    `GS(1) 2 -20 24 -304 0 0`; the companion retains bracket style 2 and its positions.
+
+F263-bracket-brace.mus / .etf / .musx
+    sha256 ae906269395134ef23f8023d4165140689095e3a9584a43e2887c1626d697ad3 (.mus)
+    sha256 09a7f8951fc63756858784a0e9f60eff560fb3c05a643c562f798675a1e28e61 (.etf)
+    sha256 67aecdd400ebdaaa96a5624e202ee07098390d63f2b091e0f51d3d2c3cded69f (.musx)
+    From F263-baseline, adds the brace to Staff 1. The source and ETF add
+    `GS(1) 3 -20 24 -304 0 0`; the companion retains bracket style 3 and its positions.
+
 F263-update-layout.mus / .etf / .musx
     sha256 dbc18f48dca5acf4c1ae4e478b4b5b7993132cc511f9f599622a3acc99eaa866 (.mus)
     sha256 7d00d193db10d99e4cdc710a7a7aa72ecf1375fe4b583af0523775bd8e655cc7 (.etf)

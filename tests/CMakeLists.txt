@@ -27,6 +27,7 @@ add_executable(finale_mus_reader_tests
     classes/details/baseline_tests.cpp
     classes/details/measure_graphic_assign_tests.cpp
     classes/details/percussion_note_code_tests.cpp
+    classes/details/staff_group_tests.cpp
     classes/details/staff_size_tests.cpp
     classes/options/accidental_options_tests.cpp
     classes/options/alternate_notation_options_tests.cpp

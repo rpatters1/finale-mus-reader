@@ -34,6 +34,9 @@ void importMeasureGraphicAssignments(const ImportContext& context);
 /// @brief Recovers percussion-note type assignments for individual notes.
 void importPercussionNoteCodes(const ImportContext& context);
 
+/// @brief Recovers staff groups and their measure ranges.
+void importStaffGroups(const ImportContext& context);
+
 /// @brief Recovers per-staff size overrides and updates retained staff systems.
 void importStaffSizes(const ImportContext& context);
 
