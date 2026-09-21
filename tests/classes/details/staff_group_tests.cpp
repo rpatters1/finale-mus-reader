@@ -77,7 +77,8 @@ TEST_CASE("StaffGroup recovers the Finale 2011 range layout", "[class][staff-gro
     CHECK(group->customBarShape == 44);
     CHECK(group->hideStaves == StaffGroup::HideStaves::Normally);
 
-    const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 6);
+    const auto key =
+        finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(6));
     REQUIRE(report.fields.contains(key));
     CHECK(report.fields.at(key).size() == 29);
     CHECK(report.fields.at(key).at("startMeas").origin == ValueOrigin::LegacyMus);
@@ -122,7 +123,8 @@ TEST_CASE("Pre-Finale-2011 StaffGroup imports only the base system for all measu
         CHECK(group->startMeas == 1);
         CHECK(group->endMeas == (std::numeric_limits<musx::dom::MeasCmper>::max)());
         CHECK(group->isAllMeasures());
-        const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 3);
+        const auto key =
+            finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(3));
         REQUIRE(report.fields.contains(key));
         CHECK(report.fields.at(key).at("startMeas").origin == ValueOrigin::LegacyBehavior);
         CHECK(report.fields.at(key).at("endMeas").origin == ValueOrigin::LegacyBehavior);
@@ -147,7 +149,8 @@ TEST_CASE("StaffGroup hide-staves auxiliary flags activate in Finale 2003", "[cl
     const auto [asGroup, asGroupReport] = import(finale_mus_reader::versions::finale2003, 0x0800);
     REQUIRE(asGroup);
     CHECK(asGroup->hideStaves == StaffGroup::HideStaves::AsGroup);
-    const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 3);
+    const auto key =
+        finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(3));
     CHECK(asGroupReport.fields.at(key).at("hideStaves").origin == ValueOrigin::LegacyMus);
 
     const auto [never, neverReport] = import(finale_mus_reader::versions::finale2003, 0x1000);
@@ -203,7 +206,8 @@ TEST_CASE("GS StaffGroup takes its staff span from the compact Scroll View list 
         CHECK(brace->startInst == 8);
         CHECK(brace->endInst == 9);
 
-        const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 1);
+        const auto key =
+            finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(1));
         CHECK(report.fields.at(key).at("startInst").origin == ValueOrigin::LegacyMus);
         CHECK(report.fields.at(key).at("startInst").rawValue == 4);
         CHECK(report.fields.at(key).at("endInst").origin == ValueOrigin::LegacyMus);
@@ -243,7 +247,8 @@ TEST_CASE("Controlled Finale 2.6.3 StaffGroups recover the three Coda bracket st
         CHECK(group->barlineType == StaffGroup::BarlineType::Normal);
         CHECK(group->drawBarlines == StaffGroup::DrawBarlineStyle::ThroughStaves);
 
-        const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 1);
+        const auto key =
+            finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(1));
         REQUIRE(result.report.fields.contains(key));
         CHECK(result.report.fields.at(key).size() == 29);
         CHECK(result.report.fields.at(key).at("bracket.style").origin == ValueOrigin::LegacyMus);
@@ -280,7 +285,8 @@ TEST_CASE("Controlled Finale 2000 StaffGroup recovers a custom barline shape", "
     CHECK(group->startMeas == 1);
     CHECK(group->endMeas == (std::numeric_limits<musx::dom::MeasCmper>::max)());
 
-    const auto key = finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, 1);
+    const auto key =
+        finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(1));
     REQUIRE(result.report.fields.contains(key));
     CHECK(result.report.fields.at(key).at("customBarShape").origin == ValueOrigin::LegacyMus);
     CHECK(result.report.fields.at(key).at("customBarShape").rawValue == 2);
