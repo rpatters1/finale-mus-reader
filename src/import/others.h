@@ -106,6 +106,7 @@ void importPartDefinitions(const ImportContext& context);
 
 /// @brief Recovers the score- and part-specific global view settings.
 void importPartGlobals(const ImportContext& context);
+void importPartVoicing(const ImportContext& context);
 
 /// @brief Recovers percussion-map note identities, staff positions, and noteheads.
 void importPercussionNoteInfo(const ImportContext& context);
