@@ -46,7 +46,7 @@ TEST_CASE("Part voicing recovers the controlled Finale 2008 edits")
     expect(second->getShareMode() == musx::dom::EnigmaBase::ShareMode::None, "Voicing was incorrectly shared with the score");
     for (const auto* member : {"enabled", "voicingType", "singleLayerVoiceType", "select1st", "select2nd", "select3rd", "select4th", "select5th",
              "selectFromBottom", "selectSingleNote", "singleLayer", "multiLayer"}) {
-        const auto* source = voiced.report.findField<PartVoicing>(member, 2, 1);
+        const auto* source = voiced.report.findField<PartVoicing>(member, 2, musx::dom::Cmper(1));
         expect(source && source->origin == ValueOrigin::LegacyMus, std::string("Unreported PartVoicing member: ") + member);
     }
     expect(reportedFieldCount(voiced.report) >= 24, "The part voicing field manifests are incomplete");
