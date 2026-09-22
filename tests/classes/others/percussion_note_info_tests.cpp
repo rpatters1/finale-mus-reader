@@ -139,6 +139,51 @@ TEST_CASE("Fixed-row percussion maps use DS selection in both storage epochs", "
     }
 }
 
+TEST_CASE("Legacy staff-style selections synthesize percussion-note collections", "[class]")
+{
+    const auto checkNotes = [](const finale_mus_reader::container::ParsedContainer& parsed, SourceProfile profile) {
+        const auto document = makePercussionNoteInfoDocument();
+        const auto report = importPercussionNoteInfo(parsed, profile, document);
+        const auto notes = document->getOthers()->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        REQUIRE(notes.size() == 1);
+        CHECK(notes.front()->percNoteType == 32);
+        CHECK(notes.front()->staffPosition == 6);
+        CHECK(field(report, "others.percussionNoteInfo[1,0].staffPosition").origin == ValueOrigin::LegacyMus);
+    };
+
+    for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        auto parsed = makeContainer({{7, "FY", {1, 0, 0, 0, 0x1000, 0}}}, epoch, ByteOrder::BigEndian);
+        auto detail = makeDetailContainer(epoch, 1, 60, {60, 6, 207, 250, 0}, "DF", ByteOrder::BigEndian);
+        parsed.blocks.push_back(std::move(detail.blocks.front()));
+        auto profile = SourceProfile(epoch);
+        profile.byteOrder = ByteOrder::BigEndian;
+        profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
+        checkNotes(parsed, profile);
+    }
+
+    auto parsed = makeClassContainer(0x0085, {1, 0, 0, 0, 0x1000, 0, 0, 0, 0, 0, 0, 0}, ByteOrder::LittleEndian, 7);
+    auto detail = makeDetailClassContainer(1, 60, 0, {60, 6, 207, 250, 0}, ByteOrder::LittleEndian, 0x040e);
+    parsed.blocks.push_back(std::move(detail.blocks.front()));
+    auto profile = profileFor(13);
+    profile.epoch = FormatEpoch::ZlibLegacy;
+    profile.byteOrder = ByteOrder::LittleEndian;
+    checkNotes(parsed, profile);
+}
+
+TEST_CASE("Pre-Finale 2000 FY selections do not synthesize percussion-note collections", "[class]")
+{
+    auto parsed = makeContainer({{7, "FY", {1, 0, 0, 0, 0x1000, 0}}}, FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian);
+    auto detail = makeDetailContainer(FormatEpoch::UncompressedLegacy, 1, 60, {60, 6, 207, 250, 0}, "DF", ByteOrder::BigEndian);
+    parsed.blocks.push_back(std::move(detail.blocks.front()));
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.byteOrder = ByteOrder::BigEndian;
+    profile.version = SourceVersion{.major = finale_mus_reader::versions::finale98.major};
+    const auto document = makePercussionNoteInfoDocument();
+    importPercussionNoteInfo(parsed, profile, document);
+
+    CHECK(document->getOthers()->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID).empty());
+}
+
 TEST_CASE("Finale 2008 retains DF rows and DS selection as zlib classes", "[class]")
 {
     const auto unassigned = readFixture("evidence/F2008/F2008-percussion-staff.mus", fixtureLegacySymbolFonts);
@@ -153,6 +198,31 @@ TEST_CASE("Finale 2008 retains DF rows and DS selection as zlib classes", "[clas
     CHECK(std::uint32_t(notes.front()->halfNotehead) == 194);
     CHECK(std::uint32_t(notes.front()->wholeNotehead) == 194);
     CHECK(std::uint32_t(notes.front()->dwholeNotehead) == 194);
+}
+
+TEST_CASE("Finale 2008 staff-style selections upgrade their referenced percussion rows", "[class]")
+{
+    const std::string mapping = R"xml(
+        <FinaleNameDocument><MasterDeviceNames>
+        <NoteNameList Name="Percussion Map 1">
+        <Note Number="2" PercNoteType="32" />
+        <Note Number="7" PercNoteType="37" />
+        </NoteNameList></MasterDeviceNames></FinaleNameDocument>)xml";
+    const auto bytes = [](std::string_view value) {
+        return std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(value.data()), value.size());
+    };
+    const finale_mus_reader::ReaderOptions options{bytes(fixtureLegacySymbolFonts), {bytes(mapping)}};
+
+    for (const auto fixture : {"F2008-percstyle.mus", "F2008-percstyle-assigned.mus"}) {
+        const auto result =
+            Reader::readWithReport<TestXmlDocument>(std::filesystem::path(FINALE_MUS_READER_TEST_SOURCE_DIR) / "evidence/F2008" / fixture, options);
+        const auto notes = result.document->getOthers()->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        REQUIRE(notes.size() == 2);
+        CHECK(notes[0]->percNoteType == 32);
+        CHECK(notes[0]->staffPosition == 6);
+        CHECK(notes[1]->percNoteType == 37);
+        CHECK(notes[1]->staffPosition == 4);
+    }
 }
 
 TEST_CASE("Reusable readers apply the first supplied named percussion table", "[class][reader]")
@@ -188,9 +258,13 @@ TEST_CASE("Reusable readers apply the first supplied named percussion table", "[
 
 TEST_CASE("An unreferenced DCL DF map is not constructed", "[class]")
 {
-    const auto result = readFixture("evidence/F2006/F2006-linked-tiff.mus", fixtureLegacySymbolFonts);
-    const auto notes = result.document->getOthers()->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
-    CHECK(notes.empty());
+    const auto parsed = makeDetailContainer(FormatEpoch::DclLegacy, 1, 60, {60, 6, 207, 250, 0}, "DF", ByteOrder::BigEndian);
+    auto profile = SourceProfile(FormatEpoch::DclLegacy);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto document = makePercussionNoteInfoDocument();
+    importPercussionNoteInfo(parsed, profile, document);
+
+    CHECK(document->getOthers()->getArray<PercussionNoteInfoTestTarget>(musx::dom::SCORE_PARTID).empty());
 }
 
 TEST_CASE("Coda-banner files predate percussion maps", "[class]")

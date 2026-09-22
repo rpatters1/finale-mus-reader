@@ -9,6 +9,7 @@ namespace {
 using namespace classes;
 
 using DrumStaff = musx::dom::others::DrumStaff;
+using DrumStaffStyle = musx::dom::others::DrumStaffStyle;
 
 ImportReport importDrumStaff(
     const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
@@ -93,6 +94,69 @@ TEST_CASE("A drum-staff record without its map word is rejected")
     CHECK(document->getOthers()->getAllSources<DrumStaff>().empty());
     REQUIRE(report.diagnostics.size() == 1);
     CHECK(report.diagnostics.front().message.find("shorter than its layout") != std::string::npos);
+}
+
+TEST_CASE("Finale 2000 through 2006 drum staff styles read FY word zero")
+{
+    for (const auto epoch : {FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto byteOrder : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            const auto parsed = makeContainer({{12, "FY", {5, 0, 0, -136, 3007, 0}}, {12, "FY", {0, 0, 0, 0, 0, 0}}}, epoch, byteOrder);
+            const auto document = emptyDrumStaffDocument();
+            auto profile = SourceProfile(epoch);
+            profile.byteOrder = byteOrder;
+            profile.version = SourceVersion{.major = finale_mus_reader::versions::finale2000.major};
+            const auto report = importDrumStaff(parsed, profile, document);
+
+            const auto style = document->getOthers()->get<DrumStaffStyle>(musx::dom::SCORE_PARTID, 12);
+            REQUIRE(style);
+            CHECK(style->whichDrumLib == 5);
+            CHECK(field(report, "others.drumStaffStyle[12].whichDrumLib").origin == ValueOrigin::LegacyMus);
+            CHECK(field(report, "others.drumStaffStyle[12].whichDrumLib").rawValue == 5);
+        }
+    }
+}
+
+TEST_CASE("Pre-Finale 2000 records and unrelated zlib classes do not create drum staff styles")
+{
+    SECTION("pre-Finale 2000")
+    {
+        const auto parsed = makeContainer({{12, "FY", {5, 0, 0, 0, 0, 0}}}, FormatEpoch::UncompressedLegacy);
+        const auto document = emptyDrumStaffDocument();
+        SourceProfile profile(FormatEpoch::UncompressedLegacy);
+        profile.byteOrder = ByteOrder::BigEndian;
+        profile.version = SourceVersion{.major = finale_mus_reader::versions::finale98.major};
+        importDrumStaff(parsed, profile, document);
+        CHECK(document->getOthers()->getAllSources<DrumStaffStyle>().empty());
+    }
+
+    SECTION("DrumStaff class is not DrumStaffStyle")
+    {
+        const auto parsed = makeClassContainer(0x0084, {5, 0, 0, 0, 0, 0}, ByteOrder::LittleEndian, 12);
+        const auto document = emptyDrumStaffDocument();
+        SourceProfile profile(FormatEpoch::ZlibLegacy);
+        profile.byteOrder = ByteOrder::LittleEndian;
+        importDrumStaff(parsed, profile, document);
+        CHECK(document->getOthers()->getAllSources<DrumStaffStyle>().empty());
+    }
+}
+
+TEST_CASE("A Finale 2006 FY record imports its staff-style percussion map")
+{
+    const auto result = readFixture("evidence/F2006/F2006-embedded-tiff.mus");
+    const auto style = result.document->getOthers()->get<DrumStaffStyle>(musx::dom::SCORE_PARTID, 12);
+    REQUIRE(style);
+    CHECK(style->whichDrumLib == 1);
+    CHECK(field(result.report, "others.drumStaffStyle[12].whichDrumLib").origin == ValueOrigin::LegacyMus);
+}
+
+TEST_CASE("A Finale 2008 class 0x0085 record imports its staff-style percussion map")
+{
+    const auto result = readFixture("evidence/F2008/F2008-percstyle.mus");
+    const auto style = result.document->getOthers()->get<DrumStaffStyle>(musx::dom::SCORE_PARTID, 1);
+    REQUIRE(style);
+    CHECK(style->whichDrumLib == 1);
+    CHECK(field(result.report, "others.drumStaffStyle[1].whichDrumLib").origin == ValueOrigin::LegacyMus);
+    CHECK(field(result.report, "others.drumStaffStyle[1].whichDrumLib").rawValue == 1);
 }
 
 } // namespace

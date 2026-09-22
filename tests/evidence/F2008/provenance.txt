@@ -147,3 +147,20 @@ F2008-notehead-font.mus
     Derived from F2008-empty by selecting American Typewriter, size 17, underline as the independent
     notehead font. Staff words 3, 4, and 5 become `0x0009`, `0x1104`, and `0x0020`; the Finale 27
     companion preserves the font, size, effect, and enabled setting.
+
+F2008-percstyle.mus
+    sha256 774e21d8efacc13e71af8bf8a245e1e1d606f9006f9b474435cadcd2268d7dba
+-finale27/F2008-percstyle.musx
+    sha256 4db8ffba9bc4f994f70961f556ee54c7ed352f01fead97322836c4ae295aac8a
+    A controlled little-endian document containing a Staff Style named Percussion Style with
+    percussion notation enabled and Percussion Map 1 selected. Class `0x0085`, comparator 1,
+    stores map ID 1 in word 0. The style is not assigned, and the Finale 27 companion emits one
+    `drumLayoutPmmRef` instead of a `drumStaffStyle`.
+
+F2008-percstyle-assigned.mus
+    sha256 026242e7619b16661a9bb5cad4c9d61f484a6b0c5bb74a71e97b069544b443da
+-finale27/F2008-percstyle-assigned.musx
+    sha256 39727711368c202668777afa2837ddf232f86a91b7b1000f3f2f0ff1e81248dc
+    Derived from F2008-percstyle by assigning Percussion Style to the document's staff. The
+    `0x0085` payload remains unchanged, isolating assignment as the condition that preserves the
+    style through Finale 27 conversion.
