@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "import/support/percussion_mappings.h"
+#include "import/support/percussion_records.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -26,8 +27,6 @@ using PercussionNoteInfoTarget = musx::dom::others::PercussionNoteInfo;
 using PercussionFontType = musx::dom::options::FontOptions::FontType;
 
 constexpr records::LegacyTag percussionNoteInfoClass = 0x0139;
-constexpr auto legacyDrumStaffTag = records::packTag("DS");
-constexpr records::LegacyTag legacyDrumStaffClass = 0x0084;
 constexpr auto legacyPercussionMapTag = records::packTag("DF");
 constexpr records::LegacyTag legacyPercussionMapClass = 0x040e;
 constexpr auto legacyPercussionMapNameTag = records::packTag("DL");
@@ -125,13 +124,14 @@ std::map<musx::dom::Cmper, std::string> legacyPercussionMapNames(const ImportCon
     return result;
 }
 
-std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>> selectedLegacyPercussionRows(const ImportContext& context)
+using SelectedPercussionRows = std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>>;
+
+void collectSelectedPercussionRows(
+    const ImportContext& context, records::LegacyTag fixedTag, records::LegacyTag classId, SelectedPercussionRows& result)
 {
-    const auto selected =
-        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), legacyDrumStaffTag, legacyDrumStaffClass);
-    std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>> result;
+    const auto selected = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), fixedTag, classId);
     if (!selected) {
-        return result;
+        return;
     }
     const auto& source = *selected;
     for (const auto& [partId, staffId] : recordKeys(source)) {
@@ -155,6 +155,16 @@ std::map<musx::dom::Cmper, std::set<musx::dom::Cmper>> selectedLegacyPercussionR
                 }
             }
         }
+    }
+}
+
+SelectedPercussionRows selectedLegacyPercussionRows(const ImportContext& context)
+{
+    SelectedPercussionRows result;
+    collectSelectedPercussionRows(context, percussion_records::drumStaffTag, percussion_records::drumStaffClass, result);
+    // Staff styles begin in Finale 2000 and use the same legacy row-selection bitmap.
+    if (sourceAtOrAfter(context.profile, FormatEpoch::UncompressedLegacy, versions::finale2000)) {
+        collectSelectedPercussionRows(context, percussion_records::drumStaffStyleTag, percussion_records::drumStaffStyleClass, result);
     }
     return result;
 }

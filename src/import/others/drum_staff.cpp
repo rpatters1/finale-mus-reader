@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "import/support/percussion_records.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -14,21 +15,46 @@ namespace others {
 namespace {
 
 using DrumStaffTarget = musx::dom::others::DrumStaff;
+using DrumStaffStyleTarget = musx::dom::others::DrumStaffStyle;
 
-constexpr records::LegacyTag fixedDrumStaffTag = records::packTag("DS");
-constexpr records::LegacyTag drumStaffClass = 0x0084;
 constexpr std::size_t whichDrumLibOffset = 0;
 constexpr std::size_t whichDrumLibSize = 2;
 
-void reportDrumStaff(const ImportContext& context, const DrumStaffTarget& target, const RecordFamilySource& source, const records::LegacyRow& row)
+template <typename Target>
+void reportDrumStaffFamily(const ImportContext& context, const Target& target, const RecordFamilySource& source, const records::LegacyRow& row)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<DrumStaffTarget>(target.getSourcePartId(), target.getCmper());
+        const auto key = reporting.template instanceKey<Target>(target.getSourcePartId(), target.getCmper());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         reporting.report().setField(key, "whichDrumLib",
             typename Reporting::FieldInfo{
                 Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + whichDrumLibOffset, target.whichDrumLib, source.identity});
     });
+}
+
+template <typename Target>
+void importDrumStaffFamily(const ImportContext& context, const RecordFamilySource& source, std::string_view diagnosticName)
+{
+    for (const auto& [partId, cmper] : recordKeys(source)) {
+        const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);
+        if (rows.empty()) {
+            continue;
+        }
+        const auto payload = collectRecordPayload(source, rows);
+        if (payload.size() < whichDrumLibSize) {
+            context.report.diagnostics.push_back(
+                {musx::util::Logger::LogLevel::Info, std::string(diagnosticName) + " " + std::to_string(cmper) + " is shorter than its layout."});
+            continue;
+        }
+
+        auto target = createOthersRecordTarget<Target>(context.document, source, rows.front(), cmper);
+        if (!target) {
+            continue;
+        }
+        target->whichDrumLib = payloadWord(payload, whichDrumLibOffset, context.profile.byteOrder);
+        reportDrumStaffFamily(context, *target, source, rows.front());
+        context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
+    }
 }
 
 } // namespace
@@ -39,32 +65,20 @@ void importDrumStaff(const ImportContext& context)
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         return;
     }
-    const auto selected =
-        selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), fixedDrumStaffTag, drumStaffClass);
-    if (!selected) {
+    const auto drumStaffSource = selectRecordFamilySource(
+        context, context.index.getOthers(), context.index.getClassOthers(), percussion_records::drumStaffTag, percussion_records::drumStaffClass);
+    if (drumStaffSource) {
+        importDrumStaffFamily<DrumStaffTarget>(context, *drumStaffSource, "Drum staff");
+    }
+
+    // Staff styles begin in Finale 2000.
+    if (!sourceAtOrAfter(context.profile, FormatEpoch::UncompressedLegacy, versions::finale2000)) {
         return;
     }
-    const auto& source = *selected;
-
-    for (const auto& [partId, staffId] : recordKeys(source)) {
-        const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
-        if (rows.empty()) {
-            continue;
-        }
-        const auto payload = collectRecordPayload(source, rows);
-        if (payload.size() < whichDrumLibSize) {
-            context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info, "Drum staff " + std::to_string(staffId) + " is shorter than its layout."});
-            continue;
-        }
-
-        auto target = createOthersRecordTarget<DrumStaffTarget>(context.document, source, rows.front(), staffId);
-        if (!target) {
-            continue;
-        }
-        target->whichDrumLib = payloadWord(payload, whichDrumLibOffset, context.profile.byteOrder);
-        reportDrumStaff(context, *target, source, rows.front());
-        context.document->getOthers()->add(DrumStaffTarget::XmlNodeName, std::move(target));
+    const auto drumStaffStyleSource = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(),
+        percussion_records::drumStaffStyleTag, percussion_records::drumStaffStyleClass);
+    if (drumStaffStyleSource) {
+        importDrumStaffFamily<DrumStaffStyleTarget>(context, *drumStaffStyleSource, "Drum staff style");
     }
 }
 
