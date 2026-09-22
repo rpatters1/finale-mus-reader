@@ -79,6 +79,22 @@ F263-clef-baseline.etf
 
 Finale 27 companions are in `-finale27/`.
 
+F263-namepos.mus / .etf / .musx
+    sha256 9472502e82fc7db71ccf3d500783012f660887d621a6123fb560d20b26302c7e (.mus)
+    sha256 4bb1230282b356e5459959719543c9c3e356301369b7b0f2acd626e5ec99f6dd (.etf)
+    sha256 e8914d82c57a1bb17bad1782b5a872eeacf5b34af657f56da1be107ece52bac9 (.musx)
+    Gives Staff 1 the full name `Name` and stores its position as
+    `NS(1) 123 45 1 12 2 1`: Chicago 12 italic, right justified. Finale 27 creates
+    the staff-name text with the document default font and omits the positioning object.
+
+F263-namepos-left.mus / .etf / .musx
+    sha256 5ec51f662307519f28563d4265912b3a91a3e4cb059a24fa0bacf4c2c6cd0ae3 (.mus)
+    sha256 6fbc9ade7178616a8d2503ed064324c95f491e3378b1c0673a80892dad95a729 (.etf)
+    sha256 6d8bb51c11682f7a8d6884bf72704666e19519929de8bb24d606245b90d9caf4 (.musx)
+    Gives Staff 1 the same full name and offsets, storing
+    `NS(1) 123 45 100 13 1 0`: Charcoal 13 bold, left justified. Finale 27 again
+    uses the document default name font and omits the positioning object.
+
 F263-musechars.mus / .etf / .musx
     sha256 f730245934b1aaf1ddf758d5298f553f2795090bd4b561f375385e7ea17eefa1 (.mus)
     sha256 88f8ee19b81bd8dd26313f34f9524c1888f88a52e02e010110c0194f23b1bfee (.etf)

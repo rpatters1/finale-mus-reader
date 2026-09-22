@@ -83,6 +83,18 @@ void importMultiStaffGroupIds(const ImportContext& context);
 /// @brief Recovers the staff membership of each multi-staff instrument.
 void importMultiStaffInstrumentGroups(const ImportContext& context);
 
+/// @brief Recovers abbreviated-name positioning overrides for staves.
+void importNamePositionAbbreviated(const ImportContext& context);
+
+/// @brief Recovers full-name positioning overrides for staves.
+void importNamePositionFull(const ImportContext& context);
+
+/// @brief Recovers abbreviated-name positioning overrides for staff styles.
+void importNamePositionStyleAbbreviated(const ImportContext& context);
+
+/// @brief Recovers full-name positioning overrides for staff styles.
+void importNamePositionStyleFull(const ImportContext& context);
+
 /// @brief Recovers page graphic assignments and their embedded-graphic references.
 void importPageGraphicAssignments(const ImportContext& context);
 

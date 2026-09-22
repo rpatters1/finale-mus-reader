@@ -63,7 +63,9 @@ could instead report the gap.
 | Material | Home |
 |---|---|
 | What a specific fixture is and what it changes | `tests/evidence/<era>/provenance.txt` |
-| A format fact the code now depends on | `docs/format_overview.md` or the relevant `docs/` rule |
+| A binding reader rule | the relevant production `docs/` file |
+| Cross-cutting container, epoch, framing, or shared-record fact | `docs/format_overview.md` |
+| A class-specific selector, class id, payload layout, flag, version behavior, sharing behavior, or recovery status | the paired research repository's `research/format/<pool>/<name>.md`, never production `docs/format_overview.md` |
 
 Delete derivation history, refuted predictions, investigative narratives, and references to
 materials that are not part of this repository.

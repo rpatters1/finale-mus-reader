@@ -69,6 +69,10 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMusicSymbolOptions: return "music_symbol_options";
     case Phase::ImportMultiStaffGroupIds: return "multi_staff_group_ids";
     case Phase::ImportMultiStaffInstrumentGroups: return "multi_staff_instrument_groups";
+    case Phase::ImportNamePositionAbbreviated: return "name_position_abbreviated";
+    case Phase::ImportNamePositionFull: return "name_position_full";
+    case Phase::ImportNamePositionStyleAbbreviated: return "name_position_style_abbreviated";
+    case Phase::ImportNamePositionStyleFull: return "name_position_style_full";
     case Phase::ImportNoteRestOptions: return "note_rest_options";
     case Phase::ImportPageFormatOptions: return "page_format_options";
     case Phase::ImportPages: return "pages";

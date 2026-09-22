@@ -191,15 +191,20 @@ struct SyntheticClassRow
     std::uint16_t partId{};
     bool hasContinuation{};
     std::vector<std::uint16_t> continuationMasks;
+    std::uint16_t continuationTrailerFirst{};
+    std::uint16_t continuationTrailerSecond{};
 
     SyntheticClassRow(std::uint16_t classIdValue, std::vector<std::int16_t> wordValues, std::uint16_t cmperValue = GLOBALS_CMPER,
-        std::uint16_t partIdValue = 0, bool continuation = false, std::vector<std::uint16_t> maskValues = {})
+        std::uint16_t partIdValue = 0, bool continuation = false, std::vector<std::uint16_t> maskValues = {}, std::uint16_t trailerFirst = 0,
+        std::uint16_t trailerSecond = 0)
         : classId(classIdValue),
           words(std::move(wordValues)),
           cmper(cmperValue),
           partId(partIdValue),
           hasContinuation(continuation),
-          continuationMasks(std::move(maskValues))
+          continuationMasks(std::move(maskValues)),
+          continuationTrailerFirst(trailerFirst),
+          continuationTrailerSecond(trailerSecond)
     {}
 };
 
@@ -244,7 +249,8 @@ inline finale_mus_reader::container::ParsedContainer makeClassContainer(const st
                 push16(slot < row.continuationMasks.size() ? row.continuationMasks[slot] : 0);
             }
         }
-        block.data.insert(block.data.end(), 4, 0);
+        push16(row.continuationTrailerFirst);
+        push16(row.continuationTrailerSecond);
     }
     block.info.decodedSize = block.data.size();
     parsed.blocks.push_back(std::move(block));
