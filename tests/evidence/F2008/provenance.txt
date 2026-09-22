@@ -64,6 +64,18 @@ F2008-empty.musx
     twelve blue values at words 25--36, and five zero trailer words. Every
     color and the outline switch agree with the companion.
 
+F2008-parts.mus / -finale27/F2008-parts.musx
+    sha256 7b1084a77f4c5359f05ebedb924acbd0e8a73cc5c7c6abafc3b1118954d0c6f1 (.mus)
+    sha256 503ed74be133eea448ddfd230470f7e46bc5230bc8cba904c344a61fb735bccc (.musx)
+    Derived from F2008-empty by adding two linked parts that share staff 1, with no part voicing.
+
+F2008-parts-voiced.mus / -finale27/F2008-parts-voiced.musx
+    sha256 8fc23ec298ea38e742afc21c7eb7463c98fa44f4ffb862d251ec1530792a3df1 (.mus)
+    sha256 7b615ca2e8ca5579f837cd594f00d4d412af7151a13ce24c69bc1b9535ec76aa (.musx)
+    Derived from F2008-parts by enabling voicing in both linked parts. Part 1 uses the top note
+    in single-layer passages. Part 2 selects the second and fifth notes from the bottom and uses
+    layer 2 for both single-layer and multilayer passages.
+
 F2008-empty-le.mus / -finale27/F2008-empty-le.musx
     sha256 3472a2e139d309dcafa7ef6d8e091ba81e25e5da340650a78fa4fb26e40497bb (.mus)
     sha256 fae71f507f4101d8f7b8a7644fd15149e20b965943e99a95b7665fc73d5e2019 (.musx)

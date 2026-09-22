@@ -80,6 +80,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportPartDefinitions: return "part_defs";
     case Phase::ImportPartGlobals: return "part_globals";
+    case Phase::ImportPartVoicing: return "part_voicing";
     case Phase::ImportPercussionNoteCodes: return "percussion_note_codes";
     case Phase::ImportPercussionNoteInfo: return "percussion_note_info";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
