@@ -132,7 +132,7 @@ TEST_CASE("Name positioning uses the early layout before Finale 3.7")
         CHECK(target->hAlign == (testCase.earlyLayout ? musx::dom::AlignJustify::Right : musx::dom::AlignJustify::Center));
         CHECK(target->expand == testCase.earlyLayout);
         CHECK(target->hidden == !testCase.earlyLayout);
-        const auto* field = report.findField<NamePositionFull>("expand", musx::dom::SCORE_PARTID, 1);
+        const auto* field = report.findField<NamePositionFull>("expand", musx::dom::SCORE_PARTID, musx::dom::Cmper{1});
         REQUIRE(field);
         CHECK(field->origin == (testCase.earlyLayout ? ValueOrigin::LegacyBehavior : ValueOrigin::LegacyMus));
     }
