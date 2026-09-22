@@ -13,6 +13,9 @@ later layout can revise one without destabilizing the others.
 
 - Read `AGENTS.md`, then `docs/format_overview.md`, then the class's existing importer if it
   has one (`src/import/<pool>/<name>.cpp`) and its test file (`tests/classes/<pool>/<name>_tests.cpp`).
+- Do not add the target class's selectors, class ids, payload layouts, flags, version behavior,
+  sharing behavior, or recovery status to `docs/format_overview.md`. In the paired research
+  workspace, the sole prose home for those findings is `research/format/<pool>/<name>.md`.
 - Treat every locator or structure hint, including one from the user, as a hypothesis until a
   fixture supports it with bytes. Label uncertain format claims **Believed** or **Unverified**
   in the code per the `comment-production-code` skill.

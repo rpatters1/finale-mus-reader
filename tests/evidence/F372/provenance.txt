@@ -8,6 +8,14 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-namepos-indiv.mus / .etf / -finale27/F372-namepos-indiv.musx
+    sha256 1ab55c2972bcba6d6c88c9d3dd958d6ef1b2562f9223eb1bf30aa83445d0075d (.mus)
+    sha256 7b601332532bc9a44883e18a8eb1daf36c8c0733642ec2418ea8220505510e58 (.etf)
+    sha256 7a4a2ee9a6f66d362aed739bcc95e50db0c1e36e7bfbdd4cf769d3d1671c82f6 (.musx)
+    Derived from F372-baseline by enabling individual positioning for staff 1's full name while
+    leaving its abbreviated name on shared positioning. The ETF independently exposes the full
+    and abbreviated positioning rows, and the Finale 27 companion preserves the distinction.
+
 F372-fretboard-baselines.mus / .etf / -finale27/F372-fretboard-baselines.musx
     sha256 980b3a757fb00b4008d36a00f8734fe407cf4cc8e14c0cae33a36ff277bb336d (.mus)
     sha256 bac9ffb40be40b8f836c5947953102d5939b97638a1865e52d4838915aab58fb (.etf)

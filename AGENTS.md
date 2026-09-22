@@ -40,12 +40,12 @@ agent can use them. Read the relevant one before starting that task:
 
 ## Documentation
 
-`docs/` holds the binding project rules and the format knowledge the code relies on. Read one
-when the task calls for it:
+`docs/` holds the binding project rules and cross-cutting format knowledge the code relies on.
+Read one when the task calls for it:
 
 | Read | Before |
 |---|---|
-| [`docs/format_overview.md`](docs/format_overview.md) | Any work on the reader: the pipeline, the four epochs, record rows, terminology. |
+| [`docs/format_overview.md`](docs/format_overview.md) | Any work on the reader: the pipeline, four epochs, framing, generic record rows, and terminology. Never add class-specific format notes. |
 | [`docs/decoder_rules.md`](docs/decoder_rules.md) | Writing or changing a layout gate, or any binary read. Structural markers outrank version gates; epoch gates outrank version gates. |
 | [`docs/text_encoding.md`](docs/text_encoding.md) | Any text or symbol conversion. Never re-encode pre-Finale-2012 text without that text's own font. |
 | [`docs/options_fallback.md`](docs/options_fallback.md) | Adding an option overlay or reporting a `ValueOrigin`. |
@@ -53,6 +53,11 @@ when the task calls for it:
 | [`docs/build_invariants.md`](docs/build_invariants.md) | Changing CMake or adding a dependency. |
 | [`docs/code_conventions.md`](docs/code_conventions.md) | Writing or reviewing any project-owned C++ source file. |
 | [`tests/evidence/README.md`](tests/evidence/README.md) | Adding or using a fixture. |
+
+Do not add a class's selectors, class ids, payload layout, flags, version behavior, sharing
+behavior, or recovery status to `docs/format_overview.md`. In the paired research workspace,
+those findings belong in `research/format/<pool>/<name>.md`; production retains the importer,
+tests, and fixture provenance without duplicating the class reference prose.
 
 Comments in `src/` and `include/` state how the code works, and how the format is believed to
 work where belief is all there is, with the confidence labeled. They do not carry how a behavior
