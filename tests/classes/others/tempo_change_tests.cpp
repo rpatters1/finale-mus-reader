@@ -67,7 +67,7 @@ void checkTempo(const musx::dom::DocumentPtr& document, const ImportReport& repo
     CHECK(fields.at("eduPosition").rawValue == edu);
     CHECK(fields.at("ratio").rawValue == ratio);
     CHECK(fields.at("unit").rawValue == unit);
-    CHECK(fields.at("isRelative").rawValue == relative);
+    CHECK(fields.at("isRelative").rawValue == static_cast<std::int64_t>(relative));
 }
 
 TEST_CASE("TempoChange recovers fixed rows in every pre-zlib epoch", "[class][tempo-change]")
@@ -114,7 +114,7 @@ TEST_CASE("Controlled Coda and DCL tempo changes retain relative source values",
              std::tuple{"evidence/F2002/F2002-tempo.mus", 1024, 1210, 1000},
          }) {
         const auto result = readFixture(fixture);
-        const auto tempos = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, 1);
+        const auto tempos = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
         REQUIRE(tempos.size() == 1);
         const auto& tempo = tempos.front();
         CHECK(tempo->getInci() == musx::dom::Inci(0));
@@ -139,22 +139,22 @@ TEST_CASE("Controlled Coda and DCL tempo changes retain relative source values",
 TEST_CASE("Controlled zlib tempo changes split and retain their measure incidences", "[class][tempo-change]")
 {
     const auto result = readFixture("evidence/F2012/F2012-jwtempo.mus");
-    const auto firstMeasure = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, 1);
+    const auto firstMeasure = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     const std::array ratios{
         111848, 118838, 125829, 132819, 139810, 146800, 153791, 160781, 167772, 174762, 181753, 188743, 195734, 202724, 209715, 216705};
     REQUIRE(firstMeasure.size() == ratios.size());
     for (std::size_t i = 0; i < ratios.size(); ++i) {
         const auto& tempo = firstMeasure.at(i);
-        CHECK(tempo->getInci() == musx::dom::Inci(i));
+        CHECK(tempo->getInci() == static_cast<musx::dom::Inci>(i));
         CHECK(tempo->eduPosition == static_cast<int>(256 * i));
         CHECK(tempo->ratio == ratios[i]);
         CHECK(tempo->unit == 1000);
         CHECK_FALSE(tempo->isRelative);
-        const auto key = finale_mus_reader::instanceKey<TempoChange>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(i));
+        const auto key = finale_mus_reader::instanceKey<TempoChange>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1), static_cast<musx::dom::Inci>(i));
         REQUIRE(result.report.fields.contains(key));
         CHECK(result.report.fields.at(key).at("ratio").rawValue == ratios[i]);
     }
-    const auto secondMeasure = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, 2);
+    const auto secondMeasure = result.document->getOthers()->getArray<TempoChange>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
     REQUIRE(secondMeasure.size() == 1);
     CHECK(secondMeasure.front()->eduPosition == 0);
     CHECK(secondMeasure.front()->ratio == 223696);
