@@ -677,3 +677,10 @@ F100-syslock.mus / .etf / .musx
     sha256 6d4e7fd837766eac484ef2e9235eba797ac7e69e9931549145528b889fe4d5a9 (.musx)
     From F100-baseline, adds a second measure and locks the two-measure system. The Finale 27
     re-save preserves the lock.
+
+F100-tempo.mus / .etf / .musx
+    sha256 5b8c641945f97925a0e2cf3ab000963ee4adffc0783e8c92accbdc16257f54af (.mus)
+    sha256 7613d1ff64497198bb8113a12b734be96fd7860d6a2fc319cd13135309a67a98 (.etf)
+    sha256 f1ec758fdb3869cad9dea4d322b2a07b15e4b44816c52445142198464c520947 (.musx)
+    From the Finale 1.0 baseline, adds one relative Tempo Tool change in measure 1 at EDU
+    position 2048. The saved event has ratio 123 and unit 123; the Finale 27 re-save retains it.

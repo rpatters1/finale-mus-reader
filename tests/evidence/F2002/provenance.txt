@@ -142,3 +142,13 @@ F2002-tablature-basekey47.etf
     From F2002-tablature, changing only Base Key to 47. `IS(1)` word 1 changes
     from 0 to 47, and the companion changes only the synthesized instrument's
     string pitch and derived name, to MIDI pitch 47 and `B2`.
+
+F2002-tempo.mus
+    sha256 934263a18252707aa93a9f03eb9af1480b8294c460535c0d53088dc4413b7f3f
+F2002-tempo.etf
+    sha256 b5d81572240308412abab4555375b6629f8b38cec01d6c69185ed1d46432b3b9
+-finale27/F2002-tempo.musx
+    sha256 de8e08b006e1f2863966df1fe1a4f5a531992c8cce513ff0d0d3c05ad471ba15
+    From the Finale 2002 baseline, adds one relative Tempo Tool change in measure 1 at
+    EDU position 1024. The saved event has ratio 1210 and unit 1000; the Finale 27 re-save
+    retains it.

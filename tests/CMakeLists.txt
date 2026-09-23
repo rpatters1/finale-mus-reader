@@ -79,6 +79,7 @@ add_executable(finale_mus_reader_tests
     classes/others/staff_style_assign_tests.cpp
     classes/others/staff_system_tests.cpp
     classes/others/system_lock_tests.cpp
+    classes/others/tempo_change_tests.cpp
     classes/others/staff_used_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp

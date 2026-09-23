@@ -97,6 +97,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportStaffSystems: return "staff_systems";
     case Phase::ImportSystemLocks: return "system_locks";
     case Phase::ImportStaffUsed: return "staff_used";
+    case Phase::ImportTempoChanges: return "tempo_changes";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";
     case Phase::ImportStaffOptions: return "staff_options";
     case Phase::ImportStemOptions: return "stem_options";

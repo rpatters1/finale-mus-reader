@@ -99,6 +99,7 @@ enum class Phase : std::size_t {
     ImportStaffSystems,
     ImportSystemLocks,
     ImportStaffUsed,
+    ImportTempoChanges,
     ImportSmartShapeOptions,
     ImportStaffOptions,
     ImportStemOptions,

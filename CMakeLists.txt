@@ -234,6 +234,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/staff_system.cpp
     src/import/others/system_lock.cpp
     src/import/others/staff_used.cpp
+    src/import/others/tempo_change.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
     src/import/support/embedded_graphics.cpp
