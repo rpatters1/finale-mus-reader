@@ -44,7 +44,7 @@ TEST_CASE("System lock word one and filler do not affect the recovered span", "[
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::others::importSystemLocks(context);
-        const auto lock = document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, 2);
+        const auto lock = document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, musx::dom::Cmper(2));
         REQUIRE(lock);
         CHECK(lock->endMeas == 6);
     }
@@ -53,10 +53,10 @@ TEST_CASE("System lock word one and filler do not affect the recovered span", "[
 TEST_CASE("System lock recovers the Finale 2008 class record", "[class][system-lock]")
 {
     const auto result = readFixture("evidence/F2008/F2008-syslock.mus");
-    const auto lock = result.document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, 1);
+    const auto lock = result.document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(lock);
     CHECK(lock->endMeas == 2);
-    const auto* field = result.report.findField<SystemLock>("endMeas", musx::dom::SCORE_PARTID, 1);
+    const auto* field = result.report.findField<SystemLock>("endMeas", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(field);
     CHECK(field->origin == ValueOrigin::LegacyMus);
     CHECK(field->rawValue == 2);
@@ -71,10 +71,10 @@ TEST_CASE("Finale 1.0 system lock spans both measures of the controlled edit", "
 
     const auto edited = readFixture("evidence/F100/F100-syslock.mus");
     CHECK(edited.document->getOthers()->getAllSources<musx::dom::others::Measure>().size() == 2);
-    const auto lock = edited.document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, 1);
+    const auto lock = edited.document->getOthers()->get<SystemLock>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(lock);
     CHECK(lock->endMeas == 3);
-    const auto* field = edited.report.findField<SystemLock>("endMeas", musx::dom::SCORE_PARTID, 1);
+    const auto* field = edited.report.findField<SystemLock>("endMeas", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
     REQUIRE(field);
     CHECK(field->origin == ValueOrigin::LegacyMus);
     CHECK(field->rawValue == 3);
