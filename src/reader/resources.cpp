@@ -10,7 +10,7 @@ ReaderResources prepareReaderResources(const ReaderOptions& options, XmlParser p
 {
     ReaderResources result;
     result.symbolFontNames = text::parseMacSymbolFonts(options.macSymbolFonts);
-    result.percussionMappings = percussion::parseMappingTables(options.percussionMappingXml, parseXml);
+    result.percussionMappings = percussion::parseMappingTables(options.percussionMappingXml, options.percussionMapConversionTable, parseXml);
     return result;
 }
 
