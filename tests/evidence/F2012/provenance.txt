@@ -268,3 +268,11 @@ F2012-noteartexp-unlnk-move.mus
     record's primary horizontal offset and one continuation mask group change; the companion
     remains shared. Together the pair shows that unlink creates the partial snapshot with an
     initially clear mask and a later edit marks the affected group.
+
+F2012-jwtempo.mus
+    sha256 db756a62f270e0d39c98adab3686ad26be20b1103beea330c422916c61a2289b
+-finale27/F2012-jwtempo.musx
+    sha256 2f465e66755945039caec17e8c3c5a00c7113e9d36a690ff4f791eeb4bbc3d0f
+    Adds a sequence of absolute Tempo Tool changes with the JW Tempo plugin: sixteen
+    positioned changes in measure 1 and one at the start of measure 2. The Finale 27
+    re-save retains the sequence.

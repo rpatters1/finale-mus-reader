@@ -142,6 +142,9 @@ void importStaffLists(const ImportContext& context);
 /// @brief Recovers locked measure spans from fixed-row other records.
 void importSystemLocks(const ImportContext& context);
 
+/// @brief Recovers measure tempo tool changes in incidence order.
+void importTempoChanges(const ImportContext& context);
+
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
 
