@@ -139,6 +139,9 @@ void importStaffUsed(const ImportContext& context);
 /// category lists.
 void importStaffLists(const ImportContext& context);
 
+/// @brief Recovers locked measure spans from fixed-row other records.
+void importSystemLocks(const ImportContext& context);
+
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
 

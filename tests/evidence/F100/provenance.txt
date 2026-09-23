@@ -670,3 +670,10 @@ staffopts/F100-transp-settoclef7.mus / .etf / .musx
     from zero to `0xf000`, and the ETF repeats that value. The companion sets `setToClef`, writes
     `transposedClef` 7, keeps key-signature interval and adjustment zero, and does not set the
     later `noSimplifyKey` or chromatic controls.
+
+F100-syslock.mus / .etf / .musx
+    sha256 cd01e0bc02978e64d6d3c4d95807cecb4e618420591704e097f3733ee391f0f5 (.mus)
+    sha256 1f0adb52d170267f197d179c9929a0846f6a648e7eed1a67b3c97c53d7d802ae (.etf)
+    sha256 6d4e7fd837766eac484ef2e9235eba797ac7e69e9931549145528b889fe4d5a9 (.musx)
+    From F100-baseline, adds a second measure and locks the two-measure system. The Finale 27
+    re-save preserves the lock.
