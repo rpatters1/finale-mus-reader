@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "import/shared/barline_type.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -102,21 +103,6 @@ struct StaffGroupSpanMember
     case 1: return Result::Right;
     case 2: return Result::Center;
     default: return Result::Left;
-    }
-}
-
-[[nodiscard]] StaffGroupTarget::BarlineType barlineType(std::uint16_t value)
-{
-    using Result = StaffGroupTarget::BarlineType;
-    switch (value) {
-    case 1: return Result::Normal;
-    case 2: return Result::Double;
-    case 3: return Result::Dashed;
-    case 4: return Result::Solid;
-    case 5: return Result::Final;
-    case 6: return Result::Tick;
-    case 0x0e: return Result::Custom;
-    default: return Result::None;
     }
 }
 
@@ -333,7 +319,7 @@ bool populateStaffGroup(StaffGroupTarget& target, std::span<const std::int16_t> 
     target.bracket->showOnSingleStaff = (static_cast<std::uint16_t>(words[9]) & bracketOnSingleMask) != 0;
 
     const auto flags = static_cast<std::uint16_t>(words[10]);
-    target.barlineType = barlineType((flags & barlineTypeMask) >> barlineTypeShift);
+    target.barlineType = barlineTypeOf((flags & barlineTypeMask) >> barlineTypeShift);
     target.fullNameJustify = alignJustify(flags & fullNameJustifyMask);
     target.abbrvNameJustify = alignJustify((flags & abbrvNameJustifyMask) >> abbrvNameJustifyShift);
     target.drawBarlines = drawBarlineStyle(flags);

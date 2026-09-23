@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "import/shared/barline_type.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -168,26 +169,6 @@ constexpr std::uint8_t extendedLeftBarlineShift = 4;
 constexpr std::uint16_t extendedCompositeDispNumeratorMask = 0x0100;
 constexpr std::uint16_t extendedCompositeDispDenominatorMask = 0x0200;
 constexpr std::uint16_t extendedPageBreakMask = 0x0800;
-
-// Finale's barline codes, which musxdom's enum reorders and extends. **Believed** for the custom
-// code, whose Shape Designer comparator is the word beside it. The left-barline code alone reaches
-// 15, which is how a measure says to take the type from the document's barline options.
-[[nodiscard]] MeasureTarget::BarlineType barlineTypeOf(std::uint16_t stored)
-{
-    using BarlineType = MeasureTarget::BarlineType;
-    switch (stored) {
-    case 0: return BarlineType::None;
-    case 1: return BarlineType::Normal;
-    case 2: return BarlineType::Double;
-    case 3: return BarlineType::Dashed;
-    case 4: return BarlineType::Solid;
-    case 5: return BarlineType::Final;
-    case 6: return BarlineType::Tick;
-    case 7: return BarlineType::Custom;
-    case 15: return BarlineType::OptionsDefault;
-    default: return BarlineType::None;
-    }
-}
 
 // Finale's positioning codes. Three of them translate directly; the two that carry individual
 // positioning are 4 and 6 rather than the 3 and 4 musxdom numbers them. Code 3 is reserved and

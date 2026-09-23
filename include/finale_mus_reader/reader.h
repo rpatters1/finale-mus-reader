@@ -395,6 +395,18 @@ struct ImportResult
     ImportReport report;
 };
 
+/// @brief A Finale MIDI Device Annotation XML document and its filename.
+struct PercussionMappingXml
+{
+    /// @brief Filename used by Finale's percussion-map conversion table.
+    /// @details Paths are accepted; only the final filename component is used. An empty name
+    /// permits direct note-name-list lookup without conversion-table lookup.
+    std::string fileName{};
+
+    /// @brief XML contents, parsed during reader creation without retaining the span.
+    std::span<const std::uint8_t> bytes{};
+};
+
 /// @brief Optional resources supplied by the application when a reader is created.
 struct ReaderOptions
 {
@@ -409,7 +421,13 @@ struct ReaderOptions
     /// @details The reader parses every buffer during creation and does not retain the spans.
     /// Documents may contain one or more named `NoteNameList` tables. The first supplied table
     /// with each name is retained; later tables with the same normalized name are ignored.
-    std::vector<std::span<const std::uint8_t>> percussionMappingXml{};
+    std::vector<PercussionMappingXml> percussionMappingXml{};
+
+    /// @brief Contents of Finale's `PercMapConversionTable.txt`, if available.
+    /// @details The reader parses these bytes during creation and does not retain the span.
+    /// A matching legacy map name selects a supplied XML file and note-name list. Missing
+    /// mappings retain the direct name-based lookup.
+    std::span<const std::uint8_t> percussionMapConversionTable{};
 };
 
 class Reader

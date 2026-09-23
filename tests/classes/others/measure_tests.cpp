@@ -223,6 +223,19 @@ TEST_CASE("Thirteen-word measure records recover every member in both byte order
     }
 }
 
+TEST_CASE("Measure barline code 14 selects a custom shape")
+{
+    const auto parsed = makeClassContainer(
+        {SyntheticClassRow{0x00b0, {442, 0, 4, 1024, 0x2006, 0x00e0, 4, 1024, 0x00f0, 13, 0, 0, 0}, 1, 0}}, ByteOrder::LittleEndian);
+    const auto document = emptyMeasureDocument();
+    const auto report = measureImport(parsed, SourceProfile(FormatEpoch::ZlibLegacy), document);
+
+    const auto measure = document->getOthers()->get<Measure>(musx::dom::SCORE_PARTID, 1);
+    expect(measure && measure->barlineType == BarlineType::Custom, "Legacy barline code 14 did not select Custom");
+    expect(measure->customBarShape == 13, "The custom barline's shape comparator was not recovered");
+    expect(field(report, "others.measSpec[1].barlineType").origin == ValueOrigin::LegacyMus, "The custom barline was not reported as a stored value");
+}
+
 TEST_CASE("The full-names bit is read only from Finale 2011")
 {
     // The same record, read by three releases. The bit predates the setting, so only the last of

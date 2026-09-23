@@ -196,7 +196,7 @@ void importLegacyPercussionNoteInfo(const ImportContext& context)
             auto noteType = std::optional<musx::dom::PercussionNoteTypeId>{};
             if (context.profile.percussionMappings) {
                 if (const auto name = mapNames.find(mapId); name != mapNames.end()) {
-                    noteType = context.profile.percussionMappings->find(name->second, midiNote);
+                    noteType = context.profile.percussionMappings->find(name->second, midiKey, midiNote);
                 }
             }
             const auto mapSpecificType = noteType.has_value();

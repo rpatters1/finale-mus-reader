@@ -104,7 +104,8 @@ auto document = finale_mus_reader::Reader::read<XmlDocument>("legacy_score.mus")
 // Parse optional resources once when importing multiple files.
 finale_mus_reader::ReaderOptions options;
 options.macSymbolFonts = macSymbolFontsBytes;            // Finale's MacSymbolFonts.txt, if available
-options.percussionMappingXml = percussionMappingXmlBuffers;
+options.percussionMappingXml = {{"SmartMusic SoftSynth.xml", percussionMappingXmlBytes}};
+options.percussionMapConversionTable = percussionMapConversionTableBytes; // Finale's PercMapConversionTable.txt, if available
 auto reader = finale_mus_reader::Reader::create<XmlDocument>(options);
 auto anotherDocument = reader.read("another_legacy_score.mus");
 

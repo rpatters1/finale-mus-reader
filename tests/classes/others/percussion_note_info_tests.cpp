@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "import/support/percussion_mappings.h"
+
+#include <array>
 
 namespace finale_mus_reader_tests {
 namespace {
@@ -211,7 +214,7 @@ TEST_CASE("Finale 2008 staff-style selections upgrade their referenced percussio
     const auto bytes = [](std::string_view value) {
         return std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(value.data()), value.size());
     };
-    const finale_mus_reader::ReaderOptions options{bytes(fixtureLegacySymbolFonts), {bytes(mapping)}};
+    const finale_mus_reader::ReaderOptions options{bytes(fixtureLegacySymbolFonts), {{"", bytes(mapping)}}};
 
     for (const auto fixture : {"F2008-percstyle.mus", "F2008-percstyle-assigned.mus"}) {
         const auto result =
@@ -242,7 +245,7 @@ TEST_CASE("Reusable readers apply the first supplied named percussion table", "[
             return std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(value.data()), value.size());
         };
         const std::string symbolFontContents(fixtureLegacySymbolFonts);
-        const finale_mus_reader::ReaderOptions options{bytes(symbolFontContents), {bytes(first), bytes(duplicate)}};
+        const finale_mus_reader::ReaderOptions options{bytes(symbolFontContents), {{"", bytes(first)}, {"", bytes(duplicate)}}};
         return finale_mus_reader::Reader::create<TestXmlDocument>(options);
     }();
 
@@ -254,6 +257,40 @@ TEST_CASE("Reusable readers apply the first supplied named percussion table", "[
         CHECK(notes.front()->percNoteType == 236);
         CHECK(field(result.report, "others.percussionNoteInfo[1,0].percNoteType").rawValue == 60);
     }
+}
+
+TEST_CASE("Legacy percussion conversion selects an XML file and input key", "[class][reader]")
+{
+    const std::string first = R"xml(<FinaleNameDocument><MasterDeviceNames>
+        <NoteNameList Name="Latin Percussion"><Note Number="103" PercNoteType="35" /></NoteNameList>
+        <NoteNameList Name="Legacy, Map"><Note Number="7" PercNoteType="99" /></NoteNameList>
+        </MasterDeviceNames></FinaleNameDocument>)xml";
+    const std::string second = R"xml(<FinaleNameDocument><MasterDeviceNames>
+        <NoteNameList Name="Latin Percussion"><Note Number="103" PercNoteType="4131" /></NoteNameList>
+        </MasterDeviceNames></FinaleNameDocument>)xml";
+    const std::string conversion = "// legacy name,file,list\r\n"
+                                   "Legacy\\, Map,missing.xml,Latin Percussion\r\n"
+                                   "Legacy\\, Map,second.xml,Latin Percussion\r\n"
+                                   "Fallback,missing.xml,Latin Percussion\r\n";
+    const auto bytes = [](std::string_view value) {
+        return std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(value.data()), value.size());
+    };
+    const std::array documents{finale_mus_reader::PercussionMappingXml{"/tmp/first.xml", bytes(first)},
+        finale_mus_reader::PercussionMappingXml{"second.xml", bytes(second)}};
+    const auto parseXml = [](const char* data, std::size_t size) -> std::unique_ptr<musx::xml::IXmlDocument> {
+        auto xml = std::make_unique<TestXmlDocument>();
+        xml->loadFromBuffer(data, size);
+        return xml;
+    };
+    const auto tables = finale_mus_reader::percussion::parseMappingTables(documents, bytes(conversion), parseXml);
+    CHECK(tables.find("Legacy, Map", 103, 7) == 4131);
+    CHECK(tables.find("Fallback", 103, 7) == std::nullopt);
+    CHECK(tables.find("Legacy, Map", 104, 7) == 99);
+    const std::string missingTarget = "Legacy\\, Map,missing.xml,Latin Percussion\n";
+    const auto missingTargetTables = finale_mus_reader::percussion::parseMappingTables(documents, bytes(missingTarget), parseXml);
+    CHECK(missingTargetTables.find("Legacy, Map", 103, 7) == 99);
+    const auto withoutConversion = finale_mus_reader::percussion::parseMappingTables(documents, {}, parseXml);
+    CHECK(withoutConversion.find("Legacy, Map", 103, 7) == 99);
 }
 
 TEST_CASE("An unreferenced DCL DF map is not constructed", "[class]")
