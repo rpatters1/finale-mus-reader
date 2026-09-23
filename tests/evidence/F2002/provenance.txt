@@ -152,3 +152,12 @@ F2002-tempo.etf
     From the Finale 2002 baseline, adds one relative Tempo Tool change in measure 1 at
     EDU position 1024. The saved event has ratio 1210 and unit 1000; the Finale 27 re-save
     retains it.
+
+F2002-splitpoints.mus
+    sha256 661327c369222fdea0a943bb6eb89d7d988c6897179dacfbea0fb6de3c9408dc
+F2002-splitpoints.etf
+    sha256 50a19a8707581805a67cd2f78fc956808dda66351bc1fa6405eee8eb8cac2308
+-finale27/F2002-splitpoints.musx
+    sha256 7ecab5f812fa1b899bf5a5a76c1b54b6f742f66c8e8e7e6ff4867ce69eaecb5a
+    From the Finale 2002 baseline, adds two split points in measure 1. The Finale 27
+    re-save retains both positions.

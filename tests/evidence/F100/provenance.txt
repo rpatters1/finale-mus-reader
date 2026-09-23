@@ -684,3 +684,10 @@ F100-tempo.mus / .etf / .musx
     sha256 f1ec758fdb3869cad9dea4d322b2a07b15e4b44816c52445142198464c520947 (.musx)
     From the Finale 1.0 baseline, adds one relative Tempo Tool change in measure 1 at EDU
     position 2048. The saved event has ratio 123 and unit 123; the Finale 27 re-save retains it.
+
+F100-splitpoints.mus / .etf / .musx
+    sha256 c06424ccf3e540dd6bf156bc323a2ccdd4c93174d6c65c1cf981fb1ebab0e479 (.mus)
+    sha256 807b5856d65e52da319ca088d357cf2b72f4a53ab7fa18e273405015dfdc1adc (.etf)
+    sha256 95deffb44592109b17025e252c9d105b3823c74f9eb77a220242ace4b4750e3b (.musx)
+    From the Finale 1.0 baseline, adds two split points in measure 1. The Finale 27
+    re-save retains both positions.
