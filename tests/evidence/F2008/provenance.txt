@@ -188,3 +188,10 @@ F2008-percstyle-assigned.mus
     Derived from F2008-percstyle by assigning Percussion Style to the document's staff. The
     `0x0085` payload remains unchanged, isolating assignment as the condition that preserves the
     style through Finale 27 conversion.
+
+F2008-syslock.mus
+    sha256 07e9e791d4134bd87c7b29c29b509e9889df6178e3d286390ab65bfbd2fa3905
+-finale27/F2008-syslock.musx
+    sha256 3d1f13de827f3b7d8f1ca627800217195c54e980ef4c3013388e6301e4af35f1
+    A Finale 2008 document with a system lock beginning at measure 1 and ending before measure 2.
+    Its Finale 27 re-save preserves the lock.
