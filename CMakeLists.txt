@@ -228,6 +228,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/percussion_note_info.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
+    src/import/others/split_measure.cpp
     src/import/others/staff.cpp
     src/import/others/staff_list.cpp
     src/import/others/staff_style_assign.cpp

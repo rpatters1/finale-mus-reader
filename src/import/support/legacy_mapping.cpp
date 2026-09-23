@@ -272,6 +272,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
+        FINALE_MUS_READER_IMPORTER(ImportSplitMeasures, &others::importSplitMeasures),
         FINALE_MUS_READER_IMPORTER(ImportStaff, &others::importStaff),
         FINALE_MUS_READER_IMPORTER(ImportStaffLists, &others::importStaffLists),
         FINALE_MUS_READER_IMPORTER(ImportStaffStyleAssignments, &others::importStaffStyleAssignments),

@@ -70,12 +70,12 @@ void importKeyMapArrays(const ImportContext& context);
 /// era's own behavior for the layers it does not.
 void importLayerAttributes(const ImportContext& context);
 
-/// @brief Recovers every measure the source stores, score and unlinked part alike.
-void importMeasures(const ImportContext& context);
-
 /// @brief Recovers marking categories and their names, supplying the canned categories only
 /// when the source predates Finale 2009.
 void importMarkingCategories(const ImportContext& context);
+
+/// @brief Recovers every measure the source stores, score and unlinked part alike.
+void importMeasures(const ImportContext& context);
 
 /// @brief Recovers the part-specific staff-group reference for each multi-staff instrument.
 void importMultiStaffGroupIds(const ImportContext& context);
@@ -120,24 +120,27 @@ void importShapeGraphicAssignments(const ImportContext& context);
 /// @brief Recovers SmartShapeCustomLine objects.
 void importSmartShapeCustomLines(const ImportContext& context);
 
+/// @brief Recovers stored split positions for measures.
+void importSplitMeasures(const ImportContext& context);
+
 /// @brief Recovers source Staff objects and the parallel names used before Finale 3.7.
 void importStaff(const ImportContext& context);
 
-/// @brief Recovers source StaffStyle objects.
-void importStaffStyles(const ImportContext& context);
+/// @brief Recovers category and repeat staff lists, supplying absent canned
+/// category lists.
+void importStaffLists(const ImportContext& context);
 
 /// @brief Recovers source StaffStyleAssign objects.
 void importStaffStyleAssignments(const ImportContext& context);
+
+/// @brief Recovers source StaffStyle objects.
+void importStaffStyles(const ImportContext& context);
 
 /// @brief Recovers source StaffSystem objects from legacy system-layout records.
 void importStaffSystems(const ImportContext& context);
 
 /// @brief Recovers, normalizes, and completes the StaffUsed lists used by layout.
 void importStaffUsed(const ImportContext& context);
-
-/// @brief Recovers category and repeat staff lists, supplying absent canned
-/// category lists.
-void importStaffLists(const ImportContext& context);
 
 /// @brief Recovers locked measure spans from fixed-row other records.
 void importSystemLocks(const ImportContext& context);

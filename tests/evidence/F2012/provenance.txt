@@ -276,3 +276,18 @@ F2012-jwtempo.mus
     Adds a sequence of absolute Tempo Tool changes with the JW Tempo plugin: sixteen
     positioned changes in measure 1 and one at the start of measure 2. The Finale 27
     re-save retains the sequence.
+
+F2012-splitpoints.mus
+    sha256 de3ebcdadb731495a8232440829b230d1ddc977e69aa85df052f136728fa161f
+-finale27/F2012-splitpoints.musx
+    sha256 273df176a5efe47d352f92d9e0abf726da041e1173487dcd236ed102e0bb1ba3
+    From the Finale 2012 baseline, adds one split point in measure 1. The Finale 27
+    re-save retains the position.
+
+F2012-splitpoints-parts.mus
+    sha256 c81242415a284488e0c425c933aecb5238618a95c3f61040453e8bb871345ace
+-finale27/F2012-splitpoints-parts.musx
+    sha256 f51567984de93d2281d8cce2fe3bebff2c72748fa591364d558d9f7d87babfe6
+    From the Finale 2012 split-point fixture, adds a linked part and changes the
+    split position in measure 1. The split point remains visible in the part, and
+    the Finale 27 re-save retains its position.
