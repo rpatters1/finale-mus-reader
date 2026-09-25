@@ -291,3 +291,11 @@ F2012-splitpoints-parts.mus
     From the Finale 2012 split-point fixture, adds a linked part and changes the
     split position in measure 1. The split point remains visible in the part, and
     the Finale 27 re-save retains its position.
+
+F2012-timecomp.mus
+    sha256 01bb3cbf391b5a4777bdc259ee9f432e811c1d67b8f7ab82274bf245e2457561
+-finale27/F2012-timecomp.musx
+    sha256 29c9a98feb7166cb5b1125d9e424950bdc3b792d8f93ebf17a508c133c2b7e3c
+    Measure 1 has a composite time signature of two groups: 3 + 1 + 2 1/2 over eighth +
+    sixteenth, then 4 + 2 over quarter + sixteenth. Numerator and denominator are both
+    composite. The Finale 27 re-save retains both lists.

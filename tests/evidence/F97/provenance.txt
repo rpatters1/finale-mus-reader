@@ -117,3 +117,12 @@ F97-altnotation.mus / .etf
     Measures 2--7 use Slash Beats, Rhythmic, One-Bar Repeat, Two-Bar Repeat for
     two measures, and Invisible Beats. The six nonzero selectors occupy the low
     nibble of GF word 4. The MUSX file is its Finale 27 companion.
+
+F97-timecomp.mus / .etf
+    sha256 MUS 1d6c23398224f24c34e116262e8834acbccba47ed32623901b7a13b1893d083d
+    sha256 ETF f22d1950ccca2f74fca564dff41be82440c006699d23d1cdcf3b59cfac393ffb
+-finale27/F97-timecomp.musx
+    sha256 c4fe320c91094ce88470ddcadb8b9d16461d1418729a71fb861b90006ea67fe2
+    From Fin97-baseline, gives measure 1 the composite numerator 3 + 1 + 2 1/2 over an eighth
+    note, and measure 2 a numerator of 1 over the composite denominator quarter + eighth +
+    sixteenth. The MUSX file is its Finale 27 companion.
