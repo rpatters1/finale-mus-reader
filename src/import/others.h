@@ -148,6 +148,12 @@ void importSystemLocks(const ImportContext& context);
 /// @brief Recovers measure tempo tool changes in incidence order.
 void importTempoChanges(const ImportContext& context);
 
+/// @brief Recovers composite time signature lower lists.
+void importTimeCompositeLowers(const ImportContext& context);
+
+/// @brief Recovers composite time signature upper lists.
+void importTimeCompositeUppers(const ImportContext& context);
+
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
 

@@ -370,3 +370,11 @@ F372-altnotation.mus / .etf / .musx
     2, 3, 4, 5--6, and 7 respectively receive Slash Beats, Rhythmic, One-Bar Repeat, Two-Bar
     Repeat, and Invisible Beats. The MUS and ETF contain one five-word `GF` row for each changed
     measure; word 4 holds values 1, 2, 3, 4, 5, and 6 in measure order.
+
+F372-timecomp.mus / .etf / .musx
+    sha256 b4177ee0c33a914898dfbe7db6954fc5c836bf97e5a33f3d06575bc9c62b6c7f (.mus)
+    sha256 a59604502997748a7c1810cd1cacdf447f92ba8376bbc1ec4ade3a31fe8f13fa (.etf)
+    sha256 60b98e811c60a1ee9252250173ba24d96bd74a7966bd6fdf1eabf5b556599ab6 (.musx)
+    From the Finale 3.7.2 baseline, gives measure 1 the composite numerator 3 + 1 + 2 1/2 over
+    an eighth note, and measure 2 a numerator of 1 over the composite denominator quarter +
+    eighth + sixteenth.

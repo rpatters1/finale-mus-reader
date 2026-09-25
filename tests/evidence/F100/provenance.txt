@@ -691,3 +691,11 @@ F100-splitpoints.mus / .etf / .musx
     sha256 95deffb44592109b17025e252c9d105b3823c74f9eb77a220242ace4b4750e3b (.musx)
     From the Finale 1.0 baseline, adds two split points in measure 1. The Finale 27
     re-save retains both positions.
+
+F100-timecomp-frac.mus / .etf / .musx
+    sha256 073dcd590c992f41c85a3b21fd642045d61221761b66d008cca3cb6d1f7eb7dd (.mus)
+    sha256 78e84967c405408bb79da3a789469fb7ca9b84a823b47d2664fb716755801dfa (.etf)
+    sha256 638d1e35a31316bb1c144a950a4191307f011d3bfa1880e082af73ed98505e79 (.musx)
+    From the Finale 1.0 baseline, gives measure 1 the composite numerator 3 + 1 + 2 1/2 over
+    an eighth note, and measure 2 a numerator of 1 over the composite denominator quarter +
+    eighth + sixteenth.

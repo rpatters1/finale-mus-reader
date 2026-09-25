@@ -283,6 +283,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTempoChanges, &others::importTempoChanges),
         FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
         FINALE_MUS_READER_IMPORTER(ImportTextExpressionDefs, &others::importTextExpressionDefs),
+        FINALE_MUS_READER_IMPORTER(ImportTimeCompositeLowers, &others::importTimeCompositeLowers),
+        FINALE_MUS_READER_IMPORTER(ImportTimeCompositeUppers, &others::importTimeCompositeUppers),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterFlats, &others::importTonalCenterFlats),
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterSharps, &others::importTonalCenterSharps),
         // details

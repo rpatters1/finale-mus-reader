@@ -84,6 +84,7 @@ add_executable(finale_mus_reader_tests
     classes/others/staff_used_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
+    classes/others/time_composite_tests.cpp
     classes/texts/text_pool_tests.cpp
     reader_tests.cpp
     text_encoding_tests.cpp)

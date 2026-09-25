@@ -185,3 +185,11 @@ F2005/-finale27/F2005-tie-xtrasys.musx
     -12 to -11 EVPU. Selector 41 incidence 2 word 3 is the only decoded source word that
     changes; the ETF prints the same value and the Finale 27 companion changes only
     <frontTieSepar>, from -12 to -11.
+
+F2005-timecomp.mus / .etf / .musx
+    sha256 60d557ed2cb8a455f8eceddf8d1767bad9eec5b6a6fcac7d296c67c82e6f2050 (.mus)
+    sha256 82e65e1f112dfcc4af11a13a262f9d92d12eccf7053f01317333a1febc5dbdb2 (.etf)
+    sha256 398e6010d265a3332acaf4c3580bd4cbf0321e852637cea7bf4e2a6c7ceb2558 (.musx)
+    Measure 1 has a composite time signature of two groups: 3 + 1 + 2 1/2 over eighth +
+    sixteenth, then 1 + 2 over quarter + sixteenth. Numerator and denominator are both
+    composite. The MUSX file is its Finale 27 companion.
