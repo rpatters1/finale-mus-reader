@@ -199,7 +199,7 @@ TEST_CASE("Controlled fixtures recover independent key and time signatures", "[c
     SECTION("DCL two incidences")
     {
         const auto result = readFixture("evidence/F2002/F2002-fileinfo-text.mus");
-        for (const musx::dom::Cmper staffId : {5, 6}) {
+        for (const auto staffId : {musx::dom::Cmper(5), musx::dom::Cmper(6)}) {
             const auto details = result.document->getDetails()->get<IndependentStaff>(musx::dom::SCORE_PARTID, staffId, 1);
             REQUIRE(details);
             CHECK(details->hasKey);
@@ -225,7 +225,8 @@ TEST_CASE("Controlled fixtures recover independent key and time signatures", "[c
         CHECK(details->displayAbbrvTime);
         CHECK_FALSE(details->displayAltNumTsig);
         CHECK_FALSE(details->displayAltDenTsig);
-        const auto* abbreviated = result.report.findField<IndependentStaff>("displayAbbrvTime", musx::dom::SCORE_PARTID, 2, std::nullopt, 1);
+        const auto* abbreviated = result.report.findField<IndependentStaff>(
+            "displayAbbrvTime", musx::dom::SCORE_PARTID, musx::dom::Cmper(2), std::nullopt, musx::dom::Cmper(1));
         REQUIRE(abbreviated);
         CHECK(abbreviated->origin == ValueOrigin::LegacyMus);
         CHECK(abbreviated->rawValue == 0x0604);
