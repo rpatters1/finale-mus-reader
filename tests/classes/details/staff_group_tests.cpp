@@ -215,6 +215,28 @@ TEST_CASE("GS StaffGroup takes its staff span from the compact Scroll View list 
     }
 }
 
+TEST_CASE("GS StaffGroup recovers the curved-hook bracket", "[class][staff-group]")
+{
+    const auto parsed = makeContainer(
+        {{0, "IU", {15, 1, -184, 19, 1, -456}}, {1, "GS", {6, -20, 0, 0, 0, 0}}}, FormatEpoch::UncompressedLegacy, ByteOrder::BigEndian);
+    const auto document = emptyStaffGroupDocument();
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.byteOrder = ByteOrder::BigEndian;
+    const auto report = importStaffGroups(parsed, profile, document);
+
+    const auto group = document->getDetails()->get<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, 1);
+    REQUIRE(group);
+    REQUIRE(group->bracket);
+    CHECK(group->bracket->style == musx::dom::details::Bracket::BracketStyle::BracketCurvedHooks);
+    CHECK(group->startInst == 15);
+    CHECK(group->endInst == 19);
+    CHECK(report.diagnostics.empty());
+    const auto key =
+        finale_mus_reader::instanceKey<StaffGroup>(musx::dom::SCORE_PARTID, musx::dom::BASE_SYSTEM_ID, std::nullopt, musx::dom::Cmper(1));
+    CHECK(report.fields.at(key).at("bracket.style").origin == ValueOrigin::LegacyMus);
+    CHECK(report.fields.at(key).at("bracket.style").rawValue == 6);
+}
+
 TEST_CASE("Controlled Finale 2.6.3 StaffGroups recover the three Coda bracket styles", "[class][staff-group][reader]")
 {
     struct Sample

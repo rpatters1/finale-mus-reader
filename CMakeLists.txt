@@ -170,6 +170,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/custom_key_octaves.cpp
     src/import/details/fretboard_diagrams.cpp
     src/import/details/gframe_hold.cpp
+    src/import/details/independent_staff_details.cpp
     src/import/details/key_symbol_list.cpp
     src/import/details/measure_graphic_assign.cpp
     src/import/details/percussion_note_code.cpp

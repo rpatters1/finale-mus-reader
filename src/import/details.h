@@ -25,6 +25,9 @@ void importFretboardDiagrams(const ImportContext& context);
 /// alternate-notation bits from supported pre-Finale-2000 record shapes.
 void importGFrameHolds(const ImportContext& context);
 
+/// @brief Recovers per-staff independent key and time signatures.
+void importIndependentStaffDetails(const ImportContext& context);
+
 /// @brief Recovers accidental strings for custom key symbol lists.
 void importKeySymbolListElements(const ImportContext& context);
 
