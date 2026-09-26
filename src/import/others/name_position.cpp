@@ -30,25 +30,6 @@ bool sourceUsesPreFinale37NamePositionLayout(const SourceProfile& profile)
     return sourcePredatesVersion(profile, FormatEpoch::UncompressedLegacy, versions::finale3_7);
 }
 
-[[nodiscard]] std::uint16_t namePositionFlags(
-    const ImportContext& context, const RecordFamilySource& source, const records::LegacyRow& row, std::span<const std::uint8_t> effectivePayload)
-{
-    auto flags = payloadWord(effectivePayload, namePositionFlagsOffset, context.profile.byteOrder);
-    if (!source.classRecords || row.partId == musx::dom::SCORE_PARTID || row.continuationSize == 0 || row.trailerSecond == 0) {
-        return flags;
-    }
-
-    // Continued name-position records store the flags-word editable mask in the
-    // second terminal word, beyond the continuation's byte masks.
-    const auto physicalPayload = source.pool->payloadOf(row);
-    if (physicalPayload.size() < namePositionPayloadSize) {
-        return flags;
-    }
-    const auto physicalFlags = payloadWord(physicalPayload, namePositionFlagsOffset, context.profile.byteOrder);
-    flags = static_cast<std::uint16_t>((flags & ~row.trailerSecond) | (physicalFlags & row.trailerSecond));
-    return flags;
-}
-
 template <typename Target>
 void reportNamePosition(
     const ImportContext& context, const Target& target, const records::LegacyRow& row, records::LegacyTag identity, bool preFinale37Layout)
@@ -101,7 +82,7 @@ void importNamePosition(const ImportContext& context, const char* fixedTag, reco
         auto target = createOthersRecordTarget<Target>(context.document, *source, row, cmper);
         target->horzOff = static_cast<std::int16_t>(payloadWord(payload, namePositionHorzOffset, context.profile.byteOrder));
         target->vertOff = static_cast<std::int16_t>(payloadWord(payload, namePositionVertOffset, context.profile.byteOrder));
-        const auto flags = namePositionFlags(context, *source, row, payload);
+        const auto flags = payloadWord(payload, namePositionFlagsOffset, context.profile.byteOrder);
         const auto preFinale37Layout = sourceUsesPreFinale37NamePositionLayout(context.profile);
         if (preFinale37Layout) {
             target->justify = static_cast<musx::dom::AlignJustify>(flags & earlyNamePositionJustificationMask);

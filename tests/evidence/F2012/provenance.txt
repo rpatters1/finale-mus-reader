@@ -299,3 +299,11 @@ F2012-timecomp.mus
     Measure 1 has a composite time signature of two groups: 3 + 1 + 2 1/2 over eighth +
     sixteenth, then 4 + 2 over quarter + sixteenth. Numerator and denominator are both
     composite. The Finale 27 re-save retains both lists.
+
+F2012-rptback.mus
+    sha256 07f51d9638b34eadfa4018d8ebf37e92e26c127957540acd49d8c6a4f1b01167
+-finale27/F2012-rptback.musx
+    sha256 567aafe4f0097e44a5781d26b6f86c569cf4f524bc4ff402135545f6100279f1
+    From the Finale 2012 baseline, adds a backward repeat in measure 1 with three
+    passes, target measure 1, and reset on the selected pass. The Finale 27
+    conversion accompanies the source.

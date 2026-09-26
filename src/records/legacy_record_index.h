@@ -104,7 +104,7 @@ class LegacyRowPool
 public:
     /// @brief Sorts the rows and assigns incidences within each family.
     /// @param payload Backing bytes that the rows index into.
-    static LegacyRowPool build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload);
+    static LegacyRowPool build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload, ByteOrder byteOrder);
 
     /// @brief Returns a row's payload bytes in file order.
     [[nodiscard]] std::span<const std::uint8_t> payloadOf(const LegacyRow& row) const

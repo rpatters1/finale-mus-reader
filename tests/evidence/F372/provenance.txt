@@ -8,6 +8,23 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-rptback-reset.mus / .etf / -finale27/F372-rptback-reset.musx
+    sha256 c3bb7a803d9176469ed7bb5239db0ed2e787d739a680fcff1c8e6e9ecfa2a001 (.mus)
+    sha256 d1687862de4d5877fe0689c2fd7a419d07be8904c2ad690664b3dda35d6d4649 (.etf)
+    sha256 b4b116452d13638c255c7d15d72f80cf3329a6f7da83a459502a87dd935cbb3e (.musx)
+    Derived from F372-baseline by adding a backward repeat with default settings except
+    reset on change. Its first `BR(1)` flag word is `0x0440`, also shown in the ETF:
+    `0x0400` is the default always trigger and `0x0040` selects reset. The Finale 27
+    companion retains the repeat but omits its reset setting.
+
+F372-rptback-jmp3pass.mus / .etf / -finale27/F372-rptback-jmp3pass.musx
+    sha256 fbc9b0f64d01d43db0c2b8f0c1c9d2c278336b136104388ef03d00d5214b641f (.mus)
+    sha256 8847d12a89e0a94385ff1e7a8fc0b087b092236a1e634c1fa8fe8c3d8e6f7cab (.etf)
+    sha256 4dbee8be293ef44b3b2ef280019b54fb95387d7035119a5e036269afa14aa814 (.musx)
+    Derived from F372-baseline by adding a backward repeat set to jump on pass 3.
+    Its first `BR(1)` row has pass 3 and flag `0x0880`, also shown in the ETF.
+    The Finale 27 companion retains the pass count but omits the trigger setting.
+
 F372-namepos-indiv.mus / .etf / -finale27/F372-namepos-indiv.musx
     sha256 1ab55c2972bcba6d6c88c9d3dd958d6ef1b2562f9223eb1bf30aa83445d0075d (.mus)
     sha256 7b601332532bc9a44883e18a8eb1daf36c8c0733642ec2418ea8220505510e58 (.etf)

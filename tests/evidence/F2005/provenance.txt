@@ -193,3 +193,11 @@ F2005-timecomp.mus / .etf / .musx
     Measure 1 has a composite time signature of two groups: 3 + 1 + 2 1/2 over eighth +
     sixteenth, then 1 + 2 over quarter + sixteenth. Numerator and denominator are both
     composite. The MUSX file is its Finale 27 companion.
+
+F2005-rptback.mus / .etf / -finale27/F2005-rptback.musx
+    sha256 b0c22a3fb8c0a70dab230d7ac5d68b9dae6775950c2f13f766dbf5249df5989d (.mus)
+    sha256 7756d1b9500b30209eb1978ca99bbf4888eb7e6aae7b9d462e1f4fd75d39a692 (.etf)
+    sha256 52a6f565fa7d55d63ac5b49f3c0010443fe3a6d5f5cec675c01168b165e6ba46 (.musx)
+    From the Finale 2005 baseline, adds a backward repeat in measure 1 that plays
+    twice and targets one measure backward. The ETF and Finale 27 conversion
+    accompany the source.

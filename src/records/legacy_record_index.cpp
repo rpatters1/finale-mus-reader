@@ -238,7 +238,7 @@ std::vector<LegacyRow> decodeClassRecords(const container::ParsedContainer& pars
 
 } // namespace
 
-LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload)
+LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std::uint8_t> payload, ByteOrder byteOrder)
 {
     // Sorting by family keeps each family contiguous, so a lookup is a binary search rather
     // than a hashed allocation. Fixed rows derive incidence from encounter order. A zlib class
@@ -285,6 +285,15 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
         auto* effective = result.m_effectivePartPayloads.data() + row.effectivePayloadOffset;
         for (std::size_t offset = 0; offset < continuation.size() - continuationPrefixSize; ++offset) {
             const auto mask = continuation[continuationPrefixSize + offset];
+            effective[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
+        }
+        // The two terminal words extend the editable mask across the payload's final
+        // four bytes, which the same-sized continuation uses for its length prefix.
+        for (std::size_t i = 0; i < continuationPrefixSize; ++i) {
+            const auto maskWord = static_cast<std::uint16_t>(i < 2 ? row.trailerFirst : row.trailerSecond);
+            const auto shift = byteOrder == ByteOrder::BigEndian ? (i % 2 == 0 ? 8U : 0U) : (i % 2 == 0 ? 0U : 8U);
+            const auto mask = static_cast<std::uint8_t>(maskWord >> shift);
+            const auto offset = row.payloadSize - continuationPrefixSize + i;
             effective[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
         }
         row.continuationOverlayReady = true;
@@ -379,19 +388,19 @@ LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& par
     if (const auto types = poolTypesFor(parsed.formatEpoch)) {
         std::vector<std::uint8_t> othersPayload;
         auto othersRows = decodeRows(parsed, types->others, false, othersPayload);
-        result.m_others = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload));
+        result.m_others = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload), parsed.byteOrder);
 
         std::vector<std::uint8_t> detailsPayload;
         auto detailRows = decodeRows(parsed, types->details, true, detailsPayload);
-        result.m_details = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload));
+        result.m_details = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload), parsed.byteOrder);
     } else if (parsed.formatEpoch == FormatEpoch::ZlibLegacy) {
         std::vector<std::uint8_t> othersPayload;
         auto othersRows = decodeClassRecords(parsed, false, othersPayload);
-        result.m_classOthers = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload));
+        result.m_classOthers = LegacyRowPool::build(std::move(othersRows), std::move(othersPayload), parsed.byteOrder);
 
         std::vector<std::uint8_t> detailsPayload;
         auto detailRows = decodeClassRecords(parsed, true, detailsPayload);
-        result.m_classDetails = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload));
+        result.m_classDetails = LegacyRowPool::build(std::move(detailRows), std::move(detailsPayload), parsed.byteOrder);
     }
     result.m_texts = collectTexts(parsed);
     return result;

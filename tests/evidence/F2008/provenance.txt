@@ -195,3 +195,15 @@ F2008-syslock.mus
     sha256 3d1f13de827f3b7d8f1ca627800217195c54e980ef4c3013388e6301e4af35f1
     A Finale 2008 document with a system lock beginning at measure 1 and ending before measure 2.
     Its Finale 27 re-save preserves the lock.
+
+F2008-rptback.mus / -finale27/F2008-rptback.musx
+    sha256 3fd976bb8ac4836da5c1674d659463f48d3a166015ea70335b9e43bab1c0ae61 (.mus)
+    sha256 bb964c514bf4b214d9344315449b6b1f4fec892021f6352440712e323550b198 (.musx)
+    A visible backward repeat at measure 1. Its class-other `0x00cb` flag word is zero,
+    and the Finale 27 companion does not contain a hidden element.
+
+F2008-rptback-hidden.mus / -finale27/F2008-rptback-hidden.musx
+    sha256 c4c0fa485161d5d85f2ceb1d704a9bdd89ca67db5624df1af19e742590796093 (.mus)
+    sha256 eba1122e58a02578573e11f59cffa27b289949fe870dbbdf6d7589d828c12015 (.musx)
+    Derived from F2008-rptback by clearing Show for the backward repeat. Its class-other
+    flag word changes to `0x4000`; the companion contains the hidden element.
