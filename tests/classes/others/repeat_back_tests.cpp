@@ -59,10 +59,11 @@ void checkRepeatBack(const finale_mus_reader::container::ParsedContainer& parsed
 
 TEST_CASE("RepeatBack decodes the twelve word layout in early epochs", "[class][repeat-back]")
 {
-    const auto rows = std::vector<SyntheticRow>{{7, "BR", {99, 3, -2, -35, 12, 0x1841}}, {7, "BR", {0, 0, 0, 81, -23, 0}}};
-    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
-        checkRepeatBack(makeContainer(rows, epoch), SourceVersion{.major = 9}, false);
-    }
+    const auto earlyRows = std::vector<SyntheticRow>{{7, "BR", {99, 3, -2, -35, 12, 0x1841}}, {7, "BR", {0, 0, 0, 81, -23, 0}}};
+    checkRepeatBack(makeContainer(earlyRows, FormatEpoch::CodaBanner), SourceVersion{.major = 1}, false);
+    checkRepeatBack(makeContainer(earlyRows, FormatEpoch::UncompressedLegacy), SourceVersion{.major = 4}, false);
+    const auto dclRows = std::vector<SyntheticRow>{{7, "BR", {99, 3, -2, -35, 12, 0x1441}}, {7, "BR", {0, 0, 0, 81, -23, 0}}};
+    checkRepeatBack(makeContainer(dclRows, FormatEpoch::DclLegacy), SourceVersion{.major = 9}, false);
 }
 
 TEST_CASE("RepeatBack decodes the later flag layout with stable word positions", "[class][repeat-back]")
