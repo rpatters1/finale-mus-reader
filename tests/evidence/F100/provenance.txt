@@ -699,3 +699,23 @@ F100-timecomp-frac.mus / .etf / .musx
     From the Finale 1.0 baseline, gives measure 1 the composite numerator 3 + 1 + 2 1/2 over
     an eighth note, and measure 2 a numerator of 1 over the composite denominator quarter +
     eighth + sixteenth.
+
+F100-midclef1.mus / .etf / .musx
+    sha256 ab04a8041a104a8ad80fc2eea8d5b1b38a847de9d89b5a56b45687e0e6b08590 (.mus)
+    sha256 67c9d08d11d0f1bf71eee144e43ae64dcb83ead418f1d97f42bb1677360c2391 (.etf)
+    sha256 97298f75b038464377c81dfc2ccada8ce2910bcb81892db56454cf2d0befa943 (.musx)
+    One staff, one measure of four quarter notes, with a bass clef inserted
+    between the first and second notes. The `CE(1)` item stores clef 3 at horizontal position 110 EVPU and
+    vertical adjustment -28; `GF(1,1)` names list 1. The Finale 27 companion
+    places the treble barline clef at incidence 0 and the bass clef at incidence 1,
+    `xEduPos` 537.
+
+F100-midclef2.mus / .etf / .musx
+    sha256 d785b073ef922ab7943af6eab231a849b09baa5100ca5f65a4125b7335b8d061 (.mus)
+    sha256 497a2a6e0cb04854e259ddbb1ac2ffe712feb9e748a00d3c8d2248a76b3ce0e2 (.etf)
+    sha256 f605d5d857ceb4284b450cd74406c892be21480ffa6a8e4a5aed8f0ef7490a67 (.musx)
+    One staff, one measure of four quarter notes, with a bass clef inserted
+    between the third and fourth notes. The `CE(1)` item stores clef 3 at horizontal position 278 EVPU and
+    vertical adjustment -104; `GF(1,1)` names list 1. The Finale 27 companion
+    places the treble barline clef at incidence 0 and the bass clef at incidence 1,
+    `xEduPos` 1758.

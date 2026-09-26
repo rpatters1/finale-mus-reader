@@ -94,3 +94,13 @@ F2001Win-indtime-comp.mus / .etf / .musx
     composite. Its `FL` record stores flags 0x0603 and display words 2 and 2,
     naming composite lists `TU(2)` and `TL(2)`, and the Finale 27 companion
     carries `displayAltNumTsig` and `displayAltDenTsig`.
+
+F2001Win-midclef.mus / .etf / .musx
+    sha256 5a0037b65e5d31e2985f072c75f8d3cb01b88680663ed8f9d66dc3615026dba7 (.mus)
+    sha256 3a9396965b099c7699d4aabbb3bb97e8ee2d7ab3649280df56726b36a073eb66 (.etf)
+    sha256 1906dfdb630a5af7f5e8a160f7d49c462b52cbf4b3486384e9e296992caf3d08 (.musx)
+    Measure 1 has a treble barline clef, a bass clef at Edu 1645 raised 12 EVPU
+    with "Allow Vertical Drag" set, and a tenor clef at Edu 2912 with "Place Clef
+    After Barline" set. `CE(1)` stores the three items with flags 0, 0x0004, and
+    0x0010; `GF(1,1)` names list 1 with flags 0x0400. The Finale 27 companion
+    carries `unlockVert` on incidence 1 and `afterBarline` on incidence 2.
