@@ -735,3 +735,26 @@ F100-rptback2.mus / .etf / -finale27/F100-rptback2.musx
     The second Finale 1.0 backward-repeat variant selects individual placement and repeat
     until the second pass, without reset on change. It stores flag word 0x0181. Its Finale 27
     conversion preserves individual placement.
+
+F100-rptstart.mus / .etf / -finale27/F100-rptstart.musx
+    sha256 26ed6650aa6da8bcdb6528ddae4c3387f74497098cbaccb71eb5c97cb1094b8e (.mus)
+    sha256 726eb005759b6db499dcf125d5f43dab24acea681955511e1e1688785af8512c (.etf)
+    sha256 07128ae20a7b37c21554ede0ab8a28f1e211357c0cf4ac01abba829642e4fec6 (.musx)
+    From the Finale 1.0 baseline, adds a repeat ending to measure 1 with a relative
+    target of 2, three selected passes, and text offsets. The ETF and Finale 27
+    conversion accompany the source.
+
+F100-rptstart-jump0.mus / .etf / -finale27/F100-rptstart-jump0.musx
+    sha256 4334473fcd4f53a6bc3974620ecc8a58bdecc6cd52ff2a4d5846c51befa86dce (.mus)
+    sha256 2746a332d2b4969a7a7408214778b89f654e0852c5597f8c564abc21e6302d09 (.etf)
+    sha256 e530a2172734080ab1ab4ce605d52d2d366dd5f507f68f32f2bbdc9762f37e03 (.musx)
+    From F100-rptstart, changes only the ending target from 2 to 0. The source
+    retains its repeat flag and the conversion retains a relative action.
+
+F100-rptstart-moved.mus / .etf / -finale27/F100-rptstart-moved.musx
+    sha256 58fd990b9606c2136f2fbc8e26a47fef9ee47c28c226124e94b1160428cbb9ff (.mus)
+    sha256 e932bc040896a6c172a97e6a72b879e47f766d63d753315a19d384cf507d83d1 (.etf)
+    sha256 ecc651c2b3a9b470b4af852850589454f0b61e8002b49f0ca19ea5273114f30f (.musx)
+    From F100-rptstart, changes the repeat text and bracket offsets. The compact
+    record holds horizontal and vertical text offsets 31 and 4, left offsets
+    -10 and 52, and right offsets -1 and -36 in three packed words.

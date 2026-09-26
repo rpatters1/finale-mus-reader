@@ -201,3 +201,11 @@ F2005-rptback.mus / .etf / -finale27/F2005-rptback.musx
     From the Finale 2005 baseline, adds a backward repeat in measure 1 that plays
     twice and targets one measure backward. The ETF and Finale 27 conversion
     accompany the source.
+
+F2005-rptstafflists.mus / .etf / -finale27/F2005-rptstafflists.musx
+    sha256 fdb28d4f5e015426babe5f983fbfe433a44a5ea146dd1b99f429725607145b51 (.mus)
+    sha256 6c0660f6697c2ea3bd72236030f1bbbb64f7849b44efda9454ae8ee713c69e4b (.etf)
+    sha256 ae6df73eab6184df01dcdbdf93c953b4867d4f9086f1e8270f2c9382252ecd1f (.musx)
+    Adds an ending and a backward repeat in measure 2. The ending selects repeat
+    staff list 1 and the backward repeat selects repeat staff list 2. The ETF
+    and Finale 27 conversion accompany the source.

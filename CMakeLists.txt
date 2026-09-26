@@ -228,6 +228,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/part_globals.cpp
     src/import/others/part_voicing.cpp
     src/import/others/repeat_back.cpp
+    src/import/others/repeat_ending_start.cpp
     src/import/others/percussion_note_info.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
