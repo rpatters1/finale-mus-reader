@@ -185,3 +185,18 @@ F2000-tablature.mus / .etf / .musx
     extended flag word, and the Finale 27 companion leaves breakTabLinesAtNotes false. Together
     with the controlled Finale 2002 fixtures, this disproves treating the true value in shipped
     tablature templates as fixed legacy behavior.
+
+F2000-rptjump0.mus / .etf / -finale27/F2000-rptjump0.musx
+    sha256 4285c8d875af05f9ea6b89c6c38887733d65bbf9231416ac04f66f3c176763bf (.mus)
+    sha256 bc9cee4b170986766338c69ba975f2cfb454ea99cdcf5c96060b8fed7c7f65d6 (.etf)
+    sha256 875b0c039584909a618444d34b905ba6c8161d9f76ca7f029eb7b68832fb4196 (.musx)
+    Adds a one-pass repeat ending in measure 1 with zero target and absolute
+    action. Its source flag word is 0x0400.
+
+F2000-rptjump0-stop.mus / .etf / -finale27/F2000-rptjump0-stop.musx
+    sha256 d6fe9896f18966e0e9f71cf7d208566371a8ddfb42723d61b49aa948a7fb4df8 (.mus)
+    sha256 9ee57a40716fcfde3605eebac73c9dc31df3cf01ccf7b2e862efb2cbe69ce6cc (.etf)
+    sha256 96d46ac05a24a171f8cc38977b859d8059cc575d63c70384bc8eefff8879fae9 (.musx)
+    From F2000-rptjump0, selects Stop. Only the ending flag word changes,
+    from 0x0400 to 0x0c00; the source target stays zero. The conversion
+    records Stop and writes target -1.

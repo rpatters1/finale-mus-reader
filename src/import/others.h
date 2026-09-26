@@ -129,6 +129,12 @@ void importSplitMeasures(const ImportContext& context);
 /// @brief Recovers backward repeat assignments attached to measures.
 void importRepeatBacks(const ImportContext& context);
 
+/// @brief Recovers measure repeat-ending assignments.
+void importRepeatEndingStarts(const ImportContext& context);
+
+/// @brief Recovers the pass numbers attached to repeat endings.
+void importRepeatPassLists(const ImportContext& context);
+
 /// @brief Recovers source Staff objects and the parallel names used before Finale 3.7.
 void importStaff(const ImportContext& context);
 

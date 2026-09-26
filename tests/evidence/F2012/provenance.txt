@@ -307,3 +307,20 @@ F2012-rptback.mus
     From the Finale 2012 baseline, adds a backward repeat in measure 1 with three
     passes, target measure 1, and reset on the selected pass. The Finale 27
     conversion accompanies the source.
+
+F2012-rptstart.mus
+    sha256 b15a31fe4a8ecba5ebd0e84824d0e9560904c36aace23752806845e43e2e67cf
+-finale27/F2012-rptstart.musx
+    sha256 2fea1f8b15beebe3d28aeeb80a41afdf0d9a9b700461d8d55929b7b2bdd78d41
+    From the Finale 2012 baseline, adds a repeat ending to measure 1 with relative
+    target 3, three selected passes, individual placement, top-staff display, and
+    jump while ignoring repeats. The Finale 27 conversion accompanies the source.
+
+F2012-rptstart-hidden.mus
+    sha256 7f6282423be1860df3b15acfb5e735307db244e2b82877053ed78a080e5783f0
+-finale27/F2012-rptstart-hidden.musx
+    sha256 e302936a67d1b2381b1818da3eb3384ebfaf04030186289355c7636a29ae3ffb
+    From the repeat-ending fixture, clears individual placement and adds part 1,
+    where the ending is hidden. The score ending flag is 0x2422 and the part flag
+    is 0x2426. The Finale 27 conversion writes hidden on the part's
+    repeatEndingStart only; the score ending and pass list remain visible.

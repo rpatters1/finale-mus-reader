@@ -161,3 +161,33 @@ F2002-splitpoints.etf
     sha256 7ecab5f812fa1b899bf5a5a76c1b54b6f742f66c8e8e7e6ff4867ce69eaecb5a
     From the Finale 2002 baseline, adds two split points in measure 1. The Finale 27
     re-save retains both positions.
+
+F2002-jump0.mus / .etf / -finale27/F2002-jump0.musx
+    sha256 72a6458eaecc21e9cea9a63d6d062af7410c1c499785e106c14f9e17b55bb3f5 (.mus)
+    sha256 02063f913f5a5c4be4cfa803163238ee68f643480d7af26d807e070445bbdf95 (.etf)
+    sha256 d3faef8f188fbf82279a098369e833bf5daf74c60eec023254501391b47c6611 (.musx)
+    Adds a one-pass repeat ending in measure 1 with target zero and absolute
+    action. The first source row's flag word is 0x0400.
+
+F2002-jump3.mus / .etf / -finale27/F2002-jump3.musx
+    sha256 919455d233bf20ff766cad42a485bd37dac3933a9f9c03de1f4ece020e17b76f (.mus)
+    sha256 99a23d6e3fecafb30237b50cb1964f87019494e953c186a96e9a86a67c06b13a (.etf)
+    sha256 b1a7c82065cf6347c02b4cb895e6cc408f8a7a497a27dca5ccf8e872e4ef7ebb (.musx)
+    From F2002-jump0, changes only the ending target from zero to 3; the flag
+    word remains 0x0400 and the conversion retains absolute action.
+
+F2002-jump0-stop.mus / .etf / -finale27/F2002-jump0-stop.musx
+    sha256 7ccac629b3eea3459c2e3ca1a616149da18655f119ec2c040900eae4bbedf014 (.mus)
+    sha256 478b1e4b68db6033eb27547a2742b0dad9621265044b886505190d8b6586f901 (.etf)
+    sha256 092e876babe27e23ba4843fc7a1ef5f4a269df4bb15736dfb1864fba116f853a (.musx)
+    From F2002-jump0, changes the ending action to Stop while the source target
+    remains zero. The source flag changes from 0x0400 to 0x0c00. The Finale 27
+    conversion writes action Stop and nextEnd -1.
+
+F2002-jump3-stop.mus / .etf / -finale27/F2002-jump3-stop.musx
+    sha256 6c87703a4948b9fb35c6a9c4b467b5ede5be5a9de600f3bfa7eb3d8870acbdb4 (.mus)
+    sha256 97184f93d7ce8299b858ad27fe8815bb5134d2f43ce5909c4ff4a79c5825c448 (.etf)
+    sha256 dc8a90f6cab0769ef7af4acea4fcb9b3d404757efb3e329bca779d75799d6196 (.musx)
+    From F2002-jump3, changes the ending action to Stop while the source target
+    remains 3. The source flag changes from 0x0400 to 0x0c00. The Finale 27
+    conversion writes action Stop and nextEnd -1.

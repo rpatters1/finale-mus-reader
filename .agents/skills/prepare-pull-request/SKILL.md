@@ -1,6 +1,6 @@
 ---
 name: prepare-pull-request
-description: Validate and deliver a feature branch through a pull request in this repository. Use whenever the user asks to open or create a PR, or asks to commit and push changes that will immediately become a PR. Requires the local non-instrumented library-only build; routine instrumented variants may be left to CI.
+description: Validate and deliver a feature branch through a pull request in this repository. Use whenever the user asks to open or create a PR, or asks to commit and push changes that will immediately become a PR. Requires the full local test suite and non-instrumented library-only build.
 ---
 
 # Prepare a pull request
@@ -13,19 +13,20 @@ operations. That authorization does not cover unrelated changes or cleanup.
 After the implementation, tests, evidence, and documentation have stabilized, and immediately
 before delivery:
 
-1. Read `.github/workflows/build_and_test.yml` and locate its `non-instrumented-build` job. That job
+1. Build the test-enabled tree from the final branch state and run the complete CTest suite with
+   `ctest --test-dir <build-dir> --output-on-failure`. Do not rely on CI or an earlier test run.
+   If any test fails, fix the failure and rerun the complete suite after the final change.
+2. Read `.github/workflows/build_and_test.yml` and locate its `non-instrumented-build` job. That job
    is the source of truth for the required CMake options and build target.
-2. Configure a separate build directory with the same library-only, tests-off, and
+3. Configure a separate build directory with the same library-only, tests-off, and
    instrumentation-off settings. Adapt only generator and compiler selection when the local host
    cannot reproduce the Linux runner; on macOS, use the available local toolchain.
-3. Build the same `finale_mus_reader` target. An existing instrumented build directory does not
+4. Build the same `finale_mus_reader` target. An existing instrumented build directory does not
    satisfy this check.
-4. If the build fails, stop delivery, fix it, and rerun this validation after the changes stabilize.
+5. If the build fails, stop delivery, fix it, and rerun both the full test suite and this build
+   after the changes stabilize.
 
-Do not rerun an instrumented build or test suite solely as final PR ceremony. Those variants are
-exercised throughout development and may receive their final run in CI. Report which relevant
-instrumented tests were run during development, but the non-instrumented library build is the one
-mandatory local build at this boundary.
+Open the pull request only after both local validations pass.
 
 ## Deliver the branch
 
