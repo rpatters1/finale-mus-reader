@@ -41,6 +41,7 @@ enum class Phase : std::size_t {
     ImportChordOptions,
     ImportChordSuffixElements,
     ImportChordSuffixPlayback,
+    ImportClefLists,
     ImportClefOctaveFlats,
     ImportClefOctaveSharps,
     ImportClefOptions,

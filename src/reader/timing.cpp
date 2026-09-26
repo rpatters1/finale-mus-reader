@@ -39,6 +39,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportChordOptions: return "chord_options";
     case Phase::ImportChordSuffixElements: return "chord_suffix_elements";
     case Phase::ImportChordSuffixPlayback: return "chord_suffix_playback";
+    case Phase::ImportClefLists: return "clef_lists";
     case Phase::ImportClefOctaveFlats: return "clef_octave_flats";
     case Phase::ImportClefOctaveSharps: return "clef_octave_sharps";
     case Phase::ImportClefOptions: return "clef_options";

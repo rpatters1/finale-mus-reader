@@ -39,6 +39,9 @@ void importChordSuffixElements(const ImportContext& context);
 /// @brief Recovers chord-suffix playback intervals.
 void importChordSuffixPlayback(const ImportContext& context);
 
+/// @brief Recovers the clef lists that frames name for their barline and mid-measure clefs.
+void importClefLists(const ImportContext& context);
+
 /// @brief Recovers the percussion-map association for each percussion staff.
 void importDrumStaff(const ImportContext& context);
 

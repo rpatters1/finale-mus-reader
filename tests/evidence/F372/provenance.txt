@@ -378,3 +378,12 @@ F372-timecomp.mus / .etf / .musx
     From the Finale 3.7.2 baseline, gives measure 1 the composite numerator 3 + 1 + 2 1/2 over
     an eighth note, and measure 2 a numerator of 1 over the composite denominator quarter +
     eighth + sixteenth.
+
+F372-F263-midclef1.mus / .etf / .musx
+    sha256 1245dc528ae89107d1e53e64c5e5bf0eafb18f58bacc8ed10ae3edc10d7312d0 (.mus)
+    sha256 ce640f4318235d0a98b6889c873f857c6c9a3c459262c3863d5278a0c01fdcd7 (.etf)
+    sha256 8ded3303dba912bf4233ecc2fe837b9ecf68d2f74600bc80f32459cef301feec (.musx)
+    F263-midclef1 opened and saved in Finale 3.7.2. Its one-item clef list
+    `CE(1) [3 85 -16 75 0 0]` becomes `[0 0 0 0 0 0]` then `[3 356 -16 75 0 0]`: a
+    barline item is added and the bass clef's EVPU position becomes Edu 356. The
+    Finale 27 companion carries the same two items.

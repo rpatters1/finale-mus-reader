@@ -209,6 +209,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/bookmark.cpp
     src/import/others/chord_suffix_elements.cpp
     src/import/others/chord_suffix_playback.cpp
+    src/import/others/clef_list.cpp
     src/import/others/custom_keys.cpp
     src/import/others/drum_staff.cpp
     src/import/others/file_path.cpp
