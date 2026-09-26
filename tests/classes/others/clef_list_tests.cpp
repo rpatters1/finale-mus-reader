@@ -16,6 +16,7 @@ using namespace classes;
 using ClefList = musx::dom::others::ClefList;
 using musx::dom::ShowClefMode;
 constexpr musx::dom::Cmper clefListCmper = 4;
+constexpr musx::dom::Cmper fixtureClefListCmper = 1;
 constexpr std::uint16_t clefListClassId = 0x007f;
 
 ImportReport importClefList(const finale_mus_reader::container::ParsedContainer& parsed, musx::dom::DocumentPtr& document)
@@ -141,7 +142,7 @@ TEST_CASE("ClefList rejects an incomplete trailing item", "[class][clef-list]")
 TEST_CASE("ClefList recovers a controlled DCL list", "[class][clef-list][fixture]")
 {
     const auto result = readFixture("evidence/F2001/F2001Win-midclef.mus");
-    const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 1);
+    const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, fixtureClefListCmper);
     REQUIRE(list.size() == 3);
     CHECK(list[0]->clefIndex == 0);
     CHECK(list[0]->xEduPos == 0);
@@ -168,7 +169,7 @@ TEST_CASE("ClefList recovers a controlled DCL list", "[class][clef-list][fixture
 TEST_CASE("ClefList recovers a Coda-banner list upgraded by Finale 3.7.2", "[class][clef-list][fixture]")
 {
     const auto result = readFixture("evidence/F372/F372-F263-midclef1.mus");
-    const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 1);
+    const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, fixtureClefListCmper);
     REQUIRE(list.size() == 2);
     CHECK(list[0]->clefIndex == 0);
     CHECK(list[0]->xEduPos == 0);
