@@ -59,7 +59,7 @@ void checkRepeatBack(const finale_mus_reader::container::ParsedContainer& parsed
 
 TEST_CASE("RepeatBack decodes the twelve word layout in early epochs", "[class][repeat-back]")
 {
-    const auto rows = std::vector<SyntheticRow>{{7, "BR", {99, 3, -2, -35, 12, 0x1441}}, {7, "BR", {0, 0, 0, 81, -23, 0}}};
+    const auto rows = std::vector<SyntheticRow>{{7, "BR", {99, 3, -2, -35, 12, 0x1841}}, {7, "BR", {0, 0, 0, 81, -23, 0}}};
     for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
         checkRepeatBack(makeContainer(rows, epoch), SourceVersion{.major = 9}, false);
     }
