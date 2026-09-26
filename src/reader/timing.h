@@ -55,6 +55,7 @@ enum class Phase : std::size_t {
     ImportFretboardStyles,
     ImportGFrameHolds,
     ImportGraceNoteOptions,
+    ImportIndependentStaffDetails,
     ImportKeySignatureOptions,
     ImportKeyAttributes,
     ImportKeyFormats,

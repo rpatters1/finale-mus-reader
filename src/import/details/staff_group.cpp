@@ -113,6 +113,8 @@ struct StaffGroupSpanMember
     case 1: return Result::ThickLine;
     case 2: return Result::BracketStraightHooks;
     case 3: return Result::PianoBrace;
+    // Finale 3.2 adds the curved-hook bracket.
+    case 6: return Result::BracketCurvedHooks;
     default: return std::nullopt;
     }
 }

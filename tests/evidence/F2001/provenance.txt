@@ -76,3 +76,21 @@ F2001Win-bookmarks.musx
     `Påge Bookmark`, so this fixture is a measurement of the conversion and a
     standing reminder that a companion is a semantic reference rather than an
     oracle.
+
+F2001Win-indtime-abrv.mus / .etf / .musx
+    sha256 d5e6c209420f1670e04a6f52664d6fe1ad8a094d6ba5ef638aefdc48c81167c4 (.mus)
+    sha256 062dc4cf55a293a39b97693ad5033080a474c569f9ba98de75770deca70a1cba (.etf)
+    sha256 a1d9f1777f0ad225d2b2371c159903daf79b863dfb6ef305dce3fa38e25fc752 (.musx)
+    Staff 2, measure 1 has an independent 3/4 time signature displayed as an
+    abbreviated 4/4. Its `FL` record stores flags 0x0604 and display words 4 and
+    1024 in the second incidence, and the Finale 27 companion carries
+    `displayAbbrvTime`.
+
+F2001Win-indtime-comp.mus / .etf / .musx
+    sha256 972096a8c6cc6e21503f21d26a78946799de7033fd92fe50fb7d284e574164d0 (.mus)
+    sha256 7a9fc2f93ee3bbcfe6f9bc8f17b85ae7541f23635a65aae40522517b45662a29 (.etf)
+    sha256 97eb63f650adb0bac938d0f41d400d7c5e97e1979d34db97fb376a036cb610de (.musx)
+    Staff 2, measure 1 has an independent 4/4 time signature displayed as a
+    composite. Its `FL` record stores flags 0x0603 and display words 2 and 2,
+    naming composite lists `TU(2)` and `TL(2)`, and the Finale 27 companion
+    carries `displayAltNumTsig` and `displayAltDenTsig`.
