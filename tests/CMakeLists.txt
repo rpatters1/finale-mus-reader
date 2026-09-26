@@ -73,6 +73,7 @@ add_executable(finale_mus_reader_tests
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp
     classes/others/part_voicing_tests.cpp
+    classes/others/repeat_back_tests.cpp
     classes/others/percussion_note_info_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp

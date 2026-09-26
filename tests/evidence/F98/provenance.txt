@@ -12,6 +12,14 @@ F98-baseline.etf
     and selector 41 word 1 is zero. The Finale 27 companion enables
     beamFourEighthsInCommonTime and disables incRestsInFourGroups.
 
+F98-rptback.mus / .etf / -finale27/F98-rptback.musx
+    sha256 e4ddeb8bc5d02556e64e9754acfe3920f4582d4791381bdaaab8499236316dbd (.mus)
+    sha256 4677dc4331809211783c2844cc2bab0d3950cc303dd97e0391c349f5f1c71a05 (.etf)
+    sha256 732ef0f6256d6a32efd25909140844ba188fd3f9078082f8ff03989862fa6e15 (.musx)
+    Created from the F98 baseline with a backward repeat on measure 3, set to jump on
+    pass 2 and reset on change. Its first `BR(3)` row has pass 2 and flag `0x08c0`;
+    the Finale 27 companion retains the repeat and pass count but omits both settings.
+
 F98-beams-inclrestsin4.mus
     sha256 624b472d48acbd35fa7a771fb71204896024e24f3c5b9afa24650511c6959ce8
 F98-beams-inclrestsin4.etf

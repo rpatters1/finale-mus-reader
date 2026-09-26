@@ -89,6 +89,7 @@ enum class Phase : std::size_t {
     ImportPercussionNoteInfo,
     ImportPianoBraceBracketOptions,
     ImportRepeatOptions,
+    ImportRepeatBacks,
     ImportShapeDefinitions,
     ImportShapeGraphicAssignments,
     ImportSmartShapeCustomLines,

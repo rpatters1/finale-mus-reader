@@ -719,3 +719,19 @@ F100-midclef2.mus / .etf / .musx
     vertical adjustment -104; `GF(1,1)` names list 1. The Finale 27 companion
     places the treble barline clef at incidence 0 and the bass clef at incidence 1,
     `xEduPos` 1758.
+
+F100-rptback.mus / .etf / -finale27/F100-rptback.musx
+    sha256 e1fabfbbdc3eadbe0daafb6566c7e062d92926a78d00d9e5e3ba36842c9928f7 (.mus)
+    sha256 273b95433ac3a89ae9a24f41cdd39fef29dda0aef0500381443d8c946839f155 (.etf)
+    sha256 88f1595b892591242187833c90969367c346e52f590dd60346d5c827e7a42ccf (.musx)
+    From the Finale 1.0 baseline, adds a backward repeat in measure 1 that plays twice
+    and targets measure 1, with jump on the second pass and reset on change selected.
+    The ETF and Finale 27 conversion accompany the source.
+
+F100-rptback2.mus / .etf / -finale27/F100-rptback2.musx
+    sha256 9eee99d502864d3605ec4d06e2171a383d8ec89fcbcbb52358f99b1682f83e9f (.mus)
+    sha256 13e73026e6d2d4331b2dcd2897a53246293c8ea708c7b0b0337fdc439c7b213f (.etf)
+    sha256 995b04c220abefe0d61b9345614b6725daf7e366379f714fc21462b39e8b387b (.musx)
+    The second Finale 1.0 backward-repeat variant selects individual placement and repeat
+    until the second pass, without reset on change. It stores flag word 0x0181. Its Finale 27
+    conversion preserves individual placement.

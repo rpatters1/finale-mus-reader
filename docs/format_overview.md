@@ -60,6 +60,9 @@ A zlib part record may carry a same-sized continuation whose initial 32-bit valu
 payload length and whose remaining bytes form an editable mask. For global lyric baseline arrays,
 a shorter part payload is a prefix of the score payload: masked bytes in that prefix come from the
 part, while unmasked bytes and the omitted score suffix remain inherited.
+For same-sized continuations, the two terminal words mask the final four payload bytes that the
+continuation's length prefix displaces. Each mask bit selects the corresponding part payload bit;
+the other bits retain the score value.
 
 ## Terminology
 

@@ -87,6 +87,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportPercussionNoteInfo: return "percussion_note_info";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatOptions: return "repeat_options";
+    case Phase::ImportRepeatBacks: return "repeat_backs";
     case Phase::ImportShapeDefinitions: return "shape_definitions";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
