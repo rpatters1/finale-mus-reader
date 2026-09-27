@@ -138,6 +138,15 @@ void importRepeatEndingTexts(const ImportContext& context);
 /// @brief Recovers the pass numbers attached to repeat endings.
 void importRepeatPassLists(const ImportContext& context);
 
+/// @brief Recovers TextRepeatDef objects from source records.
+void importTextRepeatDefs(const ImportContext& context);
+
+/// @brief Recovers TextRepeatEnclosure objects from supported source records.
+void importTextRepeatEnclosures(const ImportContext& context);
+
+/// @brief Recovers TextRepeatText objects from source records.
+void importTextRepeatTexts(const ImportContext& context);
+
 /// @brief Recovers source Staff objects and the parallel names used before Finale 3.7.
 void importStaff(const ImportContext& context);
 

@@ -17,6 +17,13 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-textrpt.mus / .etf / -finale27/F100-textrpt.musx
+    sha256 73e2c6e62f3479e3605f261a1a325be421f720216f553d25208b45f327f7fb3e (.mus)
+    sha256 759a92ade29bef4aee8f07505a269e04af4477bc736e2660cb730f87d9ca608e (.etf)
+    sha256 d2358d78637aec6a7e0c38ac63bb71a246d9db1274bf3f32dcbc6cc069a85085 (.musx)
+    A text repeat with a rectangular enclosure and a measure-number placeholder.
+    Includes its contemporary ETF and Finale 27 conversion.
+
 F100-global-lyric-baseline.mus / .etf / -finale27/F100-global-lyric-baseline.musx
     sha256 05711965535413d49e1977e1fa3494a45b4f83978d9bb25c6dfd9fcaa1bc3b11 (.mus)
     sha256 bc3f563f38b6098a5c903df11e1fb907a3358e5215b6fae1ce6462e0dc43a6ca (.etf)

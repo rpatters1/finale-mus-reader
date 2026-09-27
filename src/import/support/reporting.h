@@ -5,6 +5,8 @@
 
 #include "finale_mus_reader/reader.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <utility>
 
 namespace finale_mus_reader {
@@ -169,6 +171,21 @@ void withReporting([[maybe_unused]] ImportReport& report, [[maybe_unused]] Callb
     ReportWriter writer(report);
     std::forward<Callback>(callback)(writer);
 #endif // defined(FINALE_MUS_READER_ENABLE_INSTRUMENTATION)
+}
+
+template <typename Reporting, typename Source, typename Row>
+void reportLegacyField(Reporting& reporting, const typename Reporting::InstanceKey& key, const Source& source, const Row& row, const char* member,
+    std::size_t offset, std::int64_t value, typename Reporting::Origin origin = Reporting::Origin::LegacyMus)
+{
+    reporting.report().setField(
+        key, member, typename Reporting::FieldInfo{origin, row.blockOffset, row.decodedOffset + offset, value, source.identity});
+}
+
+template <typename Reporting>
+void reportFallbackField(
+    Reporting& reporting, const typename Reporting::InstanceKey& key, const char* member, typename Reporting::Origin origin, std::int64_t value)
+{
+    reporting.report().setField(key, member, typename Reporting::FieldInfo{origin, 0, 0, value});
 }
 
 } // namespace finale_mus_reader

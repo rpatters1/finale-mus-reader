@@ -40,12 +40,10 @@ void reportEndingStart(const ImportContext& context, const EndingStartTarget& ta
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto field = [&](const char* name, std::size_t slot, std::int64_t value, std::size_t byteInWord = 0) {
             const auto& row = source.rowOfWord(rows, slot);
-            reporting.report().setField(key, name,
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset,
-                    row.decodedOffset + source.byteOffsetInRow(slot * 2) + byteInWord, value, source.identity});
+            reportLegacyField(reporting, key, source, row, name, source.byteOffsetInRow(slot * 2) + byteInWord, value);
         };
         const auto fallback = [&](const char* name, typename Reporting::Origin origin, std::int64_t value) {
-            reporting.report().setField(key, name, {origin, 0, 0, value});
+            reportFallbackField(reporting, key, name, origin, value);
         };
         if (modernFlags) {
             field("staffList", 0, target.staffList);

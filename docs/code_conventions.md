@@ -72,6 +72,14 @@ may use `withReporting` inline. Instrumentation build directives and token-erasi
 belong outside class importers; `scripts/check_reporting_boundary.py` checks this boundary and
 CI runs it.
 
+`withReporting` is the unit that disappears in a non-instrumented build. Keep the reporting work
+for an object inside one callback, including field-name construction, row and offset lookups, and
+calls to shared helpers. A helper that calls `withReporting` once per field still evaluates its
+arguments in a non-instrumented build. Use `reportLegacyField` and `reportFallbackField` from
+`reporting.h` when their field metadata and overwrite behavior match the importer; keep local
+reporting code for different layouts or provenance rules. Adopt these helpers when they make an
+importer clearer, without changing settled importers solely to use them.
+
 A reporting callback is generic: use its writer for instance keys, origins, field metadata, and
 report access. Those names must depend on the callback parameter, because a non-instrumented
 build does not declare the public instrumentation types. Use `defaultField` and `behaviorField`

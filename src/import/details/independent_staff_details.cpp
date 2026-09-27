@@ -94,12 +94,10 @@ private:
             reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
             const auto stored = [&](const char* member, std::size_t slot, std::int64_t raw) {
                 const auto& row = m_source.rowOfWord(m_rows, slot);
-                reporting.report().setField(key, member,
-                    {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + m_source.byteOffsetInRow(slot * sizeof(std::uint16_t)), raw,
-                        m_source.identity});
+                reportLegacyField(reporting, key, m_source, row, member, m_source.byteOffsetInRow(slot * sizeof(std::uint16_t)), raw);
             };
             const auto behavior = [&](const char* member, std::int64_t value) {
-                reporting.report().setField(key, member, {Reporting::Origin::LegacyBehavior, 0, 0, value});
+                reportFallbackField(reporting, key, member, Reporting::Origin::LegacyBehavior, value);
             };
             stored("keySig.key", keySlot, word(keySlot));
             stored("beats", beatsSlot, word(beatsSlot));

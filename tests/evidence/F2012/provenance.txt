@@ -24,6 +24,12 @@ F2012-upstem-flags.mus
     rather than fixed 16-byte rows. It carries sixteen font definitions and is
     the regression test for that separate decoding pathway.
 
+F2012-textrpt.mus / -finale27/F2012-textrpt.musx
+    sha256 4dbd0f2bf46ace9fc641aef5946ff9d42eb947d8a0c2f656dd54013c74638675 (.mus)
+    sha256 070f3a9b4897e9379e876b21e3a1b6598e03e0743663a94857cea7e87da7b0f9 (.musx)
+    A text repeat with an enclosure and non-ASCII text, accompanied by its
+    Finale 27 conversion.
+
 F2012-flagopts.mus
     sha256 11dcc68037d9e842165d61c60a3736d67c46a29cb14b5a0cad21df029dba7cf7
 -finale27/F2012-flagopts.musx

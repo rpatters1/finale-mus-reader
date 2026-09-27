@@ -33,12 +33,10 @@ void reportRepeatBack(const ImportContext& context, const RepeatBackTarget& targ
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
         const auto field = [&](const char* name, std::size_t slot, std::int64_t value) {
             const auto& row = source.rowOfWord(rows, slot);
-            reporting.report().setField(key, name,
-                typename Reporting::FieldInfo{
-                    Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + source.byteOffsetInRow(slot * 2), value, source.identity});
+            reportLegacyField(reporting, key, source, row, name, source.byteOffsetInRow(slot * 2), value);
         };
         const auto defaultField = [&](const char* name, std::int64_t value) {
-            reporting.report().setField(key, name, {Reporting::Origin::Finale27Default, 0, 0, value});
+            reportFallbackField(reporting, key, name, Reporting::Origin::Finale27Default, value);
         };
         field("passNumber", 1, target.passNumber);
         field("targetValue", 2, target.targetValue);
@@ -48,12 +46,12 @@ void reportRepeatBack(const ImportContext& context, const RepeatBackTarget& targ
         if (modernFlags) {
             field("topStaffOnly", 5, target.topStaffOnly);
         } else {
-            reporting.report().setField(key, "topStaffOnly", {Reporting::Origin::LegacyBehavior, 0, 0, target.topStaffOnly});
+            reportFallbackField(reporting, key, "topStaffOnly", Reporting::Origin::LegacyBehavior, target.topStaffOnly);
         }
         if (modernFlags) {
             field("hidden", 5, target.hidden);
         } else {
-            reporting.report().setField(key, "hidden", {Reporting::Origin::LegacyBehavior, 0, 0, target.hidden});
+            reportFallbackField(reporting, key, "hidden", Reporting::Origin::LegacyBehavior, target.hidden);
         }
         field("resetOnAction", 5, target.resetOnAction);
         field("jumpAction", 5, static_cast<int>(target.jumpAction));

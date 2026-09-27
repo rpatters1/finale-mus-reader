@@ -212,6 +212,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/clef_list.cpp
     src/import/others/custom_keys.cpp
     src/import/others/drum_staff.cpp
+    src/import/others/enclosure.cpp
     src/import/others/file_path.cpp
     src/import/others/font_definitions.cpp
     src/import/others/fret_instruments.cpp
@@ -242,6 +243,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/tempo_change.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
+    src/import/others/text_repeat_def.cpp
     src/import/others/time_composite.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp
