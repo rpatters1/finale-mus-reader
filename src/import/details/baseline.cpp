@@ -34,40 +34,6 @@ constexpr bool baselineHasLyricNumber =
     || std::is_same_v<T, musx::dom::details::BaselineSystemLyricsSection> || std::is_same_v<T, musx::dom::details::BaselineSystemLyricsVerse>;
 
 template <typename T>
-constexpr bool baselineIsGlobalLyricArray =
-    std::is_same_v<T, musx::dom::details::BaselineLyricsChorus> || std::is_same_v<T, musx::dom::details::BaselineLyricsSection>
-    || std::is_same_v<T, musx::dom::details::BaselineLyricsVerse>;
-
-template <typename T>
-std::vector<std::uint8_t> collectBaselinePayload(
-    const RecordFamilySource& source, std::span<const records::LegacyRow> rows, musx::dom::Cmper cmper1, musx::dom::Cmper cmper2)
-{
-    if constexpr (baselineIsGlobalLyricArray<T>) {
-        constexpr std::size_t continuationPrefixSize = sizeof(std::uint32_t);
-        if (source.classRecords && cmper1 == 0 && cmper2 == 0 && rows.size() == 1) {
-            const auto& row = rows.front();
-            const auto continuation = source.pool->continuationOf(row);
-            const auto* score = source.pool->get(source.identity, cmper1, cmper2, row.inci, musx::dom::SCORE_PARTID);
-            if (row.partId != musx::dom::SCORE_PARTID && score && score->payloadSize > row.payloadSize && continuation.size() == row.payloadSize
-                && continuation.size() >= continuationPrefixSize) {
-                // A short partial global lyric array stores a prefix of the score array. Its
-                // continuation mask selects part-owned bytes in that prefix; the omitted suffix
-                // remains inherited from the score.
-                const auto scorePayload = source.pool->payloadOf(*score);
-                const auto partPayload = source.pool->payloadOf(row);
-                std::vector<std::uint8_t> result(scorePayload.begin(), scorePayload.end());
-                for (std::size_t offset = 0; offset < continuation.size() - continuationPrefixSize; ++offset) {
-                    const auto mask = continuation[continuationPrefixSize + offset];
-                    result[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
-                }
-                return result;
-            }
-        }
-    }
-    return collectRecordPayload(source, rows);
-}
-
-template <typename T>
 void reportBaseline(const ImportContext& context, const T& target, const records::LegacyRow& row, std::size_t payloadOffset)
 {
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
@@ -99,7 +65,7 @@ void importBaselineFamily(const ImportContext& context, records::LegacyTag fixed
             if (rows.empty()) {
                 continue;
             }
-            const auto payload = collectBaselinePayload<T>(*source, rows, cmper1, cmper2);
+            const auto payload = collectRecordPayload(*source, rows);
             if (payload.empty() || payload.size() % baselineStructSize != 0) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                     "Baseline detail for " + std::to_string(cmper1) + ", " + std::to_string(cmper2) + " has an incomplete struct."});

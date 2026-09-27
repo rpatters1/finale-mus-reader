@@ -3,13 +3,13 @@
 
 #include "import/others.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <utility>
 
+#include "import/shared/repeat_flags.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -19,11 +19,6 @@ namespace {
 using RepeatBackTarget = musx::dom::others::RepeatBack;
 constexpr auto repeatBackTag = records::packTag("BR");
 constexpr records::LegacyTag repeatBackClass = 0x00cb;
-constexpr std::array repeatBackActions{musx::dom::others::RepeatActionType::JumpAuto, musx::dom::others::RepeatActionType::JumpAbsolute,
-    musx::dom::others::RepeatActionType::JumpRelative, musx::dom::others::RepeatActionType::JumpToMark, musx::dom::others::RepeatActionType::Stop,
-    musx::dom::others::RepeatActionType::NoJump};
-constexpr std::array repeatBackTriggers{
-    musx::dom::others::RepeatTriggerType::Always, musx::dom::others::RepeatTriggerType::OnPass, musx::dom::others::RepeatTriggerType::UntilPass};
 
 void reportRepeatBack(const ImportContext& context, const RepeatBackTarget& target, const RecordFamilySource& source,
     std::span<const records::LegacyRow> rows, bool modernFlags, bool hasTail)
@@ -104,8 +99,8 @@ void importRepeatBacks(const ImportContext& context)
         const auto flags = word(5);
         const auto triggerBits = static_cast<std::uint16_t>((flags & 0x0c00) >> 10);
         const auto actionBits = static_cast<std::uint16_t>((flags & 0x0070) >> 4);
-        if ((!earlyTriggers && triggerBits >= repeatBackTriggers.size()) || (earlyTriggers && (flags & 0x0900) == 0x0900)
-            || (modernFlags && actionBits >= repeatBackActions.size())) {
+        if ((!earlyTriggers && triggerBits >= repeat::triggers.size()) || (earlyTriggers && (flags & 0x0900) == 0x0900)
+            || (modernFlags && actionBits >= repeat::actions.size())) {
             context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                 "Repeat-back record for measure " + std::to_string(cmper) + " has an unknown action or trigger."});
             continue;
@@ -122,7 +117,7 @@ void importRepeatBacks(const ImportContext& context)
         if (modernFlags) {
             target->staffList = word(6);
         }
-        target->jumpAction = modernFlags             ? repeatBackActions[actionBits]
+        target->jumpAction = modernFlags             ? repeat::actions[actionBits]
                              : (flags & 0x1000) != 0 ? musx::dom::others::RepeatActionType::JumpRelative
                                                      : musx::dom::others::RepeatActionType::JumpAbsolute;
         if (earlyTriggers) {
@@ -130,7 +125,7 @@ void importRepeatBacks(const ImportContext& context)
                               : (flags & 0x0800) != 0 ? musx::dom::others::RepeatTriggerType::OnPass
                                                       : musx::dom::others::RepeatTriggerType::Always;
         } else {
-            target->trigger = repeatBackTriggers[triggerBits];
+            target->trigger = repeat::triggers[triggerBits];
         }
         if (hasTail) {
             target->rightHPos = signedWord(9);

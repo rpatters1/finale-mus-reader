@@ -75,6 +75,7 @@ add_executable(finale_mus_reader_tests
     classes/others/part_voicing_tests.cpp
     classes/others/repeat_back_tests.cpp
     classes/others/repeat_ending_start_tests.cpp
+    classes/others/text_repeat_assign_tests.cpp
     classes/others/text_repeat_def_tests.cpp
     classes/others/percussion_note_info_tests.cpp
     classes/others/shape_definitions_tests.cpp

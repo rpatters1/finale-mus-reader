@@ -209,3 +209,11 @@ F2005-rptstafflists.mus / .etf / -finale27/F2005-rptstafflists.musx
     Adds an ending and a backward repeat in measure 2. The ending selects repeat
     staff list 1 and the backward repeat selects repeat staff list 2. The ETF
     and Finale 27 conversion accompany the source.
+
+F2005-textrpt.mus / .etf / -finale27/F2005-textrpt.musx
+    sha256 474f9b611e4e8a283d4211a5c2add2df8a90bda71ee32839df20ef70e5c66def (.mus)
+    sha256 12ff5cca82d5181acb0bb3e5df436a8e3ad092920b53f205e3499ddf99a531f5 (.etf)
+    sha256 b5c18ef04438a66f4ed3f2cfa99a9112221ae1a6d8e2fd89b940376f2b749898 (.musx)
+    A text repeat assignment at measure 1, saved by Finale 2005 with its ETF and Finale 27
+    companion. Two `RU(1)` rows store the self-contained assignment: the first has positions
+    152 and -192, pass number 2, text repeat ID 1, flags `0x0442`; the second is zero filled.

@@ -207,3 +207,27 @@ F2008-rptback-hidden.mus / -finale27/F2008-rptback-hidden.musx
     sha256 eba1122e58a02578573e11f59cffa27b289949fe870dbbdf6d7589d828c12015 (.musx)
     Derived from F2008-rptback by clearing Show for the backward repeat. Its class-other
     flag word changes to `0x4000`; the companion contains the hidden element.
+
+F2008-textrpt.mus / -finale27/F2008-textrpt.musx
+    sha256 077847d6565a12c8597f6b0d340f1937ca8cce92035d2e84e7bc7c3c50818e33 (.mus)
+    sha256 27a2e6380325acabb67f592ff9b7fdc99e63f5fc7ae4e63373be958c7dd45cd1 (.musx)
+    A controlled text repeat assignment with staff list 1. Class-other `0x00f3` stores
+    staff list 1 at word 6 and flags `0x0010` at word 5.
+
+F2008-textrpt-hide.mus / -finale27/F2008-textrpt-hide.musx
+    sha256 488d8725e7b524d07e3cc9f8ab511dc39cd7dfeca678cf4e183983f8c3d158f6 (.mus)
+    sha256 bf62588b222a365ed5510c9422694d873371f424576495272923f827bf4adfad (.musx)
+    Derived from F2008-textrpt by hiding the assignment. Its class-other flag word is
+    `0x4010`, adding only `0x4000` to the baseline.
+
+F2008-textrpt-autoupd.mus / -finale27/F2008-textrpt-autoupd.musx
+    sha256 e88614a13f0582e0fc1f3b8e6d6ee7344fe12d7acbba436c46c13a5e16dc8b0f (.mus)
+    sha256 03d08b99ab0e8bc869d04edae93ea49fbf88b9c73590ae74edb9015101aac01f (.musx)
+    Derived from F2008-textrpt by enabling automatic update. Its class-other flag word is
+    `0x0090`, adding only `0x0080` to the baseline.
+
+F2008-parts-jumps.mus / -finale27/F2008-parts-jumps.musx
+    sha256 38e23e7c78cbf373bd6d5b9151593e16ebce4abef06a11395122063c95732667 (.mus)
+    sha256 8579a11ab362247d6e7ef4f91827e1db2d94a69a0a83ee675acdcae0b5fe25d7 (.musx)
+    Three text repeat assignments in one measure. Part 1 changes the first assignment's
+    horizontal position; part 2 hides the second assignment; the third is linked in both parts.

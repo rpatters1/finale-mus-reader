@@ -90,6 +90,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportRepeatBacks: return "repeat_backs";
     case Phase::ImportRepeatEndingStarts: return "repeat_ending_starts";
     case Phase::ImportRepeatEndingTexts: return "repeat_ending_texts";
+    case Phase::ImportTextRepeatAssigns: return "text_repeat_assigns";
     case Phase::ImportTextRepeatDefs: return "text_repeat_defs";
     case Phase::ImportTextRepeatEnclosures: return "text_repeat_enclosures";
     case Phase::ImportTextRepeatTexts: return "text_repeat_texts";

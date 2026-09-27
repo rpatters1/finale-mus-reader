@@ -114,18 +114,6 @@ void importPartVoicing(const ImportContext& context);
 /// @brief Recovers percussion-map note identities, staff positions, and noteheads.
 void importPercussionNoteInfo(const ImportContext& context);
 
-/// @brief Recovers ShapeDef objects and their owned instruction and data lists.
-void importShapeDefinitions(const ImportContext& context);
-
-/// @brief Recovers graphic assignments referenced by ShapeDef instructions.
-void importShapeGraphicAssignments(const ImportContext& context);
-
-/// @brief Recovers SmartShapeCustomLine objects.
-void importSmartShapeCustomLines(const ImportContext& context);
-
-/// @brief Recovers stored split positions for measures.
-void importSplitMeasures(const ImportContext& context);
-
 /// @brief Recovers backward repeat assignments attached to measures.
 void importRepeatBacks(const ImportContext& context);
 
@@ -138,14 +126,17 @@ void importRepeatEndingTexts(const ImportContext& context);
 /// @brief Recovers the pass numbers attached to repeat endings.
 void importRepeatPassLists(const ImportContext& context);
 
-/// @brief Recovers TextRepeatDef objects from source records.
-void importTextRepeatDefs(const ImportContext& context);
+/// @brief Recovers ShapeDef objects and their owned instruction and data lists.
+void importShapeDefinitions(const ImportContext& context);
 
-/// @brief Recovers TextRepeatEnclosure objects from supported source records.
-void importTextRepeatEnclosures(const ImportContext& context);
+/// @brief Recovers graphic assignments referenced by ShapeDef instructions.
+void importShapeGraphicAssignments(const ImportContext& context);
 
-/// @brief Recovers TextRepeatText objects from source records.
-void importTextRepeatTexts(const ImportContext& context);
+/// @brief Recovers SmartShapeCustomLine objects.
+void importSmartShapeCustomLines(const ImportContext& context);
+
+/// @brief Recovers stored split positions for measures.
+void importSplitMeasures(const ImportContext& context);
 
 /// @brief Recovers source Staff objects and the parallel names used before Finale 3.7.
 void importStaff(const ImportContext& context);
@@ -172,17 +163,29 @@ void importSystemLocks(const ImportContext& context);
 /// @brief Recovers measure tempo tool changes in incidence order.
 void importTempoChanges(const ImportContext& context);
 
-/// @brief Recovers composite time signature lower lists.
-void importTimeCompositeLowers(const ImportContext& context);
-
-/// @brief Recovers composite time signature upper lists.
-void importTimeCompositeUppers(const ImportContext& context);
-
 /// @brief Recovers TextBlock objects and Coda-banner block-text structure.
 void importTextBlocks(const ImportContext& context);
 
 /// @brief Recovers text expression definitions.
 void importTextExpressionDefs(const ImportContext& context);
+
+/// @brief Recovers text repeat assignments attached to measures.
+void importTextRepeatAssigns(const ImportContext& context);
+
+/// @brief Recovers TextRepeatDef objects from source records.
+void importTextRepeatDefs(const ImportContext& context);
+
+/// @brief Recovers TextRepeatEnclosure objects from supported source records.
+void importTextRepeatEnclosures(const ImportContext& context);
+
+/// @brief Recovers TextRepeatText objects from source records.
+void importTextRepeatTexts(const ImportContext& context);
+
+/// @brief Recovers composite time signature lower lists.
+void importTimeCompositeLowers(const ImportContext& context);
+
+/// @brief Recovers composite time signature upper lists.
+void importTimeCompositeUppers(const ImportContext& context);
 
 /// @brief Recovers flat tonal-center tables for custom key signatures.
 void importTonalCenterFlats(const ImportContext& context);
