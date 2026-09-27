@@ -348,7 +348,7 @@ TEST_CASE("Finale 2008 text repeat edits isolate staff list, hidden, and auto up
         const auto* field = result.report.findField<Target>("autoUpdate", musx::dom::SCORE_PARTID, musx::dom::Cmper(1), musx::dom::Inci(0));
         REQUIRE(field);
         CHECK(field->origin == ValueOrigin::LegacyMus);
-        CHECK(field->rawValue == autoUpdate);
+        CHECK(field->rawValue == (autoUpdate ? 1 : 0));
     }
 }
 
