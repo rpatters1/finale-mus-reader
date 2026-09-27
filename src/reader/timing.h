@@ -93,6 +93,7 @@ enum class Phase : std::size_t {
     ImportRepeatEndingStarts,
     ImportRepeatEndingTexts,
     ImportRepeatPassLists,
+    ImportTextRepeatAssigns,
     ImportTextRepeatDefs,
     ImportTextRepeatEnclosures,
     ImportTextRepeatTexts,

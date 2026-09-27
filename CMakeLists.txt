@@ -243,6 +243,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/tempo_change.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
+    src/import/others/text_repeat_assign.cpp
     src/import/others/text_repeat_def.cpp
     src/import/others/time_composite.cpp
     src/import/support/embedded_graphics.cpp

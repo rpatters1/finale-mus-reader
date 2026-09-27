@@ -273,8 +273,7 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
             continue;
         }
         const auto* score = result.get(row.tag, row.cmper1, row.cmper2, row.inci, musx::dom::SCORE_PARTID);
-        if (!score || score->payloadSize != row.payloadSize || row.continuationSize != row.payloadSize
-            || row.continuationSize < continuationPrefixSize) {
+        if (!score || row.continuationSize != row.payloadSize || row.continuationSize < continuationPrefixSize) {
             continue;
         }
         const auto partPayload = result.payloadOf(row);
@@ -282,19 +281,21 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
         const auto continuation = result.continuationOf(row);
         row.effectivePayloadOffset = static_cast<std::uint32_t>(result.m_effectivePartPayloads.size());
         result.m_effectivePartPayloads.insert(result.m_effectivePartPayloads.end(), scorePayload.begin(), scorePayload.end());
+        row.effectivePayloadSize = (std::max)(row.payloadSize, score->payloadSize);
+        result.m_effectivePartPayloads.resize(row.effectivePayloadOffset + row.effectivePayloadSize, 0);
         auto* effective = result.m_effectivePartPayloads.data() + row.effectivePayloadOffset;
         for (std::size_t offset = 0; offset < continuation.size() - continuationPrefixSize; ++offset) {
             const auto mask = continuation[continuationPrefixSize + offset];
-            effective[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
+            effective[offset] = static_cast<std::uint8_t>((effective[offset] & ~mask) | (partPayload[offset] & mask));
         }
-        // The two terminal words extend the editable mask across the payload's final
-        // four bytes, which the same-sized continuation uses for its length prefix.
+        // The two terminal words extend the editable mask across the part payload's final
+        // four bytes, which the continuation uses for its length prefix.
         for (std::size_t i = 0; i < continuationPrefixSize; ++i) {
             const auto maskWord = static_cast<std::uint16_t>(i < 2 ? row.trailerFirst : row.trailerSecond);
             const auto shift = byteOrder == ByteOrder::BigEndian ? (i % 2 == 0 ? 8U : 0U) : (i % 2 == 0 ? 0U : 8U);
             const auto mask = static_cast<std::uint8_t>(maskWord >> shift);
             const auto offset = row.payloadSize - continuationPrefixSize + i;
-            effective[offset] = static_cast<std::uint8_t>((scorePayload[offset] & ~mask) | (partPayload[offset] & mask));
+            effective[offset] = static_cast<std::uint8_t>((effective[offset] & ~mask) | (partPayload[offset] & mask));
         }
         row.continuationOverlayReady = true;
     }
@@ -312,7 +313,7 @@ std::span<const std::uint8_t> LegacyRowPool::effectivePayloadOf(const LegacyRow&
     if (!row.continuationOverlayReady) {
         return payloadOf(row);
     }
-    return std::span<const std::uint8_t>(m_effectivePartPayloads.data() + row.effectivePayloadOffset, row.payloadSize);
+    return std::span<const std::uint8_t>(m_effectivePartPayloads.data() + row.effectivePayloadOffset, row.effectivePayloadSize);
 }
 
 std::span<const LegacyRow> LegacyRowPool::getArray(LegacyTag tag, std::uint16_t cmper1, std::uint16_t cmper2, std::uint16_t partId) const

@@ -3,13 +3,13 @@
 
 #include "import/others.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <utility>
 
+#include "import/shared/repeat_flags.h"
 #include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
@@ -26,9 +26,6 @@ constexpr auto endingTextTag = records::packTag("ET");
 constexpr records::LegacyTag endingStartClass = 0x00cc;
 constexpr records::LegacyTag endingTextClass = 0x00cd;
 constexpr records::LegacyTag endingPassClass = 0x00ce;
-constexpr std::array endingActions{musx::dom::others::RepeatActionType::JumpAuto, musx::dom::others::RepeatActionType::JumpAbsolute,
-    musx::dom::others::RepeatActionType::JumpRelative, musx::dom::others::RepeatActionType::JumpToMark, musx::dom::others::RepeatActionType::Stop,
-    musx::dom::others::RepeatActionType::NoJump};
 
 void reportEndingStart(const ImportContext& context, const EndingStartTarget& target, const RecordFamilySource& source,
     std::span<const records::LegacyRow> rows, bool modernFlags, bool hasTail, bool earlyEndLine, std::int16_t storedTargetValue)
@@ -117,7 +114,7 @@ void importRepeatEndingStarts(const ImportContext& context)
         const auto signedLowByte = [&](std::size_t slot) { return static_cast<std::int8_t>(word(slot) & 0xff); };
         const auto flags = word(5);
         const auto actionBits = static_cast<std::uint16_t>((flags & 0x0070) >> 4);
-        if (modernFlags && actionBits >= endingActions.size()) {
+        if (modernFlags && actionBits >= repeat::actions.size()) {
             context.report.diagnostics.push_back(
                 {musx::util::Logger::LogLevel::Info, "Repeat-ending record for measure " + std::to_string(cmper) + " has an unknown action."});
             continue;
@@ -139,7 +136,7 @@ void importRepeatEndingStarts(const ImportContext& context)
         target->hidden = modernFlags && (flags & 0x0004) != 0;
         target->jumpIfIgnoring = (flags & 0x2000) != 0;
         const bool earlyRelative = context.profile.epoch == FormatEpoch::CodaBanner || earlyEndLine;
-        target->jumpAction = modernFlags                                    ? endingActions[actionBits]
+        target->jumpAction = modernFlags                                    ? repeat::actions[actionBits]
                              : !earlyRelative && (flags & 0x0c00) == 0x0c00 ? musx::dom::others::RepeatActionType::Stop
                              : earlyRelative || (flags & 0x1000) != 0       ? musx::dom::others::RepeatActionType::JumpRelative
                                                                             : musx::dom::others::RepeatActionType::JumpAbsolute;

@@ -83,6 +83,8 @@ struct LegacyRow
     bool continuationOverlayReady{};
     /// @brief Offset of this row's resolved bytes within the pool's effective-part storage.
     std::uint32_t effectivePayloadOffset{};
+    /// @brief Size of the resolved payload, which may differ from the physical part payload.
+    std::uint32_t effectivePayloadSize{};
     /// @brief The two words terminating a zlib class record.
     std::int16_t trailerFirst{};
     std::int16_t trailerSecond{};
