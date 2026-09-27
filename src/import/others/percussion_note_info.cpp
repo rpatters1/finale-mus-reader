@@ -178,7 +178,7 @@ void importLegacyPercussionNoteInfo(const ImportContext& context)
     }
     const auto& source = *selected;
     const auto percussionFont = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, PercussionFontType::Percussion);
-    const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::Cmper{};
+    const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::DEFAULT_MUSIC_FONT_ID;
     const auto mapNames = legacyPercussionMapNames(context);
     for (const auto& [mapId, selectedRows] : selectedLegacyPercussionRows(context)) {
         std::map<musx::dom::PercussionNoteTypeId, std::uint16_t> typeOrders;
@@ -252,7 +252,7 @@ void importPercussionNoteInfo(const ImportContext& context)
     const bool wide = versions::storesUnicodeCodepoints(context.profile.version);
     const auto stride = wide ? percussionNoteInfoWideStride : percussionNoteInfoNarrowStride;
     const auto percussionFont = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, PercussionFontType::Percussion);
-    const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::Cmper{};
+    const auto fontId = percussionFont ? percussionFont->fontId : musx::dom::DEFAULT_MUSIC_FONT_ID;
 
     for (const auto& [partId, cmper] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, cmper, 0, partId);

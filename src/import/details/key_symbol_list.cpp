@@ -29,7 +29,7 @@ musx::dom::Cmper keySymbolFont(const musx::dom::DocumentPtr& document, const Key
         }
     }
     const auto font = musx::dom::options::FontOptions::getFontInfoOrNull(document, musx::dom::options::FontOptions::FontType::Key);
-    return font ? font->fontId : 0;
+    return font ? font->fontId : musx::dom::DEFAULT_MUSIC_FONT_ID;
 }
 
 } // namespace
