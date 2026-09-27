@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 
+#include "import/support/text_encoding.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -18,9 +19,12 @@ namespace {
 
 using EndingStartTarget = musx::dom::others::RepeatEndingStart;
 using EndingPassTarget = musx::dom::others::RepeatPassList;
+using EndingTextTarget = musx::dom::others::RepeatEndingText;
 constexpr auto endingStartTag = records::packTag("ES");
 constexpr auto endingPassTag = records::packTag("EE");
+constexpr auto endingTextTag = records::packTag("ET");
 constexpr records::LegacyTag endingStartClass = 0x00cc;
+constexpr records::LegacyTag endingTextClass = 0x00cd;
 constexpr records::LegacyTag endingPassClass = 0x00ce;
 constexpr std::array endingActions{musx::dom::others::RepeatActionType::JumpAuto, musx::dom::others::RepeatActionType::JumpAbsolute,
     musx::dom::others::RepeatActionType::JumpRelative, musx::dom::others::RepeatActionType::JumpToMark, musx::dom::others::RepeatActionType::Stop,
@@ -158,6 +162,44 @@ void importRepeatEndingStarts(const ImportContext& context)
         }
         reportEndingStart(context, *target, *source, rows, modernFlags, hasTail, earlyEndLine, storedTargetValue);
         context.document->getOthers()->add(EndingStartTarget::XmlNodeName, std::move(target));
+    }
+}
+
+void importRepeatEndingTexts(const ImportContext& context)
+{
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), endingTextTag, endingTextClass);
+    if (!source) {
+        return;
+    }
+    // The text is null-terminated across as many incidences as it needs: UTF-16 code units in
+    // the record's byte order from Finale 2012, otherwise narrow bytes. Believed: narrow bytes
+    // are in the encoding of the ending font from FontOptions, or of the source platform when
+    // there is no ending font. Font id 0 is not a stand-in: it names the music font. Finale 27's
+    // upgrade decodes them as Mac Roman even when that font names a Windows character set; the
+    // font is used here.
+    const auto font = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, musx::dom::options::FontOptions::FontType::Ending);
+    for (const auto& [partId, cmper] : recordKeys(*source)) {
+        const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
+        if (rows.empty()) {
+            continue;
+        }
+        const auto payload = collectRecordPayload(*source, rows);
+        auto target = createOthersRecordTarget<EndingTextTarget>(context.document, *source, rows.front(), cmper);
+        if (versions::storesUnicodeCodepoints(context.profile.version)) {
+            target->text = text::utf16ToUtf8(payloadWords(payload, context.profile.byteOrder));
+        } else {
+            const auto narrow = payloadString(payload, 0, payload.size());
+            target->text = font ? text::toUtf8(narrow, context.document, font->fontId, text::UnresolvedFontFallback::Text)
+                                : text::toUtf8(narrow, context.profile.platform);
+        }
+        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+            const auto key = reporting.template instanceKey<EndingTextTarget>(partId, cmper);
+            reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+            reporting.report().setField(key, "text",
+                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, rows.front().blockOffset, rows.front().decodedOffset,
+                    static_cast<std::int64_t>(payload.size()), source->identity});
+        });
+        context.document->getOthers()->add(EndingTextTarget::XmlNodeName, std::move(target));
     }
 }
 

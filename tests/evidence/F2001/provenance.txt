@@ -104,3 +104,13 @@ F2001Win-midclef.mus / .etf / .musx
     After Barline" set. `CE(1)` stores the three items with flags 0, 0x0004, and
     0x0010; `GF(1,1)` names list 1 with flags 0x0400. The Finale 27 companion
     carries `unlockVert` on incidence 1 and `afterBarline` on incidence 2.
+
+F2001Win-endingtext.mus / .etf / .musx
+    sha256 8c638a7d6517c1cd6d0e8e8176ec4ab0da370c7315f1533923ae835314630a2e (.mus)
+    sha256 f10f75ed530f95fe15fe72a2c26ea3cdef8155251425c75f3ca54ed6b0801398 (.etf)
+    sha256 4714bc4ef173176b740d4e247352a87e70ca00c28ed84f9387fbb0afe2f1e976 (.musx)
+    Measure 1 has a repeat ending whose text is "This is å löng ending", set in
+    the ending font Times New Roman with the Windows ANSI character set. `ET(1)`
+    stores the Windows-1252 bytes, including 0xe5 and 0xf6, null-terminated
+    across two incidences. The Finale 27 companion decodes those two bytes as
+    Mac Roman, writing "This is Â lˆng ending".

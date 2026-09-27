@@ -272,6 +272,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteInfo, &others::importPercussionNoteInfo),
         FINALE_MUS_READER_IMPORTER(ImportRepeatBacks, &others::importRepeatBacks),
         FINALE_MUS_READER_IMPORTER(ImportRepeatEndingStarts, &others::importRepeatEndingStarts),
+        FINALE_MUS_READER_IMPORTER(ImportRepeatEndingTexts, &others::importRepeatEndingTexts),
         FINALE_MUS_READER_IMPORTER(ImportRepeatPassLists, &others::importRepeatPassLists),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
