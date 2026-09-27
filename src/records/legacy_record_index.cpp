@@ -281,7 +281,7 @@ LegacyRowPool LegacyRowPool::build(std::vector<LegacyRow> rows, std::vector<std:
         const auto continuation = result.continuationOf(row);
         row.effectivePayloadOffset = static_cast<std::uint32_t>(result.m_effectivePartPayloads.size());
         result.m_effectivePartPayloads.insert(result.m_effectivePartPayloads.end(), scorePayload.begin(), scorePayload.end());
-        row.effectivePayloadSize = std::max(row.payloadSize, score->payloadSize);
+        row.effectivePayloadSize = (std::max)(row.payloadSize, score->payloadSize);
         result.m_effectivePartPayloads.resize(row.effectivePayloadOffset + row.effectivePayloadSize, 0);
         auto* effective = result.m_effectivePartPayloads.data() + row.effectivePayloadOffset;
         for (std::size_t offset = 0; offset < continuation.size() - continuationPrefixSize; ++offset) {

@@ -46,7 +46,7 @@ void importTextRepeatAssigns(const ImportContext& context)
         const std::size_t wordsPerAssignment = selfContained ? 12 : 6;
         const std::size_t rowsPerAssignment = source->classRecords || !selfContained ? 1 : 2;
         for (std::size_t rowIndex = 0; rowIndex < allRows.size(); rowIndex += rowsPerAssignment) {
-            const auto rows = allRows.subspan(rowIndex, std::min(rowsPerAssignment, allRows.size() - rowIndex));
+            const auto rows = allRows.subspan(rowIndex, (std::min)(rowsPerAssignment, allRows.size() - rowIndex));
             const auto payload = collectRecordPayload(*source, rows);
             if (payload.size() % 2 != 0) {
                 context.report.diagnostics.push_back(
