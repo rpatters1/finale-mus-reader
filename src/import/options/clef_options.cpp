@@ -223,9 +223,9 @@ void reportClefDefaults(ImportReport& report, std::size_t index, const ClefDef& 
 /// @brief Turns one stored clef into a musxdom ClefDef and records where each value came from.
 /// @details Before Finale 2012 the character is a byte in the encoding of the font that draws
 /// the clef, not a code point, so it is decoded through that font exactly as legacy text is. A
-/// clef without its own font uses the document's default music font, which is a symbol font
-/// whose byte is a glyph number and survives unchanged; a clef given a text font of its own is
-/// the case that makes the difference visible.
+/// clef without its own font uses the clef font from FontOptions, normally a symbol font whose
+/// byte is a glyph number and survives unchanged; a clef given a text font of its own is the
+/// case that makes the difference visible.
 void insertRecoveredClef(const musx::dom::DocumentPtr& document, const std::shared_ptr<ClefOptionsTarget>& target, const PhysicalClef& stored,
     ImportReport& report, musx::factory::ConstructionContext& construction)
 {
@@ -251,10 +251,9 @@ void insertRecoveredClef(const musx::dom::DocumentPtr& document, const std::shar
         def->font = std::move(font);
     }
     // After the font, because which font decodes the character is what the font block decides.
-    // A clef with no font of its own names comparator zero, the default music font.
     def->clefChar = stored.charIsCodepoint ? static_cast<char32_t>(stored.clefChar)
-                                           : text::codepointFromByte(static_cast<std::uint8_t>(stored.clefChar), document,
-                                                 def->useOwnFont ? musx::dom::Cmper(stored.fontComparator) : 0, text::UnresolvedFontFallback::Symbol);
+                                           : text::codepointFromByte(static_cast<std::uint8_t>(stored.clefChar), document, def->calcFont()->fontId,
+                                                 text::UnresolvedFontFallback::Symbol);
     target->clefDefs.push_back(std::move(def));
 
     reportRecoveredClef(report, index, stored);

@@ -8,12 +8,24 @@ namespace {
 
 using namespace classes;
 
+/// FontOptions precede every other importer, so a clef without its own font always has a clef
+/// font to decode through.
+void seedClefFont(const musx::dom::DocumentPtr& document)
+{
+    auto fontOptions = std::make_shared<musx::dom::options::FontOptions>(document);
+    auto clefFont = std::make_shared<musx::dom::FontInfo>(document);
+    clefFont->fontId = musx::dom::DEFAULT_MUSIC_FONT_ID;
+    fontOptions->fontOptions.emplace(musx::dom::options::FontOptions::FontType::Clef, std::move(clefFont));
+    document->getOptions()->add(musx::dom::options::FontOptions::XmlNodeName, std::move(fontOptions));
+}
+
 void testClefTupleDecoding()
 {
     using ClefOptions = musx::dom::options::ClefOptions;
     const auto captured = [](const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
+        seedClefFont(document);
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(
@@ -67,6 +79,7 @@ void testClefTupleDecoding()
         profile.epoch = FormatEpoch::DclLegacy;
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
+        seedClefFont(document);
         ImportReport report(FormatEpoch::UncompressedLegacy);
         finale_mus_reader::PendingReferences pending;
         finale_mus_reader::options::captureClefOptions(LegacyRecordIndex::build(makeContainer(dclRows)), profile, document,
@@ -175,6 +188,7 @@ void testClefTupleDecoding()
     {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
+        seedClefFont(document);
         auto profile = profileFor(17);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::BigEndian;
@@ -195,6 +209,7 @@ void testClefTupleDecoding()
     {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
+        seedClefFont(document);
         auto profile = profileFor(13);
         profile.epoch = FormatEpoch::ZlibLegacy;
         profile.byteOrder = ByteOrder::LittleEndian;

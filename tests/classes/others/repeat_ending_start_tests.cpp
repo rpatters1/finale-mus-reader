@@ -5,7 +5,9 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace finale_mus_reader_tests {
@@ -15,6 +17,7 @@ using namespace classes;
 using RepeatEndingStart = musx::dom::others::RepeatEndingStart;
 using RepeatPassList = musx::dom::others::RepeatPassList;
 using RepeatBack = musx::dom::others::RepeatBack;
+using RepeatEndingText = musx::dom::others::RepeatEndingText;
 
 void checkEnding(const finale_mus_reader::container::ParsedContainer& parsed, std::optional<SourceVersion> version, bool modern)
 {
@@ -83,6 +86,78 @@ TEST_CASE("Repeat ending and pass list decode the Finale 2005 and zlib layouts",
                                        SyntheticClassRow{0x00ce, {1, 3, 0, 0, 0, 0}, 7}},
                     ByteOrder::LittleEndian),
         SourceVersion{.major = 12}, true);
+}
+
+std::string endingText(const finale_mus_reader::container::ParsedContainer& parsed, std::optional<SourceVersion> version, std::int64_t storedBytes,
+    finale_mus_reader::SourcePlatform platform = finale_mus_reader::SourcePlatform::Unknown)
+{
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    SourceProfile profile(parsed.formatEpoch);
+    profile.byteOrder = parsed.byteOrder;
+    profile.version = version;
+    profile.platform = platform;
+    ImportReport report(profile.epoch);
+    const auto index = LegacyRecordIndex::build(parsed);
+    auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto reference = std::move(referenceSession).finish();
+    finale_mus_reader::PendingReferences pending;
+    musx::factory::ConstructionContext construction;
+    const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+    finale_mus_reader::others::importRepeatEndingTexts(context);
+    const auto text = document->getOthers()->get<RepeatEndingText>(musx::dom::SCORE_PARTID, musx::dom::Cmper(7));
+    REQUIRE(text);
+    const auto* field = report.findField<RepeatEndingText>("text", musx::dom::SCORE_PARTID, musx::dom::Cmper(7));
+    REQUIRE(field);
+    CHECK(field->origin == ValueOrigin::LegacyMus);
+    CHECK(field->rawValue == storedBytes);
+    CHECK(RepeatEndingText::xmlMappingArray().size() == 1);
+    return text->text;
+}
+
+TEST_CASE("Repeat ending text spans incidences as narrow or UTF-16 characters", "[class][repeat-ending]")
+{
+    const auto rows = std::vector<SyntheticRow>{{7, "ET", {0x4142, 0x4344, 0x4546, 0x4748, 0x494a, 0x4b4c}}, {7, "ET", {0x4d00, 0x4e4f, 0, 0, 0, 0}}};
+    CHECK(endingText(makeContainer(rows, FormatEpoch::UncompressedLegacy), SourceVersion{.major = 5}, 24) == "ABCDEFGHIJKLM");
+    CHECK(endingText(
+              makeClassContainer({SyntheticClassRow{0x00cd, {0x2e31, 0, 0, 0, 0, 0}, 7}}, ByteOrder::LittleEndian), SourceVersion{.major = 16}, 12)
+          == "1.");
+    CHECK(endingText(makeClassContainer({SyntheticClassRow{0x00cd, {0x00e9, 0x0031, 0, 0x0032, 0, 0}, 7}}, ByteOrder::LittleEndian),
+              SourceVersion{.major = 17}, 12)
+          == "\xc3\xa9"
+             "1");
+}
+
+TEST_CASE("Repeat ending text without an ending font uses the source platform encoding", "[class][repeat-ending]")
+{
+    const auto rows = std::vector<SyntheticRow>{{7, "ET", {0x6ce5, 0, 0, 0, 0, 0}}};
+    const auto parsed = makeContainer(rows, FormatEpoch::DclLegacy);
+    CHECK(endingText(parsed, SourceVersion{.major = 6}, 12, finale_mus_reader::SourcePlatform::Windows) == "l\xc3\xa5");
+    CHECK(endingText(parsed, SourceVersion{.major = 6}, 12, finale_mus_reader::SourcePlatform::MacOS) == "l\xc3\x82");
+}
+
+TEST_CASE("Repeat ending text is stored as narrow text in Finale 1.0 and UTF-16 in Finale 2012", "[class][repeat-ending]")
+{
+    for (const auto& [fixture, expected] :
+        std::array{std::pair{"evidence/F100/F100-rptstart.mus", "dirst"}, std::pair{"evidence/F2012/F2012-rptstart.mus", "first"}}) {
+        const auto result = readFixture(fixture);
+        const auto text = result.document->getOthers()->get<RepeatEndingText>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        REQUIRE(text);
+        CHECK(text->text == expected);
+        CHECK(result.report.findField<RepeatEndingText>("text", musx::dom::SCORE_PARTID, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+    }
+}
+
+TEST_CASE("Repeat ending text uses the ending font's Windows character set", "[class][repeat-ending]")
+{
+    const auto result = readFixture("evidence/F2001/F2001Win-endingtext.mus");
+    const auto text = result.document->getOthers()->get<RepeatEndingText>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    REQUIRE(text);
+    CHECK(text->text == "This is \xc3\xa5 l\xc3\xb6ng ending");
+    const auto* field = result.report.findField<RepeatEndingText>("text", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    REQUIRE(field);
+    CHECK(field->origin == ValueOrigin::LegacyMus);
+    CHECK(field->rawValue == 24);
 }
 
 TEST_CASE("Finale 1.0 ending separates the compact text offsets", "[class][repeat-ending]")

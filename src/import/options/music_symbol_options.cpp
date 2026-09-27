@@ -184,7 +184,7 @@ bool narrowSourceApplies(NarrowMusicSymbolEra era, const SourceProfile& profile)
 
 char32_t decodeNarrowMusicSymbol(const ImportContext& context, const MusicSymbolOptionsField& field, std::int16_t stored)
 {
-    musx::dom::Cmper fontId = 0;
+    musx::dom::Cmper fontId = musx::dom::DEFAULT_MUSIC_FONT_ID;
     if (const auto font = musx::dom::options::FontOptions::getFontInfoOrNull(context.document, field.fontType)) {
         fontId = font->fontId;
     }

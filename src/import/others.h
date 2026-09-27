@@ -132,6 +132,9 @@ void importRepeatBacks(const ImportContext& context);
 /// @brief Recovers measure repeat-ending assignments.
 void importRepeatEndingStarts(const ImportContext& context);
 
+/// @brief Recovers the text that replaces a repeat ending's pass numbers.
+void importRepeatEndingTexts(const ImportContext& context);
+
 /// @brief Recovers the pass numbers attached to repeat endings.
 void importRepeatPassLists(const ImportContext& context);
 
