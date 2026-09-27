@@ -8,6 +8,13 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-F263-F100-textrpt.mus / .etf / -finale27/F372-F263-F100-textrpt.musx
+    sha256 1de2a5a66790398e2cd9945db6ca67bb21bb3b160104e00cfecb7d7586d93ebd (.mus)
+    sha256 51228de694565c70385ea1c8589289d5fc1f6f23872ea6c9078845b69c637bd2 (.etf)
+    sha256 d885dbdf29621e8bdb381ef2bf5193f9e9c2c944a2d61b2460322d7f9e6b35a5 (.musx)
+    The same text repeat saved again in Finale 3.7.2. Includes its contemporary
+    ETF and Finale 27 conversion.
+
 F372-rptback-reset.mus / .etf / -finale27/F372-rptback-reset.musx
     sha256 c3bb7a803d9176469ed7bb5239db0ed2e787d739a680fcff1c8e6e9ecfa2a001 (.mus)
     sha256 d1687862de4d5877fe0689c2fd7a419d07be8904c2ad690664b3dda35d6d4649 (.etf)

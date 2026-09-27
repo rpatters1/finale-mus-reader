@@ -76,9 +76,7 @@ void importClefListFamily(const ImportContext& context, const RecordFamilySource
             const auto key = reporting.template instanceKey<ClefListTarget>(partId, cmper, inci);
             const auto reportField = [&](const char* member, std::size_t word, std::int64_t value) {
                 const auto& row = source.rowOfWord(rows, at + word);
-                reporting.report().setField(key, member,
-                    {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + source.byteOffsetInRow((at + word) * sizeof(std::uint16_t)),
-                        value, source.identity});
+                reportLegacyField(reporting, key, source, row, member, source.byteOffsetInRow((at + word) * sizeof(std::uint16_t)), value);
             };
             reportField("clefIndex", 0, item[0]);
             reportField("xEduPos", 1, item[1]);

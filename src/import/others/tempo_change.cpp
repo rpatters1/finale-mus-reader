@@ -38,8 +38,7 @@ void importTempoRecord(const ImportContext& context, const RecordFamilySource& s
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<TempoTarget>(row.partId, cmper, inci);
         const auto reportField = [&](const char* member, std::size_t at, std::int64_t value) {
-            reporting.report().setField(key, member,
-                typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, value, source.identity});
+            reportLegacyField(reporting, key, source, row, member, at, value);
         };
         reportField("eduPosition", offset, target->eduPosition);
         reportField("ratio", offset + 4, target->ratio);
