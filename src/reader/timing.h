@@ -115,6 +115,7 @@ enum class Phase : std::size_t {
     ImportTempoChanges,
     ImportTextBlocks,
     ImportTextExpressionDefs,
+    ImportTextExpressionEnclosures,
     ImportTextOptions,
     ImportTextRepeatAssigns,
     ImportTextRepeatDefs,

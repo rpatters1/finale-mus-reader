@@ -7,6 +7,43 @@ namespace finale_mus_reader_tests {
 namespace {
 using namespace classes;
 using TestExpression = musx::dom::others::TextExpressionDef;
+using TestExpressionEnclosure = musx::dom::others::TextExpressionEnclosure;
+
+TEST_CASE("Text expression enclosures decode De rows and zlib class records", "[class][text-expression]")
+{
+    const auto parsed = makeContainer({{7, "De", {-7, 11, 24, 8, 32, static_cast<std::int16_t>(0x9802)}}});
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    SourceProfile profile(parsed.formatEpoch);
+    profile.byteOrder = parsed.byteOrder;
+    ImportReport report(profile.epoch);
+    const auto index = LegacyRecordIndex::build(parsed);
+    auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto reference = std::move(referenceSession).finish();
+    finale_mus_reader::PendingReferences pending;
+    musx::factory::ConstructionContext construction;
+    const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+    finale_mus_reader::others::importTextExpressionEnclosures(context);
+    const auto enclosure = document->getOthers()->get<TestExpressionEnclosure>(musx::dom::SCORE_PARTID, musx::dom::Cmper(7));
+    REQUIRE(enclosure);
+    CHECK(enclosure->xAdd == -7);
+    CHECK(enclosure->yAdd == 11);
+    CHECK(enclosure->xMargin == 24);
+    CHECK(enclosure->yMargin == 8);
+    CHECK(enclosure->lineWidth == 32);
+    CHECK(enclosure->shape == TestExpressionEnclosure::Shape::Ellipse);
+    CHECK(enclosure->fixedSize);
+    CHECK(enclosure->notTall);
+    CHECK(enclosure->opaque);
+    CHECK(report.findField<TestExpressionEnclosure>("xAdd", musx::dom::SCORE_PARTID, musx::dom::Cmper(7))->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<TestExpressionEnclosure>("roundCorners", musx::dom::SCORE_PARTID, musx::dom::Cmper(7))->origin == ValueOrigin::MusxOnly);
+
+    const auto zlib = readFixture("evidence/F2011/F2011-perc-instchange.mus");
+    const auto zlibEnclosure = zlib.document->getOthers()->get<TestExpressionEnclosure>(musx::dom::SCORE_PARTID, musx::dom::Cmper(25));
+    REQUIRE(zlibEnclosure);
+    CHECK(zlibEnclosure->xMargin == 9);
+    CHECK(zlibEnclosure->shape == TestExpressionEnclosure::Shape::Rectangle);
+}
 
 TEST_CASE("Text expressions recover stored playback and synthesize early text", "[class][text-expression]")
 {

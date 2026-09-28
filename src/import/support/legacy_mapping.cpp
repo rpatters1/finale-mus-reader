@@ -291,6 +291,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTempoChanges, &others::importTempoChanges),
         FINALE_MUS_READER_IMPORTER(ImportTextBlocks, &others::importTextBlocks),
         FINALE_MUS_READER_IMPORTER(ImportTextExpressionDefs, &others::importTextExpressionDefs),
+        FINALE_MUS_READER_IMPORTER(ImportTextExpressionEnclosures, &others::importTextExpressionEnclosures),
         FINALE_MUS_READER_IMPORTER(ImportTextRepeatAssigns, &others::importTextRepeatAssigns),
         FINALE_MUS_READER_IMPORTER(ImportTextRepeatDefs, &others::importTextRepeatDefs),
         FINALE_MUS_READER_IMPORTER(ImportTextRepeatEnclosures, &others::importTextRepeatEnclosures),
