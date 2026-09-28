@@ -133,7 +133,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/openmusx/musxdom.git
-            GIT_TAG 3d62911bfde978020d901a827b36fce906d86127
+            GIT_TAG 273cd2d30540960f85b12245dc0d9c32330aae48
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -219,6 +219,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/fretboard_groups.cpp
     src/import/others/fretboard_styles.cpp
     src/import/others/graphic_assignments.cpp
+    src/import/others/individual_positioning.cpp
     src/import/others/layer_attributes.cpp
     src/import/others/marking_category.cpp
     src/import/others/measure.cpp
@@ -228,9 +229,9 @@ add_library(finale_mus_reader STATIC
     src/import/others/part_definitions.cpp
     src/import/others/part_globals.cpp
     src/import/others/part_voicing.cpp
+    src/import/others/percussion_note_info.cpp
     src/import/others/repeat_back.cpp
     src/import/others/repeat_ending_start.cpp
-    src/import/others/percussion_note_info.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/smart_shape_custom_lines.cpp
     src/import/others/split_measure.cpp
@@ -238,8 +239,8 @@ add_library(finale_mus_reader STATIC
     src/import/others/staff_list.cpp
     src/import/others/staff_style_assign.cpp
     src/import/others/staff_system.cpp
-    src/import/others/system_lock.cpp
     src/import/others/staff_used.cpp
+    src/import/others/system_lock.cpp
     src/import/others/tempo_change.cpp
     src/import/others/text_blocks.cpp
     src/import/others/text_expression_defs.cpp
@@ -248,9 +249,9 @@ add_library(finale_mus_reader STATIC
     src/import/others/time_composite.cpp
     src/import/support/embedded_graphics.cpp
     src/import/support/enigma_text.cpp
-    src/import/support/reporting.cpp
     src/import/support/legacy_mapping.cpp
     src/import/support/percussion_mappings.cpp
+    src/import/support/reporting.cpp
     src/import/support/text_encoding.cpp
     src/import/texts/coda_texts.cpp
     src/import/texts/file_info_text.cpp
@@ -261,6 +262,9 @@ add_library(finale_mus_reader STATIC
     src/records/legacy_others.cpp
     src/records/legacy_record_index.cpp
     $<TARGET_OBJECTS:finale_mus_reader_blast>)
+# The two text importers declare different Target aliases in the same anonymous namespace.
+set_source_files_properties(src/import/others/text_repeat_assign.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 finale_mus_reader_enable_unity(finale_mus_reader)
 add_library(finale_mus_reader::finale_mus_reader ALIAS finale_mus_reader)
 

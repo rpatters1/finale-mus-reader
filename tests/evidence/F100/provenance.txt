@@ -765,3 +765,11 @@ F100-rptstart-moved.mus / .etf / -finale27/F100-rptstart-moved.musx
     From F100-rptstart, changes the repeat text and bracket offsets. The compact
     record holds horizontal and vertical text offsets 31 and 4, left offsets
     -10 and 52, and right offsets -1 and -36 in three packed words.
+
+F100-rptindiv.mus / .etf / -finale27/F100-rptindiv.musx
+    sha256 67fd5de22f5bd3d8c0d327bee2d228535fdb5e72893894089190953cffbffb9d (.mus)
+    sha256 a522147287639270a700ac421c7e0e84864ff514c6aae88770a962a780895109 (.etf)
+    sha256 c2ca00573f5a4860b39e2fe8f9d09d7817c4b3e28e947c72a55afdc8110147c9 (.musx)
+    Finale 1.0 individual positioning for backward repeat, ending line, ending text,
+    and text repeat instances on two staves. The ETF and Finale 27 conversion
+    accompany the source.

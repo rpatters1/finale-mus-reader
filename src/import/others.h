@@ -51,14 +51,14 @@ void importFilePath(const ImportContext& context);
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
 
-/// @brief Recovers source fret instrument definitions.
-void importFretInstruments(const ImportContext& context);
-
 /// @brief Recovers source fretboard groups.
 void importFretboardGroups(const ImportContext& context);
 
 /// @brief Recovers source fretboard styles.
 void importFretboardStyles(const ImportContext& context);
+
+/// @brief Recovers source fret instrument definitions.
+void importFretInstruments(const ImportContext& context);
 
 /// @brief Recovers custom key attributes.
 void importKeyAttributes(const ImportContext& context);
@@ -109,16 +109,27 @@ void importPartDefinitions(const ImportContext& context);
 
 /// @brief Recovers the score- and part-specific global view settings.
 void importPartGlobals(const ImportContext& context);
+
+/// @brief Recovers part-specific staff voicing settings.
 void importPartVoicing(const ImportContext& context);
 
 /// @brief Recovers percussion-map note identities, staff positions, and noteheads.
 void importPercussionNoteInfo(const ImportContext& context);
 
+/// @brief Recovers per-instance backward repeat placements.
+void importRepeatBackIndividualPositioning(const ImportContext& context);
+
 /// @brief Recovers backward repeat assignments attached to measures.
 void importRepeatBacks(const ImportContext& context);
 
+/// @brief Recovers per-instance repeat ending line placements.
+void importRepeatEndingStartIndividualPositioning(const ImportContext& context);
+
 /// @brief Recovers measure repeat-ending assignments.
 void importRepeatEndingStarts(const ImportContext& context);
+
+/// @brief Recovers per-instance repeat ending text placements.
+void importRepeatEndingTextIndividualPositioning(const ImportContext& context);
 
 /// @brief Recovers the text that replaces a repeat ending's pass numbers.
 void importRepeatEndingTexts(const ImportContext& context);
@@ -177,6 +188,9 @@ void importTextRepeatDefs(const ImportContext& context);
 
 /// @brief Recovers TextRepeatEnclosure objects from supported source records.
 void importTextRepeatEnclosures(const ImportContext& context);
+
+/// @brief Recovers per-instance text repeat placements.
+void importTextRepeatIndividualPositioning(const ImportContext& context);
 
 /// @brief Recovers TextRepeatText objects from source records.
 void importTextRepeatTexts(const ImportContext& context);

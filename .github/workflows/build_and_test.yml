@@ -114,6 +114,10 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
           -DFINALE_MUS_READER_INSTRUMENTATION=ON
 
+      - name: Build Windows tests first
+        if: runner.os == 'Windows'
+        run: cmake --build build --target finale_mus_reader_tests --parallel 2
+
       - name: Build
         run: cmake --build build --parallel 2
 

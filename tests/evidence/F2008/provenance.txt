@@ -231,3 +231,19 @@ F2008-parts-jumps.mus / -finale27/F2008-parts-jumps.musx
     sha256 8579a11ab362247d6e7ef4f91827e1db2d94a69a0a83ee675acdcae0b5fe25d7 (.musx)
     Three text repeat assignments in one measure. Part 1 changes the first assignment's
     horizontal position; part 2 hides the second assignment; the third is linked in both parts.
+
+F2008-rptindiv.mus / -finale27/F2008-rptindiv.musx
+    sha256 6d266bb451e7e8120857eea675164d6e5edb392d441fcdc19ad67e74d32953aa (.mus)
+    sha256 e41ef79d3f153d610205bd1469ac2055d863607d8a3ed062dbfc9b60be4f4fe2 (.musx)
+    Contains two ending-line and ending-text placements in each of measures 2
+    and 3, plus two text-repeat placements at definition 1. Each has score and
+    linked-part records. Individual line visibility and offsets differ by part;
+    ending-text and text-repeat offsets also differ by part. The Finale 27
+    conversion retains the part-specific placements and sharing. The backward
+    repeat now has two individual placements at measure 2, including distinct
+    score offsets, and matching linked-part instances. The score hides the
+    second backward-repeat placement; bit 0x0001 appears in its second word
+    and the companion marks that placement hidden. Part 2 hides the first
+    text-repeat placement: bit 0x0001 appears in its placement record's last
+    word, and the companion marks that placement hidden. Part 1 separately
+    turns off the text-repeat assignment's individual placement.

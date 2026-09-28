@@ -217,3 +217,13 @@ F2005-textrpt.mus / .etf / -finale27/F2005-textrpt.musx
     A text repeat assignment at measure 1, saved by Finale 2005 with its ETF and Finale 27
     companion. Two `RU(1)` rows store the self-contained assignment: the first has positions
     152 and -192, pass number 2, text repeat ID 1, flags `0x0442`; the second is zero filled.
+
+F2005-rptindiv.mus / .etf / -finale27/F2005-rptindiv.musx
+    sha256 124c807e23aa12b6d85def16cfd4079a444b51874c3be97970387b91f467e3b5 (.mus)
+    sha256 cc235cbc1a065cf336a8a835f9eac460c6a14810b7746841d6404e4e0033ad05 (.etf)
+    sha256 6c68a6c04740d889dc84aea453f70a7ad95df150ac94199c768301dfda9b3669 (.musx)
+    Contains three backward-repeat, four ending-line, four ending-text, and two
+    text-repeat individual placements. The ETF stores measure numbers in the
+    second word of the first three variants and signed offsets in their four
+    coordinate words. The Finale 27 conversion retains all thirteen placements.
+    Finale 2005 offered no hidden option for these placements.
