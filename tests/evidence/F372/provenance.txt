@@ -427,3 +427,12 @@ F372-openclose-moved.mus / .etf / -finale27/F372-openclose-moved.musx
     From F372-openclose, changes the text and bracket positions. The second
     source row holds text line -12 and right line -40, with the earlier end-line
     word still zero. The conversion gives both end line and right line -40.
+
+F372-rptindiv.mus / .etf / -finale27/F372-rptindiv.musx
+    sha256 0adc67de23e2aa50e7d953b3143bcf9b69b5fdb4eb4a45f2b80b178cb2c5bf39 (.mus)
+    sha256 fedd4f78f9f5ba16b6dc854dc9afa61d56fd9ba83e8c779cac67f50dbf991e13 (.etf)
+    sha256 cbc6781571fc73666cc83e9b295d8e65947a5131c30d304fe55f4088d1690c16 (.musx)
+    Individual placements for all four repeat variants. The source and ETF
+    agree on BI [2,2,-92,4,96,-12], EI [2,3,-64,32,4,-20], LI
+    [2,2,76,40,0,0] and [2,3,28,-60,0,0], and RI [1,1,72,0,0,0] and
+    [2,1,20,-196,0,0]. The Finale 27 companion preserves all six placements.

@@ -65,6 +65,7 @@ add_executable(finale_mus_reader_tests
     classes/others/file_path_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
+    classes/others/individual_positioning_tests.cpp
     classes/others/marking_category_tests.cpp
     classes/others/measure_tests.cpp
     classes/others/multistaff_instrument_group_tests.cpp
@@ -73,23 +74,23 @@ add_executable(finale_mus_reader_tests
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp
     classes/others/part_voicing_tests.cpp
+    classes/others/percussion_note_info_tests.cpp
     classes/others/repeat_back_tests.cpp
     classes/others/repeat_ending_start_tests.cpp
-    classes/others/text_repeat_assign_tests.cpp
-    classes/others/text_repeat_def_tests.cpp
-    classes/others/percussion_note_info_tests.cpp
     classes/others/shape_definitions_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
-    classes/others/staff_tests.cpp
+    classes/others/split_measure_tests.cpp
     classes/others/staff_list_tests.cpp
     classes/others/staff_style_assign_tests.cpp
     classes/others/staff_system_tests.cpp
-    classes/others/split_measure_tests.cpp
+    classes/others/staff_tests.cpp
+    classes/others/staff_used_tests.cpp
     classes/others/system_lock_tests.cpp
     classes/others/tempo_change_tests.cpp
-    classes/others/staff_used_tests.cpp
     classes/others/text_blocks_tests.cpp
     classes/others/text_expression_defs_tests.cpp
+    classes/others/text_repeat_assign_tests.cpp
+    classes/others/text_repeat_def_tests.cpp
     classes/others/time_composite_tests.cpp
     classes/texts/text_pool_tests.cpp
     reader_tests.cpp

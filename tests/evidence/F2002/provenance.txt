@@ -191,3 +191,13 @@ F2002-jump3-stop.mus / .etf / -finale27/F2002-jump3-stop.musx
     From F2002-jump3, changes the ending action to Stop while the source target
     remains 3. The source flag changes from 0x0400 to 0x0c00. The Finale 27
     conversion writes action Stop and nextEnd -1.
+
+F2002-rptindiv.mus / .etf / -finale27/F2002-rptindiv.musx
+    sha256 4eb69aba6bcfd75372c913b6aba2e68eaf4c7c56725186e78a4d829891b9a61d (.mus)
+    sha256 c2c3f9a47b554799bc85b4b7dabf2b151b7fed4652f018b68aec8d1ad22ebdf4 (.etf)
+    sha256 9d72cca15cfe8707ed592155e3b052c555b241d746959765e4f462cb2fb13adb (.musx)
+    Exercises two backward-repeat, four ending-start, three ending-text, and one
+    text-repeat individual placements on multiple staves and measures. The ETF
+    records distinct signed offsets, including negative ending-text y2 values;
+    the Finale 27 conversion retains all ten placements. Finale 2002 offered no
+    hidden option for these placements.
