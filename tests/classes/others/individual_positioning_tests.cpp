@@ -257,7 +257,7 @@ TEST_CASE("Finale 2008 imports hidden and per-part individual placements", "[ind
     using Line = musx::dom::others::RepeatEndingStartIndividualPositioning;
     using Text = musx::dom::others::RepeatEndingTextIndividualPositioning;
     using Repeat = musx::dom::others::TextRepeatIndividualPositioning;
-    for (const auto partId : {0, 1, 2}) {
+    for (const auto partId : std::initializer_list<musx::dom::Cmper>{0, 1, 2}) {
         CHECK(result.document->getOthers()->getArray<Back>(partId).size() == 2);
         CHECK(result.document->getOthers()->getArray<Line>(partId).size() == 4);
         CHECK(result.document->getOthers()->getArray<Text>(partId).size() == 4);
