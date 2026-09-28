@@ -114,9 +114,18 @@ jobs:
           -DCMAKE_CXX_COMPILER=${{ matrix.cxxCompiler }}
           -DFINALE_MUS_READER_INSTRUMENTATION=ON
 
-      - name: Build Windows tests first
+      - name: Compile Windows test unity objects first
         if: runner.os == 'Windows'
-        run: cmake --build build --target finale_mus_reader_tests --parallel 2
+        run: |
+          $unityDir = 'build/tests/CMakeFiles/finale_mus_reader_tests.dir/Unity'
+          $sources = @(Get-ChildItem $unityDir -Filter 'unity_*_cxx.cxx' |
+            Sort-Object { [int]($_.BaseName -replace '^unity_(\d+)_cxx$', '$1') } -Descending)
+          if ($sources.Count -eq 0) { throw 'No test unity sources were generated' }
+          foreach ($source in $sources) {
+            $object = "tests/CMakeFiles/finale_mus_reader_tests.dir/Unity/$($source.Name).obj"
+            ninja -C build $object
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Build
         run: cmake --build build --parallel 2
