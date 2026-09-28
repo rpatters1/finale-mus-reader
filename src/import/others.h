@@ -180,6 +180,9 @@ void importTextBlocks(const ImportContext& context);
 /// @brief Recovers text expression definitions.
 void importTextExpressionDefs(const ImportContext& context);
 
+/// @brief Recovers TextExpressionEnclosure objects from supported source records.
+void importTextExpressionEnclosures(const ImportContext& context);
+
 /// @brief Recovers text repeat assignments attached to measures.
 void importTextRepeatAssigns(const ImportContext& context);
 

@@ -14,18 +14,14 @@ namespace finale_mus_reader {
 namespace others {
 namespace {
 
-using Enclosure = musx::dom::others::TextRepeatEnclosure;
-constexpr auto enclosureTag = records::packTag("Rx");
-constexpr records::LegacyTag enclosureClass = 0x00f5;
-
-} // namespace
-
-void importTextRepeatEnclosures(const ImportContext& context)
+template <typename Enclosure>
+void importEnclosures(const ImportContext& context, records::LegacyTag tag, records::LegacyTag classId, const char* label)
 {
+    // Coda-banner enclosure geometry has no supported semantic interpretation.
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         return;
     }
-    const auto source = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), enclosureTag, enclosureClass);
+    const auto source = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), tag, classId);
     if (!source) {
         return;
     }
@@ -37,7 +33,7 @@ void importTextRepeatEnclosures(const ImportContext& context)
         const auto payload = collectRecordPayload(*source, rows);
         if (payload.size() < 12) {
             context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info, "Text-repeat enclosure " + std::to_string(cmper) + " is shorter than its layout."});
+                {musx::util::Logger::LogLevel::Info, std::string(label) + " enclosure " + std::to_string(cmper) + " is shorter than its layout."});
             continue;
         }
         const auto word = [&](std::size_t slot) { return payloadWord(payload, slot * 2, context.profile.byteOrder); };
@@ -45,7 +41,7 @@ void importTextRepeatEnclosures(const ImportContext& context)
         const auto shape = flags & 0x000fU;
         if (shape > static_cast<std::uint16_t>(Enclosure::Shape::Octogon)) {
             context.report.diagnostics.push_back(
-                {musx::util::Logger::LogLevel::Info, "Text-repeat enclosure " + std::to_string(cmper) + " has an unsupported shape."});
+                {musx::util::Logger::LogLevel::Info, std::string(label) + " enclosure " + std::to_string(cmper) + " has an unsupported shape."});
         }
         auto target = createOthersRecordTarget<Enclosure>(context.document, *source, rows.front(), cmper);
         target->xAdd = static_cast<std::int16_t>(word(0));
@@ -93,6 +89,18 @@ void importTextRepeatEnclosures(const ImportContext& context)
         });
         context.document->getOthers()->add(Enclosure::XmlNodeName, std::move(target));
     }
+}
+
+} // namespace
+
+void importTextExpressionEnclosures(const ImportContext& context)
+{
+    importEnclosures<musx::dom::others::TextExpressionEnclosure>(context, records::packTag("De"), 0x00f2, "Text-expression");
+}
+
+void importTextRepeatEnclosures(const ImportContext& context)
+{
+    importEnclosures<musx::dom::others::TextRepeatEnclosure>(context, records::packTag("Rx"), 0x00f5, "Text-repeat");
 }
 
 } // namespace others

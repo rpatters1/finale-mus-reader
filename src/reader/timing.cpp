@@ -113,6 +113,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportTempoChanges: return "tempo_changes";
     case Phase::ImportTextBlocks: return "text_blocks";
     case Phase::ImportTextExpressionDefs: return "text_expression_defs";
+    case Phase::ImportTextExpressionEnclosures: return "text_expression_enclosures";
     case Phase::ImportTextOptions: return "text_options";
     case Phase::ImportTextRepeatAssigns: return "text_repeat_assigns";
     case Phase::ImportTextRepeatDefs: return "text_repeat_defs";
