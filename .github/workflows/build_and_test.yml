@@ -121,11 +121,11 @@ jobs:
           $sources = @(Get-ChildItem $unityDir -Filter 'unity_*_cxx.cxx' |
             Sort-Object { [int]($_.BaseName -replace '^unity_(\d+)_cxx$', '$1') } -Descending)
           if ($sources.Count -eq 0) { throw 'No test unity sources were generated' }
-          foreach ($source in $sources) {
-            $object = "tests/CMakeFiles/finale_mus_reader_tests.dir/Unity/$($source.Name).obj"
-            ninja -C build $object
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+          $objects = @($sources | ForEach-Object {
+            "tests/CMakeFiles/finale_mus_reader_tests.dir/Unity/$($_.Name).obj"
+          })
+          ninja -C build -j 2 @objects
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build
         run: cmake --build build --parallel 2
