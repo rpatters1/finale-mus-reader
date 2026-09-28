@@ -34,8 +34,8 @@ void reportPlacement(const ImportContext& context, const RecordFamilySource& sou
         const auto legacy = [&](const char* name, std::size_t at, std::int64_t value) {
             reportLegacyField(reporting, key, source, row, name, offset + at, value);
         };
-        const auto fallback = [&](const char* name, std::int64_t value, typename Reporting::Origin origin = Reporting::Origin::LegacyBehavior) {
-            reportFallbackField(reporting, key, name, origin, value);
+        const auto fallback = [&](const char* name, std::int64_t value) {
+            reportFallbackField(reporting, key, name, Reporting::Origin::LegacyBehavior, value);
         };
         legacy("staffId", 0, target.staffId);
         if (kind == PlacementKind::TextRepeat) {
