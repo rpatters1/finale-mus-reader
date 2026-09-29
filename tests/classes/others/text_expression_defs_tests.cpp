@@ -9,6 +9,54 @@ using namespace classes;
 using TestExpression = musx::dom::others::TextExpressionDef;
 using TestExpressionEnclosure = musx::dom::others::TextExpressionEnclosure;
 
+TEST_CASE("Text-expression breakMmRest begins in F2002", "[class][text-expression]")
+{
+    using namespace finale_mus_reader;
+    for (const auto version : {versions::finale2001, versions::finale2002}) {
+        auto parsed = makeContainer({{1, "DT", {0, 0, 0, 0, 0, 0x0400}}}, FormatEpoch::DclLegacy);
+        auto profile = profileFor(version.major);
+        profile.epoch = FormatEpoch::DclLegacy;
+        const auto index = LegacyRecordIndex::build(parsed);
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        ImportReport report(profile.epoch);
+        PendingReferences pending;
+        const ImportContext context{index, profile, noSource, document, document, report, pending, session.getConstructionContext()};
+        others::importTextExpressionDefs(context);
+        const auto expression = document->getOthers()->get<TestExpression>(0, 1);
+        REQUIRE(expression);
+        const bool supported = version.major == versions::finale2002.major;
+        CHECK(expression->breakMmRest == supported);
+        const auto* field = report.findField<TestExpression>("breakMmRest", 0, 1);
+        REQUIRE(field);
+        CHECK(field->origin == (supported ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
+        CHECK(field->rawValue == (supported ? 0x0400 : 0));
+    }
+}
+
+TEST_CASE("Text expressions decode Swing from the shared playback flags", "[class][text-expression]")
+{
+    using namespace finale_mus_reader;
+    auto parsed =
+        makeContainer({{7, "DT", {0, 0, 1024, 0, 0, 0x090e}}, {7, "DT", {0, 0, 0, 0, 0, 0}}, {7, "DT", {0, 0, 0, 0, 0, 0}}}, FormatEpoch::DclLegacy);
+    auto profile = profileFor(versions::finale2006.major);
+    profile.epoch = FormatEpoch::DclLegacy;
+    const auto index = LegacyRecordIndex::build(parsed);
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    ImportReport report(profile.epoch);
+    PendingReferences pending;
+    const ImportContext context{index, profile, noSource, document, document, report, pending, session.getConstructionContext()};
+    others::importTextExpressionDefs(context);
+    const auto expression = document->getOthers()->get<TestExpression>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(expression);
+    CHECK(expression->playbackType == musx::dom::others::PlaybackType::Swing);
+    const auto* playback = report.findField<TestExpression>("playbackType", musx::dom::SCORE_PARTID, musx::dom::Cmper(7));
+    REQUIRE(playback);
+    CHECK(playback->origin == ValueOrigin::LegacyMus);
+    CHECK(playback->rawValue == 0x090e);
+}
+
 TEST_CASE("Text expression enclosures decode De rows and zlib class records", "[class][text-expression]")
 {
     const auto parsed = makeContainer({{7, "De", {-7, 11, 24, 8, 32, static_cast<std::int16_t>(0x9802)}}});
@@ -82,6 +130,39 @@ TEST_CASE("F2002 expression hiding is limited to bracketed spans", "[class][text
     const auto unbalancedText = unbalancedExpression->getRawTextCtx(0).getRawText();
     REQUIRE(unbalancedText);
     CHECK(unbalancedText->text == "^font(Times)^size(12)^nfx(0)test is ^nfx(128)hidden?");
+}
+
+TEST_CASE("Text-expression no-print conversion begins in F97", "[class][text-expression]")
+{
+    using namespace finale_mus_reader;
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy}) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        auto font = std::make_shared<musx::dom::others::FontDefinition>(
+            document, musx::dom::Cmper(0), musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper(1));
+        font->name = "Times";
+        document->getOthers()->add(font->XmlNodeName, font);
+        auto parsed = makeContainer(
+            {{1, "DT", {static_cast<std::int16_t>(epoch == FormatEpoch::CodaBanner ? 0x010c : 0x0c01), 0, 0, 0, 0, 0x0200}}, {1, "DT", {0x4142}}},
+            epoch);
+        auto profile = epoch == FormatEpoch::CodaBanner ? profileFor(versions::finale3_7.major, versions::finale3_7.minor)
+                                                        : profileFor(versions::finale97.major, versions::finale97.minor);
+        profile.epoch = epoch;
+        const auto index = LegacyRecordIndex::build(parsed);
+        ImportReport report(profile.epoch);
+        PendingReferences pending;
+        const ImportContext context{index, profile, noSource, document, document, report, pending, session.getConstructionContext()};
+        others::importTextExpressionDefs(context);
+        for (const auto& check : pending.checks) {
+            check();
+        }
+        const auto expression = document->getOthers()->get<TestExpression>(0, 1);
+        REQUIRE(expression);
+        const auto raw = expression->getRawTextCtx(0).getRawText();
+        REQUIRE(raw);
+        CHECK(raw->text.ends_with("AB"));
+        CHECK((raw->text.find("^nfx(128)") != std::string::npos) == (epoch == FormatEpoch::UncompressedLegacy));
+    }
 }
 
 TEST_CASE("Inline hidden spans preserve surrounding text and effects", "[class][text-expression]")

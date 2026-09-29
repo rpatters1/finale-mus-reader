@@ -95,6 +95,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportRepeatOptions: return "repeat_options";
     case Phase::ImportRepeatPassLists: return "repeat_pass_lists";
     case Phase::ImportShapeDefinitions: return "shape_definitions";
+    case Phase::ImportShapeExpressionDefs: return "shape_expression_defs";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";

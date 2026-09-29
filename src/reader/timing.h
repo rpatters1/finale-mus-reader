@@ -97,6 +97,7 @@ enum class Phase : std::size_t {
     ImportRepeatOptions,
     ImportRepeatPassLists,
     ImportShapeDefinitions,
+    ImportShapeExpressionDefs,
     ImportShapeGraphicAssignments,
     ImportSmartShapeCustomLines,
     ImportSmartShapeOptions,

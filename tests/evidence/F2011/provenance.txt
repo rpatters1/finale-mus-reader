@@ -143,3 +143,10 @@ F2011-staffstyle-assigned.mus
     sha256 f88cad0f8fba373d42c6e4526b52dba70c24187c6ae0a8f9b8c655e9c45166f9
     Derived by assigning the defined style to staff 1. Staff word 5 changes only by setting
     `0x1000`; the Finale 27 companion writes both the assignment and `hasStyles`.
+
+F2011-shapexp-desc.mus
+    sha256 a82f006b5efb4d174138dc567f11b606260239b8d58b46a74ce49daf79743ee4
+-finale27/F2011-shapexp-desc.musx
+    sha256 a465424f3968b40e19ef44b8c2754302ae9a685c1cc5c432d380849bd4749850
+    Adds one shape expression definition with a long description containing non-ASCII
+    characters. The Finale 27 companion retains the description.

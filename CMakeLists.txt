@@ -233,6 +233,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/repeat_back.cpp
     src/import/others/repeat_ending_start.cpp
     src/import/others/shape_definitions.cpp
+    src/import/others/shape_expression_defs.cpp
     src/import/others/smart_shape_custom_lines.cpp
     src/import/others/split_measure.cpp
     src/import/others/staff.cpp

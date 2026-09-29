@@ -140,6 +140,9 @@ void importRepeatPassLists(const ImportContext& context);
 /// @brief Recovers ShapeDef objects and their owned instruction and data lists.
 void importShapeDefinitions(const ImportContext& context);
 
+/// @brief Recovers shape expression definitions.
+void importShapeExpressionDefs(const ImportContext& context);
+
 /// @brief Recovers graphic assignments referenced by ShapeDef instructions.
 void importShapeGraphicAssignments(const ImportContext& context);
 
