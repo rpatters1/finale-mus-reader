@@ -88,7 +88,7 @@ TEST_CASE("Shape-expression breakMmRest begins in F2002", "[class][shape-express
         REQUIRE(expression);
         const bool supported = version.major == versions::finale2002.major;
         CHECK(expression->breakMmRest == supported);
-        const auto* field = report.findField<ShapeExpression>("breakMmRest", 0, 1);
+        const auto* field = report.findField<ShapeExpression>("breakMmRest", 0, musx::dom::Cmper(1));
         REQUIRE(field);
         CHECK(field->origin == (supported ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
         CHECK(field->rawValue == (supported ? 0x4000 : 0));
@@ -114,7 +114,7 @@ TEST_CASE("Shape-expression noPrint begins in F97", "[class][shape-expression]")
         REQUIRE(expression);
         const bool supported = epoch == FormatEpoch::UncompressedLegacy;
         CHECK(expression->noPrint == supported);
-        const auto* field = report.findField<ShapeExpression>("noPrint", 0, 1);
+        const auto* field = report.findField<ShapeExpression>("noPrint", 0, musx::dom::Cmper(1));
         REQUIRE(field);
         CHECK(field->origin == (supported ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
         CHECK(field->rawValue == (supported ? 0x0400 : 0));
@@ -214,8 +214,8 @@ TEST_CASE("Shape flags and positioning decode independently of text expression f
     CHECK(expression->yAdjustBaseline == -20);
     CHECK(expression->yAdjustEntry == 5);
     CHECK(expression->description.empty());
-    CHECK(report.findField<ShapeExpression>("noPrint", 0, 7)->rawValue == 0x7d01);
-    CHECK(report.findField<ShapeExpression>("breakMmRest", 0, 7)->rawValue == 0x7d01);
+    CHECK(report.findField<ShapeExpression>("noPrint", 0, musx::dom::Cmper(7))->rawValue == 0x7d01);
+    CHECK(report.findField<ShapeExpression>("breakMmRest", 0, musx::dom::Cmper(7))->rawValue == 0x7d01);
 }
 
 TEST_CASE("Zlib shape records decode in either byte order", "[class][shape-expression]")
@@ -276,7 +276,7 @@ TEST_CASE("Shape expression descriptions use platform text before F2012 and UTF-
         const auto expression = document->getOthers()->get<ShapeExpression>(0, 1);
         REQUIRE(expression);
         CHECK(expression->description == " (Copy)");
-        const auto* field = report.findField<ShapeExpression>("description", 0, 1);
+        const auto* field = report.findField<ShapeExpression>("description", 0, musx::dom::Cmper(1));
         REQUIRE(field);
         CHECK(field->origin == ValueOrigin::LegacyMus);
         CHECK(field->rawValue == (unicode ? 16 : 8));

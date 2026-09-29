@@ -27,7 +27,7 @@ TEST_CASE("Text-expression breakMmRest begins in F2002", "[class][text-expressio
         REQUIRE(expression);
         const bool supported = version.major == versions::finale2002.major;
         CHECK(expression->breakMmRest == supported);
-        const auto* field = report.findField<TestExpression>("breakMmRest", 0, 1);
+        const auto* field = report.findField<TestExpression>("breakMmRest", 0, musx::dom::Cmper(1));
         REQUIRE(field);
         CHECK(field->origin == (supported ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
         CHECK(field->rawValue == (supported ? 0x0400 : 0));
@@ -104,8 +104,12 @@ TEST_CASE("Text expressions recover stored playback and synthesize early text", 
         CHECK(expression->categoryId == 7);
         CHECK(expression->horzMeasExprAlign == musx::dom::others::HorizontalMeasExprAlign::Manual);
         CHECK(expression->vertMeasExprAlign == musx::dom::others::VerticalMeasExprAlign::Manual);
-        CHECK(field(result.report, "others.textExprDef[1].horzMeasExprAlign").origin == ValueOrigin::LegacyBehavior);
-        CHECK(field(result.report, "others.textExprDef[1].vertMeasExprAlign").origin == ValueOrigin::LegacyBehavior);
+        const auto* horizontal = result.report.findField<TestExpression>("horzMeasExprAlign", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        const auto* vertical = result.report.findField<TestExpression>("vertMeasExprAlign", musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+        REQUIRE(horizontal);
+        REQUIRE(vertical);
+        CHECK(horizontal->origin == ValueOrigin::LegacyBehavior);
+        CHECK(vertical->origin == ValueOrigin::LegacyBehavior);
         const auto block = expression->getTextBlock();
         REQUIRE(block);
         CHECK(block->textType == musx::dom::others::TextBlock::TextType::Expression);
