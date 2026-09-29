@@ -78,6 +78,7 @@ add_executable(finale_mus_reader_tests
     classes/others/repeat_back_tests.cpp
     classes/others/repeat_ending_start_tests.cpp
     classes/others/shape_definitions_tests.cpp
+    classes/others/shape_expression_defs_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
     classes/others/split_measure_tests.cpp
     classes/others/staff_list_tests.cpp

@@ -16,6 +16,22 @@ F263-F100-textrpt.mus / .etf / -finale27/F263-F100-textrpt.musx
     The Finale 1 text-repeat document reopened and saved in Finale 2.6.3.
     Includes its contemporary ETF and Finale 27 conversion.
 
+F263-F100-shapexp.mus / .etf / -finale27/F263-F100-shapexp.musx
+    sha256 c8c1ac4f399eac502e8fa19b029c9c71b2a08d06b7306e4c22a26473451a1ad0 (.mus)
+    sha256 4371b76dd0ca92e298739df89a0df138854ce7dee25ec54ec354af197ee3c35d (.etf)
+    sha256 bf48b17e49db5182a84a8fb11c440438b22fd9e04cffaf10bbf10e4ae7967ddd (.musx)
+    The F100 shape expression reopened and saved in Finale 2.6.3. Its DO rows retain
+    the shape reference and clear Lock Shape bit. The Finale 27 conversion retains
+    the measure assignment but omits the shape expression definition.
+
+F263-F100-shapexp-lockshape.mus / .etf / -finale27/F263-F100-shapexp-lockshape.musx
+    sha256 1041a81f672b34984bfc66bb570a8b823a4cde0f207b78402d91842670f7338a (.mus)
+    sha256 79150c2eb036039f0368c9e2159a4f998f831c81f49fff2d36e63a02a638b69b (.etf)
+    sha256 fe6b811f45ebfd2ec1a567ebf78a8669ea656967d69f5b5acb8ee7e913e417d3 (.musx)
+    The locked F100 shape expression reopened and saved in Finale 2.6.3. Its DO
+    rows retain the 0x0100 Lock Shape bit. The Finale 27 conversion retains the
+    measure assignment but omits the shape expression definition.
+
 F263-bracket-thickbar.mus / .etf / .musx
     sha256 133dfe195bafd048b43782c894f7d2f42d1c1befa02c708f1e3f39b58127fffa (.mus)
     sha256 bf4eba6dc3035c29b255697becab15381a2c69c57f8c408412118662c769779b (.etf)

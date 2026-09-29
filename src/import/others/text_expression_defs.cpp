@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "import/others.h"
+#include "import/shared/expression_common.h"
 #include "import/support/enigma_text.h"
-#include "import/support/expression_alignment.h"
 #include "import/support/legacy_font.h"
 #include "musx/musx.h"
 
@@ -15,60 +15,6 @@ using TextExpressionTarget = musx::dom::others::TextExpressionDef;
 constexpr auto textExpressionTag = records::packTag("DT");
 constexpr records::LegacyTag textExpressionClass = 0x00f1;
 constexpr std::size_t primeExpressionHeaderSize = 36;
-
-enum class LegacyNoteHorizontal : std::int16_t {
-    Left = 0,
-    HorizontalClickPosition = 1,
-    Stem = 2,
-    CenterOfPrimaryNotehead = 3,
-    CenterOfAllNoteheads = 4,
-    Right = 5,
-    LeftOfPrimaryNotehead = 6
-};
-
-enum class LegacyNoteVertical : std::int16_t {
-    VerticalClickPosition = 0,
-    AboveStaffBaseline = 1,
-    BelowStaffBaseline = 2,
-    TopNote = 3,
-    BottomNote = 4,
-    AboveEntry = 5,
-    BelowEntry = 6,
-    AboveStaffBaselineOrEntry = 7,
-    BelowStaffBaselineOrEntry = 8
-};
-
-std::optional<musx::dom::others::HorizontalMeasExprAlign> expressionNoteHorizontalAlignment(std::int16_t stored)
-{
-    using A = musx::dom::others::HorizontalMeasExprAlign;
-    switch (static_cast<LegacyNoteHorizontal>(stored)) {
-    case LegacyNoteHorizontal::Left: return A::LeftOfAllNoteheads;
-    case LegacyNoteHorizontal::HorizontalClickPosition: return A::Manual;
-    case LegacyNoteHorizontal::Stem: return A::Stem;
-    case LegacyNoteHorizontal::CenterOfPrimaryNotehead: return A::CenterPrimaryNotehead;
-    case LegacyNoteHorizontal::CenterOfAllNoteheads: return A::CenterAllNoteheads;
-    case LegacyNoteHorizontal::Right: return A::RightOfAllNoteheads;
-    case LegacyNoteHorizontal::LeftOfPrimaryNotehead: return A::LeftOfPrimaryNotehead;
-    }
-    return std::nullopt;
-}
-
-std::optional<musx::dom::others::VerticalMeasExprAlign> expressionNoteVerticalAlignment(std::int16_t stored)
-{
-    using A = musx::dom::others::VerticalMeasExprAlign;
-    switch (static_cast<LegacyNoteVertical>(stored)) {
-    case LegacyNoteVertical::VerticalClickPosition: return A::Manual;
-    case LegacyNoteVertical::AboveStaffBaseline: return A::AboveStaff;
-    case LegacyNoteVertical::BelowStaffBaseline: return A::BelowStaff;
-    case LegacyNoteVertical::TopNote: return A::TopNote;
-    case LegacyNoteVertical::BottomNote: return A::BottomNote;
-    case LegacyNoteVertical::AboveEntry: return A::AboveEntry;
-    case LegacyNoteVertical::BelowEntry: return A::BelowEntry;
-    case LegacyNoteVertical::AboveStaffBaselineOrEntry: return A::AboveStaffOrEntry;
-    case LegacyNoteVertical::BelowStaffBaselineOrEntry: return A::BelowStaffOrEntry;
-    }
-    return std::nullopt;
-}
 
 void synthesizeExpressionText(const ImportContext& context, const std::shared_ptr<TextExpressionTarget>& target, const records::LegacyRow& row,
     std::span<const std::uint8_t> payload)
@@ -88,9 +34,9 @@ void synthesizeExpressionText(const ImportContext& context, const std::shared_pt
     assignPackedFont(font, context.construction, packed, coda);
     font.setEnigmaStyles(payloadWord(payload, 2, context.profile.byteOrder));
     const auto flags = payloadWord(payload, 10, context.profile.byteOrder);
-    const bool hideText = bool(flags & 0x0200U);
+    const bool hideText = sourceAtOrAfter(context.profile, FormatEpoch::UncompressedLegacy, versions::finale97) && bool(flags & 0x0200U);
     // Inline expressions in F2002–2003 use '<' and '>' as hide/show controls.
-    // Earlier inline expressions apply the flag to the entire text.
+    // F97–F2001 inline expressions apply the flag to the entire text.
     const bool partialHidden =
         hideText && context.profile.epoch == FormatEpoch::DclLegacy && sourceAtOrAfter(context.profile, FormatEpoch::DclLegacy, versions::finale2002);
     font.hidden = font.hidden || (hideText && !partialHidden);
@@ -142,49 +88,13 @@ void synthesizeExpressionText(const ImportContext& context, const std::shared_pt
     context.document->getOthers()->add(Block::XmlNodeName, std::move(block));
 }
 
-std::optional<musx::dom::others::PlaybackType> expressionPlayback(std::uint16_t stored)
-{
-    using P = musx::dom::others::PlaybackType;
-    switch (stored) {
-    case 0: return P::None;
-    case 1: return P::Tempo;
-    case 2: return P::KeyVelocity;
-    case 3: return P::Transpose;
-    case 4: return P::Dump;
-    case 5: return P::Channel;
-    case 6: return P::RestrikeKeys;
-    case 7: return P::PlayTempoToolChanges;
-    case 8: return P::IgnoreTempoToolChanges;
-    case 0xb0: return P::MidiController;
-    case 0xc0: return P::MidiPatchChange;
-    case 0xd0: return P::ChannelPressure;
-    case 0xe0: return P::MidiPitchWheel;
-    default: return std::nullopt;
-    }
-}
-
-std::optional<musx::dom::others::RehearsalMarkStyle> expressionRehearsalStyle(std::int16_t stored)
-{
-    using Style = musx::dom::others::RehearsalMarkStyle;
-    switch (stored) {
-    case 0: return Style::None;
-    case 1: return Style::Letters;
-    case 2: return Style::LetterNumbers;
-    case 3: return Style::LettersLowerCase;
-    case 4: return Style::LettersNumbersLowerCase;
-    case 5: return Style::Numbers;
-    case 6: return Style::MeasureNumber;
-    default: return std::nullopt;
-    }
-}
-
 constexpr const char* textExpressionFields[] = {"textIdKey", "categoryId", "rehearsalMarkStyle", "value", "execShape", "auxData1", "playPass",
     "hideMeasureNum", "matchPlayback", "useAuxData", "hasEnclosure", "breakMmRest", "createdByHp", "playbackType", "horzMeasExprAlign",
     "vertMeasExprAlign", "horzExprJustification", "measXAdjust", "yAdjustEntry", "yAdjustBaseline", "useCategoryFonts", "useCategoryPos",
     "description"};
 
 void reportAbsentTextExpressionFields(
-    ImportReport& report, const ReportInstance& reportInstance, bool prime, bool hasCategory, bool hasRehearsalStyle)
+    ImportReport& report, const ReportInstance& reportInstance, bool prime, bool hasCategory, bool hasRehearsalStyle, bool hasBreakMmRest)
 {
     withReporting(report, [&]<typename Reporting>(Reporting& reporting) {
         if (!prime) {
@@ -204,6 +114,10 @@ void reportAbsentTextExpressionFields(
                 reporting.report().setField(
                     reporting.instanceKey(reportInstance), member, typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, 0});
             }
+        }
+        if (!hasBreakMmRest) {
+            reporting.report().setField(
+                reporting.instanceKey(reportInstance), "breakMmRest", typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, 0});
         }
     });
 }
@@ -254,16 +168,16 @@ void importTextExpressionDefs(const ImportContext& context)
             });
         };
         const auto flags = static_cast<std::uint16_t>(words[5]);
-        const bool smartMusic = (flags & 0xffU) == 0x0fU;
         const bool hasCategory = sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2009);
         // Believed: automatic rehearsal styles and the hide-number/match-playback
         // controls share the Finale 2010 introduction boundary.
         const bool hasRehearsalStyle = sourceAtOrAfter(context.profile, FormatEpoch::ZlibLegacy, versions::finale2010);
+        const bool hasBreakMmRest = sourceAtOrAfter(context.profile, FormatEpoch::DclLegacy, versions::finale2002);
         if (!prime) {
             target->horzMeasExprAlign = musx::dom::others::HorizontalMeasExprAlign::Manual;
             target->vertMeasExprAlign = musx::dom::others::VerticalMeasExprAlign::Manual;
         }
-        reportAbsentTextExpressionFields(context.report, reportInstance, prime, hasCategory, hasRehearsalStyle);
+        reportAbsentTextExpressionFields(context.report, reportInstance, prime, hasCategory, hasRehearsalStyle, hasBreakMmRest);
         if (hasRehearsalStyle) {
             assign(&TextExpressionTarget::hideMeasureNum, "hideMeasureNum", bool(flags & 0x8000U), 5);
             assign(&TextExpressionTarget::matchPlayback, "matchPlayback", bool(flags & 0x4000U), 5);
@@ -274,78 +188,21 @@ void importTextExpressionDefs(const ImportContext& context)
         if (prime) {
             assign(&TextExpressionTarget::textIdKey, "textIdKey", static_cast<musx::dom::Cmper>(words[0]), 0);
         }
-        assign(&TextExpressionTarget::value, "value", (flags & 0x2000U) ? 0 : words[2], 2);
-        assign(&TextExpressionTarget::execShape, "execShape", static_cast<musx::dom::Cmper>((flags & 0x2000U) ? words[2] : 0), 2);
-        // Normalize removed SmartMusic playback to None and clear its selector,
-        // retaining unrelated flags and the original words in field provenance.
-        assign(&TextExpressionTarget::auxData1, "auxData1", smartMusic ? 0 : words[3], 3, smartMusic);
-        assign(&TextExpressionTarget::playPass, "playPass", words[4], 4);
+        assignExpressionPlayback<TextExpressionTarget>(assign, words);
         assign(&TextExpressionTarget::hasEnclosure, "hasEnclosure", bool(flags & 0x0800U), 5);
-        assign(&TextExpressionTarget::useAuxData, "useAuxData", bool(flags & 0x1000U), 5);
-        if (prime) {
+        if (hasBreakMmRest) {
             assign(&TextExpressionTarget::breakMmRest, "breakMmRest", bool(flags & 0x0400U), 5);
         }
-        if (auto playback = smartMusic ? musx::dom::others::PlaybackType::None : expressionPlayback(flags & 0xffU)) {
-            assign(&TextExpressionTarget::playbackType, "playbackType", *playback, 5, smartMusic);
-        }
         if (prime) {
-            // Unverified: pre-category definitions use their separate note anchors as
-            // the modern positioning selectors. Other positioning fields remain
-            // unchanged.
-            const std::size_t horizontalSlot = hasCategory ? 6 : 9;
-            if (auto align =
-                    hasCategory ? expressionHorizontalAlignment(words[horizontalSlot]) : expressionNoteHorizontalAlignment(words[horizontalSlot])) {
-                assign(&TextExpressionTarget::horzMeasExprAlign, "horzMeasExprAlign", *align, horizontalSlot);
-            }
-            if (auto justify = expressionJustification(words[7])) {
-                assign(&TextExpressionTarget::horzExprJustification, "horzExprJustification", *justify, 7);
-            }
-            assign(&TextExpressionTarget::measXAdjust, "measXAdjust", words[8], 8);
-            const std::size_t verticalSlot = hasCategory ? 12 : 14;
-            if (auto align = hasCategory ? expressionVerticalAlignment(words[verticalSlot]) : expressionNoteVerticalAlignment(words[verticalSlot])) {
-                assign(&TextExpressionTarget::vertMeasExprAlign, "vertMeasExprAlign", *align, verticalSlot);
-            }
-            const std::size_t baselineSlot = hasCategory ? 15 : 13;
-            assign(&TextExpressionTarget::yAdjustBaseline, "yAdjustBaseline", words[baselineSlot], baselineSlot);
-            assign(&TextExpressionTarget::yAdjustEntry, "yAdjustEntry", words[16], 16);
-            if (hasCategory) {
-                const auto category = static_cast<std::uint16_t>(words[13]);
-                assign(&TextExpressionTarget::categoryId, "categoryId", static_cast<musx::dom::Cmper>(category & 0x3fffU), 13);
-                assign(&TextExpressionTarget::useCategoryFonts, "useCategoryFonts", bool(category & 0x8000U), 13);
-                assign(&TextExpressionTarget::useCategoryPos, "useCategoryPos", bool(category & 0x4000U), 13);
-            }
-            const auto trailer = std::span<const std::uint8_t>(payload).subspan(primeExpressionHeaderSize);
-            target->description = versions::storesUnicodeCodepoints(context.profile.version)
-                                      ? text::utf16ToUtf8(payloadWords(trailer, context.profile.byteOrder))
-                                      : text::toUtf8(payloadString(trailer, 0, trailer.size()), context.profile.platform);
-            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                const auto& descriptionRow =
-                    rows[source->classRecords || trailer.empty() ? 0 : primeExpressionHeaderSize / (2 * records::otherWordCount)];
-                reporting.report().setField(reporting.instanceKey(reportInstance), "description",
-                    typename Reporting::FieldInfo{Reporting::Origin::LegacyMus, descriptionRow.blockOffset,
-                        descriptionRow.decodedOffset + (source->classRecords ? primeExpressionHeaderSize : 0),
-                        static_cast<std::int64_t>(trailer.size()), source->identity});
-            });
+            // Unverified: pre-category definitions use their separate note anchors as modern positioning selectors.
+            assignExpressionPositioning<TextExpressionTarget>(*target, assign, words, hasCategory);
+            recoverExpressionDescription(context, *source, rows, payload, target, reportInstance, primeExpressionHeaderSize);
         } else {
             context.pending.checks.push_back(
                 [&context, target, row = rows.front(), payload] { synthesizeExpressionText(context, target, row, payload); });
         }
         if (!hasCategory) {
-            context.pending.checks.push_back([&context, target] {
-                using Category = musx::dom::others::MarkingCategory;
-                for (const auto& category : context.document->getOthers()->getArray<Category>(musx::dom::SCORE_PARTID)) {
-                    if (category->categoryType != Category::CategoryType::Misc) {
-                        continue;
-                    }
-                    target->categoryId = category->getCmper();
-                    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-                        reporting.report().setField(
-                            reporting.template instanceKey<TextExpressionTarget>(target->getSourcePartId(), target->getCmper()), "categoryId",
-                            typename Reporting::FieldInfo{Reporting::Origin::LegacyBehavior, 0, 0, target->categoryId});
-                    });
-                    break;
-                }
-            });
+            scheduleExpressionMiscCategory(context, target);
         }
         context.document->getOthers()->add(TextExpressionTarget::XmlNodeName, std::move(target));
     }

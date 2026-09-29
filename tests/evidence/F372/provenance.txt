@@ -15,6 +15,22 @@ F372-F263-F100-textrpt.mus / .etf / -finale27/F372-F263-F100-textrpt.musx
     The same text repeat saved again in Finale 3.7.2. Includes its contemporary
     ETF and Finale 27 conversion.
 
+F372-F263-F100-shapexp.mus / .etf / -finale27/F372-F263-F100-shapexp.musx
+    sha256 ba9bd5743ca1657c357c4280600a6aa9ccd14226d3fdf976407d5a4f3ee19520 (.mus)
+    sha256 2f887056f31cfc1c1e6343716a3a07140ee659b8a30125eac17944c7d4508dd7 (.etf)
+    sha256 7a819746073c045880d62f7d821c06a5921222735c61657452e342e30de2893d (.musx)
+    The unlocked F263 shape expression reopened and saved in Finale 3.7.2. Its
+    one DO row references shape 2 and sets the master-shape bit. The Finale 27
+    conversion retains the shape expression definition.
+
+F372-F263-F100-shpexp-lkshp.mus / .etf / -finale27/F372-F263-F100-shpexp-lkshp.musx
+    sha256 6ea28062fe138b04520c2aaddf3c68e6ba80ba1c5a466ab5eb928b4920a89db5 (.mus)
+    sha256 6048da9b966f50cee95055d8ccd7f561bf9a09598ec264a29696242e1391b5e4 (.etf)
+    sha256 90c650622cb9cf786f2198b344b4cf7dfe476b6f41e4cdb30e16fa75266372c7 (.musx)
+    The locked F263 shape expression reopened and saved in Finale 3.7.2. Its
+    one DO row also has the 0x0100 Lock Shape bit, and the Finale 27 companion
+    retains noHorzStretch on its shape expression definition.
+
 F372-rptback-reset.mus / .etf / -finale27/F372-rptback-reset.musx
     sha256 c3bb7a803d9176469ed7bb5239db0ed2e787d739a680fcff1c8e6e9ecfa2a001 (.mus)
     sha256 d1687862de4d5877fe0689c2fd7a419d07be8904c2ad690664b3dda35d6d4649 (.etf)

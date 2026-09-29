@@ -278,6 +278,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportRepeatEndingTexts, &others::importRepeatEndingTexts),
         FINALE_MUS_READER_IMPORTER(ImportRepeatPassLists, &others::importRepeatPassLists),
         FINALE_MUS_READER_IMPORTER(ImportShapeDefinitions, &others::importShapeDefinitions),
+        FINALE_MUS_READER_IMPORTER(ImportShapeExpressionDefs, &others::importShapeExpressionDefs),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
         FINALE_MUS_READER_IMPORTER(ImportSplitMeasures, &others::importSplitMeasures),

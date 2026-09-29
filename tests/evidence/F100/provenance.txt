@@ -17,6 +17,20 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-shapexp.mus / .etf / -finale27/F100-shapexp.musx
+    sha256 df95d64f439723654c05f34939e2510ca77b3eec792c7c7ebbe896bf0129868c (.mus)
+    sha256 472309d465a2398f2b195bb5e2d2ed7fc0c28c782e3552b172fb01029919df4c (.etf)
+    sha256 27c5581acd34e56a4df84b509516c532b3e1c94f0e201a82b5e482934606158a (.musx)
+    A shape expression definition and a measure assignment, with Lock Shape clear.
+
+F100-shapexp-lockshape.mus / .etf / -finale27/F100-shapexp-lockshape.musx
+    sha256 77f514d9d410d95993f045c26e92d04abf02a3cfdbdb126a30ddc6d4d2bf8d62 (.mus)
+    sha256 ea6d0edee8081c78b24b14f86f6b6426fc1e1a1c1d31cabe69ca52bfa28027a0 (.etf)
+    sha256 d39b47406bc698bd4e942ec876ee49ee8283ae21680f7b39891af34ee795fe34 (.musx)
+    Resaved after enabling Lock Shape. The first DO row changes only in flag bit 0x0100.
+    Both Finale 27 companions retain the assignment and shape but omit the expression definition;
+    their decoded score XML is identical.
+
 F100-textrpt.mus / .etf / -finale27/F100-textrpt.musx
     sha256 73e2c6e62f3479e3605f261a1a325be421f720216f553d25208b45f327f7fb3e (.mus)
     sha256 759a92ade29bef4aee8f07505a269e04af4477bc736e2660cb730f87d9ca608e (.etf)
