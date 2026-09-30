@@ -30,6 +30,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportAcciOrderFlats: return "acci_order_flats";
     case Phase::ImportAcciOrderSharps: return "acci_order_sharps";
     case Phase::ImportAlternateNotationOptions: return "alternate_notation_options";
+    case Phase::ImportArticulationDefs: return "articulation_defs";
     case Phase::ImportAugmentationDotOptions: return "augmentation_dot_options";
     case Phase::ImportBarlineOptions: return "barline_options";
     case Phase::ImportBaselines: return "baselines";

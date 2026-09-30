@@ -25,6 +25,9 @@ void importAcciOrderFlats(const ImportContext& context);
 /// @brief Recovers sharp accidental ordering for custom key signatures.
 void importAcciOrderSharps(const ImportContext& context);
 
+/// @brief Recovers source articulation definitions.
+void importArticulationDefs(const ImportContext& context);
+
 /// @brief Recovers the control header and positioned elements of every stored measure beat chart.
 void importBeatChartElements(const ImportContext& context);
 

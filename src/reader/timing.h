@@ -32,6 +32,7 @@ enum class Phase : std::size_t {
     ImportAcciOrderFlats,
     ImportAcciOrderSharps,
     ImportAlternateNotationOptions,
+    ImportArticulationDefs,
     ImportAugmentationDotOptions,
     ImportBarlineOptions,
     ImportBaselines,
