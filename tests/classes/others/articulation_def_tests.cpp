@@ -86,8 +86,7 @@ TEST_CASE("Finale 2011 class articulation retains the four-incidence layout", "[
 TEST_CASE("Wide articulation layout keeps 32-bit symbols and independent font words", "[class][articulation-def]")
 {
     const auto parsed = makeClassContainer(0x0079,
-        {1, std::int16_t(0xf600), 7, 28, 0x0005, std::int16_t(0xafcc), 1, std::int16_t(0xf601), 8, -6, 12, 24, 0x007f, 18, 0x0002, -4, 6, 10, 11, -20,
-            30, 60, 70, 110, 120, 0, 0, 0, 0, 0},
+        {1, -2560, 7, 28, 0x0005, -20532, 1, -2559, 8, -6, 12, 24, 0x007f, 18, 0x0002, -4, 6, 10, 11, -20, 30, 60, 70, 110, 120, 0, 0, 0, 0, 0},
         ByteOrder::LittleEndian, 1);
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
