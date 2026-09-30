@@ -147,8 +147,8 @@ void importArticulationDefs(const ImportContext& context)
                 legacyBehavior(&ArticulationTarget::xOffsetAlt, "xOffsetAlt", 0);
                 legacyBehavior(&ArticulationTarget::yOffsetAlt, "yOffsetAlt", 0);
                 legacyBehavior(&ArticulationTarget::defVertPos, "defVertPos", 24);
-                legacyBehavior(&ArticulationTarget::mainShape, "mainShape", 0);
-                legacyBehavior(&ArticulationTarget::altShape, "altShape", 0);
+                legacyBehavior(&ArticulationTarget::mainShape, "mainShape", musx::dom::Cmper{});
+                legacyBehavior(&ArticulationTarget::altShape, "altShape", musx::dom::Cmper{});
                 const bool hasPlaybackValues = word(2) != 0 || word(3) != 0;
                 assign(&ArticulationTarget::playArtic, "playArtic", hasPlaybackValues || (flags & 0x0c00U) != 0, 5);
                 const bool alterDuration = (flags & 0x0200U) != 0;
