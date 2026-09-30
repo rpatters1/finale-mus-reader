@@ -787,3 +787,78 @@ F100-rptindiv.mus / .etf / -finale27/F100-rptindiv.musx
     Finale 1.0 individual positioning for backward repeat, ending line, ending text,
     and text repeat instances on two staves. The ETF and Finale 27 conversion
     accompany the source.
+
+F100-artic.mus / .etf / -finale27/F100-artic.musx
+    sha256 85aea5b0d3b46b29d53921e76e9090acf5089ef80ba029ac3d769daf7af36e0f (.mus)
+    sha256 35c5c2a01094f38d12178d6328190c99274b7cfe88b6da01e4b5c8e06185cfff (.etf)
+    sha256 8e371be6351a78fa2c056cf9f082aabe1786f58dfbf6bd07c10c8f56b7038993 (.musx)
+    Finale 1.0 articulation definition with no playback effect. The single IX row
+    has zero in both playback value words and in its flag word.
+
+F100-artic-playback.mus / .etf / -finale27/F100-artic-playback.musx
+    sha256 85325ce04121dd1a7abfff3db969c1a24c571d38e758a051006a7203a812ab9a (.mus)
+    sha256 21ca1e2e26882b60d2a6b55b0c71f4da830826cf6e3cdf7112fd20242beeb7df (.etf)
+    sha256 b5dd87a0e71679075c0dd735595164de03c86d76b4f1bb98334be4ff112923b5 (.musx)
+    From F100-artic, enables velocity playback with bottom value 3 and top value 5.
+    The IX row stores the values in words 2 and 3 and sets 0x0400 in word 5.
+
+F100-artic-playtime.mus / .etf / -finale27/F100-artic-playtime.musx
+    sha256 58593b00bd1bf54b06967a4be710b49248e99cfb93e327c2478660f76c1598f7 (.mus)
+    sha256 64670d63f667f0440a8f2195a21ee614d112dd2a49ed9c57412b83b0ff66ef34 (.etf)
+    sha256 504d6ea93204bdc6181a6afeec8b0f8fef2b9963d73cb29c83147b5886493ad9 (.musx)
+    From F100-artic-playback, changes one playback checkbox to time based playback.
+    The IX value words remain 3 and 5; the flag word changes from 0x0400 to 0x0c00.
+    The Finale 27 conversion places them in bottom and top attack timing deltas.
+
+F100-artic-playtime-altdur.mus / .etf / -finale27/F100-artic-playtime-altdur.musx
+    sha256 6d1e90d99335c88e99d628c30e50b5ea095e43b4ebcd396b7aadad99e1c14de7 (.mus)
+    sha256 d6c73a55b3378696415c441492585f1ab5812e3f957a7c3abdadaa8dc75b54d4 (.etf)
+    sha256 b3a281acf7b52837adb97a2505d8221917f4b947902b67c60c9a0ad1ee861d0f (.musx)
+    From F100-artic-playtime, selects Alter Duration. The IX value words remain
+    3 and 5; the flag word changes from 0x0c00 to 0x0e00. The Finale 27
+    conversion places them in bottom and top duration deltas.
+
+F100-artic-playtime-altfrac.mus / .etf / -finale27/F100-artic-playtime-altfrac.musx
+    sha256 29f758a414f5a55b39226cd612ba0fb5c7f33c8f7d5ca62674a412224cf2a7cb (.mus)
+    sha256 2d5c41721a663ba2aa24337fc7f62df3ef05a3696280871b179f0fc7237ed45c (.etf)
+    sha256 2c9638b695d48a270b3b0e777eb8a0cd56866fc9bde090ea19b174ee916c73b7 (.musx)
+    From F100-artic-playtime-altdur, checks Use fraction and enters 3/7 in the
+    first playback field. IX word 2 changes to 0x0307, word 3 stays 5, and the
+    flag word gains 0x0100. The conversion reports 43% duration for both notes.
+
+F100-artic-clone.mus / .etf / -finale27/F100-artic-clone.musx
+    sha256 d5ce3086a92cd3b0b25d8e559b7cbbee8625adea83681763957f8f06b793a25c (.mus)
+    sha256 2c65001d69c28c0bd7af7a3daefeffb944924add35df9c8d7ec18b6c78c7bce7 (.etf)
+    sha256 7e17ba536ee6dccc8a789f427ff72dc929c0aa3356466e03c7473ed3f2797638 (.musx)
+    From F100-artic, checks Clone Mark. IX word 5 changes from zero to 0x0040.
+    The conversion reports copyMode both.
+
+F100-artic-clonehorz.mus / .etf / -finale27/F100-artic-clonehorz.musx
+    sha256 887cfc6e02d8d09911710696c97124ad0fe530dd73d1dfb607004b58279f2c31 (.mus)
+    sha256 d6165eac32fb9c60cb8cfcb06173fa9a0db80dcc5baeab947fd689f1de859fe8 (.etf)
+    sha256 96dc9b84245aa7035f32150e53b54144bb670115b5bf20a68c83a97e55c09bf0 (.musx)
+    From F100-artic-clone, checks Clone Horizontal. IX word 5 adds 0x0020.
+    The conversion reports copyMode horizontal.
+
+F100-artic-topnote.mus / .etf / -finale27/F100-artic-topnote.musx
+    sha256 311a1683bcd119a29a7ea7cefbbf8635d4da4293e862582af64984c3792b565c (.mus)
+    sha256 487a696c2ce265cee7d9a7e10a311cd2b2a4d82e00de0908b8c68414ff9c3de4 (.etf)
+    sha256 a7bc63e9a922815af9a1edc9bc0af9257e2ac0ff80d5bbf6255aa42f8480ca91 (.musx)
+    From F100-artic, checks Use Top Note. IX word 5 changes from zero to 0x0080.
+    The conversion reports useTopNote.
+
+F100-artic-playneg.mus / .etf / -finale27/F100-artic-playneg.musx
+    sha256 367e68c31d6c6c5b71ffe9149a13474837be8bfb196198c2900e4e4c21bd1909 (.mus)
+    sha256 a03142c49f87df1519a66bf73d955475696a3f3eaa4d573f3a9eb9f3670fb94c (.etf)
+    sha256 a9bf7745b85b078321b0455c3538d990885edd26e2386b8a8d3f860329eb8568 (.musx)
+    Saves a negative velocity fraction of -3/5, with second playback value 7.
+    IX word 2 is 0x7d05 and word 5 is 0x0100. The conversion reports 2500%
+    for both notes, treating numerator byte 125 as unsigned.
+
+F100-artic-playinf.mus / .etf / -finale27/F100-artic-playinf.musx
+    sha256 1e04bab87ba30a9ceea5a7265de44147d121b77c4ab8de427c35c5eeb9dd13aa (.mus)
+    sha256 6881758f56cae31b990d614f783f634f970736ef70c69db26542b7d86ef52fd9 (.etf)
+    sha256 1d56c5ee2d71d0a0ece7c49dbae2279ab8d85f5a92ffc48f88265a4337e514d9 (.musx)
+    From F100-artic-playneg, changes the fraction denominator from 5 to zero.
+    IX word 2 becomes 0x7d00; the fraction flag stays set. The conversion emits
+    raw velocity deltas: bottom 32000 and top 7.

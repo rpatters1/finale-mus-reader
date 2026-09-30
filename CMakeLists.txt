@@ -205,6 +205,7 @@ add_library(finale_mus_reader STATIC
     src/import/options/tie_options.cpp
     src/import/options/time_signature_options.cpp
     src/import/options/tuplet_options.cpp
+    src/import/others/articulation_def.cpp
     src/import/others/beat_chart_element.cpp
     src/import/others/bookmark.cpp
     src/import/others/chord_suffix_elements.cpp
