@@ -27,7 +27,7 @@ TEST_CASE("Measure number regions import the Coda split rows", "[class][measure-
     CHECK_FALSE(region->scoreData->useStartEncl);
     CHECK_FALSE(region->scoreData->useMultipleEncl);
     CHECK(region->region == 1);
-    const auto& fields = result.report.fields.at(finale_mus_reader::instanceKey<Region>(0, 1));
+    const auto& fields = result.report.fields.at(finale_mus_reader::instanceKey<Region>(0, musx::dom::Cmper(1)));
     CHECK(fields.size() == 168);
     CHECK(fields.at("scoreData.startEnclosure.xAdd").origin == ValueOrigin::Unmapped);
     CHECK(fields.at("scoreData.useStartEncl").origin == ValueOrigin::LegacyMus);
@@ -64,7 +64,7 @@ TEST_CASE("Coda measure number prefixes use the last style word", "[class][measu
     REQUIRE(region);
     CHECK(region->prefix == "12");
     CHECK(region->suffix.empty());
-    CHECK(result.report.findField<Region>("prefix", 0, 1)->origin == ValueOrigin::LegacyMus);
+    CHECK(result.report.findField<Region>("prefix", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
 }
 
 TEST_CASE("Coda measure number enclosure shapes match modern values", "[class][measure-number-region]")
@@ -168,8 +168,8 @@ TEST_CASE("Finale 2000 measure ranges use the old flag and bracket slots", "[cla
             CHECK(data->leftMmBracketChar == (enabled ? U'[' : 0));
             CHECK(data->rightMmBracketChar == (enabled ? U']' : 0));
         }
-        CHECK(result.report.findField<Region>("scoreData.showMmRange", 0, 1)->origin == ValueOrigin::LegacyMus);
-        CHECK(result.report.findField<Region>("partData.leftMmBracketChar", 0, 1)->origin == ValueOrigin::LegacyMus);
+        CHECK(result.report.findField<Region>("scoreData.showMmRange", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+        CHECK(result.report.findField<Region>("partData.leftMmBracketChar", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
     }
 }
 
@@ -232,13 +232,13 @@ TEST_CASE("Measure number regions accept the old full struct in all later contai
                     CHECK(data->mmRestJustify == alignment);
                 }
                 CHECK(region->region == 1);
-                CHECK(report.fields.at(finale_mus_reader::instanceKey<Region>(0, 1)).size() == 168);
-                CHECK(report.findField<Region>("scoreData.startAlign", 0, 1)->origin == ValueOrigin::LegacyMus);
-                CHECK(report.findField<Region>("scoreData.leftMmBracketChar", 0, 1)->origin == ValueOrigin::LegacyMus);
-                CHECK(report.findField<Region>("partData.rightMmBracketChar", 0, 1)->origin == ValueOrigin::LegacyMus);
-                CHECK(report.findField<Region>("scoreData.showMmRange", 0, 1)->origin == ValueOrigin::LegacyMus);
-                CHECK(report.findField<Region>("partData.showOnMmRest", 0, 1)->origin == ValueOrigin::LegacyMus);
-                CHECK(report.findField<Region>("partData.mmRestJustify", 0, 1)->origin == ValueOrigin::LegacyMus);
+                CHECK(report.fields.at(finale_mus_reader::instanceKey<Region>(0, musx::dom::Cmper(1))).size() == 168);
+                CHECK(report.findField<Region>("scoreData.startAlign", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+                CHECK(report.findField<Region>("scoreData.leftMmBracketChar", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+                CHECK(report.findField<Region>("partData.rightMmBracketChar", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+                CHECK(report.findField<Region>("scoreData.showMmRange", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+                CHECK(report.findField<Region>("partData.showOnMmRest", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+                CHECK(report.findField<Region>("partData.mmRestJustify", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
             }
         }
     }
@@ -278,8 +278,8 @@ TEST_CASE("Old measure number rest controls follow the full layout", "[class][me
         REQUIRE(region);
         CHECK(region->scoreData->showMmRange);
         CHECK(region->partData->showOnMmRest);
-        CHECK(report.findField<Region>("scoreData.showMmRange", 0, 1)->origin == ValueOrigin::LegacyMus);
-        CHECK(report.findField<Region>("partData.showOnMmRest", 0, 1)->origin == ValueOrigin::LegacyMus);
+        CHECK(report.findField<Region>("scoreData.showMmRange", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
+        CHECK(report.findField<Region>("partData.showOnMmRest", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
     }
 }
 
@@ -329,9 +329,9 @@ TEST_CASE("Pre-3.7 regions import the seven-row layout", "[class][measure-number
     CHECK(region->scoreData->startEnclosure->xMargin == 18);
     CHECK(region->scoreData->startEnclosure->lineWidth == 256);
     CHECK(region->region == 1);
-    CHECK(report.findField<Region>("scoreData.startWith", 0, 1)->origin == ValueOrigin::LegacyBehavior);
-    CHECK(report.findField<Region>("scoreData.showMmRange", 0, 1)->origin == ValueOrigin::LegacyBehavior);
-    CHECK(report.findField<Region>("prefix", 0, 1)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<Region>("scoreData.startWith", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyBehavior);
+    CHECK(report.findField<Region>("scoreData.showMmRange", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyBehavior);
+    CHECK(report.findField<Region>("prefix", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
 }
 
 TEST_CASE("An old region enclosure requires a shape and the automatic-use flag", "[class][measure-number-region]")
@@ -363,7 +363,7 @@ TEST_CASE("An old region enclosure requires a shape and the automatic-use flag",
         CHECK(region->scoreData->useStartEncl == expected);
         CHECK(region->scoreData->useMultipleEncl == expected);
         CHECK(region->partData->useStartEncl == expected);
-        CHECK(report.findField<Region>("scoreData.useStartEncl", 0, 1)->origin == ValueOrigin::LegacyBehavior);
+        CHECK(report.findField<Region>("scoreData.useStartEncl", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyBehavior);
     };
     check(0, static_cast<std::int16_t>(0xa088), false);
     check(1, static_cast<std::int16_t>(0x8088), false);
@@ -419,7 +419,7 @@ TEST_CASE("Measure number regions import the fixed-row layout", "[class][measure
     CHECK(region->scoreData->startYdisp == 40);
     CHECK(region->scoreData->mmRestYdisp == 40);
     CHECK(region->region == 1);
-    CHECK(result.report.fields.at(finale_mus_reader::instanceKey<Region>(0, 1)).size() == 168);
+    CHECK(result.report.fields.at(finale_mus_reader::instanceKey<Region>(0, musx::dom::Cmper(1))).size() == 168);
 }
 
 TEST_CASE("Measure number regions import the 2010 score and part layout", "[class][measure-number-region]")
@@ -538,7 +538,7 @@ TEST_CASE("Measure number enclosures retain width words with the extended flag",
     CHECK(region->scoreData->multipleEnclosure->lineWidth == 111);
     CHECK(region->partData->startEnclosure->lineWidth == -22640);
     CHECK(region->partData->multipleEnclosure->lineWidth == 111);
-    CHECK(report.findField<Region>("scoreData.startEnclosure.lineWidth", 0, 1)->origin == ValueOrigin::LegacyMus);
+    CHECK(report.findField<Region>("scoreData.startEnclosure.lineWidth", 0, musx::dom::Cmper(1))->origin == ValueOrigin::LegacyMus);
 }
 
 } // namespace
