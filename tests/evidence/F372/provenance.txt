@@ -8,6 +8,13 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-F263-F100-msnm-enclevr.mus / .etf / -finale27/F372-F263-F100-msnm-enclevr.musx
+    sha256 268ef86162b07594d3da872be25b7b6c93e295fbca7c60f122d230c153f0f4de (.mus)
+    sha256 60d7bec4c2588349281667263be78679812d6e77754dfdad48b6228eabb7f785 (.etf)
+    sha256 f79f4c3d08ba07974b4827551358d9affb7d48d1a9ee60a668b710f380c2c6c2 (.musx)
+    Reopens the Finale 2.6.3 measure-number document in Finale 3.7.2 and sets
+    an enclosure. The Finale 27 conversion retains its margins, line width, and uses.
+
 F372-F263-F100-textrpt.mus / .etf / -finale27/F372-F263-F100-textrpt.musx
     sha256 1de2a5a66790398e2cd9945db6ca67bb21bb3b160104e00cfecb7d7586d93ebd (.mus)
     sha256 51228de694565c70385ea1c8589289d5fc1f6f23872ea6c9078845b69c637bd2 (.etf)

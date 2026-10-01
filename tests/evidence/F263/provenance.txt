@@ -9,6 +9,13 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-F100-measnums-enclevry.mus / .etf / -finale27/F263-F100-measnums-enclevry.musx
+    sha256 18cf7ca35b53c8145ee377f0212340443d509f2eaed2f8503577236b9f6efd02 (.mus)
+    sha256 06668f8be444b98ad148f1a6eeac41376f9896cac760a2b77f522776b086d5b5 (.etf)
+    sha256 3688553d4f44673a9b528537e8a051001fb9b190edc052065a72fc9014174a25 (.musx)
+    Reopens the Finale 1 measure-number document in Finale 2.6.3 and enables
+    enclosures on every number. The Finale 27 conversion enables both enclosure uses.
+
 F263-F100-textrpt.mus / .etf / -finale27/F263-F100-textrpt.musx
     sha256 081db49a31b6193c72a3bd4091d95f6ad679d5ae3ccac4c3d79fc2d596468802 (.mus)
     sha256 0f7975aeaefdf3bc2ce63b62bb9a3a016925161b0a5b4911300bccae5b666e60 (.etf)

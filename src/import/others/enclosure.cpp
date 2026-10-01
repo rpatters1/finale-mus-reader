@@ -48,7 +48,7 @@ void importEnclosures(const ImportContext& context, records::LegacyTag tag, reco
         target->yAdd = static_cast<std::int16_t>(word(1));
         target->xMargin = static_cast<std::int16_t>(word(2));
         target->yMargin = static_cast<std::int16_t>(word(3));
-        target->lineWidth = (flags & 0x2000U) != 0 ? 0 : static_cast<std::int16_t>(word(4));
+        target->lineWidth = static_cast<std::int16_t>(word(4));
         if (shape <= static_cast<std::uint16_t>(Enclosure::Shape::Octogon)) {
             target->shape = static_cast<Enclosure::Shape>(shape);
         }
@@ -68,12 +68,7 @@ void importEnclosures(const ImportContext& context, records::LegacyTag tag, reco
             field("yAdd", 1, target->yAdd);
             field("xMargin", 2, target->xMargin);
             field("yMargin", 3, target->yMargin);
-            if ((flags & 0x2000U) == 0) {
-                field("lineWidth", 4, target->lineWidth);
-            } else {
-                reportLegacyField(reporting, key, *source, source->rowOfWord(rows, 4), "lineWidth", source->byteOffsetInRow(8), word(4),
-                    Reporting::Origin::Unmapped);
-            }
+            field("lineWidth", 4, target->lineWidth);
             if (shape <= static_cast<std::uint16_t>(Enclosure::Shape::Octogon)) {
                 field("shape", 5, shape);
             } else {

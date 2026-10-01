@@ -247,3 +247,11 @@ F2008-rptindiv.mus / -finale27/F2008-rptindiv.musx
     text-repeat placement: bit 0x0001 appears in its placement record's last
     word, and the companion marks that placement hidden. Part 1 separately
     turns off the text-repeat assignment's individual placement.
+
+F2008-F372-F263-F100-msnm-enclevr.mus / -finale27/F2008-F372-F263-F100-msnm-enclevr.musx
+    sha256 e5032205a9a16e52a77bbe175b15c83a3be334efa31477e2eb8f53b2436c0a83 (.mus)
+    sha256 2c2923f6b180d23b8103859bbd17e676be82928a52a01f369bdc1ded356339af (.musx)
+    A Finale 2008 re-save of the controlled measure-number enclosure fixture, followed by a
+    Finale 27 companion re-save. The old 96-byte class payload retains the rectangle enclosure,
+    its 18/18 margins and 118 line width, and the enabled start and mid-measure uses. Finale 2008
+    cannot export ETF, so this pair contains only the source document and modern companion.
