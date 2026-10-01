@@ -65,6 +65,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportLineCurveOptions: return "line_curve_options";
     case Phase::ImportLyricOptions: return "lyric_options";
     case Phase::ImportMarkingCategories: return "marking_categories";
+    case Phase::ImportMeasureNumberRegions: return "measure_number_regions";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportMiscOptions: return "misc_options";

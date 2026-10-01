@@ -80,6 +80,9 @@ void importLayerAttributes(const ImportContext& context);
 /// when the source predates Finale 2009.
 void importMarkingCategories(const ImportContext& context);
 
+/// @brief Recovers measure number regions and their score and part settings.
+void importMeasureNumberRegions(const ImportContext& context);
+
 /// @brief Recovers every measure the source stores, score and unlinked part alike.
 void importMeasures(const ImportContext& context);
 

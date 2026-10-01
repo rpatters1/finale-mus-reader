@@ -200,3 +200,19 @@ F2000-rptjump0-stop.mus / .etf / -finale27/F2000-rptjump0-stop.musx
     From F2000-rptjump0, selects Stop. Only the ending flag word changes,
     from 0x0400 to 0x0c00; the source target stays zero. The conversion
     records Stop and writes target -1.
+
+F2000-measnums.mus / .etf / -finale27/F2000-measnums.musx
+    sha256 c27aac1c39bc85662d0f54ccbec8a71cdffb558df5b4b658d43eb5b982254f26 (.mus)
+    sha256 14c453f2b5706da28b3cec4af5427fed95465005150cf5aa831bc5397224dc33 (.etf)
+    sha256 d3c86071dd8139242da7046aae078352126f716767aeec8cdca72eabcf404707 (.musx)
+    Finale 2000 measure-number region before enabling multimeasure-rest ranges.
+    Its one 96-byte region has flag 0x8080 and zero bracket-character slots.
+
+F2000-measnums-mmrest.mus / .etf / -finale27/F2000-measnums-mmrest.musx
+    sha256 82abad211f69ea38652a87fa96f079c517fee3494c33ed04134dc8533a9b0ba7 (.mus)
+    sha256 036cfe84d1fa2b347a8679232c9f4eba273dafb057b7c3a28bf835ec308bc98b (.etf)
+    sha256 396e8522e9b4679f03a8e478bcc0c47d0ae033633fdada7c1191beab4558e980 (.musx)
+    From F2000-measnums, enables multimeasure-rest range display and sets the left and right
+    bracket characters to '[' and ']'. Only the region flag changes to 0x8880 and its
+    bracket-character words change to 0x005b and 0x005d. The companion carries the range
+    setting and both characters in score and part data.

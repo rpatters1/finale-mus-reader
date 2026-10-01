@@ -199,14 +199,14 @@ TEST_CASE("Text repeat definition and enclosure decode their extended fixed rows
     CHECK(justification->rawValue == 3);
     CHECK(shape->origin == ValueOrigin::Unmapped);
     CHECK(shape->rawValue == 9);
-    const auto shapeReferencedEnclosure = document->getOthers()->get<Enclosure>(musx::dom::SCORE_PARTID, musx::dom::Cmper(9));
-    REQUIRE(shapeReferencedEnclosure);
-    CHECK(shapeReferencedEnclosure->lineWidth == 0);
-    CHECK(shapeReferencedEnclosure->shape == Enclosure::Shape::Rectangle);
-    const auto* shapeReference = report.findField<Enclosure>("lineWidth", musx::dom::SCORE_PARTID, musx::dom::Cmper(9));
-    REQUIRE(shapeReference);
-    CHECK(shapeReference->origin == ValueOrigin::Unmapped);
-    CHECK(shapeReference->rawValue == 37);
+    const auto flaggedEnclosure = document->getOthers()->get<Enclosure>(musx::dom::SCORE_PARTID, musx::dom::Cmper(9));
+    REQUIRE(flaggedEnclosure);
+    CHECK(flaggedEnclosure->lineWidth == 37);
+    CHECK(flaggedEnclosure->shape == Enclosure::Shape::Rectangle);
+    const auto* width = report.findField<Enclosure>("lineWidth", musx::dom::SCORE_PARTID, musx::dom::Cmper(9));
+    REQUIRE(width);
+    CHECK(width->origin == ValueOrigin::LegacyMus);
+    CHECK(width->rawValue == 37);
 }
 
 } // namespace

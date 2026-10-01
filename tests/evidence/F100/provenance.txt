@@ -17,6 +17,56 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-measnums.mus / .etf / -finale27/F100-measnums.musx
+    sha256 cef1c6c0ae2cf6d78d93eb59fec2948c27540aa34f5f0537d66e4932e59d49a3 (.mus)
+    sha256 df23e7c865c334036a771d5003a01d3526b929966ca932a45e30d38288165c39 (.etf)
+    sha256 524197d5495b940436941f34c922d337805dcc1d91cc8f39de69206fce376094 (.musx)
+    Changes the Coda measure-number font, placement, and starting character.
+    The Finale 27 conversion also supplies enclosure defaults.
+
+F100-measnums-prefix.mus / .etf / -finale27/F100-measnums-prefix.musx
+    sha256 85b211e171a94db8f3d12ba10ff259b29201d97edb82543d367dfee132a63838 (.mus)
+    sha256 73eb5579b69a4e0cb1a64991e5587d82226bdb001327e91df6a65e67b179fc34 (.etf)
+    sha256 19d6cc6538c7e668dfe1834434bca8bb606494ff2cd9f1548c78ea8571f343a5 (.musx)
+    Derived from F100-measnums by setting the two-character measure-number prefix to "12".
+    The final style word changes from zero to 0x3132; the region row is unchanged.
+
+F100-measnums-ellipse.mus / .etf / -finale27/F100-measnums-ellipse.musx
+    sha256 32db41067f55d50032d6055f0768dcfcd4aa83f8f1bc88fa43c75ee074d36c8f (.mus)
+    sha256 b3e2101fcd6cfd900f2217c05b00e375de9242f847f5efde8ed8fe8635bcfe27 (.etf)
+    sha256 c4ec24843a6facdab0e68ade8467bce9e29abeacb3072817627f2d572c059a21 (.musx)
+    Changes only the measure-number enclosure shape to ellipse.
+
+F100-measnums-triangle.mus / .etf / -finale27/F100-measnums-triangle.musx
+    sha256 49210ad4a9139b6abaf0a95e017a3ac11801c078cd1d32670a10195e705e2d3e (.mus)
+    sha256 17e29a52ac5a3a4bc3b5dcbd898e83d8a17b9e7745b25cbbcb1edf76843be9c6 (.etf)
+    sha256 22f07d28120d8c7eb979811a45daeab3b17e5242a77ac2a52c75083855242e19 (.musx)
+    Changes only the measure-number enclosure shape to triangle.
+
+F100-measnums-diamond.mus / .etf / -finale27/F100-measnums-diamond.musx
+    sha256 2e96485236c890593d463aa8a4081e840b30b787a27d7c9923fdfa1735c0beb2 (.mus)
+    sha256 8e64c632d84dfb7d933fb29ea11d39db04fd143077360fbadb523a73ca8ba17f (.etf)
+    sha256 a02f95971b88b9a4534728aa43b4f20b4f1a05b116cb6004be49d5dd178c25cb (.musx)
+    Changes only the measure-number enclosure shape to diamond.
+
+F100-measnums-pentagon.mus / .etf / -finale27/F100-measnums-pentagon.musx
+    sha256 f35336337e9b3399d43c2be4106bf282e4b218e8f43901de9030846fc5be6574 (.mus)
+    sha256 5497bd0b8293ba579ebc1900689be59160d583ed669c4ea1ddf931af6c4be346 (.etf)
+    sha256 264fbb360f64f9c8544ba60fcd507a97e9f70ac42d45c6fa4bfb489c12b110dc (.musx)
+    Changes only the measure-number enclosure shape to pentagon.
+
+F100-measnums-hexagon.mus / .etf / -finale27/F100-measnums-hexagon.musx
+    sha256 17421b6e1ddcc7547ed1b3a8e2503cea203231daf3e7b24fbb4e1451d7e9a839 (.mus)
+    sha256 b14d8114b343ef56758e21a3020f06f93afd3777b08139a07dd7d6ac233d3a24 (.etf)
+    sha256 9e5284175c30ac1c7462c70fd61e153c19e0a3a23b80d5ffa098c59464cffe09 (.musx)
+    Changes only the measure-number enclosure shape to hexagon.
+
+F100-measnums-septagon.mus / .etf / -finale27/F100-measnums-septagon.musx
+    sha256 ad6505ad26c8c782f4578610228dc99de3fcefeed9d329bdcab0576b320ada90 (.mus)
+    sha256 43f28d69ea83fff55b5c9598d067af8aa2f66d61b2aff764691191972f646540 (.etf)
+    sha256 4953a8b859e0cb47faf756dbf74ccc862a3bbc801d1d164fe900abd227f2a575 (.musx)
+    Changes only the measure-number enclosure shape to septagon.
+
 F100-shapexp.mus / .etf / -finale27/F100-shapexp.musx
     sha256 df95d64f439723654c05f34939e2510ca77b3eec792c7c7ebbe896bf0129868c (.mus)
     sha256 472309d465a2398f2b195bb5e2d2ed7fc0c28c782e3552b172fb01029919df4c (.etf)
