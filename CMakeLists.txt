@@ -228,6 +228,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/multistaff_instrument_group.cpp
     src/import/others/name_position.cpp
     src/import/others/page.cpp
+    src/import/others/page_text_assign.cpp
     src/import/others/part_definitions.cpp
     src/import/others/part_globals.cpp
     src/import/others/part_voicing.cpp

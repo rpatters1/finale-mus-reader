@@ -70,6 +70,22 @@ F2012-baseline.mus
     sha256 aa95324d39ef94f1340133d637b52206eeddaf1c7442fb0ac1a81c3e444639f3
     The unedited control for the Finale 2012 text saves below.
 
+F2012-pagetext.mus / -finale27/F2012-pagetext.musx
+    sha256 76b17e6a8591f8d32a8c6edbc46e6ba3d0e5f45403af6abe563b97dadb0b56b4 (.mus)
+    sha256 f3de0a64728d4fc4fff43d65fd9b07e0db542e26fe9a36e30606d7dea32be9f9 (.musx)
+    From F2012-baseline, adds left- and right-justified page text assignments.
+
+F2012-pagetext-part.mus / -finale27/F2012-pagetext-part.musx
+    sha256 fc07a802b9407d85a8216b74c6a379408950044ede09cd70960a849d085e7254 (.mus)
+    sha256 519808872bf15e6511f7c5cf1f9b1b602d7851368bbaa44ebaf2dd38ad7c7e91 (.musx)
+    From F2012-pagetext, creates one linked part without editing the page text assignments.
+
+F2012-pagetext-part-unlinked.mus / -finale27/F2012-pagetext-part-unlinked.musx
+    sha256 0cf7ae6b06d846ffeb2824cc58f7b0282db50a01c3560b6e51e44c0fe0e357c1 (.mus)
+    sha256 5f14e96afcd4b6b375de76bf1fa71da6788a6ddfaa65da24b2e162a51900c535 (.musx)
+    From F2012-pagetext-part, unlinks the right-justified assignment's position
+    and the left-justified assignment's visibility in the part.
+
 F2012-piano.mus
     sha256 490270f73e3f31b28ffabb87d52f36896264065e24e6634a05445bce327a6560
 -finale27/F2012-piano.musx

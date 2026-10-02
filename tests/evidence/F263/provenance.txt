@@ -9,6 +9,28 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-F100-pagetitle-ydisp.mus / .etf / -finale27/F263-F100-pagetitle-ydisp.musx
+    sha256 5784b1f26f776e4ec1e79ca037b28ac6225ea57b877606d49150fbe4f55a90 (.mus)
+    sha256 3612067e44aca7b62f8e4169062812b674b7f261e1d75e6a3790828284b52d94 (.etf)
+    sha256 1c97f1690f2765c19852f70f62c2d7831ef9634cc31e45b9edf067f9f40c3df9 (.musx)
+    Reopens F100-pagetitle-ydisp in Finale 2.6.3 and saves it without changing the
+    page title. Its `HS` row retains all six words, including vertical word 596.
+    The Finale 27 companion has vertical displacement -544.
+
+F263-F100-header.mus / .etf / -finale27/F263-F100-header.musx
+    sha256 2a306994ea7ed7cec71d3b47ff3c5f9e93eb99d473253be575508232f1b2daf3 (.mus)
+    sha256 7a438f0e91a7c2096d9ddd6da74a5d639c6a9518bd09a0f8ada17e767beaa933 (.etf)
+    sha256 3503a3d5dcae902f4c6b6300aca928becc714c6b1425142313b99bdeb09b0d0e (.musx)
+    Reopens the Finale 1.0 right-aligned odd-page header in Finale 2.6.3. Its
+    `HS(0)` flags are `0x2081`; the companion starts the assignment on page 1.
+
+F263-F100-header-excp1.mus / .etf / -finale27/F263-F100-header-excp1.musx
+    sha256 d460a79b50b8982e6fde221ae4ec6a30c2b63337d4f85e1ce20774f00fb882a9 (.mus)
+    sha256 836484ae6965393e73d4b3642a2738c116faf45438ce938a8ab8eb26b44e7c27 (.etf)
+    sha256 94684264a80d42fbbbd02aefbe0694cf57a820025234eebb262164c2ef8b651e (.musx)
+    Enables Except Page 1 on the same header. The `HS(0)` flag word becomes
+    `0x6081`, adding `0x4000`; the companion starts the assignment on page 2.
+
 F263-F100-measnums-enclevry.mus / .etf / -finale27/F263-F100-measnums-enclevry.musx
     sha256 18cf7ca35b53c8145ee377f0212340443d509f2eaed2f8503577236b9f6efd02 (.mus)
     sha256 06668f8be444b98ad148f1a6eeac41376f9896cac760a2b77f522776b086d5b5 (.etf)

@@ -268,6 +268,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportNamePositionStyleFull, &others::importNamePositionStyleFull),
         FINALE_MUS_READER_IMPORTER(ImportPageGraphicAssignments, &others::importPageGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportPages, &others::importPages),
+        FINALE_MUS_READER_IMPORTER(ImportPageTextAssigns, &others::importPageTextAssigns),
         FINALE_MUS_READER_IMPORTER(ImportPartDefinitions, &others::importPartDefinitions),
         FINALE_MUS_READER_IMPORTER(ImportPartGlobals, &others::importPartGlobals),
         FINALE_MUS_READER_IMPORTER(ImportPartVoicing, &others::importPartVoicing),

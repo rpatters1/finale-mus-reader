@@ -617,14 +617,12 @@ private:
         }
         // Whatever the source spells, the command names one font definition. `^fontid` states
         // its comparator outright, `Font` followed by digits is the same thing under Finale's
-        // own convention for a font it knows only by id, and anything else is a name musxdom
-        // matches back to a definition.
+        // own convention for a font it knows only by id, and anything else is a name matched
+        // to a definition after normalization.
         const auto resolved = name == "fontid" ? readDecimal(spelled) : resolveFont(spelled, packedCharset);
         if (!resolved) {
-            // Nothing in the document answers to this name, so the name is all there is to
-            // keep. There is no comparator to fall back to either. musxdom resolves it the
-            // same way at parse time and will report the same absence rather than being handed
-            // an id that means something else.
+            // Nothing in the document answers to this normalized name, so the spelling is
+            // all there is to keep. There is no comparator to fall back to either.
             m_font.reset();
             m_result.text.push_back('^');
             m_result.text.append(name);
@@ -704,7 +702,7 @@ private:
         if (const auto byId = fontIdFromSpelling(spelled)) {
             return byId;
         }
-        const auto name = convertCommandText(spelled, packedCharset);
+        const auto name = musx::dom::normalizeFontName(convertCommandText(spelled, packedCharset));
         if (m_source.fontResolutionCache) {
             auto& resolved = m_source.fontResolutionCache->fontIdsByName;
             if (const auto cached = resolved.find(name); cached != resolved.end()) {
@@ -719,18 +717,16 @@ private:
         return resolveFontName(name);
     }
 
-    std::optional<Cmper> resolveFontName(const std::string& name) const
+    std::optional<Cmper> resolveFontName(const std::string& normalizedName) const
     {
-        // musxdom owns the rule that matches a name to a definition, so it is asked rather
-        // than reimplemented. It reports absence by throwing, which is the only reason this
-        // is written as a caught exception rather than a test.
-        musx::dom::FontInfo info(m_source.document);
-        try {
-            info.setFontIdByName(name);
-        } catch (const std::invalid_argument&) {
-            return std::nullopt;
+        // A named font command and its definition may differ in case or spacing. Compare
+        // their normalized names while retaining the definition's stored comparator.
+        for (const auto& font : m_source.document->getOthers()->getArray<musx::dom::others::FontDefinition>(musx::dom::SCORE_PARTID)) {
+            if (musx::dom::normalizeFontName(font->name) == normalizedName) {
+                return font->getCmper();
+            }
         }
-        return info.fontId;
+        return std::nullopt;
     }
 
     /// @brief Converts text that belongs to a command, such as a font name.

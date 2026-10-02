@@ -1,27 +1,29 @@
 // Copyright (c) 2026 Robert G. Patterson
 // SPDX-License-Identifier: MIT
 
-// Text recovery for the Coda-banner epoch, which stores it two ways and neither is the text
-// pool of the later eras.
+// Early HS/HT text recovery. The Coda-banner epoch also keeps numbered block texts and
+// lyrics in a separate text region; later files can carry HS/HT blocks alongside a numbered text pool.
 //
 // Block text is in the `HT` and `HS` others families, one pair per block. `HT` holds the
 // characters and `HS` holds the style, and they are keyed alike: `HS` incidence n describes the
 // nth `HT` record of the same comparator.
 //
-// Lyric text is in the text region that follows the last record pool -- two length-prefixed
-// chunks, of which the second carries `^verse(n)`, `^chorus(n)` and `^section(n)` records in
-// spelled-out Enigma. The first chunk is a `^text` header, empty in every document seen,
-// because block text goes to `HT` instead.
+// The text region after the last record pool has two length-prefixed chunks. The first
+// can carry `^block(n)` text named by `PT`; the second carries lyrics. Both use spelled-out Enigma.
 
 #include "import/texts.h"
 #include "import/texts/internal.h"
 
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include "import/shared/coda_text_records.h"
+#include "import/shared/page_text_records.h"
 #include "import/support/enigma_text.h"
 #include "import/support/legacy_mapping.h"
 #include "import/support/text_encoding.h"
@@ -44,17 +46,12 @@ constexpr records::LegacyTag codaTextRecord = records::packTag("HT");
 // A block's characters occupy four consecutive `HT` incidences, so 48 bytes, however short the
 // string is. What follows the terminator is a previous save's bytes and layout data, neither of
 // which this reads.
-constexpr std::uint32_t codaTextIncidences = 4;
-
-// `HS` word 2 packs the two things a block needs in order to be drawn: the font comparator
-// above the point size. Word 3 is the `nfx` style mask. Words 0 and 1 are the block's position,
-// which musxdom keeps elsewhere.
-constexpr std::size_t codaStyleFontSizeSlot = 2;
+// `HS` word 2 packs the font comparator and point size, with their byte positions depending
+// on the container epoch. Word 3 is the `nfx` style mask. Words 0 and 1 are the block's
+// position, which musxdom keeps elsewhere.
 constexpr std::size_t codaStyleEffectsSlot = 3;
 constexpr std::size_t codaStyleInsertArgumentSlot = 4;
 constexpr std::size_t codaStyleFlagsSlot = 5;
-constexpr unsigned codaStyleFontShift = 8;
-constexpr std::uint16_t codaStyleSizeMask = 0x00ff;
 
 // This era writes an insert as a single character rather than as a command, and the same
 // character stands for whichever insert the block carries. Which one it is comes from the style
@@ -76,11 +73,11 @@ constexpr std::string_view codaInsertCommands[] = {"page", "date", "time"};
 /// than in the text, and only what `HS` carries is written. A document whose page offset is
 /// zero still gets `^page(0)` wherever its text holds the insert, the insert being what the
 /// document states.
-std::string spellCodaBlock(const LegacyRow& style, std::string_view characters, bool& unknownInsert)
+std::string spellCodaBlock(const LegacyRow& style, FormatEpoch epoch, std::string_view characters, bool& unknownInsert)
 {
-    const auto packed = static_cast<std::uint16_t>(style.words[codaStyleFontSizeSlot]);
-    std::string result = "^font(Font" + std::to_string(packed >> codaStyleFontShift) + ")";
-    result += "^size(" + std::to_string(packed & codaStyleSizeMask) + ")";
+    const auto fontSize = coda_text::styleFontSize(style, epoch);
+    std::string result = "^font(Font" + std::to_string(fontSize.font) + ")";
+    result += "^size(" + std::to_string(fontSize.size) + ")";
     result += "^nfx(" + std::to_string(style.words[codaStyleEffectsSlot]) + ")";
 
     const auto selector =
@@ -143,9 +140,12 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
 {
     const auto& pool = context.index.getOthers();
     Cmper number = 0;
+    for (const auto& existing : context.document->getTexts()->getArray<musx::dom::texts::BlockText>()) {
+        number = (std::max)(number, existing->getTextNumber());
+    }
     for (const auto cmper : pool.cmpersForTag(codaTextRecord)) {
         const auto characters = pool.getArray(codaTextRecord, cmper);
-        const auto records = static_cast<std::uint32_t>(characters.size() / codaTextIncidences);
+        const auto records = static_cast<std::uint32_t>(characters.size() / coda_text::rowsPerBlock);
         for (std::uint32_t record = 0; record < records; ++record) {
             const auto* style = pool.get(codaStyleRecord, cmper, 0, record);
             if (!style) {
@@ -157,29 +157,36 @@ void importCodaBlockTexts(const ImportContext& context, const text::EnigmaTextSo
                                                             "was not imported."});
                 continue;
             }
+            if (number == (std::numeric_limits<Cmper>::max)()) {
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Warning, "A legacy text block exceeds the available text comparators and was not imported."});
+                return;
+            }
             ++number;
             bool unknownInsert = false;
-            auto spelled = spellCodaBlock(*style, readRowText(pool, characters, record * codaTextIncidences, codaTextIncidences), unknownInsert);
+            auto spelled = spellCodaBlock(*style, context.profile.epoch, coda_text::readBlockCharacters(pool, characters, record), unknownInsert);
             if (unknownInsert) {
                 context.report.diagnostics.push_back(
                     {musx::util::Logger::LogLevel::Warning, "A legacy text block carries an insert this reader has no command for; the "
                                                             "insert character was kept as it stands."});
             }
             addCodaText<musx::dom::texts::BlockText>(context, source, number, spelled, CodaTextFontType::TextBlock);
+            context.pending.codaTextBlockByStyle.emplace(std::pair{cmper, static_cast<musx::dom::Inci>(record)}, number);
         }
     }
 }
 
 // The lyric keywords this era spells, and the musxdom class each names. `verse`, `chorus` and
 // `section` are the same three the later text pool uses; only the framing around them differs.
-struct CodaLyricKeyword
+struct CodaTextKeyword
 {
     std::string_view keyword;
     void (*add)(const ImportContext&, const text::EnigmaTextSource&, Cmper, const std::string&, CodaTextFontType);
     CodaTextFontType defaultFontType;
 };
 
-constexpr CodaLyricKeyword codaLyricKeywords[] = {
+constexpr CodaTextKeyword codaTextKeywords[] = {
+    {"block", &addCodaText<musx::dom::texts::BlockText>, CodaTextFontType::TextBlock},
     {"verse", &addCodaText<musx::dom::texts::LyricsVerse>, CodaTextFontType::LyricVerse},
     {"chorus", &addCodaText<musx::dom::texts::LyricsChorus>, CodaTextFontType::LyricChorus},
     {"section", &addCodaText<musx::dom::texts::LyricsSection>, CodaTextFontType::LyricSection},
@@ -207,21 +214,21 @@ std::vector<std::string_view> readCodaChunks(std::span<const std::uint8_t> regio
 }
 
 /// @brief The keyword and number a record opens with, when it opens with one.
-struct CodaLyricRecord
+struct CodaTextRecord
 {
     std::size_t keyword{};
     Cmper number{};
     std::size_t bodyStart{};
 };
 
-std::optional<CodaLyricRecord> readCodaLyricHeader(std::string_view chunk, std::size_t at)
+std::optional<CodaTextRecord> readCodaTextHeader(std::string_view chunk, std::size_t at)
 {
     if (at >= chunk.size() || chunk[at] != '^') {
         return std::nullopt;
     }
-    for (std::size_t keyword = 0; keyword < std::size(codaLyricKeywords); ++keyword) {
-        const auto name = codaLyricKeywords[keyword].keyword;
-        if (chunk.compare(at + 1, name.size(), name) != 0 || chunk[at + 1 + name.size()] != '(') {
+    for (std::size_t keyword = 0; keyword < std::size(codaTextKeywords); ++keyword) {
+        const auto name = codaTextKeywords[keyword].keyword;
+        if (at + 1 + name.size() >= chunk.size() || chunk.compare(at + 1, name.size(), name) != 0 || chunk[at + 1 + name.size()] != '(') {
             continue;
         }
         std::size_t digits = at + 2 + name.size();
@@ -240,18 +247,18 @@ std::optional<CodaLyricRecord> readCodaLyricHeader(std::string_view chunk, std::
         if (body < chunk.size() && chunk[body] == ' ') {
             ++body;
         }
-        return CodaLyricRecord{keyword, number, body};
+        return CodaTextRecord{keyword, number, body};
     }
     return std::nullopt;
 }
 
-void importCodaLyricTexts(const ImportContext& context, const text::EnigmaTextSource& source)
+void importCodaTextRegion(const ImportContext& context, const text::EnigmaTextSource& source)
 {
     const auto chunks = readCodaChunks(context.index.getTexts());
     for (const auto chunk : chunks) {
         std::size_t at = 0;
         while (at < chunk.size()) {
-            const auto header = readCodaLyricHeader(chunk, at);
+            const auto header = readCodaTextHeader(chunk, at);
             if (!header) {
                 ++at;
                 continue;
@@ -259,14 +266,14 @@ void importCodaLyricTexts(const ImportContext& context, const text::EnigmaTextSo
             // A record runs to the next one, there being no terminator: the commands inside a
             // record also begin with a caret, so only a keyword this reader knows ends it.
             std::size_t end = header->bodyStart;
-            while (end < chunk.size() && !readCodaLyricHeader(chunk, end)) {
+            while (end < chunk.size() && !readCodaTextHeader(chunk, end)) {
                 ++end;
             }
             auto body = std::string(chunk.substr(header->bodyStart, end - header->bodyStart));
             while (!body.empty() && body.back() == '\0') {
                 body.pop_back();
             }
-            const auto& keyword = codaLyricKeywords[header->keyword];
+            const auto& keyword = codaTextKeywords[header->keyword];
             keyword.add(context, source, header->number, body, keyword.defaultFontType);
             at = end;
         }
@@ -277,14 +284,17 @@ void importCodaLyricTexts(const ImportContext& context, const text::EnigmaTextSo
 
 void importCodaStoredTexts(const ImportContext& context)
 {
-    if (context.profile.epoch != FormatEpoch::CodaBanner) {
+    const bool codaBanner = context.profile.epoch == FormatEpoch::CodaBanner;
+    if (!codaBanner && !others::hasLegacyPageTextStyle(context)) {
         return;
     }
-    // This era predates Unicode by a wide margin, so its bytes are always a code page.
+    // HS/HT bytes predate Unicode and use a code page in either container layout.
     text::EnigmaFontResolutionCache fontResolutionCache;
     const text::EnigmaTextSource source{context.document, /*utf8*/ false, context.profile.platform, nullptr, &fontResolutionCache};
+    if (codaBanner) {
+        importCodaTextRegion(context, source);
+    }
     importCodaBlockTexts(context, source);
-    importCodaLyricTexts(context, source);
 }
 
 } // namespace texts

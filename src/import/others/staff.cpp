@@ -491,6 +491,16 @@ void synthesizeLegacyStaffName(const ImportContext& context, StaffTarget& staff,
     block->textId = *textNumber;
     block->textType = TextBlock::TextType::Block;
     block->lineSpacingPercentage = 100;
+    const auto fullName = nameMember == &StaffTarget::fullNameTextId;
+    std::shared_ptr<const musx::dom::others::NamePositioning> namePosition;
+    if (fullName) {
+        namePosition = context.document->getOthers()->get<musx::dom::others::NamePositionFull>(staff.getSourcePartId(), staff.getCmper());
+    } else {
+        namePosition = context.document->getOthers()->get<musx::dom::others::NamePositionAbbreviated>(staff.getSourcePartId(), staff.getCmper());
+    }
+    if (namePosition) {
+        block->justify = static_cast<TextBlock::TextJustify>(legacyCenterOppositeOrder(static_cast<std::int64_t>(namePosition->justify)));
+    }
     block->newPos36 = true;
     block->showShape = true;
     block->wordWrap = true;
@@ -514,6 +524,20 @@ void synthesizeLegacyStaffName(const ImportContext& context, StaffTarget& staff,
         };
         behavior("lineSpacingPercentage", 100);
         behavior("shapeId", 0);
+        if (namePosition) {
+            const auto sourceKey =
+                fullName ? reporting.template instanceKey<musx::dom::others::NamePositionFull>(staff.getSourcePartId(), staff.getCmper())
+                         : reporting.template instanceKey<musx::dom::others::NamePositionAbbreviated>(staff.getSourcePartId(), staff.getCmper());
+            if (const auto* source = reporting.report().findField(sourceKey, "justify")) {
+                auto adjusted = *source;
+                adjusted.origin = Reporting::Origin::LegacyMusAdjusted;
+                reporting.report().setField(blockKey, "justify", adjusted);
+            } else {
+                behavior("justify", static_cast<std::int64_t>(block->justify));
+            }
+        } else {
+            behavior("justify", static_cast<std::int64_t>(block->justify));
+        }
         behavior("newPos36", 1);
         behavior("showShape", 1);
         behavior("noExpandSingleWord", 0);

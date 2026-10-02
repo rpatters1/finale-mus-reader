@@ -3,14 +3,18 @@
 
 #include "import/others.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "import/shared/coda_text_records.h"
+#include "import/shared/page_text_records.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -163,37 +167,78 @@ void importStoredTextBlocks(const ImportContext& context)
     }
 }
 
-void importCodaTextBlocks(const ImportContext& context)
+void importLegacyPageTextBlocks(const ImportContext& context)
 {
-    const auto blockTexts = context.document->getTexts()->getArray<musx::dom::texts::BlockText>();
-    std::size_t textIndex = 0;
+    const auto& pool = context.index.getOthers();
+    const auto connectorCmpers = pool.cmpersForTag(records::packTag("PT"));
+    const bool separateBlockIds = !pool.cmpersForTag(records::packTag("pT")).empty() && !connectorCmpers.empty();
+    musx::dom::Cmper nextBlockId = 0;
+    for (const auto cmper : connectorCmpers) {
+        nextBlockId = (std::max)(nextBlockId, musx::dom::Cmper(cmper));
+    }
     for (const auto cmper : context.index.getOthers().cmpersForTag(codaTextStyleTag)) {
-        for (const auto& row : context.index.getOthers().getArray(codaTextStyleTag, cmper)) {
-            if (textIndex >= blockTexts.size()) {
-                return;
+        const auto textRows = pool.getArray(records::packTag("HT"), cmper);
+        for (const auto& row : pool.getArray(codaTextStyleTag, cmper)) {
+            const auto key = std::pair{musx::dom::Cmper(cmper), static_cast<musx::dom::Inci>(row.inci)};
+            const auto found = context.pending.codaTextBlockByStyle.find(key);
+            if (found == context.pending.codaTextBlockByStyle.end()) {
+                continue;
             }
-            const auto textId = blockTexts[textIndex++]->getTextNumber();
-            auto target = std::make_shared<Target>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, textId);
+            if (context.profile.epoch != FormatEpoch::CodaBanner && coda_text::readBlockCharacters(pool, textRows, row.inci).empty()) {
+                continue;
+            }
+            const auto textId = found->second;
+            auto blockId = textId;
+            if (separateBlockIds) {
+                bool available = false;
+                while (nextBlockId < (std::numeric_limits<musx::dom::Cmper>::max)()) {
+                    ++nextBlockId;
+                    if (!context.document->getOthers()->get<Target>(musx::dom::SCORE_PARTID, nextBlockId)) {
+                        available = true;
+                        break;
+                    }
+                }
+                if (!available) {
+                    context.report.diagnostics.push_back(
+                        {musx::util::Logger::LogLevel::Info, "A legacy page text block exceeds the available comparators."});
+                    continue;
+                }
+                blockId = nextBlockId;
+            }
+            if (context.document->getOthers()->get<Target>(musx::dom::SCORE_PARTID, blockId)) {
+                continue;
+            }
+            auto target = std::make_shared<Target>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, blockId);
             target->textId = textId;
             target->lineSpacingPercentage = 100;
             const auto flags = static_cast<std::uint16_t>(row.words[5]);
             target->justify = static_cast<Target::TextJustify>(legacyCenterOppositeOrder(flags & 0x0003U));
-            target->shapeId = 0;
-            target->newPos36 = false;
-            target->showShape = false;
-            target->noExpandSingleWord = false;
+            target->showShape = context.profile.epoch != FormatEpoch::CodaBanner;
             target->wordWrap = true;
-            applyLegacyTextBlockCorners(context, musx::dom::SCORE_PARTID, textId, *target);
+            applyLegacyTextBlockCorners(context, musx::dom::SCORE_PARTID, blockId, *target);
 
-            reportValue(context, musx::dom::SCORE_PARTID, textId, "textId", textId, row);
-            reportValue(context, musx::dom::SCORE_PARTID, textId, "justify", flags & 0x0003U, row);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "lineSpacingPercentage", 100);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "shapeId", 0);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "newPos36", 0);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "showShape", 0);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "noExpandSingleWord", 0);
-            reportBehavior(context, musx::dom::SCORE_PARTID, textId, "wordWrap", 1);
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto instance = reporting.template instanceKey<Target>(musx::dom::SCORE_PARTID, blockId);
+                reporting.report().setInstanceOrigin(instance, Reporting::Origin::LegacyBehavior);
+                if (context.profile.epoch != FormatEpoch::CodaBanner) {
+                    reporting.report().setField(
+                        instance, "textId", {Reporting::Origin::LegacyMusAdjusted, row.blockOffset, row.decodedOffset, textId});
+                }
+            });
+            if (context.profile.epoch == FormatEpoch::CodaBanner) {
+                reportValue(context, musx::dom::SCORE_PARTID, blockId, "textId", textId, row);
+            }
+            reportValue(context, musx::dom::SCORE_PARTID, blockId, "justify", flags & 0x0003U, row);
+            reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "lineSpacingPercentage", 100);
+            reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "showShape", target->showShape);
+            reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "wordWrap", 1);
+            if (context.profile.epoch == FormatEpoch::CodaBanner) {
+                reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "shapeId", 0);
+                reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "newPos36", 0);
+                reportBehavior(context, musx::dom::SCORE_PARTID, blockId, "noExpandSingleWord", 0);
+            }
             context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
+            found->second = blockId;
         }
     }
 }
@@ -204,12 +249,12 @@ void importTextBlocks(const ImportContext& context)
 {
     if (context.profile.epoch != FormatEpoch::CodaBanner) {
         importStoredTextBlocks(context);
-        return;
     }
-    // A Coda-banner document names no text from its style rows: the two are paired by position
-    // against the block texts, so the text pool has to be complete first. Deferring the pass keeps
-    // that out of the registry's line order -- see @ref PendingReferences::materialize.
-    context.pending.materialize.push_back([&context] { importCodaTextBlocks(context); });
+    if (hasLegacyPageTextStyle(context)) {
+        // HS/HT text is complete after the text importer, regardless of which early container
+        // stores it. Materialization keeps TextBlock allocation ahead of assignment resolution.
+        context.pending.materialize.push_back([&context] { importLegacyPageTextBlocks(context); });
+    }
 }
 
 } // namespace others

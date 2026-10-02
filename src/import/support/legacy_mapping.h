@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <map>
 #include <optional>
 #include <set>
 #include <span>
@@ -796,6 +797,8 @@ struct PendingReferences
     std::vector<PendingCustomLineReference> customLines; ///< Custom lines requested by recovered classes.
     /// @brief Legacy staff systems whose flags select a system-specific StaffUsed list.
     std::set<std::pair<musx::dom::Cmper, musx::dom::Cmper>> staffSystemsWithOwnStaffLists;
+    /// @brief An HS row's HT text id, replaced by its synthesized TextBlock id during materialization.
+    std::map<std::pair<musx::dom::Cmper, musx::dom::Inci>, musx::dom::Cmper> codaTextBlockByStyle;
     /// @brief Completes source-owned pools before checks allocate or resolve their referents.
     std::vector<std::function<void()>> materialize;
     /// @brief Checks to run once every importer has finished, in the order they were registered.

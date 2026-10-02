@@ -17,6 +17,54 @@ F100-baseline.mus
     selector 41 contains six zero words. The Finale 27 companion carries rest drops
     `0, 0, 0, -24, -48`, establishing fixed behavior rather than stored values.
 
+F100-pagetitle.mus / .etf / -finale27/F100-pagetitle.musx
+    sha256 898c3f9e0789b77b7ae8878dddd3a7ae9f148dfe2d35c1a70e142333192cfb30 (.mus)
+    sha256 3edbddf777d000947f23892dda4a68a0c0f9c9542d3ff0cc3a07ee008faa79b8 (.etf)
+    sha256 079dc41bc43285d8a8057b84685612d6468b2035855205145c1f7fa8fb950031 (.musx)
+    Adds one page-attached title text block to the Finale 1.0 baseline.
+
+F100-pagetitle-ydisp.mus / .etf / -finale27/F100-pagetitle-ydisp.musx
+    sha256 02196ffb34f70a46f99118d2df943a7894be591f8c8db3ba7a57126d47b202c7 (.mus)
+    sha256 027da113a46c4ce7408dacd95ea3c1bb12886aa03aa98b645af71cf83dd69550 (.etf)
+    sha256 ddb51b5c7ed8e4b2c0fb27965860c87b796dddb737b52189e44429f81848b524 (.musx)
+    Derived from F100-pagetitle by moving the page title vertically. The `HS`
+    row's vertical word increases from 556 to 596 while its other five words stay fixed.
+
+F100-header.mus / .etf / -finale27/F100-header.musx
+    sha256 86ca36a7f29159e6b2158f4644ddec038944117347097b201df05133507674f3 (.mus)
+    sha256 96005419916729fa10ca9c0cb60cb719a47c063701c628a91ca46903edbdbbf6 (.etf)
+    sha256 de3c55cb603ae28190be26acd6e05c0dcf6cd60159963a05080b04482f566c1f (.musx)
+    Adds an odd-page, right-justified header to the baseline. Its `HS` row has
+    zero horizontal and vertical displacement.
+
+F100-header-meastext.mus / .etf / -finale27/F100-header-meastext.musx
+    sha256 9eb4cd15e13183e547462571568760b6ea073dee6b9294c5925d1e746a0942e9 (.mus)
+    sha256 f8b049e3bc860366988e0bd0b190b65af9bf112c4163b77c70fcfc5528eb5dd3 (.etf)
+    sha256 439834129d1b6e62f6f820730d9c26247aae61a3ffb14d1877833f60dfd8cfd5 (.musx)
+    Derived from F100-header by adding "Measure Text" to measure 1. The header's
+    `HS` and `HT` rows remain unchanged.
+
+F100-header-x7-y11.mus / .etf / -finale27/F100-header-x7-y11.musx
+    sha256 1a8c9a62eb1930083e05a132835538c70707df3dce7c42df4da5be4e51043f13 (.mus)
+    sha256 fdac918f462aa063c090e57d2a19920c3634c1dff5ed932df07812969efa18e9 (.etf)
+    sha256 755a440245dbaad07e3b5790606e778b101540c5e91ae43b9d0d2fc10915c13e (.musx)
+    Derived from F100-header by setting the UI horizontal and vertical offsets
+    to 7 and 11. The `HS` row changes only those first two words.
+
+F100-footer.mus / .etf / -finale27/F100-footer.musx
+    sha256 a2802d932ffeae2b6b2211a92bb335dde9641e1321e8166aadc47f18f0907ea8 (.mus)
+    sha256 28e95ea8ca2061a265d66bca754d763bd81cede5cc47c7949c5a02d41d70723c (.etf)
+    sha256 339c02f6d3800204bf5f64590992eecea0379354c70cb65875fa53260fe8c4e6 (.musx)
+    Adds an even-page, left-justified footer to the baseline. Its `HS` row has
+    zero horizontal and vertical displacement.
+
+F100-footer-x7-y11.mus / .etf / -finale27/F100-footer-x7-y11.musx
+    sha256 fda717f20d6acdbd167e7d8f543e6394e929d3cbc86eeb0a905f873e670e42c2 (.mus)
+    sha256 89c82a6a7cdfbc414b927b8d734f4a9daff0a87c2f51047a15af4f944a1bba54 (.etf)
+    sha256 657c1e8815741666bdaf27ae8896fe8f3b671e0e08697d53901af200 (.musx)
+    Derived from F100-footer by setting the UI horizontal and vertical offsets
+    to 7 and 11. The `HS` row changes only those first two words.
+
 F100-measnums.mus / .etf / -finale27/F100-measnums.musx
     sha256 cef1c6c0ae2cf6d78d93eb59fec2948c27540aa34f5f0537d66e4932e59d49a3 (.mus)
     sha256 df23e7c865c334036a771d5003a01d3526b929966ca932a45e30d38288165c39 (.etf)

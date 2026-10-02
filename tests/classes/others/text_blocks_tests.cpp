@@ -3,6 +3,8 @@
 
 #include "class_test_support.h"
 
+#include "import/texts.h"
+
 namespace finale_mus_reader_tests {
 namespace {
 
@@ -22,7 +24,7 @@ std::vector<SyntheticRow> textBlockFixedRows(std::uint16_t cmper, const std::vec
 }
 
 void textBlockImport(const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, ImportReport& report)
+    const musx::dom::DocumentPtr& document, ImportReport& report, bool importTexts = false)
 {
     const auto index = LegacyRecordIndex::build(parsed);
     auto referenceSession = musx::factory::DocumentFactory::begin();
@@ -30,6 +32,9 @@ void textBlockImport(const finale_mus_reader::container::ParsedContainer& parsed
     finale_mus_reader::PendingReferences pending;
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+    if (importTexts) {
+        finale_mus_reader::texts::importTexts(context);
+    }
     finale_mus_reader::others::importTextBlocks(context);
     // The Coda pass is deferred, because it pairs its rows against the imported text pool. A test
     // driving one importer alone still has to close the phase the registry closes.
@@ -142,20 +147,17 @@ void testStoredTextBlocksAcrossEpochs()
 
 void testCodaTextBlockSynthesis()
 {
-    using BlockText = musx::dom::texts::BlockText;
     using Target = musx::dom::others::TextBlock;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    for (musx::dom::Cmper number : {musx::dom::Cmper{1}, musx::dom::Cmper{2}}) {
-        auto text = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number);
-        text->text = "block " + std::to_string(number);
-        document->getTexts()->add(BlockText::XmlNodeName, std::move(text));
-    }
-    const auto parsed = makeContainer({{0, "HS", {0, 0, 1036, 0, 0, 0x0080}}, {0, "HS", {0, 0, 1036, 0, 0, 0x0081}}}, FormatEpoch::CodaBanner);
+    const auto parsed =
+        makeContainer({{0, "HS", {0, 0, 1036, 0, 0, 0x0080}}, {0, "HS", {0, 0, 1036, 0, 0, 0x0081}}, {0, "HT", {0x4100}}, {0, "HT", {}},
+                          {0, "HT", {}}, {0, "HT", {}}, {0, "HT", {0x4200}}, {0, "HT", {}}, {0, "HT", {}}, {0, "HT", {}}},
+            FormatEpoch::CodaBanner);
     ImportReport report(FormatEpoch::UncompressedLegacy);
     SourceProfile profile(FormatEpoch::CodaBanner);
     profile.byteOrder = ByteOrder::BigEndian;
-    textBlockImport(parsed, profile, document, report);
+    textBlockImport(parsed, profile, document, report, true);
 
     const auto first = document->getOthers()->get<Target>(musx::dom::SCORE_PARTID, 1);
     const auto second = document->getOthers()->get<Target>(musx::dom::SCORE_PARTID, 2);
