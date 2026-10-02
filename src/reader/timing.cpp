@@ -70,6 +70,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportMiscOptions: return "misc_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";
+    case Phase::ImportMultimeasureRests: return "mmrests";
     case Phase::ImportMultiStaffGroupIds: return "multi_staff_group_ids";
     case Phase::ImportMultiStaffInstrumentGroups: return "multi_staff_instrument_groups";
     case Phase::ImportMusicSpacingOptions: return "spacing_options";

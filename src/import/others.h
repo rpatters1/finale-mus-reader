@@ -86,6 +86,9 @@ void importMeasureNumberRegions(const ImportContext& context);
 /// @brief Recovers every measure the source stores, score and unlinked part alike.
 void importMeasures(const ImportContext& context);
 
+/// @brief Recovers MultimeasureRest objects.
+void importMultimeasureRests(const ImportContext& context);
+
 /// @brief Recovers the part-specific staff-group reference for each multi-staff instrument.
 void importMultiStaffGroupIds(const ImportContext& context);
 

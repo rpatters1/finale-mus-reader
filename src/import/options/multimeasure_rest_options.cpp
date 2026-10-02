@@ -133,9 +133,8 @@ const FieldMapping mmRestFields[] = {
 // distinguish. Slot 5 is a shape comparator in this era as in every later one, and the source's
 // own comparator is kept because shape definitions are recovered from the source.
 //
-// Slots 1 to 3 hold something this era stores and Finale 3.5 stopped writing: slot 1 varies per
-// document, and slots 2 and 3 move together. Finale's own conversion of these documents carries
-// nothing from them, so nothing names them. They are **open** and unmapped.
+// Slots 1 to 3 are the multimeasure-rest number font (id, size, effects) in the Coda-banner era.
+// They belong to FontOptions, which reads them there; Finale 3.0 and 3.2 leave them zero.
 //
 // The rest of the class keeps the pinned baseline's values, which match this era's behavior.
 // The two H-bar adjustments are the exception, because the baseline does not agree there; they

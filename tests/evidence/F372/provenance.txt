@@ -459,3 +459,20 @@ F372-rptindiv.mus / .etf / -finale27/F372-rptindiv.musx
     agree on BI [2,2,-92,4,96,-12], EI [2,3,-64,32,4,-20], LI
     [2,2,76,40,0,0] and [2,3,28,-60,0,0], and RI [1,1,72,0,0,0] and
     [2,1,20,-196,0,0]. The Finale 27 companion preserves all six placements.
+
+F372-nommrest.mus / .etf / -finale27/F372-nommrest.musx
+    sha256 ebbb68d19d5f9ca6088f09116c6d03d52213262bd73c472967601fdb973af4be (.mus)
+    sha256 f9d73ad6c17a5b67d17895ba72b565a17cdc809dfd18dd285bd1d99b0c0576aa (.etf)
+    sha256 6560ab9bd384b4875d15ee0c55fdd0b8583eb8b22ee2d0b8432366576feb98c1 (.musx)
+    From F372-baseline, adds runs of empty measures without creating multimeasure
+    rests. No XI record is stored.
+
+F372-mmrest-syms.mus / .etf / -finale27/F372-mmrest-syms.musx
+    sha256 346d193245376ee733ae2b2a3a3d08b6b9b9daa86109ad039bf00950d9deca47 (.mus)
+    sha256 808a74047b5068b56dc0f79156b4687b65fa97d2978e87734360891fe1ad7448 (.etf)
+    sha256 10b6647a09bb98cc881aa78f784b58759b4b927faf3eb7714abe653f21327262 (.musx)
+    From F372-nommrest, creates multimeasure rests for measures 1-3, 5-7 and 9-11
+    that use symbols, with non-default spacing and adjustments. Each XI record and
+    selector 25 store 369 n -7 1 3 11 / 47 5 21 -29 0 1. The
+    Finale 27 companion keeps the options and each rest's first row, but writes every
+    rest with spacing 48, no adjustments and symbols off.

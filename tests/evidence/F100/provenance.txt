@@ -960,3 +960,19 @@ F100-artic-playinf.mus / .etf / -finale27/F100-artic-playinf.musx
     From F100-artic-playneg, changes the fraction denominator from 5 to zero.
     IX word 2 becomes 0x7d00; the fraction flag stays set. The conversion emits
     raw velocity deltas: bottom 32000 and top 7.
+
+F100-nommrests.mus / .etf / -finale27/F100-nommrests.musx
+    sha256 e3d72649ec4180d4791b005fa3cc7d89aa4859b4c1b3c8387559a063e1bf3594 (.mus)
+    sha256 4ab3d43212d6f97940e2926f1faac591a59eaa09ae1393b0067fcad4669531f7 (.etf)
+    sha256 0fb1e5e7ad28c62490f7627730411dcfb1fdb7d0df8d29436c88c6c65d5b3792 (.musx)
+    From F100-baseline, adds notes and measures so that the score contains runs of
+    empty measures. Multimeasure rests are not enabled, and no XI record is stored.
+
+F100-mmrests.mus / .etf / -finale27/F100-mmrests.musx
+    sha256 ff8a6ef4d97591dced8e215b8f4310c7025723dc2a29944093d6d0ae577b791e (.mus)
+    sha256 15878a749c6f4ca8857556098145566360bc96dd2baf394257c8d85a8465c9bb (.etf)
+    sha256 3d0c60cecfe4085af2c305f451e40c1d81643a78cf22d55df762b3e60e15b857 (.musx)
+    From F100-nommrests, enables multimeasure rests through special part extraction,
+    which Finale 1.0 applies to the whole document. The save stores three one-row
+    XI records, for measures 1-3, 5-7 and 9-11, and its multimeasure-rest number font
+    is New York 27 italic. Special part extraction also changes other records.

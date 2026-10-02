@@ -260,6 +260,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMarkingCategories, &others::importMarkingCategories),
         FINALE_MUS_READER_IMPORTER(ImportMeasureNumberRegions, &others::importMeasureNumberRegions),
         FINALE_MUS_READER_IMPORTER(ImportMeasures, &others::importMeasures),
+        FINALE_MUS_READER_IMPORTER(ImportMultimeasureRests, &others::importMultimeasureRests),
         FINALE_MUS_READER_IMPORTER(ImportMultiStaffGroupIds, &others::importMultiStaffGroupIds),
         FINALE_MUS_READER_IMPORTER(ImportMultiStaffInstrumentGroups, &others::importMultiStaffInstrumentGroups),
         FINALE_MUS_READER_IMPORTER(ImportNamePositionAbbreviated, &others::importNamePositionAbbreviated),

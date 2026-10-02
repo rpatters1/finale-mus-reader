@@ -70,6 +70,7 @@ add_executable(finale_mus_reader_tests
     classes/others/marking_category_tests.cpp
     classes/others/measure_tests.cpp
     classes/others/measure_number_region_tests.cpp
+    classes/others/multimeasure_rest_tests.cpp
     classes/others/multistaff_instrument_group_tests.cpp
     classes/others/name_position_tests.cpp
     classes/others/page_tests.cpp
