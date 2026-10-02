@@ -150,7 +150,7 @@ TEST_CASE("An incomplete measure text tuple is reported and skipped", "[class][m
     profile.byteOrder = ByteOrder::LittleEndian;
     ImportReport report(profile.epoch);
     measureTextImport(makeDetailClassContainer(1, 2, 0, {2, 10, 20, 0, 0, 3, 4}, profile.byteOrder, 0x0420), profile, document, report);
-    CHECK(document->getDetails()->getArray<MeasureTextTarget>(musx::dom::SCORE_PARTID, 1, 2).size() == 1);
+    CHECK(document->getDetails()->getArray<MeasureTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Cmper{2}).size() == 1);
     CHECK_FALSE(report.diagnostics.empty());
 }
 
@@ -173,7 +173,7 @@ TEST_CASE("Coda measure text resolves its PT connector to the numbered block tex
     CHECK(field(result, "others.textBlock[1].textId").origin == ValueOrigin::LegacyMus);
 
     const auto baseline = readFixture("evidence/F100/F100-header.mus");
-    CHECK(baseline.document->getDetails()->getArray<MeasureTextTarget>(musx::dom::SCORE_PARTID, 1, 1).empty());
+    CHECK(baseline.document->getDetails()->getArray<MeasureTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Cmper{1}).empty());
 }
 
 TEST_CASE("Finale 2001 measure text splits its horizontal position by sign", "[class][measure-text]")
