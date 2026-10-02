@@ -76,22 +76,22 @@ void reportMeasureText(const ImportContext& context, const RecordFamilySource& s
         const auto key =
             reporting.template instanceKey<MeasureTextTarget>(partId, target.getCmper1(), target.getInci().value_or(0), target.getCmper2());
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
-        const auto field = [&](const char* name, std::size_t slot, std::int64_t value,
-                               typename Reporting::Origin origin = Reporting::Origin::LegacyMus) {
+        using Origin = typename Reporting::Origin;
+        const auto field = [&](const char* name, std::size_t slot, std::int64_t value, Origin origin) {
             const auto physicalSlot = at + slot;
             reportLegacyField(
                 reporting, key, source, source.rowOfWord(rows, physicalSlot), name, source.byteOffsetInRow(physicalSlot * 2), value, origin);
         };
-        field("block", 0, target.block);
+        field("block", 0, target.block, Origin::LegacyMus);
         if (earlyCoordinates) {
-            field("xDispEvpu", 1, target.xDispEvpu, Reporting::Origin::LegacyMusAdjusted);
-            reportFallbackField(reporting, key, "xDispEdu", Reporting::Origin::LegacyBehavior, target.xDispEdu);
+            field("xDispEvpu", 1, target.xDispEvpu, Origin::LegacyMusAdjusted);
+            reportFallbackField(reporting, key, "xDispEdu", Origin::LegacyBehavior, target.xDispEdu);
         } else {
-            field("xDispEdu", 1, target.xDispEdu);
-            field("xDispEvpu", 1, target.xDispEvpu);
+            field("xDispEdu", 1, target.xDispEdu, Origin::LegacyMus);
+            field("xDispEvpu", 1, target.xDispEvpu, Origin::LegacyMus);
         }
-        field("yDisp", 2, target.yDisp);
-        field("hidden", 4, target.hidden);
+        field("yDisp", 2, target.yDisp, Origin::LegacyMus);
+        field("hidden", 4, target.hidden, Origin::LegacyMus);
     });
 }
 
