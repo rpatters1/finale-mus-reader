@@ -69,6 +69,7 @@ enum class Phase : std::size_t {
     ImportMarkingCategories,
     ImportMeasureNumberRegions,
     ImportMeasureGraphicAssignments,
+    ImportMeasureTextAssigns,
     ImportMeasures,
     ImportMiscOptions,
     ImportMultimeasureRestOptions,

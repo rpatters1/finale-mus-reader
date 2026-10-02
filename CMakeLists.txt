@@ -173,6 +173,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/independent_staff_details.cpp
     src/import/details/key_symbol_list.cpp
     src/import/details/measure_graphic_assign.cpp
+    src/import/details/measure_text_assign.cpp
     src/import/details/percussion_note_code.cpp
     src/import/details/staff_group.cpp
     src/import/details/staff_size.cpp

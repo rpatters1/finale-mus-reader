@@ -24,38 +24,11 @@ namespace others {
 namespace {
 
 using PageTextTarget = musx::dom::others::PageTextAssign;
-using TextBlockTarget = musx::dom::others::TextBlock;
-constexpr auto pageTextTag = records::packTag("pT");
-constexpr auto earlyTextBlockTag = records::packTag("PT");
 constexpr records::LegacyTag pageTextClass = 0x00c2;
 constexpr auto codaPageTextTag = records::packTag("HS");
 constexpr auto codaPageTextCharactersTag = records::packTag("HT");
 constexpr std::uint16_t exceptPageOneFlag = 0x4000U;
 constexpr std::size_t pageTextWordsPerAssignment = 12;
-
-void ensureEarlyPageTextBlock(const ImportContext& context, musx::dom::Cmper blockId, musx::dom::Cmper textId, const records::LegacyRow& connector)
-{
-    if (context.document->getOthers()->get<TextBlockTarget>(musx::dom::SCORE_PARTID, blockId)) {
-        return;
-    }
-    // An early pT reference names a block whose PT row supplies the text-pool number.
-    auto block = std::make_shared<TextBlockTarget>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, blockId);
-    block->textId = textId;
-    block->lineSpacingPercentage = 100;
-    block->showShape = context.profile.epoch != FormatEpoch::CodaBanner;
-    block->wordWrap = true;
-    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<TextBlockTarget>(musx::dom::SCORE_PARTID, blockId);
-        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyBehavior);
-        const RecordFamilySource connectorSource{&context.index.getOthers(), earlyTextBlockTag, false, false};
-        reportLegacyField(reporting, key, connectorSource, connector, "textId", connectorSource.byteOffsetInRow(0), textId);
-        reporting.report().setField(key, "lineSpacingPercentage", {Reporting::Origin::LegacyBehavior, 0, 0, 100});
-        reporting.report().setField(key, "justify", {Reporting::Origin::LegacyBehavior, 0, 0, 0});
-        reporting.report().setField(key, "showShape", {Reporting::Origin::LegacyBehavior, 0, 0, block->showShape});
-        reporting.report().setField(key, "wordWrap", {Reporting::Origin::LegacyBehavior, 0, 0, 1});
-    });
-    context.document->getOthers()->add(TextBlockTarget::XmlNodeName, std::move(block));
-}
 
 bool applyPageTextFlags(PageTextTarget& target, std::uint16_t flags)
 {
@@ -112,15 +85,7 @@ PageIncidenceByPart importEarlyPageTextRecords(const ImportContext& context)
             target->yDisp = row.words[2];
             target->startPage = row.words[3] == 0 ? musx::dom::PageCmper(cmper == 0 ? 1 : cmper) : static_cast<musx::dom::PageCmper>(row.words[3]);
             target->endPage = row.words[4] == 0 ? musx::dom::PageCmper(cmper) : static_cast<musx::dom::PageCmper>(row.words[4]);
-            if (!context.document->getOthers()->get<TextBlockTarget>(partId, target->block)) {
-                const auto* connector = context.index.getOthers().get(earlyTextBlockTag, target->block, 0, 0, partId);
-                if (connector && connector->wordCount != 0 && connector->words[0] > 0) {
-                    ensureEarlyPageTextBlock(context, target->block, static_cast<musx::dom::Cmper>(connector->words[0]), *connector);
-                } else {
-                    context.report.diagnostics.push_back(
-                        {musx::util::Logger::LogLevel::Info, "Early page text block " + std::to_string(target->block) + " has no text connector."});
-                }
-            }
+            resolveEarlyTextBlock(context, partId, target->block);
             withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
                 const auto key = reporting.template instanceKey<PageTextTarget>(partId, cmper, inci);
                 reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
