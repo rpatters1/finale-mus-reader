@@ -769,12 +769,12 @@ void testEnigmaFontResolutionCache()
             std::span<const std::uint8_t>(reinterpret_cast<const std::uint8_t*>(value.data()), value.size()), source);
     };
 
-    expectText(convert("^font(Times)a").text == "^font(Times)a" && convert("^font(Times)b").text == "^font(Times)b" && cache.fontIdsByName.size() == 1
-                   && cache.fontIdsByName.at("Times") == musx::dom::Cmper(4),
-        "Repeated resolved font names were not served by one cached result");
+    expectText(convert("^font(Times)a").text == "^font(Times)a" && convert("^font(times)b").text == "^font(Times)b" && cache.fontIdsByName.size() == 1
+                   && cache.fontIdsByName.at("times") == musx::dom::Cmper(4),
+        "Equivalent font names were not resolved through one cached result");
 
     expectText(convert("^font(Missing)a").text == "^font(Missing)a" && convert("^font(Missing)b").text == "^font(Missing)b"
-                   && cache.fontIdsByName.size() == 2 && !cache.fontIdsByName.at("Missing"),
+                   && cache.fontIdsByName.size() == 2 && !cache.fontIdsByName.at("missing"),
         "Repeated unresolved font names were not served by one cached result");
 }
 

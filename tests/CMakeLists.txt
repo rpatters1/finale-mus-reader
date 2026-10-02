@@ -73,6 +73,7 @@ add_executable(finale_mus_reader_tests
     classes/others/multistaff_instrument_group_tests.cpp
     classes/others/name_position_tests.cpp
     classes/others/page_tests.cpp
+    classes/others/page_text_assign_tests.cpp
     classes/others/part_definitions_tests.cpp
     classes/others/part_globals_tests.cpp
     classes/others/part_voicing_tests.cpp

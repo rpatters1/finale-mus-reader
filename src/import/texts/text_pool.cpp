@@ -281,8 +281,8 @@ void importLaterTextPool(const ImportContext& context)
 {
     FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::TextLaterPool);
     // The Coda-banner epoch's text stream is length-prefixed chunks rather than
-    // `^keyword(n) ... ^end` records, and its block text is not in the stream at all.
-    // `importCodaTexts` reads both; walking them here would only report a malformed pool.
+    // `^keyword(n) ... ^end` records. Its numbered blocks and lyrics use that framing,
+    // while HS/HT blocks use record rows; walking the stream here would report a malformed pool.
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         return;
     }

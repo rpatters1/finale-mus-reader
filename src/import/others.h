@@ -110,6 +110,9 @@ void importPageGraphicAssignments(const ImportContext& context);
 /// @brief Recovers page-layout objects and their first-system references.
 void importPages(const ImportContext& context);
 
+/// @brief Recovers page text assignments and their TextBlock references.
+void importPageTextAssigns(const ImportContext& context);
+
 /// @brief Recovers PartDefinition objects, and supplies the score part every era has.
 void importPartDefinitions(const ImportContext& context);
 

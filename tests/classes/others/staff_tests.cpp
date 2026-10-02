@@ -1229,6 +1229,27 @@ TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")
     CHECK(field("fullNameTextId")->origin == ValueOrigin::LegacyBehavior);
 }
 
+TEST_CASE("Early synthesized staff-name TextBlocks take their justification from name positioning")
+{
+    using TextBlock = musx::dom::others::TextBlock;
+    for (const auto& [fixture, justification, raw] : {
+             std::tuple{"evidence/F263/F263-namepos.mus", TextBlock::TextJustify::Right, std::int64_t{1}},
+             std::tuple{"evidence/F263/F263-namepos-left.mus", TextBlock::TextJustify::Left, std::int64_t{0}},
+         }) {
+        const auto result = readFixture(fixture);
+        const auto staff = result.document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, staffCmper1);
+        REQUIRE(staff);
+        REQUIRE(staff->fullNameTextId != 0);
+        const auto block = result.document->getOthers()->get<TextBlock>(musx::dom::SCORE_PARTID, staff->fullNameTextId);
+        REQUIRE(block);
+        CHECK(block->justify == justification);
+        const auto* field = result.report.findField<TextBlock>("justify", musx::dom::SCORE_PARTID, staff->fullNameTextId);
+        REQUIRE(field);
+        CHECK(field->origin == ValueOrigin::LegacyMusAdjusted);
+        CHECK(field->rawValue == raw);
+    }
+}
+
 TEST_CASE("The six-word Staff transposition word carries its set-to-clef index")
 {
     const auto result = readFixture("evidence/F100/staffopts/F100-transp-settoclef7.mus");

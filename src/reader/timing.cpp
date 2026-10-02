@@ -82,6 +82,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportPageFormatOptions: return "page_format_options";
     case Phase::ImportPageGraphicAssignments: return "page_graphic_assigns";
     case Phase::ImportPages: return "pages";
+    case Phase::ImportPageTextAssigns: return "page_text_assigns";
     case Phase::ImportPartDefinitions: return "part_defs";
     case Phase::ImportPartGlobals: return "part_globals";
     case Phase::ImportPartVoicing: return "part_voicing";
