@@ -49,8 +49,8 @@ TEST_CASE("Early HS text size and lower handle use the uncompressed layout", "[c
                        profile.epoch),
         profile, document, report, std::nullopt, true);
 
-    const auto top = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
-    const auto lower = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 1);
+    const auto top = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+    const auto lower = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{1});
     REQUIRE(top);
     REQUIRE(lower);
     CHECK(top->yDisp == -474);
@@ -86,8 +86,8 @@ TEST_CASE("Page text fields and incidence are decoded from fixed rows", "[class]
     profile.version = SourceVersion{.major = 3, .minor = 7};
     profile.byteOrder = ByteOrder::BigEndian;
     pageTextImport(makeContainer(rows), profile, document, report);
-    const auto left = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
-    const auto right = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 1);
+    const auto left = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+    const auto right = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{1});
     REQUIRE(left);
     REQUIRE(right);
     CHECK(left->block == 7);
@@ -111,7 +111,7 @@ TEST_CASE("Page text fields and incidence are decoded from fixed rows", "[class]
 TEST_CASE("Finale 97 page text references its stored TextBlock", "[class][page-text]")
 {
     const auto result = readFixture("evidence/F97/Fin97-baseline.mus");
-    const auto assignment = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto assignment = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(assignment);
     CHECK(assignment->block == 2);
     const auto block = assignment->getTextBlock();
@@ -140,9 +140,9 @@ TEST_CASE("Coda pT and HS use distinct numbered and HT block texts", "[class][pa
     ImportReport report(profile.epoch);
     pageTextImport(parsed, profile, document, report, std::nullopt, true);
 
-    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 5, 0);
-    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 9, 0);
-    const auto header = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{5}, musx::dom::Inci{0});
+    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{9}, musx::dom::Inci{0});
+    const auto header = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(first);
     REQUIRE(second);
     REQUIRE(header);
@@ -175,8 +175,8 @@ TEST_CASE("Coda pT and HS use distinct numbered and HT block texts", "[class][pa
 TEST_CASE("Finale 3.7 page text uses fixed pT tuples", "[class][page-text]")
 {
     const auto result = readFixture("evidence/F372/F372-fileinfo-text.mus");
-    const auto first = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
-    const auto second = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 1);
+    const auto first = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+    const auto second = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{1});
     REQUIRE(first);
     REQUIRE(second);
     CHECK(first->block == 1);
@@ -201,7 +201,7 @@ TEST_CASE("Early pT and HS assignments coexist while later files use pT", "[clas
         profile.version = version;
         profile.byteOrder = ByteOrder::BigEndian;
         pageTextImport(makeContainer(rows, epoch), profile, document, report, musx::dom::Cmper{7});
-        return document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+        return document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
     };
 
     const auto early = read({legacy, legacyText}, FormatEpoch::UncompressedLegacy, SourceVersion{.major = 3, .minor = 5});
@@ -236,7 +236,7 @@ TEST_CASE("Early pT and HS assignments link distinct TextBlocks", "[class][page-
     using TextBlock = musx::dom::others::TextBlock;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    auto text = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+    auto text = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
     text->text = "Allegretto";
     document->getTexts()->add(BlockText::XmlNodeName, std::move(text));
     SourceProfile profile(FormatEpoch::UncompressedLegacy);
@@ -247,8 +247,8 @@ TEST_CASE("Early pT and HS assignments link distinct TextBlocks", "[class][page-
                                      {1, "HT", {0x5469, 0x746c, 0x6500}}, {1, "HT", {}}, {1, "HT", {}}, {1, "HT", {}}},
                        profile.epoch),
         profile, document, report, std::nullopt, true);
-    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
-    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 1);
+    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{1});
     REQUIRE(first);
     REQUIRE(second);
     CHECK(first->block == 2);
@@ -279,7 +279,7 @@ TEST_CASE("Early pT resolves its PT connector before the 3.7 gate", "[class][pag
     for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy}) {
         auto session = musx::factory::DocumentFactory::begin();
         const auto document = session.getDocument();
-        auto text = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+        auto text = std::make_shared<BlockText>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
         text->text = "Copyright";
         document->getTexts()->add(BlockText::XmlNodeName, std::move(text));
         SourceProfile profile(epoch);
@@ -287,7 +287,7 @@ TEST_CASE("Early pT resolves its PT connector before the 3.7 gate", "[class][pag
         profile.byteOrder = ByteOrder::BigEndian;
         ImportReport report(epoch);
         pageTextImport(makeContainer({{1, "pT", {2, 0, 0, 0, 0, 0}}, {2, "PT", {1}}}, epoch), profile, document, report);
-        const auto assignment = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+        const auto assignment = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
         REQUIRE(assignment);
         CHECK(assignment->block == 2);
         const auto block = assignment->getTextBlock();
@@ -317,7 +317,7 @@ TEST_CASE("Page text tuple decoding covers DCL and zlib framing", "[class][page-
             }
             pageTextImport(makeContainer({first, second}, epoch), profile, document, report);
         }
-        const auto assignment = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+        const auto assignment = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
         REQUIRE(assignment);
         CHECK(assignment->block == 7);
         CHECK(assignment->oddEven == PageTextTarget::PageAssignType::Odd);
@@ -336,8 +336,8 @@ TEST_CASE("Finale 2012 page text part records overlay unlinked fields", "[class]
     CHECK(linkedRight->getSourcePartId() == musx::dom::SCORE_PARTID);
 
     const auto unlinked = readFixture("evidence/F2012/F2012-pagetext-part-unlinked.mus");
-    const auto scoreLeft = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
-    const auto scoreRight = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 1);
+    const auto scoreLeft = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
+    const auto scoreRight = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{1});
     const auto partLeft = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::Cmper{1}, musx::dom::Cmper{1}, musx::dom::Inci{0});
     const auto partRight = unlinked.document->getOthers()->get<PageTextTarget>(musx::dom::Cmper{1}, musx::dom::Cmper{1}, musx::dom::Inci{1});
     REQUIRE(scoreLeft);
@@ -363,7 +363,7 @@ TEST_CASE("Finale 2012 page text part records overlay unlinked fields", "[class]
 TEST_CASE("Coda-banner page text resolves its synthesized TextBlock", "[class][page-text]")
 {
     const auto result = readFixture("evidence/F100/F100-pagetitle.mus");
-    const auto assignment = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+    const auto assignment = result.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
     REQUIRE(assignment);
     CHECK(assignment->getTextBlock());
     CHECK(assignment->block == assignment->getTextBlock()->getCmper());
@@ -378,30 +378,31 @@ TEST_CASE("Coda-banner page text resolves its synthesized TextBlock", "[class][p
     CHECK(field(result.report, "others.pageTextAssign[1,0].rightPgXDisp").origin == ValueOrigin::Unmapped);
 
     const auto older = readFixture("evidence/F263/F263-staffopts.mus");
-    const auto range = older.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto range = older.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(range);
     CHECK(range->getTextBlock());
     CHECK(range->startPage == 1);
     CHECK(range->endPage == 0);
     CHECK(range->oddEven == PageTextTarget::PageAssignType::Even);
     CHECK(range->yDisp == 42);
-    CHECK(older.document->getOthers()->getArray<PageTextTarget>(musx::dom::SCORE_PARTID, 1).size() == 7);
+    CHECK(older.document->getOthers()->getArray<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}).size() == 7);
 
     const auto moved = readFixture("evidence/F100/F100-pagetitle-ydisp.mus");
-    const auto movedAssignment = moved.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+    const auto movedAssignment = moved.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
     REQUIRE(movedAssignment);
     CHECK(movedAssignment->getTextBlock());
     CHECK(movedAssignment->yDisp == -557);
     CHECK(field(moved.report, "others.pageTextAssign[1,0].yDisp").rawValue == 596);
 
     const auto upgraded = readFixture("evidence/F263/F263-F100-pagetitle-ydisp.mus");
-    const auto upgradedAssignment = upgraded.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 1, 0);
+    const auto upgradedAssignment =
+        upgraded.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, musx::dom::Inci{0});
     REQUIRE(upgradedAssignment);
     CHECK(upgradedAssignment->getTextBlock());
     CHECK(upgradedAssignment->yDisp == movedAssignment->yDisp);
 
     const auto header = readFixture("evidence/F100/F100-header-x7-y11.mus");
-    const auto headerAssignment = header.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto headerAssignment = header.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(headerAssignment);
     CHECK(headerAssignment->getTextBlock());
     CHECK(headerAssignment->xDisp == 7);
@@ -413,7 +414,7 @@ TEST_CASE("Coda-banner page text resolves its synthesized TextBlock", "[class][p
     CHECK(field(header.report, "others.pageTextAssign[0,0].yDisp").rawValue == 11);
 
     const auto footer = readFixture("evidence/F100/F100-footer-x7-y11.mus");
-    const auto footerAssignment = footer.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto footerAssignment = footer.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(footerAssignment);
     CHECK(footerAssignment->getTextBlock());
     CHECK(footerAssignment->xDisp == 7);
@@ -454,15 +455,15 @@ TEST_CASE("An empty Coda text slot does not consume a page assignment incidence"
     finale_mus_reader::others::importPageTextAssigns(context);
     finale_mus_reader::runDeferredChecks(pending);
 
-    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
-    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 1);
+    const auto first = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
+    const auto second = document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{1});
     REQUIRE(first);
     REQUIRE(second);
     CHECK(first->block == 11);
     CHECK(first->xDisp == 10);
     CHECK(second->block == 33);
     CHECK(second->xDisp == 30);
-    CHECK_FALSE(document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 2));
+    CHECK_FALSE(document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{2}));
     CHECK(field(report, "others.pageTextAssign[0,1].block").rawValue == 2);
 }
 
@@ -470,8 +471,8 @@ TEST_CASE("Adding Coda measure text leaves page text assignments unchanged", "[c
 {
     const auto header = readFixture("evidence/F100/F100-header.mus");
     const auto withMeasureText = readFixture("evidence/F100/F100-header-meastext.mus");
-    const auto first = header.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
-    const auto second = withMeasureText.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto first = header.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
+    const auto second = withMeasureText.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(first);
     REQUIRE(second);
     const auto firstBlock = first->getTextBlock();
@@ -485,15 +486,15 @@ TEST_CASE("Adding Coda measure text leaves page text assignments unchanged", "[c
     CHECK(secondText->text == firstText->text);
     CHECK(second->xDisp == first->xDisp);
     CHECK(second->yDisp == first->yDisp);
-    CHECK(withMeasureText.document->getOthers()->getArray<PageTextTarget>(musx::dom::SCORE_PARTID, 0).size() == 1);
+    CHECK(withMeasureText.document->getOthers()->getArray<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}).size() == 1);
 }
 
 TEST_CASE("HS Except Page 1 starts a repeating page text assignment on page two", "[class][page-text]")
 {
     const auto baseline = readFixture("evidence/F263/F263-F100-header.mus");
     const auto exceptFirst = readFixture("evidence/F263/F263-F100-header-excp1.mus");
-    const auto ordinary = baseline.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
-    const auto excluded = exceptFirst.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, 0, 0);
+    const auto ordinary = baseline.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
+    const auto excluded = exceptFirst.document->getOthers()->get<PageTextTarget>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, musx::dom::Inci{0});
     REQUIRE(ordinary);
     REQUIRE(excluded);
     CHECK(ordinary->startPage == 1);
