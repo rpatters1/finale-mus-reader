@@ -84,7 +84,7 @@ constexpr EarlyTuple contiguousEarlyTuple(FontType type, std::string_view tag, s
 // Established except for StaffNames: Finale 1.0 calls the source preference "Name", and this
 // era has exactly one of it where Finale 3.0 and later store four. **Believed:** that one
 // preference continues as StaffNames. See @ref codaNameCompanionTypes.
-const std::array<EarlyTuple, 13> earlyCodaTuples{{
+const std::array<EarlyTuple, 14> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::Music, "02", 0),
     contiguousEarlyTuple(FontType::Key, "03", 3),
     {FontType::Clef, {earlyField("04", 0), earlyField("39", 4), earlyField("39", 5)}},
@@ -98,6 +98,9 @@ const std::array<EarlyTuple, 13> earlyCodaTuples{{
     contiguousEarlyTuple(FontType::LyricChorus, "27", 0),
     contiguousEarlyTuple(FontType::LyricSection, "27", 3),
     contiguousEarlyTuple(FontType::StaffNames, "04", 3),
+    // Words 1-3 of the multimeasure-rest defaults, which hold the rest number's font in this
+    // era. Finale 3.0 stopped storing it there.
+    contiguousEarlyTuple(FontType::MultiMeasRest, "25", 1),
 }};
 
 // The Coda-banner era exposes a single "Name" font preference. Finale 3.0 split it into the

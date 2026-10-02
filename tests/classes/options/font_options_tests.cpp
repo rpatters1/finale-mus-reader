@@ -392,9 +392,22 @@ void testFontOptionsCapture()
     const auto f100Tuplet = expectEarlyFont("evidence/F100/F100-tuplet.mus", FontType::Tuplet, 20, 17, 0);
     expect(f100Tuplet.document->getOptions()->get<FontOptions>()->getFontInfo(FontType::ChordAcci)->fontId == 20,
         "The ChordAcci side effect in the controlled tuplet save was not recovered");
+    const auto f100NoMmRests = expectEarlyFont("evidence/F100/F100-nommrests.mus", FontType::MultiMeasRest, 1, 24, 0);
+    const auto f100MmRests = expectEarlyFont("evidence/F100/F100-mmrests.mus", FontType::MultiMeasRest, 2, 27, 2);
+    expect(f100MmRests.document->getOptions()->get<FontOptions>()->getFontInfo(FontType::MultiMeasRest)->italic,
+        "The Finale 1.0.0 multimeasure-rest number font effects were not recovered");
+    expect(field(f100MmRests, "options.fontOptions[" + std::to_string(static_cast<std::size_t>(FontType::MultiMeasRest)) + "].fontId").origin
+               == ValueOrigin::LegacyMus,
+        "The Finale 1.0.0 multimeasure-rest number font was not reported as recovered");
+    // From Finale 3.0 the number font is an ordinary entry of the default-font array.
+    const auto f300NoMmRests = expectEarlyFont("evidence/F300/F300-nommrest.mus", FontType::MultiMeasRest, 0, 24, 0);
+    const auto f300MmRests = expectEarlyFont("evidence/F300/F300-mmrest.mus", FontType::MultiMeasRest, 2, 11, 1);
+    expect(f300MmRests.document->getOptions()->get<FontOptions>()->getFontInfo(FontType::MultiMeasRest)->bold,
+        "The Finale 3.0 multimeasure-rest number font effects were not recovered");
 
     for (const auto* result : {&f2002, &f2005, &f2007, &f2012, &f100Baseline, &f100Music, &f263Baseline, &f263Music, &f100Text, &f100Lyric,
-             &f100Accis, &f100Chord, &f100Chorus, &f100Clef, &f100Ending, &f100Key, &f100Name, &f100Section, &f100Time, &f100Tuplet}) {
+             &f100Accis, &f100Chord, &f100Chorus, &f100Clef, &f100Ending, &f100Key, &f100Name, &f100Section, &f100Time, &f100Tuplet, &f100NoMmRests,
+             &f100MmRests, &f300NoMmRests, &f300MmRests}) {
         const auto options = result->document->getOptions()->get<FontOptions>();
         for (const auto& [type, font] : options->fontOptions) {
             (void)type;

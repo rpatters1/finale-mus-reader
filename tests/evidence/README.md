@@ -1,8 +1,9 @@
 # Test fixtures
 
 Controlled Finale documents used by the test suite. Each directory holds the fixtures written by
-one Finale release, named by that release: `F100` is Finale 1.0.0, `F263` is 2.6.3, `F372` is
-3.7.2, `F97` and `F98` are Finale 97 and 98, and `F2000` through `F2012` are the annual releases.
+one Finale release, named by that release: `F100` is Finale 1.0.0, `F263` is 2.6.3, `F300` is 3.0,
+`F372` is 3.7.2, `F97` and `F98` are Finale 97 and 98, and `F2000` through `F2012` are the annual
+releases.
 
 Within a directory:
 

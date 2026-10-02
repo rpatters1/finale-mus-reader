@@ -225,6 +225,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/marking_category.cpp
     src/import/others/measure_number_region.cpp
     src/import/others/measure.cpp
+    src/import/others/multimeasure_rest.cpp
     src/import/others/multistaff_instrument_group.cpp
     src/import/others/name_position.cpp
     src/import/others/page.cpp
