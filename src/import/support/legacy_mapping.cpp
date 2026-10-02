@@ -315,6 +315,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportIndependentStaffDetails, &details::importIndependentStaffDetails),
         FINALE_MUS_READER_IMPORTER(ImportKeySymbolListElements, &details::importKeySymbolListElements),
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
+        FINALE_MUS_READER_IMPORTER(ImportMeasureTextAssigns, &details::importMeasureTextAssigns),
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),
         FINALE_MUS_READER_IMPORTER(ImportStaffGroups, &details::importStaffGroups),
         FINALE_MUS_READER_IMPORTER(ImportStaffSizes, &details::importStaffSizes),

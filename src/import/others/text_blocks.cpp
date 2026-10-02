@@ -170,8 +170,8 @@ void importStoredTextBlocks(const ImportContext& context)
 void importLegacyPageTextBlocks(const ImportContext& context)
 {
     const auto& pool = context.index.getOthers();
-    const auto connectorCmpers = pool.cmpersForTag(records::packTag("PT"));
-    const bool separateBlockIds = !pool.cmpersForTag(records::packTag("pT")).empty() && !connectorCmpers.empty();
+    const auto connectorCmpers = pool.cmpersForTag(earlyTextBlockTag);
+    const bool separateBlockIds = hasEarlyConnectedTextAssignments(context);
     musx::dom::Cmper nextBlockId = 0;
     for (const auto cmper : connectorCmpers) {
         nextBlockId = (std::max)(nextBlockId, musx::dom::Cmper(cmper));

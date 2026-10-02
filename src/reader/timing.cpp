@@ -67,6 +67,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportMarkingCategories: return "marking_categories";
     case Phase::ImportMeasureNumberRegions: return "measure_number_regions";
     case Phase::ImportMeasureGraphicAssignments: return "meas_graphic_assigns";
+    case Phase::ImportMeasureTextAssigns: return "meas_text_assigns";
     case Phase::ImportMeasures: return "measures";
     case Phase::ImportMiscOptions: return "misc_options";
     case Phase::ImportMultimeasureRestOptions: return "mmrest_options";

@@ -44,6 +44,20 @@ F2001Win-meastext.mus / .ETF / .musx
     A measure-attached block containing `Measure-attachéd text: €2.99`. It confirms
     Windows-1252 text decoding at the DCL lower boundary.
 
+F2001Win-meastext-pos.mus / .etf / .musx
+    sha256 f34ca6f44f64200e4fc99cfaf7a75885140971f5f2dc57b3ec977e8b9b888146 (.mus)
+    sha256 735c7f798f7971c4a7cbf2fc477d4d545152940181b7035b9982f5ff939a852c (.etf)
+    sha256 bfc8b589925059025c11ada5ac376927c4e67e41a5e1ef6b5a0292bba5744eda (.musx)
+    One measure text block at staff 1, measure 1, with a positive horizontal position. Its
+    `mt(1,1)` tuple is `1 784 78 0 0`; the companion stores `xdispEdu` 784.
+
+F2001Win-meastext-neg.mus / .etf / .musx
+    sha256 07da5bbd54151b68f85aa3552600dd976e847680dfb1a6dc85b9bbe5f19768a2 (.mus)
+    sha256 40d7d5c2d6ce89562e904aeccd5e2c27f053bab73f39d94cd17e2802e940785c (.etf)
+    sha256 7b8c66400cf06ad47bd3705b23d141a9429034e3f82c25fed96e2a37d11bfc03 (.musx)
+    The same measure text block with a negative horizontal position. Its `mt(1,1)` tuple is
+    `1 -249 117 0 0`; the companion stores `xdispEvpu` -249.
+
 F2001Win-section-lyric.mus / .ETF / .musx
     sha256 324284085ba263fe184afd0a2beb2079ba200227d720cbc63b64a43690428f2b (.mus)
     sha256 31795894401cdf477378b6589af5aab97d7feaafa28b365c0b225a527a09fb5c (.ETF)

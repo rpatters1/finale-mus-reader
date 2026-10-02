@@ -26,3 +26,25 @@ F300-mmrest.mus / .etf / -finale27/F300-mmrest.musx
     and changes the rest number font to Geneva 11 bold. The rests are one-row XI
     records 361 n 7 1 0 0. The font is tuple 12 of selector 24, (2, 11, 1);
     selector 25 words 1-3 stay zero. The save also changes other records.
+
+F300-meatext-pos.mus / .etf / -finale27/F300-meatext-pos.musx
+    sha256 1df1abed62326acadb31a8383e7ba090e4aaa213ba26330d10c48586a1138a23 (.mus)
+    sha256 b7b0e14e6e4fe208148be35399e9c6afd43172bbad607c8bcf11f28e8854af57 (.etf)
+    sha256 8482ccfb2c6e1a75b8796b92d86f623d243cbf02d2ba8d5fa1b30321a62e7463 (.musx)
+    One measure text block at staff 1, measure 1, positioned right of the measure start.
+    Its `mt(1,1)` tuple is `1 88 -116 0 0`; no `TX` row is stored, and `PT(1)` names
+    block text 1. The companion stores `xdispEdu` 455 and `ydisp` -116.
+
+F300-meatext-neg.mus / .etf / -finale27/F300-meatext-neg.musx
+    sha256 2df51501d4fe0a7cc8a172ea638dc7a7d1f7066e3d5c4f797bb6b54cedf21f6c (.mus)
+    sha256 064e3bf60ea74f9d9609d4db99bf9dfd18d5c65b127c65c4c5de698b467de6dd (.etf)
+    sha256 c5731d14520f0fd5377b4455c6b3b9a8d925c862cc97b5dd55bef3711f077933 (.musx)
+    The same measure text block positioned left of the measure start. Its `mt(1,1)` tuple
+    is `1 -340 -136 0 0`; the companion stores `xdispEvpu` -364 and `ydisp` -136.
+
+F300-meatext-pos-staffred.mus / .etf / -finale27/F300-meatext-pos-staffred.musx
+    sha256 c7dc12fd6637fb2b5afb16054ea1cbce22845830c7745140f4671b16b85507d9 (.mus)
+    sha256 997448d0ba853e6145d92d1ac122d7ed2f966534b5dbfffc3d8f8d933c289bef (.etf)
+    sha256 bb63a40df2df524e027be8885b82204292cea3df90eb64ec1f64a7b703e85995 (.musx)
+    From F300-meatext-pos, with staff 1 reduced to 67% on its system. The `mt(1,1)` tuple
+    is unchanged at `1 88 -116 0 0`; the companion stores `ydisp` -173.

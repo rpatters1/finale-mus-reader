@@ -86,6 +86,46 @@ F2012-pagetext-part-unlinked.mus / -finale27/F2012-pagetext-part-unlinked.musx
     From F2012-pagetext-part, unlinks the right-justified assignment's position
     and the left-justified assignment's visibility in the part.
 
+F2012-meastext-part.mus / -finale27/F2012-meastext-part.musx
+    sha256 73bb0ef55dcfab1023c33f082ae95269c7e19590e50e79310c995b3c11157677 (.mus)
+    sha256 d058f5febcabb1c127e4eb9bb3241845ceb9f1685ba2387bf21ef85778b593a5 (.musx)
+    Two staves, each extracted as a linked part, with one measure text at measure 1 of
+    each staff: staff 1 right of the first beat and staff 2 left of it. Only score
+    0x0420 records are stored.
+
+F2012-meastext-part-moved.mus / -finale27/F2012-meastext-part-moved.musx
+    sha256 6a780df25171ce8dad3a77846c9255a759cc4323de6d17b88de2a581b3f2e7a8 (.mus)
+    sha256 872ae38dc0bb489cc5e3c021071b739d771e5b88433a2903bceb9b3e040340eb (.musx)
+    From F2012-meastext-part, moves the staff-1 text vertically in part 1. A part-1
+    0x0420 record is added whose continuation selects both displacement words.
+
+F2012-meastext-part-moved-score-hidden.mus / -finale27/F2012-meastext-part-moved-score-hidden.musx
+    sha256 c4315504accff189c16d2b20d21aa73a16ede797a97b7638c3e78619779e2366 (.mus)
+    sha256 c32bdd22171d3cdb457163f2bd993feac551a33516c42b2377e13223aacf3a2f (.musx)
+    From F2012-meastext-part-moved, makes the staff-1 text screen-only in the score.
+    The part-1 record is unchanged; the companion part inherits the hidden flag.
+
+F2012-meastext-part-hidden.mus / -finale27/F2012-meastext-part-hidden.musx
+    sha256 cf0713a69affef85b3c0c90a6371b4e0792d1507f4edd740c71b900f17beb774 (.mus)
+    sha256 fd346049b3e92f66e78ed0fcc528b0991a748deeacf5442e025bd8fb151d36d8 (.musx)
+    From F2012-meastext-part-moved-score-hidden, makes the staff-2 text screen-only
+    in part 2. A part-2 0x0420 record is added whose continuation selects only the
+    hidden flag.
+
+F2012-meastext-part-score-moved.mus / -finale27/F2012-meastext-part-score-moved.musx
+    sha256 226eea5bd2780d7310f783523b9f545c5e6385be1e0d962d86955e297e5ac078 (.mus)
+    sha256 0aa18faa634baa276bf2d08b4489feee7840cfc590fb6b196ce6c275e3aba93e (.musx)
+    From F2012-meastext-part-hidden, moves the staff-2 text horizontally in the score.
+    The part-2 record still stores the earlier position; the companion part takes the
+    score position.
+
+F2012-meastext-part-staff2red.mus / -finale27/F2012-meastext-part-staff2red.musx
+    sha256 2483a89d3e7f8ee335dd54aff35e1d4b2c4dcf31ba86bdcd938e4653c2eee3bb (.mus)
+    sha256 435404e7fb3bf0cfea484cf0c6148ef73d79e592fb2096743111deff5433e5e1 (.musx)
+    From F2012-meastext-part-score-moved, reduces staff 2 to 57% on its system. The
+    measure text records are unchanged, and the companion keeps their vertical
+    displacements.
+
 F2012-piano.mus
     sha256 490270f73e3f31b28ffabb87d52f36896264065e24e6634a05445bce327a6560
 -finale27/F2012-piano.musx

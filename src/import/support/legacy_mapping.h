@@ -167,13 +167,23 @@ struct RecordFamilySource
 /// unshared.
 [[nodiscard]] musx::dom::EnigmaBase::ShareMode recordShareMode(const RecordFamilySource& source, const records::LegacyRow& row);
 
+/// @brief Initializes a partially linked part target from the score instance of the same identity.
+/// @details That is what partial sharing means: the part record states only what the part changed,
+/// and everything else is the score's. musxdom owns that operation, so it is called rather than
+/// reproduced. A part record whose score instance has not been created is left uninitialized
+/// instead; the record enumeration hands out score records first, so that case is a source whose
+/// score record is missing rather than an ordering mistake. Every record target is created through
+/// this one path.
+template <typename T>
+void initializePartialFromScore(const std::shared_ptr<T>& target, const std::shared_ptr<const T>& score)
+{
+    if (target && score && target->getShareMode() == musx::dom::EnigmaBase::ShareMode::Partial) {
+        musx::factory::PartSharingFactory::initializePartial(target, score);
+    }
+}
+
 /// @brief Creates an others instance with identity and sharing taken from its source row.
-/// @details A partially linked part instance is initialized from the score instance of the same
-/// identity before it is returned, because that is what partial sharing means: the part record
-/// states only what the part changed, and everything else is the score's. musxdom owns that
-/// operation, so it is called rather than reproduced. A part record whose score instance has not
-/// been created is left uninitialized instead; the record enumeration hands out score records
-/// first, so that case is a source whose score record is missing rather than an ordering mistake.
+/// @details A partially linked part instance is initialized by @ref initializePartialFromScore.
 template <typename T>
 [[nodiscard]] std::shared_ptr<T> createOthersRecordTarget(const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
     const records::LegacyRow& row, musx::dom::Cmper cmper, musx::dom::Inci inci = 0)
@@ -191,30 +201,39 @@ template <typename T>
     } else {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper);
     }
-    if (target && shareMode == musx::dom::EnigmaBase::ShareMode::Partial) {
-        if (const auto score = document->getOthers()->template get<T>(musx::dom::SCORE_PARTID, cmper, lookupInci)) {
-            musx::factory::PartSharingFactory::initializePartial(target, score);
-        }
+    if (shareMode == musx::dom::EnigmaBase::ShareMode::Partial) {
+        initializePartialFromScore(target, document->getOthers()->template get<T>(musx::dom::SCORE_PARTID, cmper, lookupInci));
     }
     return target;
 }
 
 /// @brief Creates a details instance with identity and sharing taken from its
 /// source row.
+/// @details A partially linked part instance is initialized by @ref initializePartialFromScore.
 template <typename T>
 [[nodiscard]] std::shared_ptr<T> createDetailsRecordTarget(const musx::dom::DocumentPtr& document, const RecordFamilySource& source,
     const records::LegacyRow& row, musx::dom::Cmper cmper1, musx::dom::Cmper cmper2, musx::dom::Inci inci = 0)
 {
     const auto shareMode = recordShareMode(source, row);
+    const bool partial = shareMode == musx::dom::EnigmaBase::ShareMode::Partial;
     std::shared_ptr<T> target;
     if constexpr (std::is_base_of_v<musx::dom::EntryDetailsBase, T>) {
         const auto entryNumber = (static_cast<musx::dom::EntryNumber>(cmper1) << 16U) | cmper2;
         target = std::make_shared<T>(document, row.partId, shareMode, entryNumber, inci);
+        if (partial) {
+            initializePartialFromScore(target, document->getDetails()->template get<T>(musx::dom::SCORE_PARTID, entryNumber, inci));
+        }
     } else if constexpr (std::is_constructible_v<T, const musx::dom::DocumentPtr&, std::uint16_t, musx::dom::EnigmaBase::ShareMode, musx::dom::Cmper,
                              musx::dom::Cmper, musx::dom::Inci>) {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper1, cmper2, inci);
+        if (partial) {
+            initializePartialFromScore(target, document->getDetails()->template get<T>(musx::dom::SCORE_PARTID, cmper1, cmper2, inci));
+        }
     } else {
         target = std::make_shared<T>(document, row.partId, shareMode, cmper1, cmper2);
+        if (partial) {
+            initializePartialFromScore(target, document->getDetails()->template get<T>(musx::dom::SCORE_PARTID, cmper1, cmper2));
+        }
     }
     return target;
 }
