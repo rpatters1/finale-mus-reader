@@ -9,6 +9,16 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-beatchart.mus / .etf / -finale27/F263-beatchart.musx
+    sha256 b12d08a78e322ea1023b9757119b621e927ff2bf22e8833643181cfb5177a95d (.mus)
+    sha256 3889f6fe72bf45221c107464f3bfb54d94f7e6220e9757f64a7a83934b8b995f (.etf)
+    sha256 a2f35da4d6003c2ce719da9b82131e61d0e4a71df2f316957cb75fdf61b9a21a (.musx)
+    Two staves, two measures of uneven rhythms positioned by beat chart, each
+    measure 1176 EVPU wide, with one mid-measure clef in each staff and measure.
+    The `CE` items store horizontal positions 209 and 381 EVPU on staff 1 and 749
+    and 965 EVPU on staff 2; each `GF` frame names its list in word 1. The Finale
+    27 companion places the four clefs at `xEduPos` 238, 475, 981, and 2197.
+
 F263-F100-pagetitle-ydisp.mus / .etf / -finale27/F263-F100-pagetitle-ydisp.musx
     sha256 5784b1f26f776e4ec1e79ca037b28ac6225ea57b877606d49150fbe4f55a90 (.mus)
     sha256 3612067e44aca7b62f8e4169062812b674b7f261e1d75e6a3790828284b52d94 (.etf)

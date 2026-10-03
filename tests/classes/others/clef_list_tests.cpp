@@ -6,7 +6,10 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace finale_mus_reader_tests {
@@ -23,7 +26,9 @@ ImportReport importClefList(const finale_mus_reader::container::ParsedContainer&
 {
     const auto index = LegacyRecordIndex::build(parsed);
     auto session = musx::factory::DocumentFactory::begin();
-    document = session.getDocument();
+    if (!document) {
+        document = session.getDocument();
+    }
     auto referenceSession = musx::factory::DocumentFactory::begin();
     const auto reference = std::move(referenceSession).finish();
     ImportReport report(parsed.formatEpoch);
@@ -33,6 +38,7 @@ ImportReport importClefList(const finale_mus_reader::container::ParsedContainer&
     musx::factory::ConstructionContext construction;
     const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
     finale_mus_reader::others::importClefLists(context);
+    finale_mus_reader::runDeferredChecks(pending);
     return report;
 }
 
@@ -119,13 +125,59 @@ TEST_CASE("ClefList splits a zlib payload into six-word items", "[class][clef-li
     }
 }
 
-TEST_CASE("ClefList is not imported from the Coda-banner layout", "[class][clef-list]")
+TEST_CASE("ClefList converts a Coda-banner list through the measure named by its frame", "[class][clef-list]")
 {
-    musx::dom::DocumentPtr document;
-    const auto report = importClefList(makeContainer({{clefListCmper, "CE", {3, 145, 0, 75, 0, 0}}}, FormatEpoch::CodaBanner), document);
-    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, clefListCmper).empty());
-    CHECK(std::any_of(report.diagnostics.begin(), report.diagnostics.end(),
-        [](const auto& diagnostic) { return diagnostic.message.find("Mid-measure clefs") != std::string::npos; }));
+    // Measures 600 EVPU wide whose music starts 36 EVPU in, so a stored 145 EVPU is Edu 792 of a
+    // 4096-Edu measure and 318 EVPU is Edu 2048. Frames 1, 3, and 4 name lists 2, 5, and 6; frame 2
+    // holds alto clef 4 alone. Stored 30 EVPU precedes the music, so list 6's only clef moves to
+    // the barline and leaves no list. No frame names list 7.
+    auto session = musx::factory::DocumentFactory::begin();
+    musx::dom::DocumentPtr document = session.getDocument();
+    auto spacing = std::make_shared<Spacing>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
+    spacing->musFront = 36;
+    document->getOptions()->add(Spacing::XmlNodeName, std::move(spacing));
+    auto staff =
+        std::make_shared<musx::dom::others::Staff>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
+    staff->defaultClef = 0;
+    document->getOthers()->add(musx::dom::others::Staff::XmlNodeName, std::move(staff));
+    for (musx::dom::Cmper meas = 1; meas <= 4; ++meas) {
+        auto measure = std::make_shared<musx::dom::others::Measure>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, meas);
+        measure->width = 600;
+        measure->beats = 4;
+        measure->divBeat = 1024;
+        document->getOthers()->add(musx::dom::others::Measure::XmlNodeName, std::move(measure));
+    }
+    auto parsed = makeContainer(
+        {{2, "CE", {3, 145, -8, 75, 0, 0}}, {5, "CE", {1, 318, 0, 75, 0, 0}}, {6, "CE", {2, 30, 0, 75, 0, 0}}, {7, "CE", {3, 200, 0, 75, 0, 0}}},
+        FormatEpoch::CodaBanner);
+    for (const auto& [meas, frame] : {std::pair<std::uint16_t, std::vector<std::int16_t>>{1, {91, 2, 0, 0, 0x0400}}, {2, {0, 4, 0, 0, 0}},
+             {3, {0, 5, 0, 0, 0x0400}}, {4, {0, 6, 0, 0, 0x0400}}}) {
+        parsed.blocks.push_back(std::move(makeDetailContainer(FormatEpoch::CodaBanner, 1, meas, frame, "GF").blocks.front()));
+    }
+    const auto report = importClefList(parsed, document);
+
+    const auto first = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{2});
+    REQUIRE(first.size() == 2);
+    CHECK(first[0]->clefIndex == 0);
+    CHECK(first[0]->xEduPos == 0);
+    CHECK(first[0]->percent == 0);
+    CHECK(first[1]->clefIndex == 3);
+    CHECK(first[1]->xEduPos == 792);
+    CHECK(first[1]->yEvpuPos == -8);
+    CHECK(first[1]->percent == 75);
+    const auto second = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{5});
+    REQUIRE(second.size() == 2);
+    CHECK(second[0]->clefIndex == 4);
+    CHECK(second[1]->clefIndex == 1);
+    CHECK(second[1]->xEduPos == 2048);
+    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{6}).empty());
+    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{7}).empty());
+
+    CHECK(field(report, "others.clefEnum[2,0].clefIndex").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(field(report, "others.clefEnum[2,0].percent").origin == ValueOrigin::LegacyBehavior);
+    CHECK(field(report, "others.clefEnum[2,1].xEduPos").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(field(report, "others.clefEnum[2,1].xEduPos").rawValue == 145);
+    CHECK(field(report, "others.clefEnum[2,1].yEvpuPos").origin == ValueOrigin::LegacyMus);
 }
 
 TEST_CASE("ClefList rejects an incomplete trailing item", "[class][clef-list]")
@@ -180,15 +232,34 @@ TEST_CASE("ClefList recovers a Coda-banner list upgraded by Finale 3.7.2", "[cla
     CHECK(list[1]->percent == 75);
 }
 
-TEST_CASE("ClefList skips controlled Coda-banner lists", "[class][clef-list][fixture]")
+TEST_CASE("ClefList converts controlled Coda-banner lists", "[class][clef-list][fixture]")
 {
-    for (const auto* fixture : {"evidence/F100/F100-midclef1.mus", "evidence/F100/F100-midclef2.mus", "evidence/F263/F263-midclef1.mus",
-             "evidence/F263/F263-midclef2.mus"}) {
+    for (const auto& [fixture, position] : {std::pair{"evidence/F100/F100-midclef1.mus", 537}, std::pair{"evidence/F100/F100-midclef2.mus", 1758},
+             std::pair{"evidence/F263/F263-midclef1.mus", 356}, std::pair{"evidence/F263/F263-midclef2.mus", 1431}}) {
         CAPTURE(fixture);
         const auto result = readFixture(fixture);
-        CHECK(result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID).empty());
-        CHECK(std::any_of(result.report.diagnostics.begin(), result.report.diagnostics.end(),
-            [](const auto& diagnostic) { return diagnostic.message.find("Mid-measure clefs") != std::string::npos; }));
+        const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, fixtureClefListCmper);
+        REQUIRE(list.size() == 2);
+        CHECK(list[0]->clefIndex == 0);
+        CHECK(list[0]->xEduPos == 0);
+        CHECK(list[1]->clefIndex == 3);
+        CHECK(list[1]->xEduPos == position);
+    }
+}
+
+TEST_CASE("ClefList converts Coda-banner lists in measures spaced by beat chart", "[class][clef-list][fixture]")
+{
+    // Each barline clef is the one in effect: the staff's default, then the clef the previous
+    // measure's list ends with.
+    const auto result = readFixture("evidence/F263/F263-beatchart.mus");
+    for (const auto& [listId, barline, clef, position] :
+        {std::tuple{3, 0, 1, 238}, std::tuple{4, 1, 0, 475}, std::tuple{1, 0, 3, 981}, std::tuple{2, 3, 0, 2196}}) {
+        CAPTURE(listId);
+        const auto list = result.document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper(listId));
+        REQUIRE(list.size() == 2);
+        CHECK(list[0]->clefIndex == barline);
+        CHECK(list[1]->clefIndex == clef);
+        CHECK(list[1]->xEduPos == position);
     }
 }
 

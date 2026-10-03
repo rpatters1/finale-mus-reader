@@ -79,7 +79,7 @@ TEST_CASE("Measure text tuples split the horizontal word by sign from the DCL ep
     }
 }
 
-TEST_CASE("Measure text before the DCL epoch keeps its measure-edge offset in EVPU", "[class][measure-text]")
+TEST_CASE("Measure text before the DCL epoch without its measure keeps its measure-edge offset", "[class][measure-text]")
 {
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
@@ -160,8 +160,8 @@ TEST_CASE("Coda measure text resolves its PT connector to the numbered block tex
     const auto assignment = result.document->getDetails()->get<MeasureTextTarget>(musx::dom::SCORE_PARTID, 1, 1, musx::dom::Inci(0));
     REQUIRE(assignment);
     CHECK(assignment->block == 1);
-    CHECK(assignment->xDispEdu == 0);
-    CHECK(assignment->xDispEvpu == 52);
+    CHECK(assignment->xDispEdu == 116);
+    CHECK(assignment->xDispEvpu == 0);
     CHECK(assignment->yDisp == -200);
     CHECK_FALSE(assignment->hidden);
     const auto block = assignment->getTextBlock();
@@ -199,20 +199,23 @@ TEST_CASE("Finale 2001 measure text splits its horizontal position by sign", "[c
     CHECK(block->textId == 1);
 }
 
-TEST_CASE("Finale 3.0 measure text keeps its measure-edge offset and resolves PT", "[class][measure-text]")
+TEST_CASE("Finale 3.0 measure text moves its offset to the first beat and resolves PT", "[class][measure-text]")
 {
-    for (const auto& [fixture, stored, vertical] :
-        {std::tuple{"evidence/F300/F300-meatext-pos.mus", 88, -116}, std::tuple{"evidence/F300/F300-meatext-neg.mus", -340, -136}}) {
+    // The music starts 24 EVPU into a 600-EVPU measure: stored 88 EVPU is Edu 455, and stored
+    // -340 EVPU is 364 EVPU before the first beat.
+    for (const auto& [fixture, stored, edu, evpu, vertical] :
+        {std::tuple{"evidence/F300/F300-meatext-pos.mus", 88, 455, 0, -116}, std::tuple{"evidence/F300/F300-meatext-neg.mus", -340, 0, -364, -136}}) {
         const auto result = readFixture(fixture);
         const auto assignment = result.document->getDetails()->get<MeasureTextTarget>(musx::dom::SCORE_PARTID, 1, 1, musx::dom::Inci(0));
         REQUIRE(assignment);
         CHECK(assignment->block == 1);
-        CHECK(assignment->xDispEdu == 0);
-        CHECK(assignment->xDispEvpu == stored);
+        CHECK(assignment->xDispEdu == edu);
+        CHECK(assignment->xDispEvpu == evpu);
         CHECK(assignment->yDisp == vertical);
-        const auto* origin = measureTextField(result.report, 1, 1, 0, "xDispEvpu");
+        const auto* origin = measureTextField(result.report, 1, 1, 0, edu != 0 ? "xDispEdu" : "xDispEvpu");
         REQUIRE(origin);
         CHECK(origin->origin == ValueOrigin::LegacyMusAdjusted);
+        CHECK(origin->rawValue == stored);
         const auto block = assignment->getTextBlock();
         REQUIRE(block);
         CHECK(block->textId == 1);
@@ -220,6 +223,19 @@ TEST_CASE("Finale 3.0 measure text keeps its measure-edge offset and resolves PT
         const auto text = result.document->getTexts()->get<musx::dom::texts::BlockText>(block->textId);
         REQUIRE(text);
         CHECK(text->text.find("Measure Text") != std::string::npos);
+    }
+}
+
+TEST_CASE("Finale 3.0 measure text converts its offset through the measure's beat chart", "[class][measure-text]")
+{
+    // Before the first note, between two notes, and past the barline.
+    const auto result = readFixture("evidence/F300/F300-meastext-beatchart.mus");
+    for (const auto& [inci, edu, evpu] : {std::tuple{0, 0, -20}, std::tuple{1, 416, 0}, std::tuple{2, 27136, 0}}) {
+        CAPTURE(inci);
+        const auto assignment = result.document->getDetails()->get<MeasureTextTarget>(musx::dom::SCORE_PARTID, 1, 1, musx::dom::Inci(inci));
+        REQUIRE(assignment);
+        CHECK(assignment->xDispEdu == edu);
+        CHECK(assignment->xDispEvpu == evpu);
     }
 }
 

@@ -14,6 +14,7 @@
 #include <string_view>
 #include <utility>
 
+#include "import/shared/gframe_records.h"
 #include "import/shared/staff_defaults.h"
 #include "musx/musx.h"
 
@@ -25,8 +26,6 @@ using StaffStyleAssignTarget = musx::dom::others::StaffStyleAssign;
 using StaffStyleAssignStaffTarget = musx::dom::others::Staff;
 using StaffStyleAssignStyleTarget = musx::dom::others::StaffStyle;
 
-constexpr auto gframeHoldTag = records::packTag("GF");
-constexpr std::size_t gframeHoldEarlyFlagsSlot = 4;
 constexpr std::size_t gframeHoldFinale98FlagsSlot = 1;
 constexpr std::uint16_t gframeHoldAlternateNotationMask = 0x000f;
 
@@ -34,7 +33,7 @@ constexpr std::uint16_t gframeHoldAlternateNotationMask = 0x000f;
 {
     // Preliminary: presumed flags occupy word 4 before Finale 98 and word 1 beginning
     // with Finale 98. No structural discriminator is known; an absent version uses word 4.
-    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale98) ? gframeHoldFinale98FlagsSlot : gframeHoldEarlyFlagsSlot;
+    return sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale98) ? gframeHoldFinale98FlagsSlot : gframe::earlyFlagsSlot;
 }
 
 struct AlternateNotationStyle
@@ -170,8 +169,7 @@ void reportAlternateNotationStyleSource(const ImportContext& context, const Staf
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<StaffStyleAssignStyleTarget>(target.getSourcePartId(), target.getCmper());
         reporting.report().setField(key, "altNotation",
-            {Reporting::Origin::LegacyMusAdjusted, row.blockOffset, row.decodedOffset + flagsSlot * sizeof(std::uint16_t), storedType,
-                gframeHoldTag});
+            {Reporting::Origin::LegacyMusAdjusted, row.blockOffset, row.decodedOffset + flagsSlot * sizeof(std::uint16_t), storedType, gframe::tag});
     });
 }
 
@@ -245,7 +243,7 @@ void reportSynthesizedAlternateNotationAssignment(
         reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMusAdjusted);
         const auto adjusted = [&](const char* member, std::int64_t value) {
             reporting.report().setField(
-                key, member, {Reporting::Origin::LegacyMusAdjusted, run.firstRow->blockOffset, run.firstRow->decodedOffset, value, gframeHoldTag});
+                key, member, {Reporting::Origin::LegacyMusAdjusted, run.firstRow->blockOffset, run.firstRow->decodedOffset, value, gframe::tag});
         };
         adjusted("styleId", storedType);
         adjusted("startMeas", run.startMeas);
@@ -288,7 +286,7 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
         static_cast<void>(ensureAlternateNotationStyle(context, style));
     }
 
-    const RecordFamilySource source{&context.index.getDetails(), gframeHoldTag, false, true};
+    const RecordFamilySource source{&context.index.getDetails(), gframe::tag, false, true};
     std::set<std::uint16_t> unknownTypes;
     for (const auto& [partId, staffId] : recordKeys(source)) {
         std::optional<AlternateNotationRun> run;

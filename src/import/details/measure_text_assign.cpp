@@ -29,44 +29,79 @@ constexpr std::uint16_t measureTextHiddenFlag = 0x0001U;
 
 using EarlyBlockKeys = std::set<std::pair<musx::dom::Cmper, musx::dom::Cmper>>;
 
-/// @brief A stored vertical offset that awaits its staff's size on the containing system.
-struct ScaledVertical
+/// @brief A pre-DCL assignment whose stored offsets await the measure's layout and its staff's size.
+struct EarlyPlacement
 {
     std::shared_ptr<MeasureTextTarget> target;
-    const records::LegacyRow* row{};
-    std::size_t byteOffset{};
-    std::int16_t stored{};
+    const records::LegacyRow* horizontalRow{};
+    std::size_t horizontalOffset{};
+    std::int16_t horizontal{};
+    const records::LegacyRow* verticalRow{};
+    std::size_t verticalOffset{};
+    std::int16_t vertical{};
 };
+
+// Before the DCL epoch the horizontal word is an EVPU offset from the measure's left edge. Measured
+// from the first beat instead, a position before it stays an EVPU displacement and any other is
+// converted to Edu through the measure's spacing. Believed: the conversion is exact for a measure
+// without a beat chart and approximate within one. A measure the document lacks has no spacing,
+// so its offset is kept as stored.
+void placeHorizontal(const ImportContext& context, const RecordFamilySource& source, const EarlyPlacement& placement)
+{
+    auto& target = *placement.target;
+    const auto measure = context.document->getOthers()->get<musx::dom::others::Measure>(musx::dom::SCORE_PARTID, target.getCmper2());
+    bool converted = false;
+    if (measure) {
+        const auto fromFirstBeat = std::lround(placement.horizontal - measure->calcFirstBeatEvpu());
+        if (fromFirstBeat < 0) {
+            target.xDispEvpu = static_cast<musx::dom::Evpu>(fromFirstBeat);
+        } else {
+            target.xDispEvpu = 0;
+            target.xDispEdu = static_cast<musx::dom::Edu>(std::lround(measure->calcEduFromEvpu(placement.horizontal)));
+            converted = true;
+        }
+    }
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<MeasureTextTarget>(
+            musx::dom::SCORE_PARTID, target.getCmper1(), target.getInci().value_or(0), target.getCmper2());
+        const auto* stored = converted ? "xDispEdu" : "xDispEvpu";
+        const auto* other = converted ? "xDispEvpu" : "xDispEdu";
+        reportLegacyField(reporting, key, source, *placement.horizontalRow, stored, placement.horizontalOffset, placement.horizontal,
+            Reporting::Origin::LegacyMusAdjusted);
+        reportFallbackField(reporting, key, other, Reporting::Origin::LegacyBehavior, 0);
+    });
+}
 
 // Believed: before the DCL epoch the vertical offset is scaled by the staff's size on the system
 // that contains the measure, so the unscaled displacement divides by that size. A system's own
 // size does not scale it, and later sources store it unscaled.
-void unscaleVerticals(const ImportContext& context, const RecordFamilySource& source, const std::vector<ScaledVertical>& verticals)
+void unscaleVertical(const ImportContext& context, const RecordFamilySource& source, const EarlyPlacement& placement)
 {
     using StaffSystem = musx::dom::others::StaffSystem;
-    const auto systems = context.document->getOthers()->getArray<StaffSystem>(musx::dom::SCORE_PARTID);
-    for (const auto& vertical : verticals) {
-        const auto meas = vertical.target->getCmper2();
-        // A source saved without page layout has no systems, and its offset is not reduced. musxdom's
-        // measure-to-system lookup reads page ranges it resolves only once the document is
-        // finished, so the saved systems are searched directly.
-        const auto system =
-            std::ranges::find_if(systems, [meas](const auto& candidate) { return meas >= candidate->startMeas && meas < candidate->endMeas; });
-        if (system == systems.end()) {
-            continue;
-        }
-        const auto scaling = (*system)->calcStaffScaling(vertical.target->getCmper1());
-        if (scaling == 1 || scaling <= 0) {
-            continue;
-        }
-        vertical.target->yDisp = static_cast<musx::dom::Evpu>(std::lround((musx::util::Fraction(vertical.stored) / scaling).toDouble()));
-        withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            const auto key = reporting.template instanceKey<MeasureTextTarget>(
-                musx::dom::SCORE_PARTID, vertical.target->getCmper1(), vertical.target->getInci().value_or(0), meas);
-            reportLegacyField(
-                reporting, key, source, *vertical.row, "yDisp", vertical.byteOffset, vertical.stored, Reporting::Origin::LegacyMusAdjusted);
-        });
+    if (placement.vertical == 0) {
+        return;
     }
+    const auto systems = context.document->getOthers()->getArray<StaffSystem>(musx::dom::SCORE_PARTID);
+    const auto meas = placement.target->getCmper2();
+    // A source saved without page layout has no systems, and its offset is not reduced. musxdom's
+    // measure-to-system lookup reads page ranges it resolves only once the document is
+    // finished, so the saved systems are searched directly.
+    const auto system =
+        std::ranges::find_if(systems, [meas](const auto& candidate) { return meas >= candidate->startMeas && meas < candidate->endMeas; });
+    if (system == systems.end()) {
+        return;
+    }
+    const auto scaling = (*system)->calcStaffScaling(placement.target->getCmper1());
+    if (scaling == 1 || scaling <= 0) {
+        return;
+    }
+    placement.target->yDisp = static_cast<musx::dom::Evpu>(std::lround((musx::util::Fraction(placement.vertical) / scaling).toDouble()));
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<MeasureTextTarget>(
+            musx::dom::SCORE_PARTID, placement.target->getCmper1(), placement.target->getInci().value_or(0), meas);
+        reportLegacyField(reporting, key, source, *placement.verticalRow, "yDisp", placement.verticalOffset, placement.vertical,
+            Reporting::Origin::LegacyMusAdjusted);
+    });
 }
 
 void reportMeasureText(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
@@ -83,10 +118,8 @@ void reportMeasureText(const ImportContext& context, const RecordFamilySource& s
                 reporting, key, source, source.rowOfWord(rows, physicalSlot), name, source.byteOffsetInRow(physicalSlot * 2), value, origin);
         };
         field("block", 0, target.block, Origin::LegacyMus);
-        if (earlyCoordinates) {
-            field("xDispEvpu", 1, target.xDispEvpu, Origin::LegacyMusAdjusted);
-            reportFallbackField(reporting, key, "xDispEdu", Origin::LegacyBehavior, target.xDispEdu);
-        } else {
+        // An early horizontal offset is reported once it is placed.
+        if (!earlyCoordinates) {
             field("xDispEdu", 1, target.xDispEdu, Origin::LegacyMus);
             field("xDispEvpu", 1, target.xDispEvpu, Origin::LegacyMus);
         }
@@ -96,12 +129,10 @@ void reportMeasureText(const ImportContext& context, const RecordFamilySource& s
 }
 
 void importMeasureTextFamily(
-    const ImportContext& context, const RecordFamilySource& source, EarlyBlockKeys& earlyBlocks, std::vector<ScaledVertical>& verticals)
+    const ImportContext& context, const RecordFamilySource& source, EarlyBlockKeys& earlyBlocks, std::vector<EarlyPlacement>& placements)
 {
-    // Believed: before the DCL epoch the horizontal word is an EVPU offset from the measure's
-    // left edge and the vertical word is staff-scaled. Later sources store a positive Edu or
-    // negative EVPU displacement from the measure's first beat. Converting the earlier
-    // horizontal offset needs the measure's layout, so it is kept as an EVPU displacement.
+    // From the DCL epoch the horizontal word is a positive Edu or negative EVPU displacement from
+    // the measure's first beat. Earlier offsets are placed once measures and staff systems exist.
     const bool earlyCoordinates = !sourceAtOrAfter(context.profile, FormatEpoch::DclLegacy);
     const bool earlyConnectors = !context.index.getOthers().cmpersForTag(others::earlyTextBlockTag).empty();
     for (const auto& [partId, staffId] : recordKeys(source)) {
@@ -132,8 +163,9 @@ void importMeasureTextFamily(
                     earlyBlocks.emplace(partId, target->block);
                 }
                 reportMeasureText(context, source, rows, *target, at, partId, earlyCoordinates);
-                if (earlyCoordinates && target->yDisp != 0) {
-                    verticals.push_back({target, &source.rowOfWord(rows, at + 2), source.byteOffsetInRow((at + 2) * 2), words[at + 2]});
+                if (earlyCoordinates) {
+                    placements.push_back({target, &source.rowOfWord(rows, at + 1), source.byteOffsetInRow((at + 1) * 2), words[at + 1],
+                        &source.rowOfWord(rows, at + 2), source.byteOffsetInRow((at + 2) * 2), words[at + 2]});
                 }
                 context.document->getDetails()->add(MeasureTextTarget::XmlNodeName, std::move(target));
             }
@@ -155,12 +187,17 @@ void importMeasureTextAssigns(const ImportContext& context)
         return;
     }
     EarlyBlockKeys earlyBlocks;
-    std::vector<ScaledVertical> verticals;
-    importMeasureTextFamily(context, *source, earlyBlocks, verticals);
-    if (!verticals.empty()) {
-        // Staff systems and their staff sizes finish before a vertical offset is unscaled.
-        context.pending.checks.push_back(
-            [&context, source = *source, verticals = std::move(verticals)] { unscaleVerticals(context, source, verticals); });
+    std::vector<EarlyPlacement> placements;
+    importMeasureTextFamily(context, *source, earlyBlocks, placements);
+    if (!placements.empty()) {
+        // Measures, beat charts, staff systems, and staff sizes finish before an early offset is
+        // placed.
+        context.pending.checks.push_back([&context, source = *source, placements = std::move(placements)] {
+            for (const auto& placement : placements) {
+                placeHorizontal(context, source, placement);
+                unscaleVertical(context, source, placement);
+            }
+        });
     }
     if (!earlyBlocks.empty()) {
         // Stored TextBlocks finish before a block without one resolves its PT connector.
