@@ -78,13 +78,13 @@ void addClefItem(const ImportContext& context, const RecordFamilySource& source,
 
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
         const auto key = reporting.template instanceKey<ClefListTarget>(partId, cmper, item.inci);
-        const auto reportField = [&](const char* member, std::size_t word, typename Reporting::Origin origin = Reporting::Origin::LegacyMus) {
+        const auto reportField = [&](const char* member, std::size_t word, bool adjusted = false) {
             const auto& row = source.rowOfWord(rows, item.at + word);
             reportLegacyField(reporting, key, source, row, member, source.byteOffsetInRow((item.at + word) * sizeof(std::uint16_t)),
-                word == clefFlagsWord ? flags : item.words[word], origin);
+                word == clefFlagsWord ? flags : item.words[word], adjusted ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus);
         };
         reportField("clefIndex", 0);
-        reportField("xEduPos", 1, item.convertedEdu ? Reporting::Origin::LegacyMusAdjusted : Reporting::Origin::LegacyMus);
+        reportField("xEduPos", 1, item.convertedEdu.has_value());
         reportField("yEvpuPos", 2);
         reportField("percent", 3);
         reportField("xEvpuOffset", 4);
