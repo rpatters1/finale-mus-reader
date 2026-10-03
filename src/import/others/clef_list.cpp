@@ -150,7 +150,7 @@ void importCodaClefLists(const ImportContext& context, const RecordFamilySource&
         // The clef in effect starts at the staff's default and follows each frame in measure order:
         // a single-clef frame's clef, or the last clef of a frame's list.
         const auto staff = context.document->getOthers()->get<musx::dom::others::Staff>(musx::dom::SCORE_PARTID, staffId);
-        musx::dom::ClefIndex inEffect = staff ? staff->defaultClef : 0;
+        auto inEffect = staff ? staff->defaultClef : musx::dom::ClefIndex{};
         for (const auto meas : frames.pool->secondCmpersForTag(frames.identity, staffId)) {
             const auto frameRows = frames.pool->getArray(frames.identity, staffId, meas);
             if (frameRows.empty()) {

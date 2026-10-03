@@ -136,7 +136,8 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
     auto spacing = std::make_shared<Spacing>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
     spacing->musFront = 36;
     document->getOptions()->add(Spacing::XmlNodeName, std::move(spacing));
-    auto staff = std::make_shared<musx::dom::others::Staff>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, 1);
+    auto staff =
+        std::make_shared<musx::dom::others::Staff>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1});
     staff->defaultClef = 0;
     document->getOthers()->add(musx::dom::others::Staff::XmlNodeName, std::move(staff));
     for (musx::dom::Cmper meas = 1; meas <= 4; ++meas) {
@@ -155,7 +156,7 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
     }
     const auto report = importClefList(parsed, document);
 
-    const auto first = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 2);
+    const auto first = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{2});
     REQUIRE(first.size() == 2);
     CHECK(first[0]->clefIndex == 0);
     CHECK(first[0]->xEduPos == 0);
@@ -164,13 +165,13 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
     CHECK(first[1]->xEduPos == 792);
     CHECK(first[1]->yEvpuPos == -8);
     CHECK(first[1]->percent == 75);
-    const auto second = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 5);
+    const auto second = document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{5});
     REQUIRE(second.size() == 2);
     CHECK(second[0]->clefIndex == 4);
     CHECK(second[1]->clefIndex == 1);
     CHECK(second[1]->xEduPos == 2048);
-    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 6).empty());
-    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, 7).empty());
+    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{6}).empty());
+    CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{7}).empty());
 
     CHECK(field(report, "others.clefEnum[2,0].clefIndex").origin == ValueOrigin::LegacyMusAdjusted);
     CHECK(field(report, "others.clefEnum[2,0].percent").origin == ValueOrigin::LegacyBehavior);
