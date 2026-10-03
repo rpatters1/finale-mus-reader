@@ -48,3 +48,13 @@ F300-meatext-pos-staffred.mus / .etf / -finale27/F300-meatext-pos-staffred.musx
     sha256 bb63a40df2df524e027be8885b82204292cea3df90eb64ec1f64a7b703e85995 (.musx)
     From F300-meatext-pos, with staff 1 reduced to 67% on its system. The `mt(1,1)` tuple
     is unchanged at `1 88 -116 0 0`; the companion stores `ydisp` -173.
+
+F300-meastext-beatchart.mus / .etf / -finale27/F300-meastext-beatchart.musx
+    sha256 d68b5bf5a82609e1f6adcb31da1fa32a343d9594c167377b307fbcd283ed8af0 (.mus)
+    sha256 0732620ef0b7f9bd5fef060c64dd30e54beb78c36d36efbf7f4fc117c3983296 (.etf)
+    sha256 5eb5f9d1d771075435863e4d936e55280ad5e83e279712fbf6f3328fac56b33e (.musx)
+    One staff, a measure of uneven rhythms positioned by an automatically spaced
+    beat chart, 1052 EVPU wide, with three measure texts: before the first note,
+    between two notes, and past the barline. The `mt(1,1)` tuples store horizontal
+    offsets 32, 352, and 1952 EVPU. The Finale 27 companion stores `xdispEvpu` -20
+    for the first and `xdispEdu` 416 and 27136 for the others.

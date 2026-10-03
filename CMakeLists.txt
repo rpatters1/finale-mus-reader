@@ -133,7 +133,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/openmusx/musxdom.git
-            GIT_TAG 273cd2d30540960f85b12245dc0d9c32330aae48
+            GIT_TAG c4ee936bf7bb1d9fe6c734727dc614c863b51500
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
