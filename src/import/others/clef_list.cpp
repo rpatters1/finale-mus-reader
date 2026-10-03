@@ -124,7 +124,7 @@ void addCodaBarlineClef(const ImportContext& context, const RecordFamilySource& 
     }
     target->clefIndex = clef;
     withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-        const auto key = reporting.template instanceKey<ClefListTarget>(musx::dom::SCORE_PARTID, cmper, 0);
+        const auto key = reporting.template instanceKey<ClefListTarget>(musx::dom::SCORE_PARTID, cmper, musx::dom::Inci{0});
         reportLegacyField(reporting, key, frames, frame, "clefIndex", details::gframe::codaClefSlot * sizeof(std::uint16_t), clef,
             Reporting::Origin::LegacyMusAdjusted);
         for (const auto* member : {"xEduPos", "yEvpuPos", "percent", "xEvpuOffset", "clefMode", "unlockVert", "afterBarline"}) {
