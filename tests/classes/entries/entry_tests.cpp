@@ -289,7 +289,9 @@ TEST_CASE("Entry Note IDs fill zero slots with the lowest unused IDs and retain 
         putWord(row, offset, static_cast<std::uint16_t>(value >> 16U));
         putWord(row, offset + 2, static_cast<std::uint16_t>(value));
     };
+    constexpr std::size_t maxIdsInTwoRows = 2 + (38 - 8) / 6;
     for (const auto& item : cases) {
+        REQUIRE(item.ids.size() <= maxIdsInTwoRows);
         std::array<std::uint8_t, 38> first{};
         putLong(first, 0, item.number);
         putLong(first, 18, item.flags);
@@ -302,7 +304,7 @@ TEST_CASE("Entry Note IDs fill zero slots with the lowest unused IDs and retain 
             std::array<std::uint8_t, 38> continuation{};
             putLong(continuation, 0, item.number);
             putWord(continuation, 4, 1);
-            for (std::size_t index = 2; index < item.ids.size(); ++index) {
+            for (std::size_t index = 2; index < (std::min)(item.ids.size(), maxIdsInTwoRows); ++index) {
                 putLong(continuation, 8 + (index - 2) * 6, 0x80000000U | (std::uint32_t(item.ids[index]) << 16U));
             }
             block.data.insert(block.data.end(), continuation.begin(), continuation.end());
