@@ -461,7 +461,11 @@ void expectNoScoreContent(const ImportResult& result)
     expect(result.document->getOthers()->getArray<others::TextBlock>(SCORE_PARTID).empty(), "Output contains fallback text blocks");
     expect(
         result.document->getOthers()->getArray<others::MeasureNumberRegion>(SCORE_PARTID).empty(), "Output contains fallback measure number regions");
-    expect(!result.document->getEntries()->get(1), "Output contains fallback entries");
+    if (const auto entry = result.document->getEntries()->get(1)) {
+        const auto* origin = result.report.findInstanceOrigin(finale_mus_reader::instanceKey<Entry>(
+            SCORE_PARTID, static_cast<Cmper>(entry->getEntryNumber() >> 16U), std::nullopt, static_cast<Cmper>(entry->getEntryNumber())));
+        expect(origin != nullptr && *origin == finale_mus_reader::ValueOrigin::LegacyMus, "Output contains an entry no source row built");
+    }
     {
         const auto scrollView = result.document->getScrollViewStaves(SCORE_PARTID);
         std::set<StaffCmper> recoveredStaffIds;

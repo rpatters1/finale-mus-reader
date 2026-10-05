@@ -990,3 +990,17 @@ F100-meastext2-staffred.mus / .etf / -finale27/F100-meastext2-staffred.musx
     sha256 e79202cf8e71858e820456fb75fb317bb0078fc7029ce9abef8983c2c3a84f38 (.musx)
     From F100-meastext2, with staff 1 reduced to 57% on its system. The `MT(1,1)` tuple is
     unchanged; the companion stores `ydisp` -772.
+
+F100-C4.mus / .etf / -finale27/F100-C4.musx
+    sha256 e49907dd096a366daaa828c48f645572646fa3f818351f1ac568504024803086 (.mus)
+    sha256 62ec8929f3130c77fab5f0a7381586b8bf8088e179f5f48a2960ca1cf86882bb (.etf)
+    sha256 dee84170575272cae37ad7e0fec4267e1ac6a9b8257abf041b49eaf2f5228d43 (.musx)
+    Finale 1.0 C4 note with accidental display unset. The Finale 27 companion leaves
+    showAcci and freezeAcci unset on the first note.
+
+F100-C4-showacci.mus / .etf / -finale27/F100-C4-showacci.musx
+    sha256 26884b829afd5ae68500743d192077f0675fc7ede02a5d6110d4a234bff62617 (.mus)
+    sha256 be1b34d96e1f909051e91a3372c302f1b45b216fa81437c74684269390e96037 (.etf)
+    sha256 f50ac9a2884de584adcda7dc1530840fd82f3929568e9720a461bbbc53cc3e0d (.musx)
+    From F100-C4, shows an accidental on the C4 note. The Finale 27 companion
+    sets showAcci and freezeAcci on the first note.
