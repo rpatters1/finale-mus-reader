@@ -45,6 +45,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportClefOctaveSharps: return "clef_octave_sharps";
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportDrumStaff: return "drum_staff";
+    case Phase::ImportEntries: return "entries";
     case Phase::ImportFilePath: return "file_path";
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportFontDefinitions: return "font_definitions";

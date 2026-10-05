@@ -319,7 +319,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),
         FINALE_MUS_READER_IMPORTER(ImportStaffGroups, &details::importStaffGroups),
         FINALE_MUS_READER_IMPORTER(ImportStaffSizes, &details::importStaffSizes),
-        // entries (none recovered yet)
+        // entries
+        FINALE_MUS_READER_IMPORTER(ImportEntries, &entries::importEntries),
         // texts
         FINALE_MUS_READER_IMPORTER(ImportTexts, &texts::importTexts),
     };

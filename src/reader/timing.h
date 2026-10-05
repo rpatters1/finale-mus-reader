@@ -47,6 +47,7 @@ enum class Phase : std::size_t {
     ImportClefOctaveSharps,
     ImportClefOptions,
     ImportDrumStaff,
+    ImportEntries,
     ImportFilePath,
     ImportFlagOptions,
     ImportFontDefinitions,

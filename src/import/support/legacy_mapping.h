@@ -818,6 +818,9 @@ struct PendingReferences
     std::set<std::pair<musx::dom::Cmper, musx::dom::Cmper>> staffSystemsWithOwnStaffLists;
     /// @brief An HS row's HT text id, replaced by its synthesized TextBlock id during materialization.
     std::map<std::pair<musx::dom::Cmper, musx::dom::Inci>, musx::dom::Cmper> codaTextBlockByStyle;
+    /// @brief Final Note IDs by zero-based Entry index, present only when an Entry's IDs changed.
+    /// @details Later importers resolve affected note references in deferred checks after Entries are imported.
+    std::map<musx::dom::EntryNumber, std::vector<musx::dom::NoteNumber>> noteIdsByEntryIndex;
     /// @brief Completes source-owned pools before checks allocate or resolve their referents.
     std::vector<std::function<void()>> materialize;
     /// @brief Checks to run once every importer has finished, in the order they were registered.

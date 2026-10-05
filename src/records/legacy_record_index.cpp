@@ -386,6 +386,45 @@ std::vector<std::uint16_t> LegacyRowPool::partIdsForTag(LegacyTag tag) const
 LegacyRecordIndex LegacyRecordIndex::build(const container::ParsedContainer& parsed)
 {
     LegacyRecordIndex result;
+    if (parsed.formatEpoch == FormatEpoch::CodaBanner) {
+        for (const auto& block : parsed.blocks) {
+            if (block.info.type != 0x0003) {
+                continue;
+            }
+            if (block.data.size() % CodaEntryRow{}.bytes.size() != 0) {
+                ++result.m_unsupportedEntryBlocks;
+                continue;
+            }
+            for (std::size_t offset = 0; offset < block.data.size(); offset += CodaEntryRow{}.bytes.size()) {
+                CodaEntryRow row;
+                std::copy_n(block.data.begin() + offset, row.bytes.size(), row.bytes.begin());
+                row.blockOffset = block.info.sourceOffset;
+                row.decodedOffset = offset;
+                row.number = static_cast<std::uint32_t>(offset / row.bytes.size());
+                result.m_codaEntryRows.push_back(row);
+            }
+        }
+    } else {
+        const auto entryType = parsed.formatEpoch == FormatEpoch::UncompressedLegacy ? 0x0003
+                               : parsed.formatEpoch == FormatEpoch::DclLegacy        ? 0x0011
+                                                                                     : 0x0016;
+        for (const auto& block : parsed.blocks) {
+            if (block.info.type != entryType) {
+                continue;
+            }
+            if (block.data.size() % EntryRow{}.bytes.size() != 0) {
+                ++result.m_unsupportedEntryBlocks;
+                continue;
+            }
+            for (std::size_t offset = 0; offset < block.data.size(); offset += EntryRow{}.bytes.size()) {
+                EntryRow row;
+                std::copy_n(block.data.begin() + offset, row.bytes.size(), row.bytes.begin());
+                row.blockOffset = block.info.sourceOffset;
+                row.decodedOffset = offset;
+                result.m_entryRows.push_back(row);
+            }
+        }
+    }
     if (const auto types = poolTypesFor(parsed.formatEpoch)) {
         std::vector<std::uint8_t> othersPayload;
         auto othersRows = decodeRows(parsed, types->others, false, othersPayload);

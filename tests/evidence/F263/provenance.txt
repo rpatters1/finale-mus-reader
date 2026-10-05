@@ -488,3 +488,10 @@ F263-midclef2.mus / .etf / .musx
     vertical adjustment -28; `GF(1,1)` names list 1. The Finale 27 companion
     places the treble barline clef at incidence 0 and the bass clef at incidence 1,
     `xEduPos` 1431.
+
+F263-maxnotes.mus / .etf / .musx
+    sha256 16e4d7fe1fdfb8a3884b9750d792fef6c6150d182d6becbffdb897b294d30455 (.mus)
+    sha256 10bf0b307dc80a9aafa17f4c0f5152b6ee0ad5c92a3d413d06091b8e2b4c45d0 (.etf)
+    sha256 779d708b20e27847d94b629a9a1a14e3adcf2e75cc52a62aeb1a5041a7c09051 (.musx)
+    Finale 2.6.3 document with one twelve-note Entry, an ETF export, and a Finale 27
+    companion. Its six linked physical rows hold note IDs 1 through 12.

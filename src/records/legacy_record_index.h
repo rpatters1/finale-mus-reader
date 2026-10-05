@@ -163,6 +163,23 @@ struct RecordWord
     std::size_t decodedOffset{};
 };
 
+/// @brief One physical entry row from a fixed-width entry pool.
+struct EntryRow
+{
+    std::array<std::uint8_t, 38> bytes{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+};
+
+/// @brief One physical entry row from a Coda entry pool.
+struct CodaEntryRow
+{
+    std::array<std::uint8_t, 32> bytes{};
+    std::size_t blockOffset{};
+    std::size_t decodedOffset{};
+    std::uint32_t number{};
+};
+
 /// @brief The normalized, searchable record set for one source file.
 /// @details Pools are reached the way musxdom's document reaches its own: @ref getOthers and
 /// @ref getDetails. Mapping tables consume this rather than the container, so a new epoch is
@@ -199,6 +216,11 @@ public:
     /// deliberately uncovered here rather than silently mis-sliced.
     [[nodiscard]] std::span<const std::uint8_t> getTexts() const { return m_texts; }
 
+    /// @brief Fixed 38-byte entry rows from the uncompressed, DCL, and zlib epochs.
+    [[nodiscard]] std::span<const EntryRow> getEntryRows() const { return m_entryRows; }
+    [[nodiscard]] std::span<const CodaEntryRow> getCodaEntryRows() const { return m_codaEntryRows; }
+    [[nodiscard]] std::size_t unsupportedEntryBlockCount() const { return m_unsupportedEntryBlocks; }
+
     /// @brief Reads one word of an others family as a continuous stream across incidences.
     /// @param wordIndex Absolute index, `incidence * 6 + slot`. Addressing the family as one
     /// stream is what lets a four-byte value straddle an incidence boundary.
@@ -214,6 +236,9 @@ private:
     LegacyRowPool m_details;
     LegacyRowPool m_classOthers;
     LegacyRowPool m_classDetails;
+    std::vector<EntryRow> m_entryRows;
+    std::vector<CodaEntryRow> m_codaEntryRows;
+    std::size_t m_unsupportedEntryBlocks{};
     std::vector<std::uint8_t> m_texts;
 };
 

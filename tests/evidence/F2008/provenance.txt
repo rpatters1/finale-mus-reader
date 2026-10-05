@@ -55,6 +55,13 @@ F2008-BE-text-inserts.musx
     rather than synthesizing a font the document did not state. And Finale 27
     emits no `^time` at all, where the reader preserves it.
 
+F2008-maxnotes.mus / -finale27/F2008-maxnotes.musx
+    sha256 5c91d0db96b68210e1f031385f001ff03f81d0401d40ef46b5f7e1d4895f0853 (.mus)
+    sha256 faf06d4364ac544d47bbc2d425878b424b48ab2d87d8f4fd4e7202b733734e01 (.musx)
+    A controlled Finale 2008 twelve-note chord supplied and released by Robert
+    G. Patterson. It exercises all continuation note slots in the fixed 38-byte
+    Entry row layout and has a Finale 27 companion for comparison.
+
 F2008-empty.mus
     sha256 d9321c0564199287238185f0952bd282ee4abaed8c65d72a099f7d62f96fea3e
 F2008-empty.musx
