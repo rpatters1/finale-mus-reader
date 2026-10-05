@@ -1004,3 +1004,37 @@ F100-C4-showacci.mus / .etf / -finale27/F100-C4-showacci.musx
     sha256 f50ac9a2884de584adcda7dc1530840fd82f3929568e9720a461bbbc53cc3e0d (.musx)
     From F100-C4, shows an accidental on the C4 note. The Finale 27 companion
     sets showAcci and freezeAcci on the first note.
+
+F100-alters.mus / .etf / -finale27/F100-alters.musx
+    sha256 058cf226edb34348f05e7a20ffdd018fa54b76b98406bf6ab4018279e8ce823d (.mus)
+    sha256 b6f7bdb067d192e778bda87d31d0d1511b84b61e2ea34445ff5d54c830afc142 (.etf)
+    sha256 5c78fe6e48a0f9a2c08104121d7ee072f3ae697714c3feb77c5365441468d6c8 (.musx)
+    Entry 2 has a Note TCD of 0x009d. The document has no CS(1) record.
+
+F100-alters-tcd5.mus / .etf / -finale27/F100-alters-tcd5.musx
+    sha256 ecd4485ba15da8b4882b7773811501b3dd985444c9d2f1ab6f3a7575abfb7a40 (.mus)
+    sha256 4b3364d224dec3fc24732c3cf6e15c2904dc5e719b0993f2d66e85056f5b4d49 (.etf)
+    sha256 65a4b995ac45ba8e2db69a852e9452c3cbb5f930cc54cb3fdfce33cdad5c1f65 (.musx)
+    From F100-alters, sets the TCD Watershed value to 5. CS(1) has final word 5;
+    Entry 2 retains the same Note TCD.
+
+F100-alters-tcd1.mus / .etf / -finale27/F100-alters-tcd1.musx
+    sha256 197ee21eb4605fcdd4e8eed3eb1646f3f71c8689e24e4efa1330792a6599f71f (.mus)
+    sha256 6f1933ee9db9d6a3ff71030f6bf73ddfc5df2e26834ae63ee90e484ec0ed0ab8 (.etf)
+    sha256 180d3b18838cf9bed9d5e5ec0b9598801155cea14a278c6b693befd709817bda (.musx)
+    From F100-alters, sets the TCD Watershed value to 1. CS(1) has final word 1;
+    Entry 2 retains the same Note TCD.
+
+F100-alters-tcd4.mus / .etf / -finale27/F100-alters-tcd4.musx
+    sha256 1edbcc636c36d3807ecffd48b5f42732dd7d38d9f5dc0d43149799525478c2ee (.mus)
+    sha256 54129e0078c34391681500786e2cff374faf8e5006c92dac605b6059f8e4ca11 (.etf)
+    sha256 aace35db759517f74d9d3d6f2bbcaa781f65ac3d63a0f5880676b0d52ab91cb7 (.musx)
+    From F100-alters, sets the TCD Watershed value to 4. CS(1) has final word 4;
+    Entry 2 retains the same Note TCD.
+
+F100-alters-tcd4-min1.mus / .etf / -finale27/F100-alters-tcd4-min1.musx
+    sha256 9682de1d4770335ae9dc4d358407fc5174c11f73b26d6cae5d99288f4d022007 (.mus)
+    sha256 f65e16748109fba36fdc41e3b24b89adbcb379b8dbf8d2852bb36c6adfb90786 (.etf)
+    sha256 0123767ae4ec3c9b28b728412ba966a834e78f8faf5a8bf0bcbddadd02254eb3 (.musx)
+    From F100-alters-tcd4, changes Entry 1's Note displacement from 0 to -1
+    while retaining alteration +4 and TCD Watershed 4.
