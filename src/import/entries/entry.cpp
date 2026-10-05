@@ -138,14 +138,17 @@ struct NoteSlot
 };
 
 template <typename Reporting>
-void reportEntry(Reporting& reporting, const records::EntryRow& row, const Entry& entry, std::uint32_t number, std::uint32_t duration,
-    std::uint32_t flags, std::uint16_t extendedFlags, std::int16_t position, bool hasHpFlags, bool synthesizeNoPlayback)
+void reportEntry(Reporting& reporting, const records::EntryRow& row, const Entry& entry, std::uint32_t number, std::uint32_t previous,
+    std::uint32_t next, std::uint32_t duration, std::uint32_t flags, std::uint16_t extendedFlags, std::int16_t position, bool hasHpFlags,
+    bool synthesizeNoPlayback)
 {
     const auto key =
         reporting.template instanceKey<Entry>(0, static_cast<musx::dom::Cmper>(number >> 16U), std::nullopt, static_cast<musx::dom::Cmper>(number));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
+    recovered("previousEntryNumber", previous, 6);
+    recovered("nextEntryNumber", next, 10);
     recovered("duration", duration, 14);
     recovered("hOffsetScore", position, 16);
     recovered("isValid", flags, 18);
@@ -198,13 +201,15 @@ void setTcd(Note& note, std::uint16_t tcd)
 }
 
 template <typename Reporting>
-void reportCodaEntry(
-    Reporting& reporting, const records::CodaEntryRow& row, const Entry& entry, std::uint32_t flags, std::uint16_t duration, std::int16_t position)
+void reportCodaEntry(Reporting& reporting, const records::CodaEntryRow& row, const Entry& entry, std::uint32_t previous, std::uint32_t next,
+    std::uint32_t flags, std::uint16_t duration, std::int16_t position)
 {
     const auto key = reporting.template instanceKey<Entry>(0, 0, std::nullopt, static_cast<musx::dom::Cmper>(row.number));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
+    recovered("previousEntryNumber", previous, 0);
+    recovered("nextEntryNumber", next, 4);
     recovered("duration", duration, 16);
     recovered("hOffsetScore", position, 18);
     recovered("isValid", flags, 20);
@@ -345,8 +350,8 @@ void importCodaEntries(const ImportContext& context)
             entry->notes.push_back(std::move(note));
         }
         entry->numNotes = static_cast<int>(entry->notes.size());
-        withReporting(
-            context.report, [&]<typename Reporting>(Reporting& reporting) { reportCodaEntry(reporting, row, *entry, flags, duration, position); });
+        withReporting(context.report,
+            [&]<typename Reporting>(Reporting& reporting) { reportCodaEntry(reporting, row, *entry, previous, next, flags, duration, position); });
         context.document->getEntries()->add(row.number, std::move(entry));
     }
 }
@@ -437,7 +442,7 @@ void importEntries(const ImportContext& context)
             entry->noPlayback = entry->isHidden;
         }
         withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
-            reportEntry(reporting, row, *entry, number, duration, flags, extendedFlags, position, hasHpFlags, synthesizeNoPlayback);
+            reportEntry(reporting, row, *entry, number, previous, next, duration, flags, extendedFlags, position, hasHpFlags, synthesizeNoPlayback);
         });
         std::array<std::uint32_t, supportedNoteCount> noteFlagsByIndex{};
         for (std::size_t noteIndex = 0; noteIndex < noteCount; ++noteIndex) {

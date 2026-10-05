@@ -150,7 +150,7 @@ TEST_CASE("Entry continuation rows carry notes after the first two", "[class][en
     CHECK(entry->notes[1]->harmLev == 6);
     CHECK(entry->notes[2]->harmLev == 8);
     CHECK(entry->notes[2]->getNoteId() == 3);
-    const auto* thirdOrigin = report.findField<musx::dom::Note>("harmLev", 0, 0, 3, 1);
+    const auto* thirdOrigin = report.findField<musx::dom::Note>("harmLev", 0, musx::dom::Cmper(0), musx::dom::Inci(3), musx::dom::Cmper(1));
     REQUIRE(thirdOrigin);
     CHECK(thirdOrigin->decodedOffset == 44);
 
