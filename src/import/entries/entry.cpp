@@ -142,8 +142,8 @@ void reportEntry(Reporting& reporting, const records::EntryRow& row, const Entry
     std::uint32_t next, std::uint32_t duration, std::uint32_t flags, std::uint16_t extendedFlags, std::int16_t position, bool hasHpFlags,
     bool synthesizeNoPlayback)
 {
-    const auto key =
-        reporting.template instanceKey<Entry>(0, static_cast<musx::dom::Cmper>(number >> 16U), std::nullopt, static_cast<musx::dom::Cmper>(number));
+    const auto key = reporting.template instanceKey<Entry>(
+        musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(number >> 16U), std::nullopt, static_cast<musx::dom::Cmper>(number));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
@@ -179,7 +179,7 @@ void reportNote(Reporting& reporting, const records::EntryRow& row, const Note& 
     std::uint32_t flags, std::size_t offset)
 {
     const auto key = reporting.template instanceKey<Note>(
-        0, static_cast<musx::dom::Cmper>(entryNumber >> 16U), note.getNoteId(), static_cast<musx::dom::Cmper>(entryNumber));
+        musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(entryNumber >> 16U), note.getNoteId(), static_cast<musx::dom::Cmper>(entryNumber));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
@@ -204,7 +204,8 @@ template <typename Reporting>
 void reportCodaEntry(Reporting& reporting, const records::CodaEntryRow& row, const Entry& entry, std::uint32_t previous, std::uint32_t next,
     std::uint32_t flags, std::uint16_t duration, std::int16_t position)
 {
-    const auto key = reporting.template instanceKey<Entry>(0, 0, std::nullopt, static_cast<musx::dom::Cmper>(row.number));
+    const auto key =
+        reporting.template instanceKey<Entry>(musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, std::nullopt, static_cast<musx::dom::Cmper>(row.number));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
@@ -240,7 +241,8 @@ template <typename Reporting>
 void reportCodaNote(
     Reporting& reporting, const records::CodaEntryRow& row, const Note& note, std::uint32_t entryNumber, std::uint32_t flags, std::size_t offset)
 {
-    const auto key = reporting.template instanceKey<Note>(0, 0, note.getNoteId(), static_cast<musx::dom::Cmper>(entryNumber));
+    const auto key = reporting.template instanceKey<Note>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper{0}, note.getNoteId(), static_cast<musx::dom::Cmper>(entryNumber));
     const auto recovered = [&](const char* name, std::int64_t raw, std::size_t at) {
         reporting.report().setField(key, name, {Reporting::Origin::LegacyMus, row.blockOffset, row.decodedOffset + at, raw});
     };
@@ -297,7 +299,8 @@ void importCodaEntries(const ImportContext& context)
             previousFragment = nextFragment;
             nextFragment = readLong(candidateBytes, 12);
         }
-        auto entry = std::make_shared<Entry>(context.document, 0, musx::dom::EnigmaBase::ShareMode::All, row.number, previous, next);
+        auto entry =
+            std::make_shared<Entry>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, row.number, previous, next);
         entry->duration = static_cast<std::int16_t>(duration);
         // Believed: Coda positions include horizontal stretching. The inverse scale factor is
         // unidentified, so preserve the stored score offset.
@@ -422,7 +425,8 @@ void importEntries(const ImportContext& context)
             context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info, "Entry row has incomplete note continuation."});
             continue;
         }
-        auto entry = std::make_shared<Entry>(context.document, 0, musx::dom::EnigmaBase::ShareMode::All, number, previous, next);
+        auto entry =
+            std::make_shared<Entry>(context.document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, number, previous, next);
         entry->duration = static_cast<std::int16_t>(duration);
         entry->hOffsetScore = position;
         entry->isValid = (flags & validMask) != 0;
