@@ -78,7 +78,7 @@ void importGFrameHoldRecords(const ImportContext& context)
                 continue;
             }
             const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
-            if (words.size() <= std::max(layout.clefSlot, layout.flagsSlot)) {
+            if (words.size() <= (std::max)(layout.clefSlot, layout.flagsSlot)) {
                 context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
                     "GFrameHold for staff " + std::to_string(staffId) + ", measure " + std::to_string(measure) + " is truncated."});
                 continue;
