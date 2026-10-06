@@ -20,9 +20,7 @@ void importClefOctaveSharps(const ImportContext& context);
 /// @brief Recovers source fretboard diagrams.
 void importFretboardDiagrams(const ImportContext& context);
 
-/// @brief Recovers GFrameHold behavior represented elsewhere by modern Finale.
-/// @details This entry point does not construct GFrameHold objects. It currently reads only the
-/// alternate-notation bits from supported pre-Finale-2000 record shapes.
+/// @brief Recovers GFrameHold objects and the earlier alternate-notation behavior.
 void importGFrameHolds(const ImportContext& context);
 
 /// @brief Recovers per-staff independent key and time signatures.

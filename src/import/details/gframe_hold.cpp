@@ -5,9 +5,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -28,6 +30,174 @@ using StaffStyleAssignStyleTarget = musx::dom::others::StaffStyle;
 
 constexpr std::size_t gframeHoldFinale98FlagsSlot = 1;
 constexpr std::uint16_t gframeHoldAlternateNotationMask = 0x000f;
+constexpr records::LegacyTag gframeHoldClass = 0x0414;
+constexpr std::uint16_t clefDisplayMask = 0x0030;
+constexpr std::uint16_t clefAfterBarlineBit = 0x0001;
+constexpr std::uint16_t mirrorFrameBit = 0x0040;
+
+struct GFrameLayout
+{
+    std::size_t clefSlot;
+    std::size_t flagsSlot;
+    std::optional<std::size_t> percentSlot;
+    std::size_t firstFrameSlot;
+    std::size_t knownFrames;
+};
+
+[[nodiscard]] GFrameLayout gframeLayout(const SourceProfile& profile)
+{
+    if (!sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale98)) {
+        return {gframe::codaClefSlot, gframe::earlyFlagsSlot, std::nullopt, 0, 1};
+    }
+    if (sourceAtOrAfter(profile, FormatEpoch::DclLegacy, versions::finale2004)) {
+        return {0, 1, 2, 3, 4};
+    }
+    if (sourceAtOrAfter(profile, FormatEpoch::UncompressedLegacy, versions::finale2000)) {
+        return {0, 1, 6, 2, 4};
+    }
+    return {0, 1, std::nullopt, 2, 4};
+}
+
+void importGFrameHoldRecords(const ImportContext& context)
+{
+    const auto source =
+        selectRecordFamilySource(context, context.index.getDetails(), context.index.getClassDetails(), gframe::tag, gframeHoldClass, true);
+    if (!source) {
+        return;
+    }
+    const auto layout = gframeLayout(context.profile);
+    const auto clefOptions = context.document->getOptions()->get<musx::dom::options::ClefOptions>();
+    const RecordFamilySource earlyLayers{&context.index.getDetails(), records::packTag("LL"), false, true};
+    for (const auto& [partId, staffId] : recordKeys(*source)) {
+        for (const auto measure : source->pool->secondCmpersForTag(source->identity, staffId, partId)) {
+            if (staffId == 0 || measure == 0) {
+                continue;
+            }
+            const auto rows = source->pool->getArray(source->identity, staffId, measure, partId);
+            if (rows.empty()) {
+                continue;
+            }
+            const auto words = collectRecordWords(*source, rows, context.profile.byteOrder);
+            if (words.size() <= std::max(layout.clefSlot, layout.flagsSlot)) {
+                context.report.diagnostics.push_back({musx::util::Logger::LogLevel::Info,
+                    "GFrameHold for staff " + std::to_string(staffId) + ", measure " + std::to_string(measure) + " is truncated."});
+                continue;
+            }
+            auto target = createDetailsRecordTarget<musx::dom::details::GFrameHold>(context.document, *source, rows.front(), staffId, measure);
+            const auto flags = static_cast<std::uint16_t>(words[layout.flagsSlot]);
+            const auto clef = static_cast<std::uint16_t>(words[layout.clefSlot]);
+            const bool listSelected = (flags & gframe::clefListBit) != 0;
+            if (listSelected) {
+                target->clefListId = clef;
+            } else {
+                target->clefId = static_cast<musx::dom::ClefIndex>(clef);
+            }
+            switch (flags & clefDisplayMask) {
+            case 0x0000: target->showClefMode = musx::dom::ShowClefMode::WhenNeeded; break;
+            case 0x0010: target->showClefMode = musx::dom::ShowClefMode::Never; break;
+            case 0x0020: target->showClefMode = musx::dom::ShowClefMode::Always; break;
+            default:
+                context.report.diagnostics.push_back(
+                    {musx::util::Logger::LogLevel::Info, "GFrameHold has ambiguous clef display flags for staff " + std::to_string(staffId)
+                                                             + ", measure " + std::to_string(measure) + "."});
+                break;
+            }
+            const bool hasClefAfterBarlineFlag = sourceAtOrAfter(context.profile, FormatEpoch::UncompressedLegacy, versions::finale2000);
+            if (hasClefAfterBarlineFlag) {
+                target->clefAfterBarline = (flags & clefAfterBarlineBit) != 0;
+            }
+            // Believed: the zlib GF flag word carries the mirror state in bit 0x0040.
+            if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
+                target->mirrorFrame = (flags & mirrorFrameBit) != 0;
+            }
+            const bool hasPercentWord = layout.percentSlot && words.size() > *layout.percentSlot;
+            const bool hasStoredPercent = hasPercentWord && words[*layout.percentSlot] != 0;
+            const bool usesDefaultPercent =
+                !layout.percentSlot || hasPercentWord || !sourceAtOrAfter(context.profile, FormatEpoch::DclLegacy, versions::finale2004);
+            if (hasStoredPercent) {
+                target->clefPercent = words[*layout.percentSlot];
+            } else if (usesDefaultPercent && clefOptions) {
+                target->clefPercent = clefOptions->clefChangePercent;
+            }
+            for (std::size_t layer = 0; layer < layout.knownFrames && layout.firstFrameSlot + layer < words.size(); ++layer) {
+                target->frames[layer] = static_cast<musx::dom::Cmper>(static_cast<std::uint16_t>(words[layout.firstFrameSlot + layer]));
+            }
+            std::array<const records::LegacyRow*, 3> earlyLayerRows{};
+            if (layout.knownFrames == 1 && words.size() > 3) {
+                const auto listId = static_cast<musx::dom::Cmper>(static_cast<std::uint16_t>(words[3]));
+                if (listId != 0) {
+                    for (std::size_t layer = 1; layer < target->frames.size(); ++layer) {
+                        const auto linkRows = earlyLayers.pool->getArray(earlyLayers.identity, listId, static_cast<musx::dom::Cmper>(layer), partId);
+                        if (!linkRows.empty()) {
+                            earlyLayerRows[layer - 1] = &linkRows.front();
+                            target->frames[layer] = static_cast<musx::dom::Cmper>(static_cast<std::uint16_t>(linkRows.front().words[0]));
+                        }
+                    }
+                }
+            }
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<musx::dom::details::GFrameHold>(partId, staffId, std::nullopt, measure);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                const auto stored = [&](const char* member, std::size_t slot, std::int64_t raw) {
+                    if (slot >= words.size()) {
+                        reportFallbackField(reporting, key, member, Reporting::Origin::Unmapped, 0);
+                        return;
+                    }
+                    const auto& row = source->rowOfWord(rows, slot);
+                    reportLegacyField(reporting, key, *source, row, member, source->byteOffsetInRow(slot * sizeof(std::uint16_t)), raw);
+                };
+                if (target->clefId) {
+                    stored("clefId", layout.clefSlot, clef);
+                } else {
+                    reportFallbackField(reporting, key, "clefId", Reporting::Origin::Unmapped, 0);
+                }
+                if (listSelected) {
+                    stored("clefListId", layout.clefSlot, clef);
+                } else {
+                    reportFallbackField(reporting, key, "clefListId", Reporting::Origin::LegacyBehavior, 0);
+                }
+                if ((flags & clefDisplayMask) != clefDisplayMask) {
+                    stored("showClefMode", layout.flagsSlot, flags);
+                } else {
+                    reportFallbackField(reporting, key, "showClefMode", Reporting::Origin::Unmapped, 0);
+                }
+                if (hasClefAfterBarlineFlag) {
+                    stored("clefAfterBarline", layout.flagsSlot, flags);
+                } else {
+                    reportFallbackField(reporting, key, "clefAfterBarline", Reporting::Origin::Unmapped, 0);
+                }
+                if (hasStoredPercent) {
+                    stored("clefPercent", *layout.percentSlot, words[*layout.percentSlot]);
+                } else if (usesDefaultPercent && clefOptions) {
+                    reportFallbackField(reporting, key, "clefPercent", Reporting::Origin::LegacyBehavior, target->clefPercent);
+                } else {
+                    reportFallbackField(reporting, key, "clefPercent", Reporting::Origin::Unmapped, 0);
+                }
+                if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
+                    stored("mirrorFrame", layout.flagsSlot, flags);
+                } else {
+                    reportFallbackField(reporting, key, "mirrorFrame", Reporting::Origin::Unmapped, 0);
+                }
+                constexpr std::array frameFields{"frame1", "frame2", "frame3", "frame4"};
+                for (std::size_t layer = 0; layer < frameFields.size(); ++layer) {
+                    if (layer < layout.knownFrames) {
+                        const auto slot = layout.firstFrameSlot + layer;
+                        stored(frameFields[layer], slot, slot < words.size() ? static_cast<std::uint16_t>(words[slot]) : 0);
+                    } else if (earlyLayerRows[layer - 1]) {
+                        const auto& row = *earlyLayerRows[layer - 1];
+                        reportLegacyField(reporting, key, earlyLayers, row, frameFields[layer], earlyLayers.byteOffsetInRow(0),
+                            static_cast<std::uint16_t>(row.words[0]));
+                    } else if (words.size() > 3 && words[3] == 0) {
+                        reportFallbackField(reporting, key, frameFields[layer], Reporting::Origin::LegacyBehavior, 0);
+                    } else {
+                        reportFallbackField(reporting, key, frameFields[layer], Reporting::Origin::Unmapped, 0);
+                    }
+                }
+            });
+            context.document->getDetails()->add(musx::dom::details::GFrameHold::XmlNodeName, std::move(target));
+        }
+    }
+}
 
 [[nodiscard]] std::size_t gframeHoldFlagsSlot(const SourceProfile& profile)
 {
@@ -334,6 +504,7 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
 
 void importGFrameHolds(const ImportContext& context)
 {
+    importGFrameHoldRecords(context);
     context.pending.materialize.push_back([&context] { synthesizeAlternateNotationRanges(context); });
 }
 

@@ -177,6 +177,7 @@ namespace {
 /// Order is a dependency statement wherever one class reads what another has already built.
 /// FontDefinitions and FontOptions form a bootstrap stage: option and text classes name font
 /// comparators, and text conversion also needs its class default before decoding literal bytes.
+/// Options run before other pools, so importers in those pools may read recovered option values.
 /// The remaining importers follow Finale's pool order. Within the others pool, a custom line
 /// style can therefore decode its stored character through the charset of its named font.
 ///
@@ -198,11 +199,10 @@ struct RegisteredImporter
 
 const std::vector<RegisteredImporter>& registeredImporters()
 {
-    // One line per importer, alphabetical within each pool. **The order is not a contract**, apart
-    // from the bootstrap pair below: every other importer must produce the same document wherever
-    // it appears in this list. An importer that needs another class's objects registers a check on
-    // @ref PendingReferences::checks, which runs after every importer, rather than relying on a
-    // neighbor having run first -- a dependency expressed as line order is one nothing verifies.
+    // One line per importer, alphabetical within each pool. The bootstrap pair and the options
+    // pool run before other pools. Within a pool, order is not a contract: an importer that needs
+    // another class's objects registers a check on @ref PendingReferences::checks, which runs
+    // after every importer.
     // clang-format off
     static const std::vector<RegisteredImporter> result = {
         // Bootstrap, and the one ordered pair: font definitions are the pool that font options
