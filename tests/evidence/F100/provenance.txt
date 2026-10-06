@@ -11,6 +11,12 @@ among the changed files localizes the intended changes to the named physical
 tuples; the baseline has a smaller save allocation and is therefore a semantic
 rather than byte-for-byte control for those files.
 
+F100-8th-pickup.mus / .etf / -finale27/F100-8th-pickup.musx
+    sha256 6a5a1d207655cd5a309d00ed52c4e209cb6c0a84294cbaf5df79aec37a5b0b14 (.mus)
+    sha256 0292d21a04b14ab996805316c5c1a3b97b09180e1a56a8972af95b17a4c76633 (.etf)
+    sha256 cff9374dfa6ce4585c37d3bde76cb1077355e03cfd69315ac3ac053ddb7041ea (.musx)
+    A one-measure score with an eighth-note pickup and one entry, producing a spacer frame.
+
 F100-baseline.mus
     sha256 9b6605da705949155d2690bc51680576b87872272406077fb59160fb599f00b9
     4,143 bytes. Unmodified new-document defaults. Selector 44 is absent and

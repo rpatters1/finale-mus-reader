@@ -218,6 +218,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/enclosure.cpp
     src/import/others/file_path.cpp
     src/import/others/font_definitions.cpp
+    src/import/others/frame.cpp
     src/import/others/fret_instruments.cpp
     src/import/others/fretboard_groups.cpp
     src/import/others/fretboard_styles.cpp

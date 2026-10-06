@@ -50,6 +50,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportFontDefinitions: return "font_definitions";
     case Phase::ImportFontOptions: return "font_options";
+    case Phase::ImportFrames: return "frames";
     case Phase::ImportFretboardDiagrams: return "fretboard_diagrams";
     case Phase::ImportFretboardGroups: return "fretboard_groups";
     case Phase::ImportFretboardStyles: return "fretboard_styles";
