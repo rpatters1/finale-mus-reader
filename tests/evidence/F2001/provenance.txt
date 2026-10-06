@@ -125,6 +125,13 @@ F2001Win-midclef.mus / .etf / .musx
     0x0010; `GF(1,1)` names list 1 with flags 0x0400. The Finale 27 companion
     carries `unlockVert` on incidence 1 and `afterBarline` on incidence 2.
 
+F2001Win-clef87.mus / .etf / -finale27/F2001Win-clef87.musx
+    sha256 50bca1459ca913e5bc009a47c87c56114c3bf299532f3fe0c2c8c96dbcb4523c (.mus)
+    sha256 5f11fdcbb6c1dbe0ec77253857037a9b9e405639e953f2bba319cfc91fe05c6c (.etf)
+    sha256 72bf9afd0dd1350a95feaab1cc0fe488e5cf59a3c92794474a01e11a3a0e7c6e (.musx)
+    A measure-1 clef set to 87% size. `GF(1,1)` second-row word 1 stores 87, and
+    the Finale 27 companion preserves 87%.
+
 F2001Win-endingtext.mus / .etf / .musx
     sha256 8c638a7d6517c1cd6d0e8e8176ec4ab0da370c7315f1533923ae835314630a2e (.mus)
     sha256 f10f75ed530f95fe15fe72a2c26ea3cdef8155251425c75f3ca54ed6b0801398 (.etf)
