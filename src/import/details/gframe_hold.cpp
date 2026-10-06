@@ -106,10 +106,8 @@ void importGFrameHoldRecords(const ImportContext& context)
             if (hasClefAfterBarlineFlag) {
                 target->clefAfterBarline = (flags & clefAfterBarlineBit) != 0;
             }
-            // Believed: the zlib GF flag word carries the mirror state in bit 0x0040.
-            if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-                target->mirrorFrame = (flags & mirrorFrameBit) != 0;
-            }
+            // Believed: bit 0x0040 carries the mirror state in every GF flags layout.
+            target->mirrorFrame = (flags & mirrorFrameBit) != 0;
             const bool hasPercentWord = layout.percentSlot && words.size() > *layout.percentSlot;
             const bool hasStoredPercent = hasPercentWord && words[*layout.percentSlot] != 0;
             const bool usesDefaultPercent =
@@ -173,11 +171,7 @@ void importGFrameHoldRecords(const ImportContext& context)
                 } else {
                     reportFallbackField(reporting, key, "clefPercent", Reporting::Origin::Unmapped, 0);
                 }
-                if (context.profile.epoch == FormatEpoch::ZlibLegacy) {
-                    stored("mirrorFrame", layout.flagsSlot, flags);
-                } else {
-                    reportFallbackField(reporting, key, "mirrorFrame", Reporting::Origin::Unmapped, 0);
-                }
+                stored("mirrorFrame", layout.flagsSlot, flags);
                 constexpr std::array frameFields{"frame1", "frame2", "frame3", "frame4"};
                 for (std::size_t layer = 0; layer < frameFields.size(); ++layer) {
                     if (layer < layout.knownFrames) {
