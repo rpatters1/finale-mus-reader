@@ -1,6 +1,14 @@
 Version 2002a.r1
 Mac OS 9.0.4 running in SheepShaver
 
+F2002-mirror.mus / .etf / -finale27/F2002-mirror.musx
+    sha256 3b10761d9eb898a791fe1002adb5b42692117046fa62b10d762c621f29777c22 (.mus)
+    sha256 cc35d06c230cb6f43d9d86233c8f5449ed5fa9d8c4cbf0cbb243c5213eb022b2 (.etf)
+    sha256 1be625bcc9057ce56692502124a9f0e9308769c6ca1349727274fcd5c4f9cea0 (.musx)
+    A three-measure score with Mirror Frame enabled at staff 1, measure 3 and
+    additional mirror controls enabled. GF(1,3) first-row word 1 has bit 0x0040
+    set; GF(1,1) has it clear. The companion stores mirrorFrame only at measure 3.
+
 F2002-defclef73.mus / .etf / -finale27/F2002-defclef73.musx
     sha256 34dc3c37b9e2c1d6a935a054cb1fb3cd4062297d20974991c5a2f75737a14bcc (.mus)
     sha256 3416e7c2f944dced339d67e78b203754945b75bbb01ae67f7626006108ecf925 (.etf)
