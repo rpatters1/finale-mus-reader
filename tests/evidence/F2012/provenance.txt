@@ -16,6 +16,11 @@ the last-saver tuple records the format actually written, internal 17.0 for
 Finale 2012. Reading the last-saver tuple therefore yields the version that
 governs the file's layout, which is what the reader gates on.
 
+F2012-mirrorfromFin14.mus / -finale27/F2012-mirrorfromFin14.musx
+    sha256 b9ac5bd7d99a0c5dd512886d30f5cce58929ed26a68c715daa0eed96c718e138 (.mus)
+    sha256 2f5bad23aa70684fc3787e675e336eae44c0a2d7dcf8cd0422b93ae7710f77f4 (.musx)
+    A Finale 2014 source saved to Finale 2012 format with mirrored score content and entry frames.
+
 F2012-upstem-flags.mus
     sha256 f95d2ea21b99022e41025012a57de6afef2f97184e85df62e15cc61e58fb7df6
     The tracked fixture for the 2007-2012 record encoding, which shares the

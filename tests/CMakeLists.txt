@@ -66,6 +66,7 @@ add_executable(finale_mus_reader_tests
     classes/others/custom_keys_tests.cpp
     classes/others/drum_staff_tests.cpp
     classes/others/file_path_tests.cpp
+    classes/others/frame_tests.cpp
     classes/others/fretboard_tests.cpp
     classes/others/graphic_assignments_tests.cpp
     classes/others/individual_positioning_tests.cpp

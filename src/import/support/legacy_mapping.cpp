@@ -250,6 +250,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportClefLists, &others::importClefLists),
         FINALE_MUS_READER_IMPORTER(ImportDrumStaff, &others::importDrumStaff),
         FINALE_MUS_READER_IMPORTER(ImportFilePath, &others::importFilePath),
+        FINALE_MUS_READER_IMPORTER(ImportFrames, &others::importFrames),
         FINALE_MUS_READER_IMPORTER(ImportFretboardGroups, &others::importFretboardGroups),
         FINALE_MUS_READER_IMPORTER(ImportFretboardStyles, &others::importFretboardStyles),
         FINALE_MUS_READER_IMPORTER(ImportFretInstruments, &others::importFretInstruments),

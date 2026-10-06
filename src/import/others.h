@@ -54,6 +54,9 @@ void importFilePath(const ImportContext& context);
 /// @brief Recovers the others::FontDefinition pool, whose four layouts span every epoch.
 void importFontDefinitions(const ImportContext& context);
 
+/// @brief Recovers entry ranges and legacy pickup spacers.
+void importFrames(const ImportContext& context);
+
 /// @brief Recovers source fretboard groups.
 void importFretboardGroups(const ImportContext& context);
 

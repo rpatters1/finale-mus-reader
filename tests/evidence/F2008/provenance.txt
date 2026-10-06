@@ -88,6 +88,11 @@ F2008-empty-le.mus / -finale27/F2008-empty-le.musx
     sha256 fae71f507f4101d8f7b8a7644fd15149e20b965943e99a95b7665fc73d5e2019 (.musx)
     A controlled little-endian baseline for F2008-namepos-hidden.
 
+F2008-16thpickup.mus / -finale27/F2008-16thpickup.musx
+    sha256 a9b2566fac806e372bbe0a2a5e37ca2561f9812e8e02a9cbb0cfdfbbf78cb809 (.mus)
+    sha256 1c68ba19a098b7d7392500a1f5a82bb9fa9a441b3d755d60d200ed40f1ae6d40 (.musx)
+    Derived from F2008-empty-le by adding a one-sixteenth-note pickup and one entry frame.
+
 F2008-namepos-hidden.mus / -finale27/F2008-namepos-hidden.musx
     sha256 ce1e7898281228ac1c54a1e8eda3310633b85277d43bd88c97387ff52aaeb65e (.mus)
     sha256 e6ad095b6f0973b5b2ce5f01029889c333772d6b29fbe49c75764ae6bdb758e1 (.musx)

@@ -5,6 +5,12 @@ author. Each ETF was exported by that application. Each `.musx` under `-finale27
 Finale 27's conversion of the matching MUS and is a semantic reference, not a byte-level
 reference.
 
+F2001Win-legacypickup.mus / .etf / -finale27/F2001Win-legacypickup.musx
+    sha256 541d1f91d7b55fe4b2085febca98b60619edbd11e45a0d65bfbe10b1b9d3275a (.mus)
+    sha256 4abe5d0dba934f710272dbfbc221e4d17f52a7b733652faaac58f0bdb226c091 (.etf)
+    sha256 dcf5b687b0f45badfb546a46a02b2e938daa8457942b894428c0046b94da89cc (.musx)
+    A score with a legacy pickup spacer followed by an entry frame.
+
 F2001Win-empty.mus / .ETF / .musx
     sha256 0f4d05d140d5e2fa7170cae788b9bfb6df80d4422228d24c8fbbe0fc3ec77cb0 (.mus)
     sha256 293880da4908cc7cc8230f1f4090520205dc7d81de693a1bb72f7ab4ce12012b (.ETF)
