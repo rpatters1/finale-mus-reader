@@ -340,11 +340,19 @@ const LegacyRow* LegacyRowPool::get(LegacyTag tag, std::uint16_t cmper1, std::ui
     return found != family.end() && found->inci == inci ? &*found : nullptr;
 }
 
+std::span<const LegacyRow> LegacyRowPool::rowsForTags(LegacyTag first, LegacyTag last) const
+{
+    // Rows sort by tag before any other key, so the rows of a tag range are contiguous.
+    const auto begin = std::lower_bound(m_rows.begin(), m_rows.end(), first, [](const LegacyRow& row, LegacyTag tag) { return row.tag < tag; });
+    const auto end = std::upper_bound(begin, m_rows.end(), last, [](LegacyTag tag, const LegacyRow& row) { return tag < row.tag; });
+    return std::span<const LegacyRow>(begin, end);
+}
+
 std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
-    for (const auto& row : m_rows) {
-        if (row.tag == tag && row.partId == partId && (result.empty() || result.back() != row.cmper1)) {
+    for (const auto& row : rowsForTags(tag, tag)) {
+        if (row.partId == partId && (result.empty() || result.back() != row.cmper1)) {
             result.push_back(row.cmper1);
         }
     }
@@ -354,9 +362,20 @@ std::vector<std::uint16_t> LegacyRowPool::cmpersForTag(LegacyTag tag, std::uint1
 std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(LegacyTag tag, std::uint16_t cmper1, std::uint16_t partId) const
 {
     std::vector<std::uint16_t> result;
-    for (const auto& row : m_rows) {
-        if (row.tag == tag && row.partId == partId && row.cmper1 == cmper1 && (result.empty() || result.back() != row.cmper2)) {
+    for (const auto& row : rowsForTags(tag, tag)) {
+        if (row.partId == partId && row.cmper1 == cmper1 && (result.empty() || result.back() != row.cmper2)) {
             result.push_back(row.cmper2);
+        }
+    }
+    return result;
+}
+
+std::vector<LegacyTag> LegacyRowPool::tagsInRange(LegacyTag first, LegacyTag last) const
+{
+    std::vector<LegacyTag> result;
+    for (const auto& row : rowsForTags(first, last)) {
+        if (result.empty() || result.back() != row.tag) {
+            result.push_back(row.tag);
         }
     }
     return result;
@@ -365,8 +384,8 @@ std::vector<std::uint16_t> LegacyRowPool::secondCmpersForTag(LegacyTag tag, std:
 std::vector<std::uint16_t> LegacyRowPool::partIdsForTag(LegacyTag tag) const
 {
     std::vector<std::uint16_t> result;
-    for (const auto& row : m_rows) {
-        if (row.tag != tag || std::find(result.begin(), result.end(), row.partId) != result.end()) {
+    for (const auto& row : rowsForTags(tag, tag)) {
+        if (std::find(result.begin(), result.end(), row.partId) != result.end()) {
             continue;
         }
         result.push_back(row.partId);

@@ -118,8 +118,10 @@ void importExtendedLyricBaselineFamily(const ImportContext& context, records::Le
     }
     const auto& pool = context.index.getDetails();
     std::map<std::tuple<std::uint16_t, musx::dom::Cmper, musx::dom::Cmper>, musx::dom::Inci> nextInci;
-    for (records::LegacyTag storedNumber = 1; storedNumber <= extendedLyricNumberMask; ++storedNumber) {
-        const auto tag = static_cast<records::LegacyTag>(familyBase | storedNumber);
+    const auto firstTag = static_cast<records::LegacyTag>(familyBase | 1);
+    const auto lastTag = static_cast<records::LegacyTag>(familyBase | extendedLyricNumberMask);
+    for (const auto tag : pool.tagsInRange(firstTag, lastTag)) {
+        const auto storedNumber = static_cast<records::LegacyTag>(tag & extendedLyricNumberMask);
         const RecordFamilySource source{&pool, tag, false, true};
         for (const auto& [partId, cmper1] : recordKeys(source)) {
             for (const auto cmper2 : pool.secondCmpersForTag(tag, cmper1, partId)) {

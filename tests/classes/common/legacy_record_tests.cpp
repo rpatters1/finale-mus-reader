@@ -279,6 +279,45 @@ void testOtherRowsRemainSearchable()
     expectMapping(!index.word(spacing, GLOBALS_CMPER, 12), "Word addressing ran past the last incidence");
 }
 
+// Tag queries see only their own tag's rows, so neighboring tags, other parts, and other first
+// comparators must not leak into a result, and results keep comparator order with the score part first.
+void testTagQueriesStayWithinTheirTag()
+{
+    using finale_mus_reader::records::LegacyRow;
+    using finale_mus_reader::records::LegacyRowPool;
+    using finale_mus_reader::records::LegacyTag;
+    const auto row = [](LegacyTag tag, std::uint16_t partId, std::uint16_t cmper1, std::uint16_t cmper2) {
+        LegacyRow result;
+        result.tag = tag;
+        result.partId = partId;
+        result.cmper1 = cmper1;
+        result.cmper2 = cmper2;
+        return result;
+    };
+    const auto pool = LegacyRowPool::build(
+        {
+            row(0x9002, 0, 1, 0),
+            row(0x8fff, 0, 4, 0),
+            row(0x8001, 3, 5, 6),
+            row(0x8001, 0, 5, 7),
+            row(0x8001, 0, 2, 9),
+            row(0x8001, 0, 5, 6),
+            row(0x8001, 0, 5, 6),
+            row(0x8000, 0, 1, 1),
+            row(0x8003, 2, 8, 0),
+        },
+        {}, ByteOrder::BigEndian);
+    expectMapping(pool.cmpersForTag(0x8001) == std::vector<std::uint16_t>{2, 5}, "cmpersForTag left its tag or part");
+    expectMapping(pool.cmpersForTag(0x8001, 3) == std::vector<std::uint16_t>{5}, "cmpersForTag ignored the part");
+    expectMapping(pool.cmpersForTag(0x8002).empty(), "cmpersForTag reported an absent tag");
+    expectMapping(pool.secondCmpersForTag(0x8001, 5) == std::vector<std::uint16_t>{6, 7}, "secondCmpersForTag left its comparator");
+    expectMapping(pool.secondCmpersForTag(0x8001, 5, 3) == std::vector<std::uint16_t>{6}, "secondCmpersForTag ignored the part");
+    expectMapping(pool.partIdsForTag(0x8001) == std::vector<std::uint16_t>{0, 3}, "partIdsForTag did not put the score first");
+    expectMapping(pool.partIdsForTag(0x8003) == std::vector<std::uint16_t>{2}, "partIdsForTag reported another tag's part");
+    expectMapping(pool.tagsInRange(0x8001, 0x8fff) == std::vector<LegacyTag>{0x8001, 0x8003, 0x8fff}, "tagsInRange did not bound its range");
+    expectMapping(pool.tagsInRange(0xa001, 0xafff).empty(), "tagsInRange reported an empty range");
+}
+
 TEST_CASE("Class-record continuation segment", "[class]")
 {
     testClassRecordContinuationSegment();
@@ -302,6 +341,10 @@ TEST_CASE("Detail row shape", "[class]")
 TEST_CASE("Other rows remain searchable", "[class]")
 {
     testOtherRowsRemainSearchable();
+}
+TEST_CASE("Tag queries stay within their tag", "[class]")
+{
+    testTagQueriesStayWithinTheirTag();
 }
 
 } // namespace
