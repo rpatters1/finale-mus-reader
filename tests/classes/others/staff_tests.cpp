@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "class_test_support.h"
+#include "import/details.h"
 #include "staff_test_support.h"
 
 #include "support/finale_version.h"
@@ -1181,6 +1182,39 @@ TEST_CASE("Parallel Staff names supplement missing stored name references")
     REQUIRE(finale37Staff);
     CHECK(finale37Staff->fullNameTextId == 0);
     CHECK(finale37Staff->abbrvNameTextId == 0);
+}
+
+TEST_CASE("Synthesized parallel Staff names leave stored early TextBlock comparators to measure text")
+{
+    // Early measure text names TextBlock 1 through its PT connector; the Staff names synthesized
+    // for Staff 7 must allocate around it rather than take it.
+    auto parsed = makeContainer({
+        {7, "IS", {0, 0, 0, 0, 0, 0}},
+        {7, "IS", {0, 5, 0, 0, 0, 0}},
+        {7, "IS", {0, 0, 0, 0, 0, 0}},
+        {7, "IN", {0x4e61, 0x6d65, 0, 0, 0, 0}},
+        {7, "in", {0x4162, 0x6272, 0, 0, 0, 0}},
+        {1, "PT", {9}},
+    });
+    parsed.blocks.push_back(makeDetailContainer(FormatEpoch::UncompressedLegacy, 7, 1, {1, 20, 30, 0, 0}, "MT").blocks.front());
+    const auto document = emptyStaffDocument();
+    auto profile = SourceProfile(FormatEpoch::UncompressedLegacy);
+    profile.version = SourceVersion{.major = 3, .minor = 5};
+    profile.byteOrder = ByteOrder::BigEndian;
+    staffImport(parsed, profile, document, false, &finale_mus_reader::details::importMeasureTextAssigns);
+
+    const auto assignment = document->getDetails()->get<musx::dom::details::MeasureTextAssign>(musx::dom::SCORE_PARTID, 7, 1, musx::dom::Inci(0));
+    REQUIRE(assignment);
+    CHECK(assignment->block == 1);
+    const auto block = assignment->getTextBlock();
+    REQUIRE(block);
+    CHECK(block->textId == 9);
+    const auto staff = document->getOthers()->get<Staff>(musx::dom::SCORE_PARTID, 7);
+    REQUIRE(staff);
+    CHECK(staff->fullNameTextId != 0);
+    CHECK(staff->fullNameTextId != 1);
+    CHECK(staff->abbrvNameTextId != 0);
+    CHECK(staff->abbrvNameTextId != 1);
 }
 
 TEST_CASE("Finale 1.0 Staff properties recover from the six-word row")

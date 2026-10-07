@@ -148,7 +148,7 @@ void importStaffStyleAssignments(const ImportContext& context)
     if (source) {
         importStaffStyleAssignFamily(context, *source);
     }
-    context.pending.checks.push_back([&context] { refreshStaffHasStyles(context); });
+    context.pending.defer(DeferredStage::RefreshDerivedFlags, [&context] { refreshStaffHasStyles(context); });
 }
 
 } // namespace others

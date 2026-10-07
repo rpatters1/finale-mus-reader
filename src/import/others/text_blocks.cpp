@@ -253,7 +253,7 @@ void importTextBlocks(const ImportContext& context)
     if (hasLegacyPageTextStyle(context)) {
         // HS/HT text is complete after the text importer, regardless of which early container
         // stores it. Materialization keeps TextBlock allocation ahead of assignment resolution.
-        context.pending.materialize.push_back([&context] { importLegacyPageTextBlocks(context); });
+        context.pending.defer(DeferredStage::CompletePools, [&context] { importLegacyPageTextBlocks(context); });
     }
 }
 

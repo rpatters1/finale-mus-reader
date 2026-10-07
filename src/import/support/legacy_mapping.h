@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -19,6 +20,7 @@
 
 #include "finale_mus_reader/reader.h"
 
+#include "import/support/deferred_order.h"
 #include "import/support/reporting.h"
 #include "import/support/text_encoding.h"
 #include "musx/dom/Document.h"
@@ -801,15 +803,45 @@ struct PendingCustomLineReference
     [[no_unique_address]] DeferredFieldReport reportField{};
 };
 
+/// @brief The ordered stages of deferred work, drained once every importer has run.
+/// @details A step may rely on everything an earlier stage establishes, and on nothing a step of
+/// its own stage does: within a stage, steps must be independent of each other. A step that
+/// needs another step's result belongs in a later stage than that step. The stage a step names is
+/// therefore the statement of what it depends on.
+enum class DeferredStage : std::uint8_t {
+    /// Completes source-owned objects whose construction needed other pools to be filled.
+    CompletePools,
+    /// Creates objects at comparators the source stores, before any step allocates a comparator in
+    /// the same pool and could take one of them.
+    ClaimStoredIds,
+    /// Judges recovered references and values against the objects the source stores, before any
+    /// step synthesizes an object such a reference could otherwise appear to name.
+    ResolveStoredRefs,
+    /// Synthesizes the objects a Staff owns, such as its names and a single-string fret instrument,
+    /// at newly allocated comparators. Ahead of Synthesize, which allocates from some of the same
+    /// pools, so the order of allocation does not depend on importer order.
+    SynthesizeStaffParts,
+    /// Synthesizes other objects at newly allocated comparators.
+    Synthesize,
+    /// Refreshes flags that summarize other pools, such as Staff::hasStyles.
+    RefreshDerivedFlags,
+    /// Reads composite views, such as StaffComposite, that depend on the refreshed flags.
+    ReadComposites,
+};
+
+/// @brief The number of @ref DeferredStage values.
+inline constexpr std::size_t deferredStageCount = static_cast<std::size_t>(DeferredStage::ReadComposites) + 1;
+
 /// @brief Work deferred until every source pool is filled, and drained in one phase afterwards.
 /// @details Two kinds. A reference-object request copies an object out of the pinned baseline,
 /// which allocates comparators and therefore cannot run while a pool is still being filled. A
-/// deferred check is anything an importer can only decide once another class's objects exist --
+/// deferred step is anything an importer can only decide once another class's objects exist --
 /// resolving a recovered comparator against the pool that owns its referent, most of all.
 ///
-/// Deferring such a check is what keeps the importer registry an unordered list. An importer that
+/// Deferring such a step is what keeps the importer registry an unordered list. An importer that
 /// consulted another pool directly would silently depend on running after whoever fills it, and
-/// that dependency would live in the registry's line order where nothing checks it.
+/// that dependency would live in the registry's line order where nothing checks it. A dependency
+/// between deferred steps is stated instead by the @ref DeferredStage each one names.
 struct PendingReferences
 {
     std::vector<PendingShapeReference> shapes; ///< Shape definitions requested by recovered classes.
@@ -819,21 +851,36 @@ struct PendingReferences
     /// @brief An HS row's HT text id, replaced by its synthesized TextBlock id during materialization.
     std::map<std::pair<musx::dom::Cmper, musx::dom::Inci>, musx::dom::Cmper> codaTextBlockByStyle;
     /// @brief Final Note IDs by zero-based Entry index, present only when an Entry's IDs changed.
-    /// @details Later importers resolve affected note references in deferred checks after Entries are imported.
+    /// @details Later importers resolve affected note references in deferred steps after Entries are imported.
     std::map<musx::dom::EntryNumber, std::vector<musx::dom::NoteNumber>> noteIdsByEntryIndex;
-    /// @brief Completes source-owned pools before checks allocate or resolve their referents.
-    std::vector<std::function<void()>> materialize;
-    /// @brief Checks to run once every importer has finished, in the order they were registered.
-    std::vector<std::function<void()>> checks;
+    /// @brief Deferred steps by stage, each stage in registration order.
+    std::array<std::vector<std::function<void()>>, deferredStageCount> steps;
+
+    /// @brief Registers @p step to run in @p stage once every importer has finished.
+    void defer(DeferredStage stage, std::function<void()> step) { steps[static_cast<std::size_t>(stage)].push_back(std::move(step)); }
+
+    /// @brief Registers @p sequence as one step of @p stage that runs its members in order.
+    /// @details For an importer whose per-object steps allocate comparators from a shared pool: the
+    /// order of its own objects, not the drain, then decides the comparators they receive.
+    void defer(DeferredStage stage, std::vector<std::function<void()>> sequence)
+    {
+        if (!sequence.empty()) {
+            defer(stage, [sequence = std::move(sequence)] {
+                for (const auto& step : sequence) {
+                    step();
+                }
+            });
+        }
+    }
 };
 
-/// @brief Completes deferred pool materialization, then runs the registered checks.
+/// @brief Runs every deferred step, stage by stage.
 /// @details The last step of the phase that follows every importer, and the reason registry order
 /// carries no meaning: an importer that needs another class's objects registers the work here and
 /// this runs it once every pool is filled. Exposed because a test that drives one importer alone
 /// still has to close the phase, and doing that by repeating the loop would let a test pass
 /// against a drain the reader no longer performs the same way.
-void runDeferredChecks(PendingReferences& pending);
+void runDeferredChecks(PendingReferences& pending, DeferredOrder order = DeferredOrder::AsRegistered);
 
 /// @brief Everything the importer for one musxdom class is handed.
 /// @details Passed by reference and outlived by nothing: it is built once per import and
@@ -882,10 +929,10 @@ using ClassImporter = void (*)(const ImportContext& context);
 /// @brief Applies every registered mapping table to a seeded document.
 /// @details Runs the registered importers in order, then drains @ref PendingReferences in one
 /// final phase. That phase allocates `others` comparators, so nothing may allocate one after
-/// this returns.
+/// this returns. @p order is a testing aid; the reader always uses the default.
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile, std::span<const std::uint8_t> source,
     const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
-    musx::factory::ConstructionContext& construction);
+    musx::factory::ConstructionContext& construction, DeferredOrder order = DeferredOrder::AsRegistered);
 
 } // namespace finale_mus_reader
 

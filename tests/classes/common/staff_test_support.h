@@ -5,6 +5,8 @@
 
 #include "class_test_support.h"
 
+#include <functional>
+
 namespace finale_mus_reader_tests {
 namespace classes {
 
@@ -25,7 +27,7 @@ inline musx::dom::DocumentPtr emptyStaffDocument(musx::dom::Cmper musicFontId = 
 }
 
 inline ImportReport staffImport(const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile,
-    const musx::dom::DocumentPtr& document, bool styles = false)
+    const musx::dom::DocumentPtr& document, bool styles = false, const std::function<void(const finale_mus_reader::ImportContext&)>& alsoImport = {})
 {
     ImportReport report(profile.epoch);
     const auto index = LegacyRecordIndex::build(parsed);
@@ -55,6 +57,9 @@ inline ImportReport staffImport(const finale_mus_reader::container::ParsedContai
     finale_mus_reader::others::importStaff(context);
     if (styles) {
         finale_mus_reader::others::importStaffStyles(context);
+    }
+    if (alsoImport) {
+        alsoImport(context);
     }
     finale_mus_reader::runDeferredChecks(pending);
     return report;

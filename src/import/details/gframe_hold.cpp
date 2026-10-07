@@ -499,7 +499,7 @@ void synthesizeAlternateNotationRanges(const ImportContext& context)
 void importGFrameHolds(const ImportContext& context)
 {
     importGFrameHoldRecords(context);
-    context.pending.materialize.push_back([&context] { synthesizeAlternateNotationRanges(context); });
+    context.pending.defer(DeferredStage::CompletePools, [&context] { synthesizeAlternateNotationRanges(context); });
 }
 
 } // namespace details

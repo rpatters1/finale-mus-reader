@@ -132,6 +132,7 @@ void importTextExpressionDefs(const ImportContext& context)
     if (!source) {
         return;
     }
+    std::vector<std::function<void()>> synthesizedTexts;
     for (const auto& [partId, cmper] : recordKeys(*source)) {
         const auto rows = source->pool->getArray(source->identity, cmper, 0, partId);
         bool completeRows = !rows.empty();
@@ -198,14 +199,14 @@ void importTextExpressionDefs(const ImportContext& context)
             assignExpressionPositioning<TextExpressionTarget>(*target, assign, words, hasCategory);
             recoverExpressionDescription(context, *source, rows, payload, target, reportInstance, primeExpressionHeaderSize);
         } else {
-            context.pending.checks.push_back(
-                [&context, target, row = rows.front(), payload] { synthesizeExpressionText(context, target, row, payload); });
+            synthesizedTexts.push_back([&context, target, row = rows.front(), payload] { synthesizeExpressionText(context, target, row, payload); });
         }
         if (!hasCategory) {
             scheduleExpressionMiscCategory(context, target);
         }
         context.document->getOthers()->add(TextExpressionTarget::XmlNodeName, std::move(target));
     }
+    context.pending.defer(DeferredStage::Synthesize, std::move(synthesizedTexts));
 }
 
 } // namespace others

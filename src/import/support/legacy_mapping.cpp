@@ -695,8 +695,8 @@ namespace {
 /// for. File-local because @ref applyLegacyMappings is its only caller and the ordering rule --
 /// that this runs after every pool is filled, and that nothing may allocate an `others`
 /// comparator afterwards -- is enforced there rather than by any caller of this header.
-void resolveDeferredReferences(
-    const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, PendingReferences& pending, ImportReport& report)
+void resolveDeferredReferences(const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, PendingReferences& pending,
+    ImportReport& report, DeferredOrder order)
 {
     const auto reportImported = baselineObjectReporter(report);
     // Keyed by the reference comparator, and scoped to this one import. Two clefs naming the same
@@ -775,15 +775,15 @@ void resolveDeferredReferences(
                                                         + std::to_string(pending.customLines.size()) + " Smart Shape option field(s)."});
     }
 
-    // Last within this phase: a check may read anything the copies above just added.
-    runDeferredChecks(pending);
+    // Last within this phase: a deferred step may read anything the copies above just added.
+    runDeferredChecks(pending, order);
 }
 
 } // namespace
 
 void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourceProfile& profile, std::span<const std::uint8_t> source,
     const musx::dom::DocumentPtr& document, const musx::dom::DocumentPtr& referenceDocument, ImportReport& report,
-    musx::factory::ConstructionContext& construction)
+    musx::factory::ConstructionContext& construction, DeferredOrder order)
 {
     if (!referenceDocument || referenceDocument == document) {
         throw std::logic_error("Legacy mappings require a separate, fully formed reference document");
@@ -799,17 +799,22 @@ void applyLegacyMappings(const records::LegacyRecordIndex& index, const SourcePr
     // single class: it drains what every importer asked for.
     {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::DeferredReferences);
-        resolveDeferredReferences(document, referenceDocument, pending, report);
+        resolveDeferredReferences(document, referenceDocument, pending, report, order);
     }
 }
 
-void runDeferredChecks(PendingReferences& pending)
+void runDeferredChecks(PendingReferences& pending, DeferredOrder order)
 {
-    for (const auto& materialize : pending.materialize) {
-        materialize();
-    }
-    for (const auto& check : pending.checks) {
-        check();
+    for (const auto& stage : pending.steps) {
+        if (order == DeferredOrder::ReversedWithinStage) {
+            for (auto step = stage.rbegin(); step != stage.rend(); ++step) {
+                (*step)();
+            }
+        } else {
+            for (const auto& step : stage) {
+                step();
+            }
+        }
     }
 }
 

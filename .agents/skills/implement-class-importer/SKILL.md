@@ -85,7 +85,11 @@ selects each, whether a capture pass must build a collection before the scalar t
 it, and what must be checked once they have run. Registry order is not a contract: apart from the
 bootstrap pair the registry calls out, an importer builds the same document wherever it appears,
 and entries are alphabetical within each pool. An importer that needs another class's objects
-registers a check on `PendingReferences::checks`, which runs after every importer.
+registers a deferred step with `PendingReferences::defer`, which runs after every importer. The
+`DeferredStage` it names is its dependency: choose the earliest stage whose comment guarantees what
+the step reads, and never rely on another step of the same stage. Steps that each allocate a
+comparator belong in one `defer(stage, sequence)` call, so the importer's own object order decides
+the numbers. The research coverage test that reverses every stage enforces this.
 
 **Give every new importer a timing phase in the same change.** Add one aggregate
 `timing::Phase` to `src/reader/timing.h`, name it in `src/reader/timing.cpp`, and use it on the

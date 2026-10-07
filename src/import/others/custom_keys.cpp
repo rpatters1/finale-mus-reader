@@ -212,7 +212,7 @@ void importKeyAttributes(const ImportContext& context)
         report("symbolList", 4, target->symbolList);
         report("hasClefOctv", 5, target->hasClefOctv);
         context.document->getOthers()->add(Target::XmlNodeName, target);
-        context.pending.checks.push_back([&context, target] { normalizeClefOctaveFlag(context, target); });
+        context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, target] { normalizeClefOctaveFlag(context, target); });
     }
 }
 
@@ -275,7 +275,7 @@ void importKeyMapArrays(const ImportContext& context)
             data.source = *source;
             data.rows.assign(rows.begin(), rows.end());
         });
-        context.pending.checks.push_back([&context, target, reportRows = std::move(reportRows)] {
+        context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, target, reportRows = std::move(reportRows)] {
             const auto format = context.document->getOthers()->get<musx::dom::others::KeyFormat>(target->getSourcePartId(), target->getCmper());
             if (format && format->semitones < target->steps.size()) {
                 target->steps.resize(format->semitones);

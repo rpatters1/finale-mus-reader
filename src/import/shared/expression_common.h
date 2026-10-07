@@ -127,7 +127,7 @@ void assignExpressionPlayback(Assign&& assign, const std::vector<std::int16_t>& 
 template <typename Target>
 void scheduleExpressionMiscCategory(const ImportContext& context, std::shared_ptr<Target> target)
 {
-    context.pending.checks.push_back([&context, target] {
+    context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, target] {
         using Category = musx::dom::others::MarkingCategory;
         for (const auto& category : context.document->getOthers()->getArray<Category>(musx::dom::SCORE_PARTID)) {
             if (category->categoryType != Category::CategoryType::Misc) {
