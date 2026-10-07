@@ -377,7 +377,7 @@ void importStaffUsed(const ImportContext& context)
     }
     std::vector<std::vector<StaffUsedEntry>> lists;
     importStaffUsedFamily(context, *source, lists);
-    context.pending.checks.push_back([&context, lists = std::move(lists)]() mutable {
+    context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, lists = std::move(lists)]() mutable {
         StaffUsedListSources listSources;
         for (const auto& entries : lists) {
             if (!entries.empty()) {

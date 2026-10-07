@@ -397,5 +397,26 @@ TEST_CASE("Uncovered epoch still reports", "[class]")
 {
     testUncoveredEpochStillReports();
 }
+
+TEST_CASE("Deferred steps run stage by stage, and a reversed drain reverses only within a stage", "[mapping]")
+{
+    using finale_mus_reader::DeferredOrder;
+    using finale_mus_reader::DeferredStage;
+    const auto drain = [](DeferredOrder order) {
+        std::vector<int> ran;
+        finale_mus_reader::PendingReferences pending;
+        // Registered out of stage order: stage, not registration, decides which runs first.
+        pending.defer(DeferredStage::ReadComposites, [&ran] { ran.push_back(5); });
+        pending.defer(DeferredStage::Synthesize, [&ran] { ran.push_back(3); });
+        pending.defer(DeferredStage::CompletePools, [&ran] { ran.push_back(1); });
+        pending.defer(DeferredStage::Synthesize, [&ran] { ran.push_back(4); });
+        pending.defer(DeferredStage::CompletePools, [&ran] { ran.push_back(2); });
+        finale_mus_reader::runDeferredChecks(pending, order);
+        return ran;
+    };
+    CHECK(drain(DeferredOrder::AsRegistered) == std::vector<int>{1, 2, 3, 4, 5});
+    CHECK(drain(DeferredOrder::ReversedWithinStage) == std::vector<int>{2, 1, 4, 3, 5});
+}
+
 } // namespace
 } // namespace finale_mus_reader_tests

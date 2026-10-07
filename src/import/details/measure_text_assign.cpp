@@ -192,7 +192,7 @@ void importMeasureTextAssigns(const ImportContext& context)
     if (!placements.empty()) {
         // Measures, beat charts, staff systems, and staff sizes finish before an early offset is
         // placed.
-        context.pending.checks.push_back([&context, source = *source, placements = std::move(placements)] {
+        context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, source = *source, placements = std::move(placements)] {
             for (const auto& placement : placements) {
                 placeHorizontal(context, source, placement);
                 unscaleVertical(context, source, placement);
@@ -201,7 +201,7 @@ void importMeasureTextAssigns(const ImportContext& context)
     }
     if (!earlyBlocks.empty()) {
         // Stored TextBlocks finish before a block without one resolves its PT connector.
-        context.pending.checks.push_back([&context, earlyBlocks = std::move(earlyBlocks)] {
+        context.pending.defer(DeferredStage::ClaimStoredIds, [&context, earlyBlocks = std::move(earlyBlocks)] {
             for (const auto& [partId, blockId] : earlyBlocks) {
                 others::resolveEarlyTextBlock(context, partId, blockId);
             }

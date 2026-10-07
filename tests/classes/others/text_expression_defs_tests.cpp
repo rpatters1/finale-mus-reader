@@ -157,9 +157,7 @@ TEST_CASE("Text-expression no-print conversion begins in F97", "[class][text-exp
         PendingReferences pending;
         const ImportContext context{index, profile, noSource, document, document, report, pending, session.getConstructionContext()};
         others::importTextExpressionDefs(context);
-        for (const auto& check : pending.checks) {
-            check();
-        }
+        runDeferredChecks(pending);
         const auto expression = document->getOthers()->get<TestExpression>(0, 1);
         REQUIRE(expression);
         const auto raw = expression->getRawTextCtx(0).getRawText();
@@ -197,9 +195,7 @@ TEST_CASE("Inline hidden spans preserve surrounding text and effects", "[class][
             PendingReferences pending;
             const ImportContext context{index, profile, noSource, document, document, report, pending, session.getConstructionContext()};
             others::importTextExpressionDefs(context);
-            for (const auto& check : pending.checks) {
-                check();
-            }
+            runDeferredChecks(pending);
             const auto expression = document->getOthers()->get<TestExpression>(0, 1);
             REQUIRE(expression);
             const auto raw = expression->getRawTextCtx(0).getRawText();

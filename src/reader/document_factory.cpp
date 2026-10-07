@@ -59,7 +59,7 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
 
 musx::dom::DocumentPtr createDocument(const container::ParsedContainer& parsed, const std::uint8_t* data, std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath, const detail::ReaderResources& resources, XmlParser parseXml,
-    DocumentParser parseDocument, ImportReport& report)
+    DocumentParser parseDocument, ImportReport& report, DeferredOrder deferredOrder)
 {
     auto embeddedGraphics = [&] {
         FINALE_MUS_READER_TIMED_SCOPE(timing::Phase::EmbeddedGraphics);
@@ -101,7 +101,7 @@ musx::dom::DocumentPtr createDocument(const container::ParsedContainer& parsed, 
         return records::LegacyRecordIndex::build(parsed);
     }();
     applyLegacyMappings(recordIndex, profile, std::span<const std::uint8_t>(data, size), document, pinned.referenceDocument, report,
-        session.getConstructionContext());
+        session.getConstructionContext(), deferredOrder);
 
     // Finishing validates the pools and runs musxdom's resolvers once, after every
     // legacy overlay has been applied. That includes resolving the registered font

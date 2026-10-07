@@ -153,7 +153,7 @@ void importBookmarks(const ImportContext& context)
     // numbers. A document whose bookmarks name text-pool records has no name in its own records
     // to synthesize from, so the two never collide -- but the ordering is a property of this
     // class rather than of the registry, which states no order.
-    context.pending.checks.push_back([&context] { synthesizeBookmarkTexts(context); });
+    context.pending.defer(DeferredStage::Synthesize, [&context] { synthesizeBookmarkTexts(context); });
 }
 
 } // namespace others

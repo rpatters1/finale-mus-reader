@@ -10,6 +10,7 @@
 
 #include "container/mus_container.h"
 #include "finale_mus_reader/reader.h"
+#include "import/support/deferred_order.h"
 #include "musx/dom/Document.h"
 
 namespace finale_mus_reader {
@@ -31,8 +32,9 @@ void describeSourceIdentity(const std::uint8_t* data, std::size_t size, ImportRe
 /// confidently decoded legacy value, and finishes the session so musxdom validates the
 /// completed document once. @p report must already carry the classified byte order and
 /// source platform, and it receives the per-field origin of every supported value.
+/// @p deferredOrder is a testing aid; the reader always uses the default.
 [[nodiscard]] musx::dom::DocumentPtr createDocument(const container::ParsedContainer& parsed, const std::uint8_t* data, std::size_t size,
     const std::optional<std::filesystem::path>& sourcePath, const detail::ReaderResources& resources, XmlParser parseXml,
-    DocumentParser parseDocument, ImportReport& report);
+    DocumentParser parseDocument, ImportReport& report, DeferredOrder deferredOrder = DeferredOrder::AsRegistered);
 
 } // namespace finale_mus_reader

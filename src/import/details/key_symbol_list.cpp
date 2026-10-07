@@ -73,7 +73,7 @@ void importKeySymbolListElements(const ImportContext& context)
                     {Reporting::Origin::LegacyMus, rows.front().blockOffset, rows.front().decodedOffset, 0, source->identity});
             });
             context.document->getDetails()->add(Target::XmlNodeName, target);
-            context.pending.checks.push_back([&context, target, stored] {
+            context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, target, stored] {
                 target->accidentalString =
                     text::toUtf8(stored, context.document, keySymbolFont(context.document, *target), text::UnresolvedFontFallback::Symbol);
             });

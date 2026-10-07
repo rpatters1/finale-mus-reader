@@ -7,6 +7,7 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -1477,6 +1478,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
         return;
     }
     const auto& source = *selected;
+    std::vector<std::function<void()>> synthesized;
     for (const auto& [partId, staffId] : recordKeys(source)) {
         const auto rows = source.pool->getArray(source.identity, staffId, 0, partId);
         if (rows.empty()) {
@@ -1722,7 +1724,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
                 const auto pitch = *legacySemantics.singleStringTabPitch;
                 const auto row = codaAttributesRows.front();
                 const auto pitchByteOffset = codaVerticalTabOffsetSlot * 2 + (context.profile.byteOrder == ByteOrder::BigEndian);
-                context.pending.checks.push_back([&context, target, pitch, row, pitchByteOffset] {
+                synthesized.push_back([&context, target, pitch, row, pitchByteOffset] {
                     synthesizeLegacySingleStringFretInstrument(context, target, pitch, row, codaStaffAttributesTag, pitchByteOffset);
                 });
             }
@@ -1743,7 +1745,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
                 const auto row = rows.front();
                 const auto sourceTag = source.identity;
                 const auto pitchByteOffset = tablaturePositionsSlot * 2 + (context.profile.byteOrder == ByteOrder::BigEndian);
-                context.pending.checks.push_back([&context, target, pitch, row, sourceTag, pitchByteOffset] {
+                synthesized.push_back([&context, target, pitch, row, sourceTag, pitchByteOffset] {
                     synthesizeLegacySingleStringFretInstrument(context, target, pitch, row, sourceTag, pitchByteOffset);
                 });
             }
@@ -1753,7 +1755,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
         }
         if constexpr (std::is_same_v<Target, StaffTarget>) {
             if (usesParallelStaffNames(context.profile)) {
-                context.pending.checks.push_back([&context, target] {
+                synthesized.push_back([&context, target] {
                     text::EnigmaFontResolutionCache fontResolutionCache;
                     synthesizeLegacyStaffName(context, *target, legacyStaffFullNameTag, musx::dom::options::FontOptions::FontType::StaffNames,
                         &StaffTarget::fullNameTextId, fontResolutionCache);
@@ -1782,6 +1784,7 @@ void importStaffFamily(const ImportContext& context, records::LegacyTag fixedTag
         });
         context.document->getOthers()->add(Target::XmlNodeName, std::move(target));
     }
+    context.pending.defer(DeferredStage::SynthesizeStaffParts, std::move(synthesized));
 }
 
 void importStaff(const ImportContext& context)

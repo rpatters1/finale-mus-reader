@@ -135,13 +135,35 @@ void addCodaBarlineClef(const ImportContext& context, const RecordFamilySource& 
     context.document->getOthers()->add(ClefListTarget::XmlNodeName, std::move(target));
 }
 
+/// @brief Gives a frame whose list converts to no mid-measure clef the list's barline clef as its
+/// single clef, and clears its list reference.
+void useBarlineClefOnly(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows, std::size_t itemAt,
+    musx::dom::ClefIndex clef, musx::dom::Cmper staffId, musx::dom::Cmper measure)
+{
+    using HoldTarget = musx::dom::details::GFrameHold;
+    const auto hold = context.document->getDetails()->get<HoldTarget>(musx::dom::SCORE_PARTID, staffId, measure);
+    if (!hold) {
+        return;
+    }
+    auto* target = const_cast<HoldTarget*>(hold.get());
+    target->clefId = clef;
+    target->clefListId = 0;
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<HoldTarget>(musx::dom::SCORE_PARTID, staffId, std::nullopt, measure);
+        reportLegacyField(reporting, key, source, source.rowOfWord(rows, itemAt), "clefId", source.byteOffsetInRow(itemAt * sizeof(std::uint16_t)),
+            clef, Reporting::Origin::LegacyMusAdjusted);
+        reportFallbackField(reporting, key, "clefListId", Reporting::Origin::LegacyBehavior, 0);
+    });
+}
+
 // A Coda-banner list holds only the mid-measure clefs of the one frame that names it, each placed
 // by its EVPU offset from the measure's left edge. It is converted the way Finale's own upgrade
 // converts it: the clef in effect at the barline becomes incidence 0, and each stored clef follows
 // at the Edu its offset converts to through the measure's spacing. A clef that converts to the
-// barline replaces the barline clef, and a list left with no mid-measure clef is not created, so
-// the frame keeps a single clef. A list no frame names is not created either. Believed: the
-// conversion is exact in a measure without a beat chart and approximate in one with a beat chart.
+// barline replaces the barline clef, and a list left with no mid-measure clef is not created: the
+// frame takes that barline clef as its single clef instead. A list no frame names is not created
+// either. Believed: the conversion is exact in a measure without a beat chart and approximate in
+// one with a beat chart.
 void importCodaClefLists(const ImportContext& context, const RecordFamilySource& source)
 {
     const RecordFamilySource frames{&context.index.getDetails(), details::gframe::tag, false, true};
@@ -182,16 +204,21 @@ void importCodaClefLists(const ImportContext& context, const RecordFamilySource&
                     {musx::util::Logger::LogLevel::Info, "Clef list " + std::to_string(listId) + " has an incomplete trailing item."});
             }
             std::vector<ClefItem> items;
+            std::optional<std::size_t> barlineItemAt;
             for (std::size_t at = 0; at + clefItemWords <= words.size(); at += clefItemWords) {
                 const std::span<const std::int16_t> item(words.data() + at, clefItemWords);
                 const auto edu = static_cast<musx::dom::Edu>(std::lround(measure->calcEduFromEvpu(item[1])));
                 if (edu <= 0) {
                     barlineClef = static_cast<musx::dom::ClefIndex>(item[0]);
+                    barlineItemAt = at;
                     continue;
                 }
                 items.push_back({static_cast<musx::dom::Inci>(items.size() + 1), item, at, edu});
             }
             if (items.empty()) {
+                if (barlineItemAt) {
+                    useBarlineClefOnly(context, source, rows, *barlineItemAt, barlineClef, staffId, meas);
+                }
                 continue;
             }
             addCodaBarlineClef(context, source, rows, listId, barlineClef, frames, frame);
@@ -212,7 +239,7 @@ void importClefLists(const ImportContext& context)
     }
     if (context.profile.epoch == FormatEpoch::CodaBanner) {
         // Measures, beat charts, and staves finish before a Coda-banner list is converted.
-        context.pending.materialize.push_back([&context, source = *source] { importCodaClefLists(context, source); });
+        context.pending.defer(DeferredStage::CompletePools, [&context, source = *source] { importCodaClefLists(context, source); });
         return;
     }
     for (const auto& [partId, cmper] : recordKeys(*source)) {

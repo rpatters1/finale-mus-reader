@@ -239,7 +239,7 @@ void importChordOptions(const ImportContext& context)
     // the document does not contain takes the pinned default instead. Both pools belong to other
     // importers, so the test cannot run here: it is registered for the phase that follows every
     // importer, which is what lets this class sit anywhere in the registry.
-    context.pending.checks.push_back([&context, target, reference] {
+    context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, target, reference] {
         const auto& others = *context.document->getOthers();
         if (target->fretStyleId == 0 || !others.get<musx::dom::others::FretboardStyle>(musx::dom::SCORE_PARTID, target->fretStyleId)) {
             target->fretStyleId = reference->fretStyleId;

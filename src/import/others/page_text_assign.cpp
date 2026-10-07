@@ -273,7 +273,7 @@ void importPageTextAssigns(const ImportContext& context)
         const auto source = selectRecordFamilySource(context, context.index.getOthers(), context.index.getClassOthers(), pageTextTag, pageTextClass);
         if ((source && !recordKeys(*source).empty()) || hasLegacyPageTextStyle(context)) {
             // Both text stores finish before the assignments resolve their block references.
-            context.pending.checks.push_back([&context] {
+            context.pending.defer(DeferredStage::ClaimStoredIds, [&context] {
                 auto nextIncidence = importEarlyPageTextRecords(context);
                 if (hasLegacyPageTextStyle(context)) {
                     importLegacyPageTexts(context, std::move(nextIncidence));

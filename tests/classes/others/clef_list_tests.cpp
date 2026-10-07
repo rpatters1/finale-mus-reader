@@ -130,7 +130,8 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
     // Measures 600 EVPU wide whose music starts 36 EVPU in, so a stored 145 EVPU is Edu 792 of a
     // 4096-Edu measure and 318 EVPU is Edu 2048. Frames 1, 3, and 4 name lists 2, 5, and 6; frame 2
     // holds alto clef 4 alone. Stored 30 EVPU precedes the music, so list 6's only clef moves to
-    // the barline and leaves no list. No frame names list 7.
+    // the barline and leaves no list: frame 4 takes that clef as its single clef. No frame names
+    // list 7.
     auto session = musx::factory::DocumentFactory::begin();
     musx::dom::DocumentPtr document = session.getDocument();
     auto spacing = std::make_shared<Spacing>(document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All);
@@ -147,6 +148,11 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
         measure->divBeat = 1024;
         document->getOthers()->add(musx::dom::others::Measure::XmlNodeName, std::move(measure));
     }
+    // The frame of measure 4 as the GFrameHold importer leaves it, naming list 6.
+    auto hold = std::make_shared<musx::dom::details::GFrameHold>(
+        document, musx::dom::SCORE_PARTID, musx::dom::EnigmaBase::ShareMode::All, musx::dom::Cmper{1}, musx::dom::Cmper{4});
+    hold->clefListId = 6;
+    document->getDetails()->add(musx::dom::details::GFrameHold::XmlNodeName, std::move(hold));
     auto parsed = makeContainer(
         {{2, "CE", {3, 145, -8, 75, 0, 0}}, {5, "CE", {1, 318, 0, 75, 0, 0}}, {6, "CE", {2, 30, 0, 75, 0, 0}}, {7, "CE", {3, 200, 0, 75, 0, 0}}},
         FormatEpoch::CodaBanner);
@@ -171,6 +177,16 @@ TEST_CASE("ClefList converts a Coda-banner list through the measure named by its
     CHECK(second[1]->clefIndex == 1);
     CHECK(second[1]->xEduPos == 2048);
     CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{6}).empty());
+    const auto singleClef = document->getDetails()->get<musx::dom::details::GFrameHold>(musx::dom::SCORE_PARTID, 1, 4);
+    REQUIRE(singleClef);
+    CHECK(singleClef->clefId == 2);
+    CHECK(singleClef->clefListId == 0);
+    const auto holdKey = finale_mus_reader::instanceKey<musx::dom::details::GFrameHold>(
+        musx::dom::SCORE_PARTID, musx::dom::Cmper{1}, std::nullopt, musx::dom::Cmper{4});
+    REQUIRE(report.fields.contains(holdKey));
+    CHECK(report.fields.at(holdKey).at("clefId").origin == ValueOrigin::LegacyMusAdjusted);
+    CHECK(report.fields.at(holdKey).at("clefId").rawValue == 2);
+    CHECK(report.fields.at(holdKey).at("clefListId").origin == ValueOrigin::LegacyBehavior);
     CHECK(document->getOthers()->getArray<ClefList>(musx::dom::SCORE_PARTID, musx::dom::Cmper{7}).empty());
 
     CHECK(field(report, "others.clefEnum[2,0].clefIndex").origin == ValueOrigin::LegacyMusAdjusted);

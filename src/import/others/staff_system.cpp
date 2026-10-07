@@ -350,7 +350,7 @@ void importCompactStaffSystemFamily(const ImportContext& context, const RecordFa
     }
 
     if (!systems.empty()) {
-        context.pending.materialize.push_back(
+        context.pending.defer(DeferredStage::CompletePools,
             [&context, source, systems = std::move(systems)]() mutable { finishCompactStaffSystems(context, source, std::move(systems)); });
     }
 }
@@ -443,7 +443,7 @@ void importStaffSystemFamily(const ImportContext& context, const RecordFamilySou
     }
 
     if (!systems.empty()) {
-        context.pending.materialize.push_back([&context, source, uncompressed, systems = std::move(systems)]() mutable {
+        context.pending.defer(DeferredStage::CompletePools, [&context, source, uncompressed, systems = std::move(systems)]() mutable {
             finishExpandedStaffSystems(context, source, uncompressed, std::move(systems));
         });
     }

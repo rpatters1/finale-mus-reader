@@ -134,7 +134,7 @@ void reportFirstRowOnlyRecords(const ImportContext& context)
             reportFallbackField(reporting, key, "useSymbols", Reporting::Origin::LegacyBehavior, rest->useSymbols);
         }
     });
-    context.pending.checks.push_back([&context, firstRowOnly = std::move(firstRowOnly)] {
+    context.pending.defer(DeferredStage::ResolveStoredRefs, [&context, firstRowOnly = std::move(firstRowOnly)] {
         const auto options = context.document->getOptions()->get<musx::dom::options::MultimeasureRestOptions>();
         if (!options) {
             return;
