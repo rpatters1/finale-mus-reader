@@ -146,10 +146,16 @@ public:
     /// @brief Returns every distinct source part carried by a tag, score first.
     [[nodiscard]] std::vector<std::uint16_t> partIdsForTag(LegacyTag tag) const;
 
+    /// @brief Returns every distinct tag from @p first through @p last that carries a row, in ascending order.
+    [[nodiscard]] std::vector<LegacyTag> tagsInRange(LegacyTag first, LegacyTag last) const;
+
     [[nodiscard]] bool empty() const { return m_rows.empty(); }
     [[nodiscard]] std::size_t size() const { return m_rows.size(); }
 
 private:
+    /// @brief Returns the contiguous rows whose tags lie from @p first through @p last.
+    [[nodiscard]] std::span<const LegacyRow> rowsForTags(LegacyTag first, LegacyTag last) const;
+
     std::vector<LegacyRow> m_rows;
     std::vector<std::uint8_t> m_payload;
     std::vector<std::uint8_t> m_effectivePartPayloads;
