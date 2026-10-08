@@ -105,6 +105,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportShapeExpressionDefs: return "shape_expression_defs";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
     case Phase::ImportSmartShapeCustomLines: return "ss_line_styles";
+    case Phase::ImportSmartShapes: return "smart_shapes";
     case Phase::ImportSmartShapeOptions: return "smart_shape_options";
     case Phase::ImportSplitMeasures: return "split_measures";
     case Phase::ImportStaff: return "staff";

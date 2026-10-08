@@ -1,5 +1,12 @@
 Finale 2006 (internal version 11.x), PKWARE DCL era, big-endian.
 
+F2006-lyric-vcs.mus / .etf / -finale27/F2006-lyric-vcs.musx
+    sha256 77214ce63e97c93161c913a887e44dc193d188d38b28b18fba255fb0c985e1ed (.mus)
+    sha256 0f69deef580e62b38d810b9913cadb92429af2af86b088c57fe4913e9a6f8ddc (.etf)
+    sha256 75399f9922f89e4122eeb869c0e8fbaf97a2f0f5623ebb7902b5d8d0702a32b9 (.musx)
+    A score with Verse, Chorus, and Section lyrics and their SmartShape hyphens
+    and word extensions. The same score is saved again in Finale 2008 and 2012.
+
 Origin: a test case authored for the Page-Attached Copy plug-in and released for
 publication by its author.
 

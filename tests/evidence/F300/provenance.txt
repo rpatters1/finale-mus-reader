@@ -11,6 +11,31 @@ F300-baseline.mus / .etf / -finale27/F300-baseline.musx
     sha256 32e0c3beaa1d29224f9ffa8ed8e1bff2a519f138a1d61f27bad15e602e3df903 (.musx)
     The unedited new document.
 
+F300-slur.mus / .etf / -finale27/F300-slur.musx
+    sha256 47ec09566f680d142fb5bdee86792e930760d70b2c6da0a85a03eb3dc00a4549 (.mus)
+    sha256 a2808e7bbfef2d9ab8330a269f23e35c4f1643abed26d90d3e5fcc6e1a49226c (.etf)
+    sha256 8a8b3a6fe9c186d494a5462b330226a0583e22fa44690104f7a8e3041cb41324 (.musx)
+    Adds a slur to F300-baseline. Finale 27 converts it to a SmartShape with
+    endpoints in measure 1 at EDU positions 142 and 1138.
+
+F300-slur-movel.mus / .etf / -finale27/F300-slur-movel.musx
+    sha256 7f4807885fc1ecee22e60cb38efd1e22eb36853db486d84134f1654311a3839e (.mus)
+    sha256 c7fad794a186dea9d0c2bf09e06dbcfaf060fed63c7871c719a383bd728d36e5 (.etf)
+    sha256 26debe3cf7f556b2b21e6b8d9664d433302c89fee43c5b92bca2471b0be22549 (.musx)
+    From F300-slur, moves the left slur endpoint downward.
+
+F300-slur-mover.mus / .etf / -finale27/F300-slur-mover.musx
+    sha256 6212ae723919cdc3c1679e74360bebc7d9cdf4732d7c6b90e459bf1334e4b59d (.mus)
+    sha256 6f02173949ba99deba080c60abc271c56e3e4eaaa11f8a762bfb073753ec57bd (.etf)
+    sha256 74ac381289acd7241e24e2e19c1c507f5357b1a3d62baf13a25e7a6513e2ae03 (.musx)
+    From F300-slur, moves the right slur endpoint rightward and downward.
+
+F300-slur-movecps.mus / .etf / -finale27/F300-slur-movecps.musx
+    sha256 a733ccb7d38251c276714200377ef84e47f7614081e134de38c0b6a525b82b18 (.mus)
+    sha256 f2b1293f3684130cce406343fa98e0c01dc29ef521f68cf8b2611ea89dbe50db (.etf)
+    sha256 afa293c2d0dc881021786b402138ce359ec68ceb5b19472956280bbc95249419 (.musx)
+    From F300-slur, changes the slur's control-point handles without moving its endpoints.
+
 F300-nommrest.mus / .etf / -finale27/F300-nommrest.musx
     sha256 10515dbf2a8b5c0bef7393a1d6ef814ca7f361c1154d844a68ed1996b34ab62e (.mus)
     sha256 a74b4da7bfebe20d8b733f3c29a2feb786f2cece80e590cd782f9a0a305ecacf (.etf)

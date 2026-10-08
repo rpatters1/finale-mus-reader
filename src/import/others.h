@@ -164,6 +164,9 @@ void importShapeGraphicAssignments(const ImportContext& context);
 /// @brief Recovers SmartShapeCustomLine objects.
 void importSmartShapeCustomLines(const ImportContext& context);
 
+/// @brief Imports source SmartShape records.
+void importSmartShapes(const ImportContext& context);
+
 /// @brief Recovers stored split positions for measures.
 void importSplitMeasures(const ImportContext& context);
 

@@ -133,7 +133,7 @@ else()
     else()
         FetchContent_Declare(musxdom
             GIT_REPOSITORY https://github.com/openmusx/musxdom.git
-            GIT_TAG c447cd65cfec6e8b190a56270684ec799f52889a
+            GIT_TAG d789c6fcca060a67eaca7ce95a6c0fa873b71fc2
             GIT_SHALLOW FALSE)
         FetchContent_MakeAvailable(musxdom)
         set(FINALE_MUS_READER_MUSXDOM_SOURCE "${musxdom_SOURCE_DIR}")
@@ -242,6 +242,7 @@ add_library(finale_mus_reader STATIC
     src/import/others/shape_definitions.cpp
     src/import/others/shape_expression_defs.cpp
     src/import/others/smart_shape_custom_lines.cpp
+    src/import/others/smart_shape.cpp
     src/import/others/split_measure.cpp
     src/import/others/staff.cpp
     src/import/others/staff_list.cpp

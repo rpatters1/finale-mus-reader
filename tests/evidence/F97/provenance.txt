@@ -1,11 +1,19 @@
 Finale 97 (internal version 3.8), uncompressed fixed-row era, big-endian.
 
-Origin: test cases authored for the Settings Scrapbook plug-in and released for
-publication by their author.
+Origin: most test cases were authored for the Settings Scrapbook plug-in and released for
+publication by their author. The upgraded slur fixture derives from the author's
+F300-slur document.
 
 The fixtures authored here were saved under Mac OS 9.0.4 running in SheepShaver,
 which is the host for every Finale before 2004. The exact application build is
 not recorded.
+
+F97-F300-slur.mus / .etf / -finale27/F97-F300-slur.musx
+    sha256 fd588e236b6ada477880d779d2de228bf42e1e9846b7bc85de7dec5d050ce196 (.mus)
+    sha256 5206353a2a26d07b7cfce27187ab52f5db5f0130118c3d9928e96d53e80f83ae (.etf)
+    sha256 3bbcbefe43c88d0b44ef238eabcccb5933310a51c99db9382a26de9d329b44bb (.musx)
+    Reopens the slur in Finale 97 and saves it with the same seven-incidence
+    SmartShape and EDU endpoints 142 and 1138.
 
 F97-fileinfo-short.mus
     sha256 35b764881cf54f67e2e4dfcd3d1f7071a330fd03e0f7a5afb6314a6b4857eb29
