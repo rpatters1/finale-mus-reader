@@ -1,6 +1,11 @@
 Finale 2008 (internal version 13.x), zlib era. The fixtures below include both
 byte orders.
 
+F2008-F2006-lyric-vcs.mus / -finale27/F2008-F2006-lyric-vcs.musx
+    sha256 e5b9311f254b838e5fe0e693d81e727083c79e7ec65f2a3e7c55d6ea892955b2 (.mus)
+    sha256 35c474913046f62432f09957492dfc4b5dbc5ed82ab82f8cf59096976fb53beb (.musx)
+    A Finale 2008 save of the Finale 2006 Verse, Chorus, and Section lyric-shape score.
+
 Origin of the big-endian fixtures: controlled test documents created by Robert
 G. Patterson in Finale 2008 running under Mac OS X 10.4 hosted by QEMU, and
 released by their author under this repository's MIT license. The same save

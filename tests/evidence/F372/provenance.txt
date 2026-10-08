@@ -8,6 +8,13 @@ F372-baseline.mus / .etf
     of selector 28 has bit 0 clear, so the document does not apply them. Finale 27
     accordingly emits no <baseAdjust> at all.
 
+F372-F300-slur.mus / .etf / -finale27/F372-F300-slur.musx
+    sha256 ed2280cfaf533664e6107fb5d8d111c55cc97676c2b83f57cb75e95b4a6d94b9 (.mus)
+    sha256 b4d3133742b1c74ed9197cacb4c0422ce487290e67edaf10c608b0747c64a49d (.etf)
+    sha256 65f2174f160eed5c844ce14cfbc68c19023cab883583c9fe95562f7567133982 (.musx)
+    Reopens F300-slur in Finale 3.7.2 and saves it. The slur is stored as one
+    seven-incidence SmartShape whose endpoints remain at EDU 142 and 1138.
+
 F372-F263-F100-msnm-enclevr.mus / .etf / -finale27/F372-F263-F100-msnm-enclevr.musx
     sha256 268ef86162b07594d3da872be25b7b6c93e295fbca7c60f122d230c153f0f4de (.mus)
     sha256 60d7bec4c2588349281667263be78679812d6e77754dfdad48b6228eabb7f785 (.etf)

@@ -1,7 +1,8 @@
 Finale 2000 (internal version 5.0), uncompressed fixed-row era, big-endian.
 
-Origin: a test case authored for the Mass Copy plug-in and released for
-publication by its author.
+Origin: most original test cases were authored for the Mass Copy plug-in and released for
+publication by their author. The upgraded slur fixture derives from the author's
+F300-slur document.
 
 F2000-empty.mus and the fixtures derived from it have a different origin: they were
 authored in Finale 2000 itself, running under SheepShaver, by this repository's author.
@@ -11,6 +12,13 @@ that virtual machine, so a derived fixture cannot use one of them as its parent;
 it is kept inside SheepShaver so that further fixtures can be derived from the same file.
 It is structurally the same document as F2000-baseline.mus and differs from it only in the
 bytes a fresh save rewrites.
+
+F2000-F300-slur.mus / .etf / -finale27/F2000-F300-slur.musx
+    sha256 0f22231df0d2c6177b29c15cc477d763d4a0ed4e69da393284c76c16a3b1a7c8 (.mus)
+    sha256 65fc1568654cb415ece1e11a7556e7344ea9c2b889f7255f640f2d2af813ed6b (.etf)
+    sha256 82b2c26d0802faab4c81e1ef8694fb0ae58c70b11c2b996468bc71b401548396 (.musx)
+    Reopens the slur in Finale 2000 and saves it with the same seven-incidence
+    SmartShape and EDU endpoints 142 and 1138.
 
 F2000-multilayer.mus
     sha256 bfbfdabc42ac2d94bc746ef1d1a993a970052c96250b6292cb2a2ea3e930bb9e

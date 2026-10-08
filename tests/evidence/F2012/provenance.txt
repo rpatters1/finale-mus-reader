@@ -1,5 +1,25 @@
 Finale 2012 (internal version 17.0), zlib era, little-endian.
 
+F2012-slur-part.mus / -finale27/F2012-slur-part.musx
+    sha256 61aef7cd88180582c436f365472b3e6e7a198b1cf609dfe104eafded87d854ff (.mus)
+    sha256 b996e62fad13c0d4bf9c3e30795295be3d11473e698478093e62f56ff1f88f42 (.musx)
+    Adds a slur with a fully linked part. Only the score has a SmartShape record.
+
+F2012-slur-part-edited.mus / -finale27/F2012-slur-part-edited.musx
+    sha256 a73de7c71cfbe5c932deec1c7160380cebdc0655065ec7cd6c9e6b27690e576d (.mus)
+    sha256 4c25b65ecdb89bb39cf84aa7878657bbee193ea023dc8827b1eaecdb8810b953 (.musx)
+    Flips that slur down in part 1. The part adds a partially shared SmartShape
+    record with shape type 0 while the score retains type 15.
+
+-finale27/F2012-slur-part-edited-2.musx
+    sha256 1192ac155ff2b107c5ed423322b397b793b130886295bdb988809ae3398f5f52
+    Re-saves the preceding MUSX in Finale 27 after changing the part slur.
+
+F2012-F2006-lyric-vcs.mus / -finale27/F2012-F2006-lyric-vcs.musx
+    sha256 2c9da1bbd6287e618ff893f3238be5a3a988d95f06335773465ac44482273f30 (.mus)
+    sha256 e1a6d8ffd7a11e11c63b458abd969d7dab9b8f0533d56b221415cdd55e978938 (.musx)
+    A Finale 2012 save of the Finale 2006 Verse, Chorus, and Section lyric-shape score.
+
 Origin: a test case authored for the Note Spacing plug-in and released for
 publication by its author.
 

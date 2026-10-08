@@ -9,6 +9,27 @@ F263-baseline.mus
     Finale 27 companion. Finale inserts and renumbers other TextBlocks during the
     upgrade, but semantic text plus layout identifies all nine source blocks.
 
+F263-slur.mus / .etf / -finale27/F263-slur.musx
+    sha256 e78b3f44ba87eb3b3785d3e997277c40560c69f5122d950bc12cebd86e019045 (.mus)
+    sha256 d828f5b109cce3918d7d10b738ebeb3e49b0f4b60bde8e226a39d791abba6be5 (.etf)
+    sha256 3dd474deda03b0518e912f39a8ad04cb4b5b71063dd412dc083b8392928a6c9a (.musx)
+    Adds one slur to the baseline document. Finale 27 stores a SmartShape with
+    measure-based endpoints at EDU positions 58 and 1016.
+
+F263-cresc-1to2.mus / .etf / -finale27/F263-cresc-1to2.musx
+    sha256 1a2a0a25aad1eb88f041320d0c7b9df59299e012462b459a4682eaedb5af96b6 (.mus)
+    sha256 dada9f86d3d5216caf919d386dcfc5cf5c32d7a33669a5205d885f41bd09c7f7 (.etf)
+    sha256 961f6fc2731b7e19805f6316689df617fc2d356a041e5353b08ca1a64b427aee (.musx)
+    Adds one crescendo hairpin, approximately beat 1 to beat 2, to the baseline.
+    The Finale 27 companion stores EDU endpoints 0 and 987 in measure 1.
+
+F263-cresc-dim.mus / .etf / -finale27/F263-cresc-dim.musx
+    sha256 c5ee36a28f19d8b2493e3688af2a8da625a15596bbcf4ba9d34fe3dcd0c793c7 (.mus)
+    sha256 09663c520cd211cd6ec0a1a819a02f1e3a2bf46497ff0c7213ff1c53e017a69c (.etf)
+    sha256 d794b4c19d0daff9d1001293d5e1d88c123f8a842ff08a297b13fdc4bf6bd7ef (.musx)
+    Adds a decrescendo later in the same measure, retaining the crescendo.
+    The new shape has source comparator 2, with EDU endpoints 1888 and 3456.
+
 F263-beatchart.mus / .etf / -finale27/F263-beatchart.musx
     sha256 b12d08a78e322ea1023b9757119b621e927ff2bf22e8833643181cfb5177a95d (.mus)
     sha256 3889f6fe72bf45221c107464f3bfb54d94f7e6220e9757f64a7a83934b8b995f (.etf)
