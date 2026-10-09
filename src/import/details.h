@@ -41,6 +41,9 @@ void importMeasureTextAssigns(const ImportContext& context);
 /// @brief Recovers percussion-note type assignments for individual notes.
 void importPercussionNoteCodes(const ImportContext& context);
 
+/// @brief Recovers SmartShape assignments attached to entries.
+void importSmartShapeEntryAssigns(const ImportContext& context);
+
 /// @brief Recovers staff groups and their measure ranges.
 void importStaffGroups(const ImportContext& context);
 

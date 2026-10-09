@@ -176,6 +176,7 @@ add_library(finale_mus_reader STATIC
     src/import/details/measure_graphic_assign.cpp
     src/import/details/measure_text_assign.cpp
     src/import/details/percussion_note_code.cpp
+    src/import/details/smart_shape_entry_assign.cpp
     src/import/details/staff_group.cpp
     src/import/details/staff_size.cpp
     src/import/entries/entry.cpp
@@ -227,8 +228,8 @@ add_library(finale_mus_reader STATIC
     src/import/others/individual_positioning.cpp
     src/import/others/layer_attributes.cpp
     src/import/others/marking_category.cpp
-    src/import/others/measure_number_region.cpp
     src/import/others/measure.cpp
+    src/import/others/measure_number_region.cpp
     src/import/others/multimeasure_rest.cpp
     src/import/others/multistaff_instrument_group.cpp
     src/import/others/name_position.cpp
@@ -242,8 +243,9 @@ add_library(finale_mus_reader STATIC
     src/import/others/repeat_ending_start.cpp
     src/import/others/shape_definitions.cpp
     src/import/others/shape_expression_defs.cpp
-    src/import/others/smart_shape_custom_lines.cpp
     src/import/others/smart_shape.cpp
+    src/import/others/smart_shape_custom_lines.cpp
+    src/import/others/smart_shape_measure_assign.cpp
     src/import/others/split_measure.cpp
     src/import/others/staff.cpp
     src/import/others/staff_list.cpp

@@ -65,7 +65,9 @@ void importEarlySmartShapes(const ImportContext& context)
         const auto& endRow = ends.front();
         const auto& [startMeasure, startEndpoint] = endpoints[0];
         const auto& [endMeasure, endEndpoint] = endpoints[1];
-        if (startRow.words[0] != startMeasure || endRow.words[0] != endMeasure) {
+        const bool chronologicalMarkers = startRow.words[0] == startMeasure && endRow.words[0] == endMeasure;
+        const bool reversedMarkers = !chronologicalMarkers && startRow.words[0] == endMeasure && endRow.words[0] == startMeasure;
+        if (!chronologicalMarkers && !reversedMarkers) {
             continue;
         }
         auto shape = createOthersRecordTarget<Shape>(context.document, startSource, startRow, shapeId);
@@ -102,11 +104,11 @@ void importEarlySmartShapes(const ImportContext& context)
                                    std::int64_t value) { reportLegacyField(reporting, key, source, row, member, offset, value); };
             field(startSource, startRow, "shapeType", 2, startRow.words[1]);
             field(endpointSource, *startEndpoint, "startTermSeg.endPoint.staffId", 10, shape->startTermSeg->endPoint->staffId);
-            field(startSource, startRow, "startTermSeg.endPoint.measId", 0, startMeasure);
+            field(reversedMarkers ? endSource : startSource, reversedMarkers ? endRow : startRow, "startTermSeg.endPoint.measId", 0, startMeasure);
             field(endpointSource, *startEndpoint, "startTermSeg.endPoint.eduPosition", 2, shape->startTermSeg->endPoint->eduPosition);
             field(endpointSource, *startEndpoint, "startTermSeg.endPointAdj.vertOffset", 4, shape->startTermSeg->endPointAdj->vertOffset);
             field(endpointSource, *endEndpoint, "endTermSeg.endPoint.staffId", 10, shape->endTermSeg->endPoint->staffId);
-            field(endSource, endRow, "endTermSeg.endPoint.measId", 0, endMeasure);
+            field(reversedMarkers ? startSource : endSource, reversedMarkers ? startRow : endRow, "endTermSeg.endPoint.measId", 0, endMeasure);
             field(endpointSource, *endEndpoint, "endTermSeg.endPoint.eduPosition", 2, shape->endTermSeg->endPoint->eduPosition);
             field(endpointSource, *endEndpoint, "endTermSeg.endPointAdj.vertOffset", 4, shape->endTermSeg->endPointAdj->vertOffset);
             for (const char* member : {"makeHorz", "noPushEndStart"}) {

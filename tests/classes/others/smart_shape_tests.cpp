@@ -391,5 +391,17 @@ TEST_CASE("Early slurs retain their own endpoints", "[class][smart-shape]")
     }
 }
 
+TEST_CASE("Early SmartShape endpoints follow measure order when markers are reversed", "[class][smart-shape]")
+{
+    const auto result = readFixture("evidence/F263/F263-11bars-8va-3to8.mus");
+    const auto shape = result.document->getOthers()->get<Shape>(musx::dom::SCORE_PARTID, musx::dom::Cmper(1));
+    REQUIRE(shape);
+    CHECK(shape->startTermSeg->endPoint->measId == 3);
+    CHECK(shape->endTermSeg->endPoint->measId == 8);
+    CHECK(shape->startTermSeg->endPoint->measId < shape->endTermSeg->endPoint->measId);
+    CHECK(shape->startTermSeg->endPoint->eduPosition == 493);
+    CHECK(shape->endTermSeg->endPoint->eduPosition == 1859);
+}
+
 } // namespace
 } // namespace finale_mus_reader_tests

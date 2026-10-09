@@ -3,8 +3,11 @@
 
 #include "import/details.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <map>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -17,8 +20,11 @@ namespace details {
 namespace {
 
 using CenterShapeTarget = musx::dom::details::CenterShape;
+using SmartShapeTarget = musx::dom::others::SmartShape;
+using MeasureAssignTarget = musx::dom::others::SmartShapeMeasureAssign;
 constexpr auto centerShapeTag = records::packTag("Cx");
 constexpr records::LegacyTag centerShapeClass = 0x0406;
+constexpr auto earlyShapeStartTag = records::packTag("sX");
 constexpr std::size_t centerShapeWords = 15;
 
 void reportCenterShape(const ImportContext& context, const RecordFamilySource& source, std::span<const records::LegacyRow> rows,
@@ -85,6 +91,76 @@ void importCenterShapeFamily(const ImportContext& context, const RecordFamilySou
     }
 }
 
+void reportSynthesizedCenterShape(const ImportContext& context, const CenterShapeTarget& target)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key =
+            reporting.template instanceKey<CenterShapeTarget>(target.getSourcePartId(), target.getCmper1(), std::nullopt, target.getCmper2());
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyBehavior);
+        for (const auto* member : {"startBreakAdj.horzOffset", "startBreakAdj.vertOffset", "startBreakAdj.active", "startBreakAdj.contextDir",
+                 "startBreakAdj.contextEntCnct", "endBreakAdj.horzOffset", "endBreakAdj.vertOffset", "endBreakAdj.active", "endBreakAdj.contextDir",
+                 "endBreakAdj.contextEntCnct", "ctlPtAdj.startCtlPtX", "ctlPtAdj.startCtlPtY", "ctlPtAdj.endCtlPtX", "ctlPtAdj.endCtlPtY",
+                 "ctlPtAdj.active", "ctlPtAdj.contextDir"}) {
+            reportFallbackField(reporting, key, member, Reporting::Origin::LegacyBehavior, 0);
+        }
+    });
+}
+
+void reportSynthesizedCenterAssignment(const ImportContext& context, const MeasureAssignTarget& target)
+{
+    withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+        const auto key = reporting.template instanceKey<MeasureAssignTarget>(target.getSourcePartId(), target.getCmper(), target.getInci());
+        reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMusAdjusted);
+        reportFallbackField(reporting, key, "shapeNum", Reporting::Origin::LegacyMusAdjusted, target.shapeNum);
+        reportFallbackField(reporting, key, "centerShapeNum", Reporting::Origin::LegacyBehavior, target.centerShapeNum);
+    });
+}
+
+void synthesizeEarlyCenterShapes(const ImportContext& context)
+{
+    const auto& earlyShapes = context.index.getOthers();
+    std::map<std::pair<musx::dom::Cmper, musx::dom::Cmper>, musx::dom::Cmper> nextCenterId;
+    for (const auto& center : context.document->getDetails()->getAllSources<CenterShapeTarget>()) {
+        auto& next = nextCenterId[{center->getSourcePartId(), center->getCmper1()}];
+        next = (std::max)(next, static_cast<musx::dom::Cmper>(center->getCmper2() + 1));
+    }
+    std::map<std::pair<musx::dom::Cmper, musx::dom::Cmper>, musx::dom::Inci> nextInci;
+    for (const auto& assignment : context.document->getOthers()->getAllSources<MeasureAssignTarget>()) {
+        auto& next = nextInci[{assignment->getSourcePartId(), assignment->getCmper()}];
+        next = (std::max)(next, static_cast<musx::dom::Inci>(assignment->getInci().value_or(0) + 1));
+    }
+    for (const auto& shape : context.document->getOthers()->getAllSources<SmartShapeTarget>()) {
+        const auto partId = shape->getSourcePartId();
+        const auto shapeId = shape->getCmper();
+        if (earlyShapes.getArray(earlyShapeStartTag, shapeId, 0, partId).empty()) {
+            continue;
+        }
+        const auto start = static_cast<std::int32_t>(shape->startTermSeg->endPoint->measId);
+        const auto end = static_cast<std::int32_t>(shape->endTermSeg->endPoint->measId);
+        if (start <= 0 || end <= start + 1) {
+            continue;
+        }
+        auto& centerId = nextCenterId[{partId, shapeId}];
+        if (centerId == 0) {
+            centerId = 1;
+        }
+        for (std::int32_t measure = start + 1; measure < end; ++measure) {
+            auto center = std::make_shared<CenterShapeTarget>(context.document, partId, shape->getShareMode(), shapeId, centerId);
+            center->integrityCheck(center);
+            reportSynthesizedCenterShape(context, *center);
+            context.document->getDetails()->add(CenterShapeTarget::XmlNodeName, std::move(center));
+
+            const auto measureId = static_cast<musx::dom::Cmper>(measure);
+            const auto inci = nextInci[{partId, measureId}]++;
+            auto assignment = std::make_shared<MeasureAssignTarget>(context.document, partId, shape->getShareMode(), measureId, inci);
+            assignment->shapeNum = shapeId;
+            assignment->centerShapeNum = centerId++;
+            reportSynthesizedCenterAssignment(context, *assignment);
+            context.document->getOthers()->add(MeasureAssignTarget::XmlNodeName, std::move(assignment));
+        }
+    }
+}
+
 } // namespace
 
 void importCenterShapes(const ImportContext& context)
@@ -94,6 +170,7 @@ void importCenterShapes(const ImportContext& context)
     if (source) {
         importCenterShapeFamily(context, *source);
     }
+    context.pending.defer(DeferredStage::Synthesize, [&context] { synthesizeEarlyCenterShapes(context); });
 }
 
 } // namespace details
