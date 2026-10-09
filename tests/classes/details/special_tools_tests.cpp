@@ -202,7 +202,7 @@ TEST_CASE("Secondary beam alterations retain their width word without primary co
     const auto document = session.getDocument();
     const auto report = importBeamDetail<Down>(makeDetailContainer(FormatEpoch::DclLegacy, 0, 42, {0, 0, 0, 0, 256, 2, -3, 0, 0, 0}, "bL"),
         FormatEpoch::DclLegacy, document, SourceVersion{.major = 6});
-    const auto beam = document->getDetails()->get<Down>(musx::dom::SCORE_PARTID, 42, 0);
+    const auto beam = document->getDetails()->get<Down>(musx::dom::SCORE_PARTID, 42, musx::dom::Inci(0));
     REQUIRE(beam);
     CHECK(beam->dura == 256);
     CHECK(beam->beamWidth == -3);
