@@ -1,6 +1,6 @@
 ---
 name: prepare-pull-request
-description: Validate and deliver a feature branch through a pull request in this repository. Use whenever the user asks to open or create a PR, or asks to commit and push changes that will immediately become a PR. Requires the full local test suite and non-instrumented library-only build.
+description: Validate and deliver a feature branch through a pull request in this repository. Use whenever the user asks to open or create a PR, or asks to commit and push changes that will immediately become a PR. Requires final local validation before opening a PR and prompt delivery of trivial CI fixes afterward.
 ---
 
 # Prepare a pull request
@@ -27,6 +27,13 @@ before delivery:
    after the changes stabilize.
 
 Open the pull request only after both local validations pass.
+
+## CI follow-ups on an open pull request
+
+For a trivial fix to a specific CI failure, make the narrow change, commit it, and push the
+feature branch immediately. Do not delay the push for a local rebuild or full test run; let the
+new CI run verify the fix. If the failure calls for a broader code change, use the final local
+validation workflow above before pushing.
 
 ## Deliver the branch
 
