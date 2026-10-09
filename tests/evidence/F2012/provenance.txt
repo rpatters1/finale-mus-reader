@@ -5,6 +5,11 @@ F2012-slur-part.mus / -finale27/F2012-slur-part.musx
     sha256 b996e62fad13c0d4bf9c3e30795295be3d11473e698478093e62f56ff1f88f42 (.musx)
     Adds a slur with a fully linked part. Only the score has a SmartShape record.
 
+F2012-slur-diffents.mus / -finale27/F2012-slur-diffents.musx
+    sha256 e0c359dd9ee93d6a8a7ff74ed0f008df8bd43a2b8d6ff87908fabbe3cf20a1ae (.mus)
+    sha256 84742e25352f6a3411d9d8a2f3fb7a31ebc373ccb4da490df98c832394f7c7aa (.musx)
+    Moves both endpoints of the linked slur to different entries within measure 1.
+
 F2012-slur-part-edited.mus / -finale27/F2012-slur-part-edited.musx
     sha256 a73de7c71cfbe5c932deec1c7160380cebdc0655065ec7cd6c9e6b27690e576d (.mus)
     sha256 4c25b65ecdb89bb39cf84aa7878657bbee193ea023dc8827b1eaecdb8810b953 (.musx)

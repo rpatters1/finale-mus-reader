@@ -286,6 +286,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportShapeExpressionDefs, &others::importShapeExpressionDefs),
         FINALE_MUS_READER_IMPORTER(ImportShapeGraphicAssignments, &others::importShapeGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeCustomLines, &others::importSmartShapeCustomLines),
+        FINALE_MUS_READER_IMPORTER(ImportSmartShapeMeasureAssigns, &others::importSmartShapeMeasureAssigns),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapes, &others::importSmartShapes),
         FINALE_MUS_READER_IMPORTER(ImportSplitMeasures, &others::importSplitMeasures),
         FINALE_MUS_READER_IMPORTER(ImportStaff, &others::importStaff),
@@ -320,6 +321,7 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportMeasureTextAssigns, &details::importMeasureTextAssigns),
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),
+        FINALE_MUS_READER_IMPORTER(ImportSmartShapeEntryAssigns, &details::importSmartShapeEntryAssigns),
         FINALE_MUS_READER_IMPORTER(ImportStaffGroups, &details::importStaffGroups),
         FINALE_MUS_READER_IMPORTER(ImportStaffSizes, &details::importStaffSizes),
         // entries

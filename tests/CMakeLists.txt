@@ -31,6 +31,7 @@ add_executable(finale_mus_reader_tests
     classes/details/measure_graphic_assign_tests.cpp
     classes/details/measure_text_assign_tests.cpp
     classes/details/percussion_note_code_tests.cpp
+    classes/details/smart_shape_entry_assign_tests.cpp
     classes/details/staff_group_tests.cpp
     classes/details/staff_size_tests.cpp
     classes/entries/entry_tests.cpp
@@ -73,8 +74,8 @@ add_executable(finale_mus_reader_tests
     classes/others/graphic_assignments_tests.cpp
     classes/others/individual_positioning_tests.cpp
     classes/others/marking_category_tests.cpp
-    classes/others/measure_tests.cpp
     classes/others/measure_number_region_tests.cpp
+    classes/others/measure_tests.cpp
     classes/others/multimeasure_rest_tests.cpp
     classes/others/multistaff_instrument_group_tests.cpp
     classes/others/name_position_tests.cpp
@@ -89,6 +90,7 @@ add_executable(finale_mus_reader_tests
     classes/others/shape_definitions_tests.cpp
     classes/others/shape_expression_defs_tests.cpp
     classes/others/smart_shape_custom_lines_tests.cpp
+    classes/others/smart_shape_measure_assign_tests.cpp
     classes/others/smart_shape_tests.cpp
     classes/others/split_measure_tests.cpp
     classes/others/staff_list_tests.cpp
