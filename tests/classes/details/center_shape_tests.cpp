@@ -11,6 +11,8 @@ namespace {
 
 using namespace classes;
 using CenterShape = musx::dom::details::CenterShape;
+using EarlyShapeCase = std::pair<musx::dom::Cmper, musx::dom::MeasCmper>;
+using EarlyCenterCase = std::tuple<musx::dom::Cmper, musx::dom::Cmper, musx::dom::Cmper>;
 
 ImportReport importCenterShapes(
     const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
@@ -73,11 +75,11 @@ TEST_CASE("Early spanning SmartShapes number default centers within each shape",
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
     using Shape = musx::dom::others::SmartShape;
-    for (const auto& [shapeId, endMeasure] : {std::pair{1, 6}, std::pair{2, 6}}) {
-        auto shape = std::make_shared<Shape>(document, musx::dom::SCORE_PARTID, Shape::ShareMode::All, musx::dom::Cmper(shapeId));
+    for (const auto& [shapeId, endMeasure] : {EarlyShapeCase{1, 6}, EarlyShapeCase{2, 6}}) {
+        auto shape = std::make_shared<Shape>(document, musx::dom::SCORE_PARTID, Shape::ShareMode::All, shapeId);
         shape->integrityCheck(shape);
         shape->startTermSeg->endPoint->measId = 3;
-        shape->endTermSeg->endPoint->measId = musx::dom::MeasCmper(endMeasure);
+        shape->endTermSeg->endPoint->measId = endMeasure;
         document->getOthers()->add(Shape::XmlNodeName, std::move(shape));
     }
     const auto parsed = makeContainer({{1, "sX", {3, 0, 0, 0, 0, 0}}, {2, "sX", {3, 0, 0, 0, 0, 0}}});
@@ -85,15 +87,16 @@ TEST_CASE("Early spanning SmartShapes number default centers within each shape",
     using MeasureAssign = musx::dom::others::SmartShapeMeasureAssign;
     const auto centers = document->getDetails()->getAllSources<CenterShape>();
     REQUIRE(centers.size() == 4);
-    for (const auto& [shapeId, centerId, measure] : {std::tuple{1, 1, 4}, std::tuple{1, 2, 5}, std::tuple{2, 1, 4}, std::tuple{2, 2, 5}}) {
-        const auto center = document->getDetails()->get<CenterShape>(musx::dom::SCORE_PARTID, musx::dom::Cmper(shapeId), musx::dom::Cmper(centerId));
+    for (const auto& [shapeId, centerId, measure] :
+        {EarlyCenterCase{1, 1, 4}, EarlyCenterCase{1, 2, 5}, EarlyCenterCase{2, 1, 4}, EarlyCenterCase{2, 2, 5}}) {
+        const auto center = document->getDetails()->get<CenterShape>(musx::dom::SCORE_PARTID, shapeId, centerId);
         REQUIRE(center);
         CHECK(center->startBreakAdj->vertOffset == 0);
         CHECK_FALSE(center->startBreakAdj->active);
         CHECK(center->endBreakAdj->vertOffset == 0);
         CHECK_FALSE(center->endBreakAdj->active);
         CHECK_FALSE(center->ctlPtAdj->active);
-        const auto assignments = document->getOthers()->getArray<MeasureAssign>(musx::dom::SCORE_PARTID, musx::dom::Cmper(measure));
+        const auto assignments = document->getOthers()->getArray<MeasureAssign>(musx::dom::SCORE_PARTID, measure);
         REQUIRE(assignments.size() == 2);
         const auto assigned =
             std::find_if(assignments.begin(), assignments.end(), [shapeId](const auto& value) { return value->shapeNum == shapeId; });
