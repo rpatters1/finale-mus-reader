@@ -11,6 +11,12 @@ namespace details {
 /// @brief Recovers staff and system baseline displacements.
 void importBaselines(const ImportContext& context);
 
+/// @brief Recovers primary downstem beam adjustments attached to entries.
+void importBeamAlterationsDownStem(const ImportContext& context);
+
+/// @brief Recovers primary upstem beam adjustments attached to entries.
+void importBeamAlterationsUpStem(const ImportContext& context);
+
 /// @brief Recovers center adjustments for smart shapes spanning measures.
 void importCenterShapes(const ImportContext& context);
 
@@ -40,6 +46,12 @@ void importMeasureTextAssigns(const ImportContext& context);
 
 /// @brief Recovers percussion-note type assignments for individual notes.
 void importPercussionNoteCodes(const ImportContext& context);
+
+/// @brief Recovers secondary downstem beam adjustments attached to entries.
+void importSecondaryBeamAlterationsDownStem(const ImportContext& context);
+
+/// @brief Recovers secondary upstem beam adjustments attached to entries.
+void importSecondaryBeamAlterationsUpStem(const ImportContext& context);
 
 /// @brief Recovers SmartShape assignments attached to entries.
 void importSmartShapeEntryAssigns(const ImportContext& context);

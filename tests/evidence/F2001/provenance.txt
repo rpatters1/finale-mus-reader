@@ -141,3 +141,17 @@ F2001Win-endingtext.mus / .etf / .musx
     stores the Windows-1252 bytes, including 0xe5 and 0xf6, null-terminated
     across two incidences. The Finale 27 companion decodes those two bytes as
     Mac Roman, writing "This is Â lˆng ending".
+
+F2001Win-16ths.mus / .etf / .musx
+    sha256 b41eea069b8dff003f27c38bb1dc1ba644a14c5dbdd6144586401871a37b64c3 (.mus)
+    sha256 62746734a9716efcbeec571add9112e36048e2ef4a5a6d21f19945da1b6a570e (.etf)
+    sha256 25d596006211a25239bd5616fc2b430c1ba1f92bdc9238ccd701dee216d61e6a (.musx)
+    Baseline sixteenth-note group with no primary-beam alteration detail.
+
+F2001Win-16ths-beamwidth.mus / .etf / .musx
+    sha256 049888ba2776d32da7967b7ba5c9a1bf498a3d52303b5079a10def0a9f5c1aaf (.mus)
+    sha256 69fb3b7af2b5ccdecfe2f1ac387849eb1494ab4b8312d469383822318c909806 (.etf)
+    sha256 77dac08ae3acad4550d0994da94461c307911e83d05412c8b703732fa78ef882 (.musx)
+    Changes the primary downstem beam width at entry 1. The `BL(0,1)` second-row
+    width word is 3 whole EVPUs; the Finale 27 companion writes `beamWidth=192`
+    EFIX units for the same beam.

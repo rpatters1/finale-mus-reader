@@ -1,6 +1,24 @@
 Version 2002a.r1
 Mac OS 9.0.4 running in SheepShaver
 
+F2002-16ths.mus / .etf / -finale27/F2002-16ths.musx
+    sha256 328c61295796f9889b3ab7446909deb9f04ed1500535223b07406012fb3dc3ee (.mus)
+    sha256 8bc242e72cc9387e138826fcfe88e2dbe70aa65aa608d20c3198dd81570fbaa0 (.etf)
+    sha256 0143e355b144e6fca8e83f638aca1abce187423cd1601728e9585386f8de7f3c (.musx)
+    Two groups of sixteenth notes, used as the baseline for the beam-width edit.
+    It has no primary upstem beam-alteration detail.
+
+F2002-16ths-bmwidths.mus / .etf / -finale27/F2002-16ths-bmwidths.musx
+    sha256 cb2357ae6123b082391642c3c239dca32e4068f2eaf4768e05ad0fca88a76455 (.mus)
+    sha256 94139df3128dd9d1ac0fa58cdeec562f482eccd95026ebf5401106332a26e6a2 (.etf)
+    sha256 22d20210a892cc1f60295fae616729bb45240a3113f36b5f88995e2da39c6fae (.musx)
+    From F2002-16ths, adds an upstem primary-beam width of 6 EVPUs to entry 1.
+    The BH(0,1) detail stores width word 384, and the modern companion writes
+    beamWidth 384. The source therefore stores this positive width in EFIX units.
+    The ETF also changes entry 1's eE flag word from $C0000800 to $C0000880
+    and entry 9's final eE word from 0 to 128. The companion adds a stemDetail
+    marker on entry 1; its other decoded XML is unchanged.
+
 F2002-mirror.mus / .etf / -finale27/F2002-mirror.musx
     sha256 3b10761d9eb898a791fe1002adb5b42692117046fa62b10d762c621f29777c22 (.mus)
     sha256 cc35d06c230cb6f43d9d86233c8f5449ed5fa9d8c4cbf0cbb243c5213eb022b2 (.etf)
