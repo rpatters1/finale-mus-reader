@@ -4,15 +4,24 @@
 #include "class_test_support.h"
 
 #include <algorithm>
-#include <tuple>
 
 namespace finale_mus_reader_tests {
 namespace {
 
 using namespace classes;
 using CenterShape = musx::dom::details::CenterShape;
-using EarlyShapeCase = std::pair<musx::dom::Cmper, musx::dom::MeasCmper>;
-using EarlyCenterCase = std::tuple<musx::dom::Cmper, musx::dom::Cmper, musx::dom::Cmper>;
+struct EarlyShapeCase
+{
+    musx::dom::Cmper shapeId;
+    musx::dom::MeasCmper endMeasure;
+};
+
+struct EarlyCenterCase
+{
+    musx::dom::Cmper shapeId;
+    musx::dom::Cmper centerId;
+    musx::dom::Cmper measure;
+};
 
 ImportReport importCenterShapes(
     const finale_mus_reader::container::ParsedContainer& parsed, const SourceProfile& profile, const musx::dom::DocumentPtr& document)
