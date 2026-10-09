@@ -76,6 +76,17 @@ F2008-empty.musx
     twelve blue values at words 25--36, and five zero trailer words. Every
     color and the outline switch agree with the companion.
 
+F2008-16ths.mus / -finale27/F2008-16ths.musx
+    sha256 46ff9a0ad4eedbbb1f54958e4d5a3ca7d518eb0bcea303c564197ae15c535cc2 (.mus)
+    sha256 1c20d7135b359ca612d2410eec97ec5549a165a8d5dc2f18137417c39463488f (.musx)
+    Derived from F2008-empty with two groups of sixteenth notes, the first with downstems and
+    the second with upstems.
+
+F2008-16ths-secdnup.mus / -finale27/F2008-16ths-secdnup.musx
+    sha256 ace62fa41459c0d59ce034ad67dbc4e75a757b790d51ba05cf384936ea311139 (.mus)
+    sha256 1a103d8a543af99b2b3ab153414bcf466020b334bd54d241bd3aa9f3d25b77ee (.musx)
+    Derived from F2008-16ths by modifying the secondary beam in each group.
+
 F2008-parts.mus / -finale27/F2008-parts.musx
     sha256 7b1084a77f4c5359f05ebedb924acbd0e8a73cc5c7c6abafc3b1118954d0c6f1 (.mus)
     sha256 503ed74be133eea448ddfd230470f7e46bc5230bc8cba904c344a61fb735bccc (.musx)

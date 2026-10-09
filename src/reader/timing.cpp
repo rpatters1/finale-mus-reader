@@ -34,6 +34,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportAugmentationDotOptions: return "augmentation_dot_options";
     case Phase::ImportBarlineOptions: return "barline_options";
     case Phase::ImportBaselines: return "baselines";
+    case Phase::ImportBeamAlterationsDownStem: return "beam_alterations_down_stem";
+    case Phase::ImportBeamAlterationsUpStem: return "beam_alterations_up_stem";
     case Phase::ImportBeamOptions: return "beam_options";
     case Phase::ImportBeatChartElements: return "beat_chart_elements";
     case Phase::ImportBookmarks: return "bookmarks";
@@ -92,6 +94,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportPartGlobals: return "part_globals";
     case Phase::ImportPartVoicing: return "part_voicing";
     case Phase::ImportPercussionNoteCodes: return "percussion_note_codes";
+    case Phase::ImportSecondaryBeamAlterationsDownStem: return "secondary_beam_alterations_down_stem";
+    case Phase::ImportSecondaryBeamAlterationsUpStem: return "secondary_beam_alterations_up_stem";
     case Phase::ImportPercussionNoteInfo: return "percussion_note_info";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatBackIndividualPositioning: return "repeat_back_individual_positioning";

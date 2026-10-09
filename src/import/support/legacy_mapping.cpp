@@ -311,6 +311,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportTonalCenterSharps, &others::importTonalCenterSharps),
         // details
         FINALE_MUS_READER_IMPORTER(ImportBaselines, &details::importBaselines),
+        FINALE_MUS_READER_IMPORTER(ImportBeamAlterationsDownStem, &details::importBeamAlterationsDownStem),
+        FINALE_MUS_READER_IMPORTER(ImportBeamAlterationsUpStem, &details::importBeamAlterationsUpStem),
         FINALE_MUS_READER_IMPORTER(ImportCenterShapes, &details::importCenterShapes),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveFlats, &details::importClefOctaveFlats),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveSharps, &details::importClefOctaveSharps),
@@ -321,6 +323,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportMeasureGraphicAssignments, &details::importMeasureGraphicAssignments),
         FINALE_MUS_READER_IMPORTER(ImportMeasureTextAssigns, &details::importMeasureTextAssigns),
         FINALE_MUS_READER_IMPORTER(ImportPercussionNoteCodes, &details::importPercussionNoteCodes),
+        FINALE_MUS_READER_IMPORTER(ImportSecondaryBeamAlterationsDownStem, &details::importSecondaryBeamAlterationsDownStem),
+        FINALE_MUS_READER_IMPORTER(ImportSecondaryBeamAlterationsUpStem, &details::importSecondaryBeamAlterationsUpStem),
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeEntryAssigns, &details::importSmartShapeEntryAssigns),
         FINALE_MUS_READER_IMPORTER(ImportStaffGroups, &details::importStaffGroups),
         FINALE_MUS_READER_IMPORTER(ImportStaffSizes, &details::importStaffSizes),
