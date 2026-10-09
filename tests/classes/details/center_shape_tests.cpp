@@ -56,7 +56,8 @@ TEST_CASE("CenterShape reads the three-incidence detail and class payload", "[cl
             CHECK(shape->ctlPtAdj->endCtlPtY == 24);
             CHECK(shape->ctlPtAdj->active);
             CHECK(shape->ctlPtAdj->contextDir == musx::dom::smartshape::DirectionType::Over);
-            const auto* field = report.findField<CenterShape>("ctlPtAdj.startCtlPtX", musx::dom::SCORE_PARTID, 31, std::nullopt, 7);
+            const auto* field = report.findField<CenterShape>(
+                "ctlPtAdj.startCtlPtX", musx::dom::SCORE_PARTID, musx::dom::Cmper(31), std::nullopt, musx::dom::Cmper(7));
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyMus);
             CHECK(field->rawValue == 21);
