@@ -516,3 +516,15 @@ F263-maxnotes.mus / .etf / .musx
     sha256 779d708b20e27847d94b629a9a1a14e3adcf2e75cc52a62aeb1a5041a7c09051 (.musx)
     Finale 2.6.3 document with one twelve-note Entry, an ETF export, and a Finale 27
     companion. Its six linked physical rows hold note IDs 1 through 12.
+
+F263-11bars.mus / .etf / -finale27/F263-11bars.musx
+    sha256 f76c770c4783982d6b8ff8e10b0e23eeba4b68dcf244e366e68e195063269bd7 (.mus)
+    sha256 61f8f3b74d67114d22ada2ced3336b0744856d25f54bca15644cb45aec7c6a16 (.etf)
+    sha256 30f5f8f0af691696797f88c3707692bf673f6a29d39429b6949dda1016c63dad (.musx)
+    Extends the baseline document to eleven measures.
+
+F263-11bars-8va-3to8.mus / .etf / -finale27/F263-11bars-8va-3to8.musx
+    sha256 d35fcbba50f13b6831e0c13675a7c5c7a2392ee3336d430dbc065c1deb40c5a9 (.mus)
+    sha256 cc43f2b28060b7198a92013836be5b5850521cf635f4f717bba7b89fcc10fd0e (.etf)
+    sha256 31b56ed5bacd864112593230898e14284152e40af195fdc6bd1d0a0272b70ec7 (.musx)
+    Adds an 8va smart shape from measure 3 through measure 8 to the eleven-measure document.

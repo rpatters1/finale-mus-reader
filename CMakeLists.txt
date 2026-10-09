@@ -167,6 +167,7 @@ add_library(finale_mus_reader STATIC
     src/defaults/default_document.cpp
     src/defaults/embedded_default.cpp
     src/import/details/baseline.cpp
+    src/import/details/center_shape.cpp
     src/import/details/custom_key_octaves.cpp
     src/import/details/fretboard_diagrams.cpp
     src/import/details/gframe_hold.cpp

@@ -39,6 +39,7 @@ enum class Phase : std::size_t {
     ImportBeamOptions,
     ImportBeatChartElements,
     ImportBookmarks,
+    ImportCenterShapes,
     ImportChordOptions,
     ImportChordSuffixElements,
     ImportChordSuffixPlayback,

@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "import/shared/smart_shape_adjustment_flags.h"
 #include "musx/musx.h"
 
 namespace finale_mus_reader {
@@ -131,12 +132,6 @@ void importEarlySmartShapes(const ImportContext& context)
     }
 }
 
-musx::dom::smartshape::DirectionType adjustmentDirection(std::int64_t value)
-{
-    using Direction = musx::dom::smartshape::DirectionType;
-    return (value & 0x0200) ? Direction::Over : (value & 0x0100) ? Direction::Under : Direction::None;
-}
-
 bool smartShapeIsEntryBased(const void* instance)
 {
     const auto* shape = static_cast<const Shape*>(instance);
@@ -247,22 +242,25 @@ const FieldMapping smartShapeFields[] = {
         Shape, smartShapeClass, CMPER_FROM_TARGET, 10, LongWordOrder::LowFirst, &smartShapeIsBeatBased, startTermSeg->endPoint->eduPosition),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 14, startTermSeg->endPointAdj->horzOffset),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 16, startTermSeg->endPointAdj->vertOffset),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 18, 14, startTermSeg->endPointAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 18, nullptr, startTermSeg->endPointAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 18, smart_shape_adjustment_flags::activeBit, startTermSeg->endPointAdj->active),
+    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 18, nullptr, startTermSeg->endPointAdj->contextDir,
+        smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 18, nullptr, startTermSeg->endPointAdj->contextEntCnct,
-        static_cast<musx::dom::smartshape::EntryConnectionType>(value & 0x00ff)),
+        smart_shape_adjustment_flags::entryConnection(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 20, startTermSeg->ctlPtAdj->startCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 22, startTermSeg->ctlPtAdj->startCtlPtY),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 24, startTermSeg->ctlPtAdj->endCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 26, startTermSeg->ctlPtAdj->endCtlPtY),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 28, 14, startTermSeg->ctlPtAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 28, nullptr, startTermSeg->ctlPtAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 28, smart_shape_adjustment_flags::activeBit, startTermSeg->ctlPtAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 28, nullptr, startTermSeg->ctlPtAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 30, startTermSeg->breakAdj->horzOffset),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 32, startTermSeg->breakAdj->vertOffset),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 34, 14, startTermSeg->breakAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 34, nullptr, startTermSeg->breakAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 34, smart_shape_adjustment_flags::activeBit, startTermSeg->breakAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 34, nullptr, startTermSeg->breakAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 34, nullptr, startTermSeg->breakAdj->contextEntCnct,
-        static_cast<musx::dom::smartshape::EntryConnectionType>(value & 0x00ff)),
+        smart_shape_adjustment_flags::entryConnection(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 36, endTermSeg->endPoint->staffId),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 38, endTermSeg->endPoint->measId),
     MUS_CLASS_LONG_IF(
@@ -271,28 +269,32 @@ const FieldMapping smartShapeFields[] = {
         Shape, smartShapeClass, CMPER_FROM_TARGET, 40, LongWordOrder::LowFirst, &smartShapeIsBeatBased, endTermSeg->endPoint->eduPosition),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 44, endTermSeg->endPointAdj->horzOffset),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 46, endTermSeg->endPointAdj->vertOffset),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 48, 14, endTermSeg->endPointAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 48, nullptr, endTermSeg->endPointAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 48, smart_shape_adjustment_flags::activeBit, endTermSeg->endPointAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 48, nullptr, endTermSeg->endPointAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 48, nullptr, endTermSeg->endPointAdj->contextEntCnct,
-        static_cast<musx::dom::smartshape::EntryConnectionType>(value & 0x00ff)),
+        smart_shape_adjustment_flags::entryConnection(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 50, endTermSeg->ctlPtAdj->startCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 52, endTermSeg->ctlPtAdj->startCtlPtY),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 54, endTermSeg->ctlPtAdj->endCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 56, endTermSeg->ctlPtAdj->endCtlPtY),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 58, 14, endTermSeg->ctlPtAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 58, nullptr, endTermSeg->ctlPtAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 58, smart_shape_adjustment_flags::activeBit, endTermSeg->ctlPtAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 58, nullptr, endTermSeg->ctlPtAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 60, endTermSeg->breakAdj->horzOffset),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 62, endTermSeg->breakAdj->vertOffset),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 64, 14, endTermSeg->breakAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 64, nullptr, endTermSeg->breakAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 64, smart_shape_adjustment_flags::activeBit, endTermSeg->breakAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 64, nullptr, endTermSeg->breakAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 64, nullptr, endTermSeg->breakAdj->contextEntCnct,
-        static_cast<musx::dom::smartshape::EntryConnectionType>(value & 0x00ff)),
+        smart_shape_adjustment_flags::entryConnection(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 66, fullCtlPtAdj->startCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 68, fullCtlPtAdj->startCtlPtY),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 70, fullCtlPtAdj->endCtlPtX),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 72, fullCtlPtAdj->endCtlPtY),
-    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 74, 14, fullCtlPtAdj->active),
-    MUS_CLASS_WORD_AS_IF(Shape, smartShapeClass, CMPER_FROM_TARGET, 74, nullptr, fullCtlPtAdj->contextDir, adjustmentDirection(value)),
+    MUS_CLASS_BIT(Shape, smartShapeClass, CMPER_FROM_TARGET, 74, smart_shape_adjustment_flags::activeBit, fullCtlPtAdj->active),
+    MUS_CLASS_WORD_AS_IF(
+        Shape, smartShapeClass, CMPER_FROM_TARGET, 74, nullptr, fullCtlPtAdj->contextDir, smart_shape_adjustment_flags::direction(value)),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 76, startNoteId),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 78, endNoteId),
     MUS_CLASS_WORD(Shape, smartShapeClass, CMPER_FROM_TARGET, 80, lineStyleId),
