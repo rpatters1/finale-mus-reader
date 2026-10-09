@@ -8,6 +8,8 @@ namespace {
 
 using namespace classes;
 using MeasureAssignTestTarget = musx::dom::others::SmartShapeMeasureAssign;
+using MeasureCmper = musx::dom::Cmper;
+using MeasureInci = musx::dom::Inci;
 
 TEST_CASE("SmartShape measure tuple keeps a nonzero center reference", "[class][smart-shape-measure-assign]")
 {
@@ -25,11 +27,11 @@ TEST_CASE("SmartShape measure tuple keeps a nonzero center reference", "[class][
         musx::factory::ConstructionContext construction;
         const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
         finale_mus_reader::others::importSmartShapeMeasureAssigns(context);
-        const auto assignment = document->getOthers()->get<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, 4, 0);
+        const auto assignment = document->getOthers()->get<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, MeasureCmper(4), MeasureInci(0));
         REQUIRE(assignment);
         CHECK(assignment->shapeNum == 45);
         CHECK(assignment->centerShapeNum == 7);
-        const auto* field = report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, 4, 0);
+        const auto* field = report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, MeasureCmper(4), MeasureInci(0));
         REQUIRE(field);
         CHECK(field->rawValue == 7);
     }
@@ -38,13 +40,14 @@ TEST_CASE("SmartShape measure tuple keeps a nonzero center reference", "[class][
 TEST_CASE("Stored SmartShape measure assignments retain shape and center identifiers", "[class][smart-shape-measure-assign]")
 {
     const auto result = readFixture("evidence/F2006/F2006-lyric-vcs.mus");
-    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, 2);
+    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, MeasureCmper(2));
     REQUIRE(assignments.size() == 9);
     CHECK(assignments[0]->shapeNum == 1);
     CHECK(assignments[0]->centerShapeNum == 0);
     CHECK(assignments[1]->shapeNum == 3);
-    const auto* shapeNum = result.report.findField<MeasureAssignTestTarget>("shapeNum", musx::dom::SCORE_PARTID, 2, 1);
-    const auto* centerNum = result.report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, 2, 1);
+    const auto* shapeNum = result.report.findField<MeasureAssignTestTarget>("shapeNum", musx::dom::SCORE_PARTID, MeasureCmper(2), MeasureInci(1));
+    const auto* centerNum =
+        result.report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, MeasureCmper(2), MeasureInci(1));
     REQUIRE(shapeNum);
     REQUIRE(centerNum);
     CHECK(shapeNum->origin == ValueOrigin::LegacyMus);
@@ -55,7 +58,7 @@ TEST_CASE("Stored SmartShape measure assignments retain shape and center identif
 TEST_CASE("Uncompressed SmartShape measure assignment follows the stored Mx record", "[class][smart-shape-measure-assign]")
 {
     const auto result = readFixture("evidence/F97/F97-F300-slur.mus");
-    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, 1);
+    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, MeasureCmper(1));
     REQUIRE(assignments.size() == 1);
     CHECK(assignments.front()->shapeNum == 1);
     CHECK(assignments.front()->centerShapeNum == 0);
@@ -64,12 +67,13 @@ TEST_CASE("Uncompressed SmartShape measure assignment follows the stored Mx reco
 TEST_CASE("Early SmartShape endpoint assignments occur once per measure and shape", "[class][smart-shape-measure-assign]")
 {
     const auto result = readFixture("evidence/F263/F263-cresc-dim.mus");
-    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, 1);
+    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, MeasureCmper(1));
     REQUIRE(assignments.size() == 2);
     CHECK(assignments[0]->shapeNum == 1);
     CHECK(assignments[1]->shapeNum == 2);
     CHECK(assignments[0]->centerShapeNum == 0);
-    const auto* centerNum = result.report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, 1, 0);
+    const auto* centerNum =
+        result.report.findField<MeasureAssignTestTarget>("centerShapeNum", musx::dom::SCORE_PARTID, MeasureCmper(1), MeasureInci(0));
     REQUIRE(centerNum);
     CHECK(centerNum->origin == ValueOrigin::LegacyBehavior);
 }
@@ -77,12 +81,12 @@ TEST_CASE("Early SmartShape endpoint assignments occur once per measure and shap
 TEST_CASE("Zlib SmartShape measure assignments decode concatenated tuples", "[class][smart-shape-measure-assign]")
 {
     const auto result = readFixture("evidence/F2007/F2007-lyric-hyphens.mus");
-    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, 2);
+    const auto assignments = result.document->getOthers()->getArray<MeasureAssignTestTarget>(musx::dom::SCORE_PARTID, MeasureCmper(2));
     REQUIRE(assignments.size() == 2);
     CHECK(assignments[0]->shapeNum == 1);
     CHECK(assignments[1]->shapeNum == 2);
     CHECK(assignments[1]->centerShapeNum == 0);
-    const auto* field = result.report.findField<MeasureAssignTestTarget>("shapeNum", musx::dom::SCORE_PARTID, 2, 1);
+    const auto* field = result.report.findField<MeasureAssignTestTarget>("shapeNum", musx::dom::SCORE_PARTID, MeasureCmper(2), MeasureInci(1));
     REQUIRE(field);
     CHECK(field->sourceIdentity == 0x00da);
 }
