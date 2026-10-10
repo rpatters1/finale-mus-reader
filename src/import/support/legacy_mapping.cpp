@@ -313,6 +313,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportBaselines, &details::importBaselines),
         FINALE_MUS_READER_IMPORTER(ImportBeamAlterationsDownStem, &details::importBeamAlterationsDownStem),
         FINALE_MUS_READER_IMPORTER(ImportBeamAlterationsUpStem, &details::importBeamAlterationsUpStem),
+        FINALE_MUS_READER_IMPORTER(ImportBeamExtensionDownStem, &details::importBeamExtensionDownStem),
+        FINALE_MUS_READER_IMPORTER(ImportBeamExtensionUpStem, &details::importBeamExtensionUpStem),
         FINALE_MUS_READER_IMPORTER(ImportCenterShapes, &details::importCenterShapes),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveFlats, &details::importClefOctaveFlats),
         FINALE_MUS_READER_IMPORTER(ImportClefOctaveSharps, &details::importClefOctaveSharps),

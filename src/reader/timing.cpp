@@ -36,6 +36,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportBaselines: return "baselines";
     case Phase::ImportBeamAlterationsDownStem: return "beam_alterations_down_stem";
     case Phase::ImportBeamAlterationsUpStem: return "beam_alterations_up_stem";
+    case Phase::ImportBeamExtensionDownStem: return "beam_extension_down_stem";
+    case Phase::ImportBeamExtensionUpStem: return "beam_extension_up_stem";
     case Phase::ImportBeamOptions: return "beam_options";
     case Phase::ImportBeatChartElements: return "beat_chart_elements";
     case Phase::ImportBookmarks: return "bookmarks";

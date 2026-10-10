@@ -23,6 +23,9 @@ constexpr records::LegacyTag downPrimaryBeamClass = 0x0401;
 constexpr records::LegacyTag upPrimaryBeamClass = 0x0402;
 constexpr records::LegacyTag downSecondaryBeamClass = 0x0403;
 constexpr records::LegacyTag upSecondaryBeamClass = 0x0404;
+constexpr records::LegacyTag downBeamExtensionClass = 0x03fd;
+constexpr records::LegacyTag upBeamExtensionClass = 0x03fe;
+constexpr std::uint16_t extensionBeyondEighth = 0x0800;
 constexpr records::LegacyTag plainStemClass = 0x042a;
 constexpr records::LegacyTag beamedStemClass = 0x03ff;
 constexpr std::size_t stemAlterationWordCount = 5;
@@ -70,6 +73,49 @@ void importStemAlterationFamily(const ImportContext& context, const char* tag, r
                 const bool bigEndian = context.profile.byteOrder == ByteOrder::BigEndian;
                 reportField("upHorzAdjust", 8 + (bigEndian ? 0 : 1), upHorizontal);
                 reportField("downHorzAdjust", 8 + (bigEndian ? 1 : 0), downHorizontal);
+            });
+            context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
+        }
+    }
+}
+
+template <typename Target>
+void importBeamExtensionFamily(const ImportContext& context, const char* tag, records::LegacyTag classId)
+{
+    const auto selected =
+        selectRecordFamilySource(context, context.index.getDetails(), context.index.getClassDetails(), records::packTag(tag), classId, true);
+    if (!selected) {
+        return;
+    }
+    const auto& source = *selected;
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
+        for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
+            if (entryHigh == 0 && entryLow == 0) {
+                continue;
+            }
+            const auto* row = source.pool->get(source.identity, entryHigh, entryLow, 0, partId);
+            if (!row) {
+                continue;
+            }
+            const auto words = collectRecordWords(source, std::span(row, 1), context.profile.byteOrder);
+            if (words.size() != 5 && words.size() != 10) {
+                continue;
+            }
+            const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
+            auto target = std::make_shared<Target>(context.document, row->partId, recordShareMode(source, *row), entry);
+            target->leftOffset = words[0];
+            target->rightOffset = words[1];
+            const auto packed = static_cast<std::uint16_t>(words[4]);
+            target->mask = packed & 0x03ffU;
+            // Believed: this independent bit represents the legacy beyond-eighth choice.
+            target->extBeyond8th = (packed & extensionBeyondEighth) != 0;
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<Target>(row->partId, entryHigh, std::nullopt, entryLow);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reportLegacyField(reporting, key, source, *row, "leftOffset", source.byteOffsetInRow(0), words[0]);
+                reportLegacyField(reporting, key, source, *row, "rightOffset", source.byteOffsetInRow(2), words[1]);
+                reportLegacyField(reporting, key, source, *row, "mask", source.byteOffsetInRow(8), packed);
+                reportLegacyField(reporting, key, source, *row, "extBeyond8th", source.byteOffsetInRow(8), packed);
             });
             context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
         }
@@ -188,6 +234,16 @@ void importBeamAlterationsDownStem(const ImportContext& context)
 void importBeamAlterationsUpStem(const ImportContext& context)
 {
     importBeamAlterationFamily<musx::dom::details::BeamAlterationsUpStem, false>(context, "BH", upPrimaryBeamClass);
+}
+
+void importBeamExtensionDownStem(const ImportContext& context)
+{
+    importBeamExtensionFamily<musx::dom::details::BeamExtensionDownStem>(context, "DE", downBeamExtensionClass);
+}
+
+void importBeamExtensionUpStem(const ImportContext& context)
+{
+    importBeamExtensionFamily<musx::dom::details::BeamExtensionUpStem>(context, "UE", upBeamExtensionClass);
 }
 
 void importSecondaryBeamAlterationsDownStem(const ImportContext& context)
