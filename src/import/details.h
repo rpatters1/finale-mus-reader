@@ -22,6 +22,8 @@ void importBeamExtensionDownStem(const ImportContext& context);
 
 /// @brief Recovers upstem beam extensions attached to entries.
 void importBeamExtensionUpStem(const ImportContext& context);
+
+/// @brief Recovers entry beam stub direction masks.
 void importBeamStubDirection(const ImportContext& context);
 
 /// @brief Recovers center adjustments for smart shapes spanning measures.
@@ -32,6 +34,9 @@ void importClefOctaveFlats(const ImportContext& context);
 
 /// @brief Recovers per-clef sharp octave placements for custom key signatures.
 void importClefOctaveSharps(const ImportContext& context);
+
+/// @brief Recovers custom entry sizes.
+void importEntrySize(const ImportContext& context);
 
 /// @brief Recovers source fretboard diagrams.
 void importFretboardDiagrams(const ImportContext& context);
@@ -59,6 +64,8 @@ void importSecondaryBeamAlterationsDownStem(const ImportContext& context);
 
 /// @brief Recovers secondary upstem beam adjustments attached to entries.
 void importSecondaryBeamAlterationsUpStem(const ImportContext& context);
+
+/// @brief Recovers secondary beam breaks attached to entries.
 void importSecondaryBeamBreak(const ImportContext& context);
 
 /// @brief Recovers SmartShape assignments attached to entries.

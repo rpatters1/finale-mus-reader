@@ -79,6 +79,38 @@ TEST_CASE("Beam extensions decode both tagged stem directions", "[class][special
     }
 }
 
+TEST_CASE("Entry size reads the second word of one detail incidence", "[class][special-tools]")
+{
+    using Target = musx::dom::details::EntrySize;
+    const auto check = [](const finale_mus_reader::container::ParsedContainer& parsed, FormatEpoch epoch) {
+        const auto index = LegacyRecordIndex::build(parsed);
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        auto referenceSession = musx::factory::DocumentFactory::begin();
+        const auto reference = std::move(referenceSession).finish();
+        ImportReport report(epoch);
+        SourceProfile profile(epoch);
+        profile.byteOrder = parsed.byteOrder;
+        finale_mus_reader::PendingReferences pending;
+        musx::factory::ConstructionContext construction;
+        const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+        finale_mus_reader::details::importEntrySize(context);
+        const auto size = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
+        REQUIRE(size);
+        CHECK(size->percent == 67);
+        const auto* field = report.findField<Target>("percent", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+        REQUIRE(field);
+        CHECK(field->origin == ValueOrigin::LegacyMus);
+        CHECK(field->rawValue == 67);
+    };
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            check(makeDetailContainer(epoch, 0, 42, {9, 67, 8, 7, 6, 0, 99, 0, 0, 0}, "AS", order), epoch);
+        }
+    }
+    check(makeDetailClassContainer(0, 42, musx::dom::SCORE_PARTID, {9, 67, 8, 7, 6}, ByteOrder::LittleEndian, 0x03f0), FormatEpoch::ZlibLegacy);
+}
+
 TEST_CASE("Beam stub direction reads only the fifth word", "[class][special-tools]")
 {
     using Target = musx::dom::details::BeamStubDirection;
