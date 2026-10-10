@@ -14,7 +14,6 @@
 
 #include "container/mus_container.h"
 #include "musx/dom/Fundamentals.h"
-#include "records/legacy_others.h"
 
 namespace finale_mus_reader {
 namespace records {
@@ -93,9 +92,11 @@ struct LegacyRow
     std::size_t decodedOffset{};
 };
 
-/// @brief Payload words carried by each row shape.
+/// @brief Payload words and bytes in one fixed-width other or detail incidence.
 inline constexpr std::uint8_t otherWordCount = 6;
 inline constexpr std::uint8_t detailWordCount = 5;
+inline constexpr std::size_t otherInciByteCount = otherWordCount * sizeof(std::int16_t);
+inline constexpr std::size_t detailInciByteCount = detailWordCount * sizeof(std::int16_t);
 
 /// @brief One searchable pool of normalized rows.
 /// @details Rows are held in a single sorted vector and found by binary search, so a lookup

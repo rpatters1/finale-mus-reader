@@ -38,6 +38,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportBeamAlterationsUpStem: return "beam_alterations_up_stem";
     case Phase::ImportBeamExtensionDownStem: return "beam_extension_down_stem";
     case Phase::ImportBeamExtensionUpStem: return "beam_extension_up_stem";
+    case Phase::ImportBeamStubDirection: return "beam_stub_direction";
     case Phase::ImportBeamOptions: return "beam_options";
     case Phase::ImportBeatChartElements: return "beat_chart_elements";
     case Phase::ImportBookmarks: return "bookmarks";
@@ -108,6 +109,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportRepeatPassLists: return "repeat_pass_lists";
     case Phase::ImportSecondaryBeamAlterationsDownStem: return "secondary_beam_alterations_down_stem";
     case Phase::ImportSecondaryBeamAlterationsUpStem: return "secondary_beam_alterations_up_stem";
+    case Phase::ImportSecondaryBeamBreak: return "secondary_beam_break";
     case Phase::ImportShapeDefinitions: return "shape_definitions";
     case Phase::ImportShapeExpressionDefs: return "shape_expression_defs";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";

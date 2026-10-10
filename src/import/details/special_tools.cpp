@@ -9,26 +9,127 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "musx/musx.h"
+#include "records/legacy_record_index.h"
 
 namespace finale_mus_reader {
 namespace details {
 namespace {
 
-constexpr std::size_t shortBeamWordCount = 5;
-constexpr std::size_t fullBeamWordCount = 10;
+constexpr std::size_t shortBeamWordCount = records::detailWordCount;
+constexpr std::size_t fullBeamWordCount = 2U * records::detailWordCount;
+
 constexpr records::LegacyTag downPrimaryBeamClass = 0x0401;
 constexpr records::LegacyTag upPrimaryBeamClass = 0x0402;
+
 constexpr records::LegacyTag downSecondaryBeamClass = 0x0403;
 constexpr records::LegacyTag upSecondaryBeamClass = 0x0404;
+
 constexpr records::LegacyTag downBeamExtensionClass = 0x03fd;
 constexpr records::LegacyTag upBeamExtensionClass = 0x03fe;
 constexpr std::uint16_t extensionBeyondEighth = 0x0800;
+
+constexpr records::LegacyTag beamStubDirectionClass = 0x0400;
+
+constexpr records::LegacyTag secondaryBeamBreakClass = 0x0425;
+constexpr std::size_t secondaryBreakBeamCount = 9;
+
 constexpr records::LegacyTag plainStemClass = 0x042a;
 constexpr records::LegacyTag beamedStemClass = 0x03ff;
-constexpr std::size_t stemAlterationWordCount = 5;
+constexpr std::size_t stemAlterationWordCount = records::detailWordCount;
+
+unsigned secondaryBeamBreakMask(std::span<const std::uint8_t> payload, bool flipWordBytes)
+{
+    unsigned mask = 0;
+    for (std::size_t beam = 0; beam < secondaryBreakBeamCount; ++beam) {
+        if (payload[flipWordBytes ? beam ^ 1U : beam] != 0) {
+            mask |= unsigned(musx::dom::NoteType::Note16th) >> beam;
+        }
+    }
+    return mask;
+}
+
+void importBeamStubDirectionRecord(const ImportContext& context)
+{
+    const auto selected = selectRecordFamilySource(
+        context, context.index.getDetails(), context.index.getClassDetails(), records::packTag("ub"), beamStubDirectionClass, true);
+    if (!selected) {
+        return;
+    }
+    const auto& source = *selected;
+    using Target = musx::dom::details::BeamStubDirection;
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
+        for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
+            if (entryHigh == 0 && entryLow == 0) {
+                continue;
+            }
+            const auto* row = source.pool->get(source.identity, entryHigh, entryLow, 0, partId);
+            if (!row) {
+                continue;
+            }
+            const auto words = collectRecordWords(source, std::span(row, 1), context.profile.byteOrder);
+            if (words.size() != records::detailWordCount) {
+                continue;
+            }
+            const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
+            auto target = std::make_shared<Target>(context.document, row->partId, recordShareMode(source, *row), entry);
+            const auto storedMask = static_cast<std::uint16_t>(words[4]);
+            target->mask = storedMask & 0x03ffU;
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<Target>(row->partId, entryHigh, std::nullopt, entryLow);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reportLegacyField(reporting, key, source, *row, "mask", source.byteOffsetInRow(8), storedMask);
+            });
+            context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
+        }
+    }
+}
+
+void importSecondaryBeamBreakRecord(const ImportContext& context)
+{
+    const auto selected = selectRecordFamilySource(
+        context, context.index.getDetails(), context.index.getClassDetails(), records::packTag("sB"), secondaryBeamBreakClass, true);
+    if (!selected) {
+        return;
+    }
+    const auto& source = *selected;
+    using Target = musx::dom::details::SecondaryBeamBreak;
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
+        for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
+            if (entryHigh == 0 && entryLow == 0) {
+                continue;
+            }
+            const auto* row = source.pool->get(source.identity, entryHigh, entryLow, 0, partId);
+            if (!row) {
+                continue;
+            }
+            const auto payload = source.pool->effectivePayloadOf(*row);
+            if (payload.size() != records::detailInciByteCount) {
+                continue;
+            }
+            const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
+            auto target = std::make_shared<Target>(context.document, row->partId, recordShareMode(source, *row), entry);
+            target->mask = secondaryBeamBreakMask(payload, false);
+            const auto beamEnd = payload.begin() + secondaryBreakBeamCount;
+            const auto firstSet = std::find_if(payload.begin(), beamEnd, [](std::uint8_t value) { return value != 0; });
+            target->breakThrough = firstSet != beamEnd && std::all_of(firstSet, beamEnd, [](std::uint8_t value) { return value != 0; });
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<Target>(row->partId, entryHigh, std::nullopt, entryLow);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                auto maskInfo = typename Reporting::FieldInfo{
+                    Reporting::Origin::LegacyMus, row->blockOffset, row->decodedOffset + source.byteOffsetInRow(0), target->mask, source.identity};
+                // A word-ordered upgrade exchanges each byte pair, including the unused tenth byte.
+                maskInfo.finaleUpgradeLossValue = secondaryBeamBreakMask(payload, true);
+                reporting.report().setField(key, "mask", std::move(maskInfo));
+                reportFallbackField(reporting, key, "breakThrough", Reporting::Origin::LegacyBehavior, target->breakThrough);
+            });
+            context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
+        }
+    }
+}
 
 template <typename Target>
 void importStemAlterationFamily(const ImportContext& context, const char* tag, records::LegacyTag classId)
@@ -98,7 +199,7 @@ void importBeamExtensionFamily(const ImportContext& context, const char* tag, re
                 continue;
             }
             const auto words = collectRecordWords(source, std::span(row, 1), context.profile.byteOrder);
-            if (words.size() != 5 && words.size() != 10) {
+            if (words.size() != shortBeamWordCount && words.size() != fullBeamWordCount) {
                 continue;
             }
             const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
@@ -246,6 +347,11 @@ void importBeamExtensionUpStem(const ImportContext& context)
     importBeamExtensionFamily<musx::dom::details::BeamExtensionUpStem>(context, "UE", upBeamExtensionClass);
 }
 
+void importBeamStubDirection(const ImportContext& context)
+{
+    importBeamStubDirectionRecord(context);
+}
+
 void importSecondaryBeamAlterationsDownStem(const ImportContext& context)
 {
     importBeamAlterationFamily<musx::dom::details::SecondaryBeamAlterationsDownStem, true>(context, "bL", downSecondaryBeamClass);
@@ -254,6 +360,11 @@ void importSecondaryBeamAlterationsDownStem(const ImportContext& context)
 void importSecondaryBeamAlterationsUpStem(const ImportContext& context)
 {
     importBeamAlterationFamily<musx::dom::details::SecondaryBeamAlterationsUpStem, true>(context, "bH", upSecondaryBeamClass);
+}
+
+void importSecondaryBeamBreak(const ImportContext& context)
+{
+    importSecondaryBeamBreakRecord(context);
 }
 
 void importStemAlterations(const ImportContext& context)
