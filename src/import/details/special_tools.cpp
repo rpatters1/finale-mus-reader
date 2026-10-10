@@ -33,6 +33,7 @@ constexpr records::LegacyTag upBeamExtensionClass = 0x03fe;
 constexpr std::uint16_t extensionBeyondEighth = 0x0800;
 
 constexpr records::LegacyTag beamStubDirectionClass = 0x0400;
+constexpr records::LegacyTag entrySizeClass = 0x03f0;
 
 constexpr records::LegacyTag secondaryBeamBreakClass = 0x0425;
 constexpr std::size_t secondaryBreakBeamCount = 9;
@@ -82,6 +83,41 @@ void importBeamStubDirectionRecord(const ImportContext& context)
                 const auto key = reporting.template instanceKey<Target>(row->partId, entryHigh, std::nullopt, entryLow);
                 reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
                 reportLegacyField(reporting, key, source, *row, "mask", source.byteOffsetInRow(8), storedMask);
+            });
+            context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
+        }
+    }
+}
+
+void importEntrySizeRecord(const ImportContext& context)
+{
+    const auto selected =
+        selectRecordFamilySource(context, context.index.getDetails(), context.index.getClassDetails(), records::packTag("AS"), entrySizeClass, true);
+    if (!selected) {
+        return;
+    }
+    const auto& source = *selected;
+    using Target = musx::dom::details::EntrySize;
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
+        for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
+            if (entryHigh == 0 && entryLow == 0) {
+                continue;
+            }
+            const auto* row = source.pool->get(source.identity, entryHigh, entryLow, 0, partId);
+            if (!row) {
+                continue;
+            }
+            const auto words = collectRecordWords(source, std::span(row, 1), context.profile.byteOrder);
+            if (words.size() != records::detailWordCount) {
+                continue;
+            }
+            const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
+            auto target = std::make_shared<Target>(context.document, row->partId, recordShareMode(source, *row), entry);
+            target->percent = words[1];
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<Target>(row->partId, entryHigh, std::nullopt, entryLow);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                reportLegacyField(reporting, key, source, *row, "percent", source.byteOffsetInRow(2), words[1]);
             });
             context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
         }
@@ -350,6 +386,11 @@ void importBeamExtensionUpStem(const ImportContext& context)
 void importBeamStubDirection(const ImportContext& context)
 {
     importBeamStubDirectionRecord(context);
+}
+
+void importEntrySize(const ImportContext& context)
+{
+    importEntrySizeRecord(context);
 }
 
 void importSecondaryBeamAlterationsDownStem(const ImportContext& context)

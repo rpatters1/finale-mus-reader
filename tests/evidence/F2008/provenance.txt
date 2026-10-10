@@ -283,3 +283,17 @@ F2008-F372-F263-F100-msnm-enclevr.mus / -finale27/F2008-F372-F263-F100-msnm-encl
     Finale 27 companion re-save. The old 96-byte class payload retains the rectangle enclosure,
     its 18/18 margins and 118 line width, and the enabled start and mid-measure uses. Finale 2008
     cannot export ETF, so this pair contains only the source document and modern companion.
+
+F2008-4trs.mus / -finale27/F2008-4trs.musx
+    sha256 9a2c59b4a31733dd9e4a5e49db4278e8dc6a2823ea745bda4c0173166c0155bd (.mus)
+    sha256 e564575335c2cd2f653bee2f6477b618956a53fd1c7290d2f961b090548e52d2 (.musx)
+    A little-endian Finale 2008 score with eight entries and one linked part. It is the
+    baseline for a part-specific enharmonic edit to entry 8.
+
+F2008-4trs-enh.mus / -finale27/F2008-4trs-enh.musx
+    sha256 26d3cfd834be2df60acf4ee012a67b565df9c09037d9634237730713952e4a8b (.mus)
+    sha256 bc5b73999f32745b4d050a3c3d3fa6908cfa2782f8cf113b9cab0c2bb95d1451 (.musx)
+    Derived from F2008-4trs by changing note 1 of entry 8 enharmonically in the linked part.
+    The source adds a part-specific class-detail `0x0422` record; the Finale 27 companion
+    contains a linked `noteAlter` with `enharmonic` set. The save also changes part-specific
+    layout data and the companion's `needsRecalc` values.

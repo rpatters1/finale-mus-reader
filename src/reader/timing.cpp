@@ -38,8 +38,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportBeamAlterationsUpStem: return "beam_alterations_up_stem";
     case Phase::ImportBeamExtensionDownStem: return "beam_extension_down_stem";
     case Phase::ImportBeamExtensionUpStem: return "beam_extension_up_stem";
-    case Phase::ImportBeamStubDirection: return "beam_stub_direction";
     case Phase::ImportBeamOptions: return "beam_options";
+    case Phase::ImportBeamStubDirection: return "beam_stub_direction";
     case Phase::ImportBeatChartElements: return "beat_chart_elements";
     case Phase::ImportBookmarks: return "bookmarks";
     case Phase::ImportCenterShapes: return "center_shapes";
@@ -52,6 +52,7 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportClefOptions: return "clef_options";
     case Phase::ImportDrumStaff: return "drum_staff";
     case Phase::ImportEntries: return "entries";
+    case Phase::ImportEntrySize: return "entry_size";
     case Phase::ImportFilePath: return "file_path";
     case Phase::ImportFlagOptions: return "flag_options";
     case Phase::ImportFontDefinitions: return "font_definitions";

@@ -17,6 +17,13 @@ F100-beam.mus / .etf / -finale27/F100-beam.musx
     sha256 15f5b75d4cbf5722a81325597ad439a87a03e34b7f4a211b3a7da10afb0feb8f (.musx)
     Baseline beamed group without a beam extension.
 
+F100-beam-67pct.mus / .etf / -finale27/F100-beam-67pct.musx
+    sha256 da4ceab1bb654efd59c14112339f3aa9b75f66e594b424ed5b2e4d5365020e08 (.mus)
+    sha256 a8b45e7daaac5e1bb7c0d089fc7a7804784f44a80c16061cb4a0c197573871e0 (.etf)
+    sha256 c072ae2980a96262d5ca8d8a01f536c8d974f9d08b02bf1c391dad1e5c1caa6d (.musx)
+    Derived from F100-beam by setting entry 1 to 67% size. The ETF contains
+    `AS(0,1) 0 67 0 0 0`, and the Finale 27 companion preserves 67%.
+
 F100-beam-ext8th.mus / .etf / -finale27/F100-beam-ext8th.musx
     sha256 b0ab9d57597161e2922d492fda9384d113421d99fc2df51fff608450b104aa2e (.mus)
     sha256 1deabcd719e519e4c22f3c0565da8d5876030f5119333dcf45a724a1e0fac1c8 (.etf)
