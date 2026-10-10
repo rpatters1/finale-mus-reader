@@ -22,6 +22,7 @@ void importBeamExtensionDownStem(const ImportContext& context);
 
 /// @brief Recovers upstem beam extensions attached to entries.
 void importBeamExtensionUpStem(const ImportContext& context);
+void importBeamStubDirection(const ImportContext& context);
 
 /// @brief Recovers center adjustments for smart shapes spanning measures.
 void importCenterShapes(const ImportContext& context);
@@ -58,6 +59,7 @@ void importSecondaryBeamAlterationsDownStem(const ImportContext& context);
 
 /// @brief Recovers secondary upstem beam adjustments attached to entries.
 void importSecondaryBeamAlterationsUpStem(const ImportContext& context);
+void importSecondaryBeamBreak(const ImportContext& context);
 
 /// @brief Recovers SmartShape assignments attached to entries.
 void importSmartShapeEntryAssigns(const ImportContext& context);

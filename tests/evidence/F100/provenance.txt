@@ -1070,3 +1070,21 @@ F100-alters-tcd4-min1.mus / .etf / -finale27/F100-alters-tcd4-min1.musx
     sha256 0123767ae4ec3c9b28b728412ba966a834e78f8faf5a8bf0bcbddadd02254eb3 (.musx)
     From F100-alters-tcd4, changes Entry 1's Note displacement from 0 to -1
     while retaining alteration +4 and TCD Watershed 4.
+
+F100-beam-32brkonly.mus / .etf / -finale27/F100-beam-32brkonly.musx
+    sha256 fac46127c33a87bc654dcd7f216a8681a793c30ce1416a5dc1bb9228ecf79f78 (.mus)
+    sha256 339f2818f5da6d0adfcdb42ba0389ff9c1b27071ef3c43616675ce86158380f3 (.etf)
+    sha256 2d1d7b38529c90cd444673c5b75ae1f1b398be098f73636a67757d754f59f9f9 (.musx)
+    Breaks only the thirty-second beam at entry 6.
+
+F100-beam-32brkthru.mus / .etf / -finale27/F100-beam-32brkthru.musx
+    sha256 d569dde6c477977aef003f8858d3c2b65cf6a05c453415821b151eff0d13bf12 (.mus)
+    sha256 7f9a4c405e58c6902a7e27a89693105f4ad90133e9d81474f2b84cf625d916b8 (.etf)
+    sha256 23e61a52722d8726ae019f5b304412ec29a912b3e8fc4a24f9aee66359a72184 (.musx)
+    Breaks the thirty-second beam through the shortest beam at entry 6.
+
+F100-beam-16-64brkonly.mus / .etf / -finale27/F100-beam-16-64brkonly.musx
+    sha256 af85200ccb7d5f98b085c7fdb8839b594e59a5fad91a01612b142c2d8b102532 (.mus)
+    sha256 d905f83cba7d6263949957a3e410aa24fe97c5b895f875bc3c7f5fde73328e25 (.etf)
+    sha256 e661f17d0ff4e4e1d5d48ee3944343a768e9f363bea0f276364dab6f52247ab3 (.musx)
+    Breaks only the sixteenth and sixty-fourth beams at entries 1 and 5.

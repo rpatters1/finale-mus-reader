@@ -34,6 +34,10 @@ ImportReport importBeamDetail(const finale_mus_reader::container::ParsedContaine
         finale_mus_reader::details::importBeamExtensionDownStem(context);
     } else if constexpr (std::is_same_v<Target, musx::dom::details::BeamExtensionUpStem>) {
         finale_mus_reader::details::importBeamExtensionUpStem(context);
+    } else if constexpr (std::is_same_v<Target, musx::dom::details::BeamStubDirection>) {
+        finale_mus_reader::details::importBeamStubDirection(context);
+    } else if constexpr (std::is_same_v<Target, musx::dom::details::SecondaryBeamBreak>) {
+        finale_mus_reader::details::importSecondaryBeamBreak(context);
     } else {
         finale_mus_reader::details::importSecondaryBeamAlterationsUpStem(context);
     }
@@ -72,6 +76,127 @@ TEST_CASE("Beam extensions decode both tagged stem directions", "[class][special
                 CHECK(upField->origin == ValueOrigin::LegacyMus);
             }
         }
+    }
+}
+
+TEST_CASE("Beam stub direction reads only the fifth word", "[class][special-tools]")
+{
+    using Target = musx::dom::details::BeamStubDirection;
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            const auto parsed = makeDetailContainer(epoch, 0, 42, {11, 22, 33, 44, 0x0180}, "ub", order);
+            const auto index = LegacyRecordIndex::build(parsed);
+            auto session = musx::factory::DocumentFactory::begin();
+            const auto document = session.getDocument();
+            auto referenceSession = musx::factory::DocumentFactory::begin();
+            const auto reference = std::move(referenceSession).finish();
+            ImportReport report(epoch);
+            SourceProfile profile(epoch);
+            profile.byteOrder = order;
+            finale_mus_reader::PendingReferences pending;
+            musx::factory::ConstructionContext construction;
+            const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+            finale_mus_reader::details::importBeamStubDirection(context);
+            const auto detail = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
+            REQUIRE(detail);
+            CHECK(detail->mask == 0x0180);
+            const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+            REQUIRE(field);
+            CHECK(field->origin == ValueOrigin::LegacyMus);
+        }
+    }
+}
+
+TEST_CASE("Beam stub direction ignores bits above the ten beam levels", "[class][special-tools]")
+{
+    using Target = musx::dom::details::BeamStubDirection;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto report = importBeamDetail<Target>(
+        makeDetailContainer(FormatEpoch::UncompressedLegacy, 0, 42, {0, 0, 0, 0, -1}, "ub"), FormatEpoch::UncompressedLegacy, document);
+    const auto detail = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
+    REQUIRE(detail);
+    CHECK(detail->mask == 0x03ff);
+    const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+    REQUIRE(field);
+    CHECK(field->rawValue == 0xffff);
+}
+
+TEST_CASE("Secondary beam break reads bytes in source order", "[class][special-tools]")
+{
+    using Target = musx::dom::details::SecondaryBeamBreak;
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            const auto firstWord = static_cast<std::int16_t>(order == ByteOrder::BigEndian ? 0x0100 : 0x0001);
+            const auto lastWord = static_cast<std::int16_t>(order == ByteOrder::BigEndian ? 0x0007 : 0x0700);
+            const auto parsed = makeDetailContainer(epoch, 0, 42, {firstWord, firstWord, 0, 0, lastWord}, "sB", order);
+            const auto index = LegacyRecordIndex::build(parsed);
+            auto session = musx::factory::DocumentFactory::begin();
+            const auto document = session.getDocument();
+            auto referenceSession = musx::factory::DocumentFactory::begin();
+            const auto reference = std::move(referenceSession).finish();
+            ImportReport report(epoch);
+            SourceProfile profile(epoch);
+            profile.byteOrder = order;
+            finale_mus_reader::PendingReferences pending;
+            musx::factory::ConstructionContext construction;
+            const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+            finale_mus_reader::details::importSecondaryBeamBreak(context);
+            const auto detail = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
+            REQUIRE(detail);
+            CHECK(detail->mask == 0x0140);
+            CHECK_FALSE(detail->breakThrough);
+            for (const auto* name : {"mask", "breakThrough"}) {
+                const auto* field = report.findField<Target>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+                REQUIRE(field);
+                CHECK(field->origin == (std::string_view(name) == "mask" ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
+            }
+        }
+    }
+}
+
+TEST_CASE("Zlib beam stub and secondary break classes use the tagged payload layouts", "[class][special-tools]")
+{
+    using Stub = musx::dom::details::BeamStubDirection;
+    using Break = musx::dom::details::SecondaryBeamBreak;
+    for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        const auto stubReport =
+            importBeamDetail<Stub>(makeDetailClassContainer(0, 42, 0, {0, 0, 0, 0, -1}, order, 0x0400), FormatEpoch::ZlibLegacy, document);
+        const auto firstWord = static_cast<std::int16_t>(order == ByteOrder::BigEndian ? 0x0001 : 0x0100);
+        const auto remainingWord = static_cast<std::int16_t>(0x0101);
+        const auto breakReport = importBeamDetail<Break>(
+            makeDetailClassContainer(0, 43, 0, {firstWord, remainingWord, remainingWord, remainingWord, remainingWord}, order, 0x0425),
+            FormatEpoch::ZlibLegacy, document);
+        const auto stub = document->getDetails()->get<Stub>(musx::dom::SCORE_PARTID, 42);
+        const auto secondaryBreak = document->getDetails()->get<Break>(musx::dom::SCORE_PARTID, 43);
+        REQUIRE(stub);
+        REQUIRE(secondaryBreak);
+        CHECK(stub->mask == 0x03ff);
+        CHECK(secondaryBreak->mask == 0x00ff);
+        CHECK(secondaryBreak->breakThrough);
+        CHECK(stubReport.findField<Stub>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42)));
+        CHECK(breakReport.findField<Break>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43)));
+    }
+}
+
+TEST_CASE("F100 and F2003 secondary break edits preserve the byte mask and through synthesis", "[class][special-tools]")
+{
+    using Target = musx::dom::details::SecondaryBeamBreak;
+    for (const auto& [fixture, entry, mask, through, flippedMask] : {std::tuple{"evidence/F100/F100-beam-32brkonly.mus", 6, 0x80u, false, 0x100u},
+             {"evidence/F100/F100-beam-32brkthru.mus", 6, 0xffu, true, 0x17fu}, {"evidence/F100/F100-beam-16-64brkonly.mus", 1, 0x140u, false, 0xa0u},
+             {"evidence/F2003/F2003-beam-16-64brkonly.mus", 1, 0x140u, false, 0xa0u},
+             {"evidence/F2003/F2003-beam-16-64brkonly.mus", 5, 0x140u, false, 0xa0u}}) {
+        const auto imported = readFixture(fixture);
+        const auto detail = imported.document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, entry);
+        REQUIRE(detail);
+        CHECK(detail->mask == mask);
+        CHECK(detail->breakThrough == through);
+        const auto* maskField = imported.report.findField<Target>(
+            "mask", musx::dom::SCORE_PARTID, static_cast<musx::dom::Cmper>(entry >> 16U), std::nullopt, static_cast<musx::dom::Cmper>(entry));
+        REQUIRE(maskField);
+        CHECK(maskField->finaleUpgradeLossValue == flippedMask);
     }
 }
 

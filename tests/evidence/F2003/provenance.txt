@@ -1,6 +1,14 @@
 Version 2003a.r1
 Mac OS 9.0.4 running in SheepShaver
 
+F2003-beam-16-64brkonly.mus / .etf / -finale27/F2003-beam-16-64brkonly.musx
+    sha256 b3f6559893aefb08bc748276cff76a4019c5e5b9e8f31cc0de833db53f28bf5d (.mus)
+    sha256 b4b885cb79cb15196b299c11ddbebab0cb0cb67b163d52eeaeceacf091661785 (.etf)
+    sha256 ff8639cc01b79af8047b9f541af5b16da1b80ce7911a511f862e2fa037cb17e8 (.musx)
+    Resave of the Finale 1.0 sixteenth-and-sixty-fourth-beam break edit in Finale 2003,
+    with its ETF export and subsequent Finale 27 conversion. Entries 1 and 5 retain the
+    selected secondary beam breaks.
+
 F2003-empty.mus and F2003-empty.etf
     Untouched new document used as the parent for the controlled bend-connection edits.
 
