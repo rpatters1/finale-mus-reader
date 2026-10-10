@@ -30,10 +30,116 @@ ImportReport importBeamDetail(const finale_mus_reader::container::ParsedContaine
         finale_mus_reader::details::importBeamAlterationsUpStem(context);
     } else if constexpr (std::is_same_v<Target, musx::dom::details::SecondaryBeamAlterationsDownStem>) {
         finale_mus_reader::details::importSecondaryBeamAlterationsDownStem(context);
+    } else if constexpr (std::is_same_v<Target, musx::dom::details::BeamExtensionDownStem>) {
+        finale_mus_reader::details::importBeamExtensionDownStem(context);
+    } else if constexpr (std::is_same_v<Target, musx::dom::details::BeamExtensionUpStem>) {
+        finale_mus_reader::details::importBeamExtensionUpStem(context);
     } else {
         finale_mus_reader::details::importSecondaryBeamAlterationsUpStem(context);
     }
     return report;
+}
+
+TEST_CASE("Beam extensions decode both tagged stem directions", "[class][special-tools]")
+{
+    using Down = musx::dom::details::BeamExtensionDownStem;
+    using Up = musx::dom::details::BeamExtensionUpStem;
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            auto session = musx::factory::DocumentFactory::begin();
+            const auto document = session.getDocument();
+            const auto downReport = importBeamDetail<Down>(makeDetailContainer(epoch, 0, 42, {-60, 664, 0, 0, 2688}, "DE", order), epoch, document);
+            const auto upReport = importBeamDetail<Up>(makeDetailContainer(epoch, 0, 43, {12, -36, 0, 0, 2560}, "UE", order), epoch, document);
+            const auto down = document->getDetails()->get<Down>(musx::dom::SCORE_PARTID, 42);
+            const auto up = document->getDetails()->get<Up>(musx::dom::SCORE_PARTID, 43);
+            REQUIRE(down);
+            REQUIRE(up);
+            CHECK(down->leftOffset == -60);
+            CHECK(down->rightOffset == 664);
+            CHECK(down->mask == 640);
+            CHECK(down->extBeyond8th);
+            CHECK(up->leftOffset == 12);
+            CHECK(up->rightOffset == -36);
+            CHECK(up->mask == 512);
+            CHECK(up->extBeyond8th);
+            for (const auto* name : {"leftOffset", "rightOffset", "mask", "extBeyond8th"}) {
+                const auto* field =
+                    downReport.findField<Down>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+                REQUIRE(field);
+                CHECK(field->origin == ValueOrigin::LegacyMus);
+                const auto* upField = upReport.findField<Up>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43));
+                REQUIRE(upField);
+                CHECK(upField->origin == ValueOrigin::LegacyMus);
+            }
+        }
+    }
+}
+
+TEST_CASE("Finale 1 beam extension edits retain their source mask", "[class][special-tools]")
+{
+    using Up = musx::dom::details::BeamExtensionUpStem;
+    const auto baseline = readFixture("evidence/F100/F100-beam.mus");
+    CHECK(baseline.document->getDetails()->getAllSources<Up>().empty());
+    for (const auto& [path, left, mask, raw] :
+        {std::tuple{"evidence/F100/F100-beam-ext8th.mus", 0, 512U, 2560}, std::tuple{"evidence/F100/F100-beam-extsel.mus", -60, 640U, 2688}}) {
+        const auto edited = readFixture(path);
+        const auto beam = edited.document->getDetails()->get<Up>(musx::dom::SCORE_PARTID, 1);
+        REQUIRE(beam);
+        CHECK(beam->leftOffset == left);
+        CHECK(beam->rightOffset == 664);
+        CHECK(beam->mask == mask);
+        CHECK(beam->extBeyond8th);
+        const auto* field = edited.report.findField<Up>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(1));
+        REQUIRE(field);
+        CHECK(field->rawValue == raw);
+        CHECK(field->origin == ValueOrigin::LegacyMus);
+    }
+}
+
+TEST_CASE("Beam extensions recover zlib class records", "[class][special-tools]")
+{
+    using Down = musx::dom::details::BeamExtensionDownStem;
+    using Up = musx::dom::details::BeamExtensionUpStem;
+    for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+        auto session = musx::factory::DocumentFactory::begin();
+        const auto document = session.getDocument();
+        const auto downReport =
+            importBeamDetail<Down>(makeDetailClassContainer(0, 42, 0, {-60, 664, 0, 0, 2688}, order, 0x03fd), FormatEpoch::ZlibLegacy, document);
+        const auto upReport =
+            importBeamDetail<Up>(makeDetailClassContainer(0, 43, 0, {33, -68, 0, 0, 2944}, order, 0x03fe), FormatEpoch::ZlibLegacy, document);
+        const auto down = document->getDetails()->get<Down>(musx::dom::SCORE_PARTID, 42);
+        const auto up = document->getDetails()->get<Up>(musx::dom::SCORE_PARTID, 43);
+        REQUIRE(down);
+        REQUIRE(up);
+        CHECK(down->mask == 640);
+        CHECK(up->mask == 896);
+        CHECK(up->extBeyond8th);
+        const auto* downField = downReport.findField<Down>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+        const auto* upField = upReport.findField<Up>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43));
+        REQUIRE(downField);
+        REQUIRE(upField);
+        CHECK(downField->rawValue == 2688);
+        CHECK(upField->rawValue == 2944);
+    }
+}
+
+TEST_CASE("Beam extensions use incidence zero of a doubled zlib payload", "[class][special-tools]")
+{
+    using Down = musx::dom::details::BeamExtensionDownStem;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto report =
+        importBeamDetail<Down>(makeDetailClassContainer(0, 42, 0, {18, -19, 0, 0, 3008, 0, 0, 0, 0, 2560}, ByteOrder::LittleEndian, 0x03fd),
+            FormatEpoch::ZlibLegacy, document);
+    const auto down = document->getDetails()->get<Down>(musx::dom::SCORE_PARTID, 42);
+    REQUIRE(down);
+    CHECK(down->leftOffset == 18);
+    CHECK(down->rightOffset == -19);
+    CHECK(down->mask == 960);
+    CHECK(down->extBeyond8th);
+    const auto* field = report.findField<Down>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+    REQUIRE(field);
+    CHECK(field->rawValue == 3008);
 }
 
 template <typename Target>

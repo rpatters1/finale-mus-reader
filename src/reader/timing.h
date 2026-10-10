@@ -38,6 +38,8 @@ enum class Phase : std::size_t {
     ImportBaselines,
     ImportBeamAlterationsDownStem,
     ImportBeamAlterationsUpStem,
+    ImportBeamExtensionDownStem,
+    ImportBeamExtensionUpStem,
     ImportBeamOptions,
     ImportBeatChartElements,
     ImportBookmarks,

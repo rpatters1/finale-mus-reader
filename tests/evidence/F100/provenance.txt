@@ -11,6 +11,24 @@ among the changed files localizes the intended changes to the named physical
 tuples; the baseline has a smaller save allocation and is therefore a semantic
 rather than byte-for-byte control for those files.
 
+F100-beam.mus / .etf / -finale27/F100-beam.musx
+    sha256 63a742ee083df4d519cafbd21a466e4c78f9fdc35aa51dfbd60fc3e24269849a (.mus)
+    sha256 524803a182d48d46178f0e682feb128094f4438335ec7be3e1edc25ea4bf369c (.etf)
+    sha256 15f5b75d4cbf5722a81325597ad439a87a03e34b7f4a211b3a7da10afb0feb8f (.musx)
+    Baseline beamed group without a beam extension.
+
+F100-beam-ext8th.mus / .etf / -finale27/F100-beam-ext8th.musx
+    sha256 b0ab9d57597161e2922d492fda9384d113421d99fc2df51fff608450b104aa2e (.mus)
+    sha256 1deabcd719e519e4c22f3c0565da8d5876030f5119333dcf45a724a1e0fac1c8 (.etf)
+    sha256 1499c02eb3c70dee46d33f33a1c766448a0d13acf84fe67056cc630c077599f1 (.musx)
+    Extends the eighth beam to the right by 664 EVPUs.
+
+F100-beam-extsel.mus / .etf / -finale27/F100-beam-extsel.musx
+    sha256 f471710cf9137279e05a3fbbeb28871e52834c20b429942af98771c8d58592c3 (.mus)
+    sha256 f72eff72b8162d17f3aad29ad7542c562d093cfbf4876be3c6d0b55ef04d8c20 (.etf)
+    sha256 07a4d008b2a24888ea751b31e28b6720b423cbfa84dc68987e92c71e40f38d77 (.musx)
+    Extends selected eighth and thirty-second beams, with a -60 EVPU left offset and 664 EVPU right offset.
+
 F100-mirror.mus / .etf / -finale27/F100-mirror.musx
     sha256 bc3f8b3adbc3613807914059c3c1371993fe346c561ddf4335357646fd527ae4 (.mus)
     sha256 1accc8ee33a20716690d221e80c29e23ab4b5161ad27f1c71ec96a2eee00b48a (.etf)
