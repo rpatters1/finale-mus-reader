@@ -8,6 +8,15 @@ F2002-16ths.mus / .etf / -finale27/F2002-16ths.musx
     Two groups of sixteenth notes, used as the baseline for the beam-width edit.
     It has no primary upstem beam-alteration detail.
 
+F2002-16ths-mvstem.mus / .etf / -finale27/F2002-16ths-mvstem.musx
+    sha256 6bd27637fc83e3ae7a1e12741da4917f91a7aa42c2dcc4678f26a6c71af1a09c (.mus)
+    sha256 960eeaee1102175ed6416701bdec7b24801e35876c4d38feca8294a43ad628a1 (.etf)
+    sha256 c0c00b864502c43f75cfb9dc5f07d3a17758aa10488744f8d855558233a67f0b (.musx)
+    From F2002-16ths, moves the upstem of beamed entry 2. The ETF adds one
+    St(0,2) incidence-0 row with words 42, 0, 0, 0, -4096: a 42-EVPU vertical
+    offset and a signed -16 horizontal offset in the packed high byte. It also
+    sets entry 2's stem-detail flag and changes a trailing flag on entry 9.
+
 F2002-16ths-bmwidths.mus / .etf / -finale27/F2002-16ths-bmwidths.musx
     sha256 cb2357ae6123b082391642c3c239dca32e4068f2eaf4768e05ad0fca88a76455 (.mus)
     sha256 94139df3128dd9d1ac0fa58cdeec562f482eccd95026ebf5401106332a26e6a2 (.etf)

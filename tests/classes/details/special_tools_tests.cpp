@@ -36,6 +36,184 @@ ImportReport importBeamDetail(const finale_mus_reader::container::ParsedContaine
     return report;
 }
 
+template <typename Target>
+ImportReport importStemDetail(const finale_mus_reader::container::ParsedContainer& parsed, FormatEpoch epoch, const musx::dom::DocumentPtr& document)
+{
+    ImportReport report(epoch);
+    const auto index = LegacyRecordIndex::build(parsed);
+    auto referenceSession = musx::factory::DocumentFactory::begin();
+    const auto reference = std::move(referenceSession).finish();
+    finale_mus_reader::PendingReferences pending;
+    musx::factory::ConstructionContext construction;
+    SourceProfile profile(epoch);
+    profile.byteOrder = parsed.byteOrder;
+    const finale_mus_reader::ImportContext context{index, profile, noSource, document, reference, report, pending, construction};
+    if constexpr (std::is_same_v<Target, musx::dom::details::StemAlterations>) {
+        finale_mus_reader::details::importStemAlterations(context);
+    } else {
+        finale_mus_reader::details::importStemAlterationsUnderBeam(context);
+    }
+    return report;
+}
+
+TEST_CASE("Stem alterations recover signed packed offsets for both selectors", "[class][special-tools]")
+{
+    using Plain = musx::dom::details::StemAlterations;
+    using Beamed = musx::dom::details::StemAlterationsUnderBeam;
+    for (const auto epoch : {FormatEpoch::CodaBanner, FormatEpoch::UncompressedLegacy, FormatEpoch::DclLegacy}) {
+        for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
+            auto session = musx::factory::DocumentFactory::begin();
+            const auto document = session.getDocument();
+            const auto plainReport = importStemDetail<Plain>(makeDetailContainer(epoch, 0, 42, {-12, 21, 0, 0, -2809}, "ST", order), epoch, document);
+            const auto beamedReport =
+                importStemDetail<Beamed>(makeDetailContainer(epoch, 0, 43, {9, -15, 0, 0, std::int16_t(0x0efa)}, "St", order), epoch, document);
+            const auto plain = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
+            const auto beamed = document->getDetails()->get<Beamed>(musx::dom::SCORE_PARTID, 43);
+            REQUIRE(plain);
+            REQUIRE(beamed);
+            CHECK(plain->upVertAdjust == -12);
+            CHECK(plain->downVertAdjust == 21);
+            CHECK(plain->upHorzAdjust == -11);
+            CHECK(plain->downHorzAdjust == 7);
+            CHECK(beamed->upVertAdjust == 9);
+            CHECK(beamed->downVertAdjust == -15);
+            CHECK(beamed->upHorzAdjust == 14);
+            CHECK(beamed->downHorzAdjust == -6);
+            for (const auto* name : {"upVertAdjust", "downVertAdjust", "upHorzAdjust", "downHorzAdjust"}) {
+                const auto* plainField =
+                    plainReport.findField<Plain>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+                const auto* beamedField =
+                    beamedReport.findField<Beamed>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43));
+                REQUIRE(plainField);
+                REQUIRE(beamedField);
+                CHECK(plainField->origin == ValueOrigin::LegacyMus);
+                CHECK(beamedField->origin == ValueOrigin::LegacyMus);
+            }
+        }
+    }
+}
+
+TEST_CASE("Stem alterations recover zlib class records", "[class][special-tools]")
+{
+    using Plain = musx::dom::details::StemAlterations;
+    using Beamed = musx::dom::details::StemAlterationsUnderBeam;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto plainReport =
+        importStemDetail<Plain>(makeDetailClassContainer(0, 42, musx::dom::SCORE_PARTID, {-12, 21, 0, 0, -2809}, ByteOrder::LittleEndian, 0x042a),
+            FormatEpoch::ZlibLegacy, document);
+    const auto beamedReport = importStemDetail<Beamed>(
+        makeDetailClassContainer(0, 43, musx::dom::SCORE_PARTID, {9, -15, 0, 0, std::int16_t(0x0efa)}, ByteOrder::LittleEndian, 0x03ff),
+        FormatEpoch::ZlibLegacy, document);
+    const auto plain = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
+    const auto beamed = document->getDetails()->get<Beamed>(musx::dom::SCORE_PARTID, 43);
+    REQUIRE(plain);
+    REQUIRE(beamed);
+    CHECK(plain->upVertAdjust == -12);
+    CHECK(plain->downVertAdjust == 21);
+    CHECK(plain->upHorzAdjust == -11);
+    CHECK(plain->downHorzAdjust == 7);
+    CHECK(beamed->upVertAdjust == 9);
+    CHECK(beamed->downVertAdjust == -15);
+    CHECK(beamed->upHorzAdjust == 14);
+    CHECK(beamed->downHorzAdjust == -6);
+    const auto* plainField =
+        plainReport.findField<Plain>("upHorzAdjust", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
+    const auto* beamedField =
+        beamedReport.findField<Beamed>("downHorzAdjust", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43));
+    REQUIRE(plainField);
+    REQUIRE(beamedField);
+    CHECK(plainField->origin == ValueOrigin::LegacyMus);
+    CHECK(beamedField->origin == ValueOrigin::LegacyMus);
+    CHECK(plainField->rawValue == -11);
+    CHECK(beamedField->rawValue == -6);
+}
+
+TEST_CASE("Stem alterations use incidence zero when later incidences contain data", "[class][special-tools]")
+{
+    using Plain = musx::dom::details::StemAlterations;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto report = importStemDetail<Plain>(
+        makeDetailContainer(FormatEpoch::UncompressedLegacy, 0, 42, {1, 2, 0, 0, 3, 4, 5, 0, 0, 6}, "ST"), FormatEpoch::UncompressedLegacy, document);
+    const auto stem = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
+    REQUIRE(stem);
+    CHECK(stem->upVertAdjust == 1);
+    CHECK(stem->downVertAdjust == 2);
+    CHECK(stem->downHorzAdjust == 3);
+    CHECK(report.diagnostics.empty());
+}
+
+TEST_CASE("Stem alterations retain the first detail before blank trailing rows", "[class][special-tools]")
+{
+    using Plain = musx::dom::details::StemAlterations;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto report =
+        importStemDetail<Plain>(makeDetailContainer(FormatEpoch::UncompressedLegacy, 0, 42, {18, -6, 0, 0, -2809, 0, 0, 0, 0, 0}, "ST"),
+            FormatEpoch::UncompressedLegacy, document);
+    const auto stem = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
+    REQUIRE(stem);
+    CHECK(stem->upVertAdjust == 18);
+    CHECK(stem->downVertAdjust == -6);
+    CHECK(stem->upHorzAdjust == -11);
+    CHECK(stem->downHorzAdjust == 7);
+    CHECK(report.diagnostics.empty());
+}
+
+TEST_CASE("Stem alterations retain zero adjustments only for valid entries", "[class][special-tools]")
+{
+    using Plain = musx::dom::details::StemAlterations;
+    auto session = musx::factory::DocumentFactory::begin();
+    const auto document = session.getDocument();
+    const auto report = importStemDetail<Plain>(
+        makeDetailContainer(FormatEpoch::DclLegacy, 0, 3, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, "ST"), FormatEpoch::DclLegacy, document);
+    const auto stem = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 3);
+    REQUIRE(stem);
+    CHECK(stem->upVertAdjust == 0);
+    CHECK(stem->downVertAdjust == 0);
+    CHECK(report.diagnostics.empty());
+
+    auto zeroSession = musx::factory::DocumentFactory::begin();
+    const auto zeroDocument = zeroSession.getDocument();
+    const auto zeroReport = importStemDetail<Plain>(
+        makeDetailContainer(FormatEpoch::DclLegacy, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, "ST"), FormatEpoch::DclLegacy, zeroDocument);
+    CHECK(zeroDocument->getDetails()->getAllSources<Plain>().empty());
+    CHECK(zeroReport.diagnostics.empty());
+
+    auto singleZeroSession = musx::factory::DocumentFactory::begin();
+    const auto singleZeroDocument = singleZeroSession.getDocument();
+    const auto singleZeroReport = importStemDetail<musx::dom::details::StemAlterationsUnderBeam>(
+        makeDetailContainer(FormatEpoch::DclLegacy, 0, 0, {8, -4, 0, 0, std::int16_t(0x0102)}, "St"), FormatEpoch::DclLegacy, singleZeroDocument);
+    CHECK(singleZeroDocument->getDetails()->getAllSources<musx::dom::details::StemAlterationsUnderBeam>().empty());
+    CHECK(singleZeroReport.diagnostics.empty());
+}
+
+TEST_CASE("Finale 2002 beamed stem edit recovers vertical and horizontal offsets", "[class][special-tools]")
+{
+    using Beamed = musx::dom::details::StemAlterationsUnderBeam;
+    const auto baseline = readFixture("evidence/F2002/F2002-16ths.mus");
+    CHECK(baseline.document->getDetails()->getAllSources<Beamed>().empty());
+
+    const auto edited = readFixture("evidence/F2002/F2002-16ths-mvstem.mus");
+    const auto stem = edited.document->getDetails()->get<Beamed>(musx::dom::SCORE_PARTID, 2);
+    REQUIRE(stem);
+    CHECK(stem->upVertAdjust == 42);
+    CHECK(stem->downVertAdjust == 0);
+    CHECK(stem->upHorzAdjust == -16);
+    CHECK(stem->downHorzAdjust == 0);
+    const auto* vertical =
+        edited.report.findField<Beamed>("upVertAdjust", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(2));
+    const auto* horizontal =
+        edited.report.findField<Beamed>("upHorzAdjust", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(2));
+    REQUIRE(vertical);
+    REQUIRE(horizontal);
+    CHECK(vertical->rawValue == 42);
+    CHECK(horizontal->rawValue == -16);
+    CHECK(vertical->origin == ValueOrigin::LegacyMus);
+    CHECK(horizontal->origin == ValueOrigin::LegacyMus);
+}
+
 TEST_CASE("Primary beam alterations recover both stem directions", "[class][special-tools]")
 {
     using Down = musx::dom::details::BeamAlterationsDownStem;
