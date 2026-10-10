@@ -62,5 +62,11 @@ void importStaffGroups(const ImportContext& context);
 /// @brief Recovers per-staff size overrides and updates retained staff systems.
 void importStaffSizes(const ImportContext& context);
 
+/// @brief Recovers unbeamed entry stem adjustments.
+void importStemAlterations(const ImportContext& context);
+
+/// @brief Recovers entry stem adjustments under beams.
+void importStemAlterationsUnderBeam(const ImportContext& context);
+
 } // namespace details
 } // namespace finale_mus_reader

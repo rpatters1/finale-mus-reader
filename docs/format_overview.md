@@ -76,6 +76,8 @@ prefix displaces.
 
 ## Invariants that shape the code
 
+- When a class defines one incidence, read incidence 0 even if later rows share its key. Extra
+  rows do not invalidate the first incidence.
 - Where the data states its own layout, the reader reads that instead of dating the file. A
   structural marker outranks a version gate; an epoch gate outranks a version gate.
   ([decoder_rules.md](decoder_rules.md))

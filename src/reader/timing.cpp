@@ -94,8 +94,6 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportPartGlobals: return "part_globals";
     case Phase::ImportPartVoicing: return "part_voicing";
     case Phase::ImportPercussionNoteCodes: return "percussion_note_codes";
-    case Phase::ImportSecondaryBeamAlterationsDownStem: return "secondary_beam_alterations_down_stem";
-    case Phase::ImportSecondaryBeamAlterationsUpStem: return "secondary_beam_alterations_up_stem";
     case Phase::ImportPercussionNoteInfo: return "percussion_note_info";
     case Phase::ImportPianoBraceBracketOptions: return "piano_brace_bracket_options";
     case Phase::ImportRepeatBackIndividualPositioning: return "repeat_back_individual_positioning";
@@ -106,6 +104,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportRepeatEndingTexts: return "repeat_ending_texts";
     case Phase::ImportRepeatOptions: return "repeat_options";
     case Phase::ImportRepeatPassLists: return "repeat_pass_lists";
+    case Phase::ImportSecondaryBeamAlterationsDownStem: return "secondary_beam_alterations_down_stem";
+    case Phase::ImportSecondaryBeamAlterationsUpStem: return "secondary_beam_alterations_up_stem";
     case Phase::ImportShapeDefinitions: return "shape_definitions";
     case Phase::ImportShapeExpressionDefs: return "shape_expression_defs";
     case Phase::ImportShapeGraphicAssignments: return "shape_graphic_assigns";
@@ -124,6 +124,8 @@ std::string_view phaseName(Phase phase)
     case Phase::ImportStaffStyles: return "staff_styles";
     case Phase::ImportStaffSystems: return "staff_systems";
     case Phase::ImportStaffUsed: return "staff_used";
+    case Phase::ImportStemAlterations: return "stem_alterations";
+    case Phase::ImportStemAlterationsUnderBeam: return "stem_alterations_under_beam";
     case Phase::ImportStemOptions: return "stem_options";
     case Phase::ImportSystemLocks: return "system_locks";
     case Phase::ImportTempoChanges: return "tempo_changes";

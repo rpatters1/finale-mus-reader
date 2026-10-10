@@ -23,6 +23,58 @@ constexpr records::LegacyTag downPrimaryBeamClass = 0x0401;
 constexpr records::LegacyTag upPrimaryBeamClass = 0x0402;
 constexpr records::LegacyTag downSecondaryBeamClass = 0x0403;
 constexpr records::LegacyTag upSecondaryBeamClass = 0x0404;
+constexpr records::LegacyTag plainStemClass = 0x042a;
+constexpr records::LegacyTag beamedStemClass = 0x03ff;
+constexpr std::size_t stemAlterationWordCount = 5;
+
+template <typename Target>
+void importStemAlterationFamily(const ImportContext& context, const char* tag, records::LegacyTag classId)
+{
+    const auto selected =
+        selectRecordFamilySource(context, context.index.getDetails(), context.index.getClassDetails(), records::packTag(tag), classId, true);
+    if (!selected) {
+        return;
+    }
+    const auto& source = *selected;
+    for (const auto& [partId, entryHigh] : recordKeys(source)) {
+        for (const auto entryLow : source.pool->secondCmpersForTag(source.identity, entryHigh, partId)) {
+            if (entryHigh == 0 && entryLow == 0) {
+                continue;
+            }
+            const auto* row = source.pool->get(source.identity, entryHigh, entryLow, 0, partId);
+            if (!row) {
+                continue;
+            }
+            const auto words = collectRecordWords(source, std::span(row, 1), context.profile.byteOrder);
+            if (words.size() != stemAlterationWordCount) {
+                continue;
+            }
+            const auto entry = (static_cast<musx::dom::EntryNumber>(entryHigh) << 16U) | entryLow;
+            auto target = std::make_shared<Target>(context.document, row->partId, recordShareMode(source, *row), entry);
+            target->upVertAdjust = words[0];
+            target->downVertAdjust = words[1];
+            const auto packed = static_cast<std::uint16_t>(words[4]);
+            const auto signedByte = [](std::uint16_t value) { return static_cast<musx::dom::Evpu>(value < 0x80 ? value : value - 0x100); };
+            const auto upHorizontal = signedByte(packed >> 8U);
+            const auto downHorizontal = signedByte(packed & 0xffU);
+            target->upHorzAdjust = upHorizontal;
+            target->downHorzAdjust = downHorizontal;
+            withReporting(context.report, [&]<typename Reporting>(Reporting& reporting) {
+                const auto key = reporting.template instanceKey<Target>(target->getSourcePartId(), entryHigh, std::nullopt, entryLow);
+                reporting.report().setInstanceOrigin(key, Reporting::Origin::LegacyMus);
+                const auto reportField = [&](const char* name, std::size_t byteOffset, std::int64_t value) {
+                    reportLegacyField(reporting, key, source, *row, name, source.byteOffsetInRow(byteOffset), value);
+                };
+                reportField("upVertAdjust", 0, words[0]);
+                reportField("downVertAdjust", 2, words[1]);
+                const bool bigEndian = context.profile.byteOrder == ByteOrder::BigEndian;
+                reportField("upHorzAdjust", 8 + (bigEndian ? 0 : 1), upHorizontal);
+                reportField("downHorzAdjust", 8 + (bigEndian ? 1 : 0), downHorizontal);
+            });
+            context.document->getDetails()->add(Target::XmlNodeName, std::move(target));
+        }
+    }
+}
 
 template <typename Target>
 void reportBeamAlteration(const ImportContext& context, const Target& target, const RecordFamilySource& source,
@@ -146,6 +198,16 @@ void importSecondaryBeamAlterationsDownStem(const ImportContext& context)
 void importSecondaryBeamAlterationsUpStem(const ImportContext& context)
 {
     importBeamAlterationFamily<musx::dom::details::SecondaryBeamAlterationsUpStem, true>(context, "bH", upSecondaryBeamClass);
+}
+
+void importStemAlterations(const ImportContext& context)
+{
+    importStemAlterationFamily<musx::dom::details::StemAlterations>(context, "ST", plainStemClass);
+}
+
+void importStemAlterationsUnderBeam(const ImportContext& context)
+{
+    importStemAlterationFamily<musx::dom::details::StemAlterationsUnderBeam>(context, "St", beamedStemClass);
 }
 
 } // namespace details

@@ -328,6 +328,8 @@ const std::vector<RegisteredImporter>& registeredImporters()
         FINALE_MUS_READER_IMPORTER(ImportSmartShapeEntryAssigns, &details::importSmartShapeEntryAssigns),
         FINALE_MUS_READER_IMPORTER(ImportStaffGroups, &details::importStaffGroups),
         FINALE_MUS_READER_IMPORTER(ImportStaffSizes, &details::importStaffSizes),
+        FINALE_MUS_READER_IMPORTER(ImportStemAlterations, &details::importStemAlterations),
+        FINALE_MUS_READER_IMPORTER(ImportStemAlterationsUnderBeam, &details::importStemAlterationsUnderBeam),
         // entries
         FINALE_MUS_READER_IMPORTER(ImportEntries, &entries::importEntries),
         // texts
