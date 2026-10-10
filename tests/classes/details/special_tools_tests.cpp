@@ -100,7 +100,7 @@ TEST_CASE("Beam stub direction reads only the fifth word", "[class][special-tool
             const auto detail = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
             REQUIRE(detail);
             CHECK(detail->mask == 0x0180);
-            const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, 0, std::nullopt, 42);
+            const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
             REQUIRE(field);
             CHECK(field->origin == ValueOrigin::LegacyMus);
         }
@@ -117,7 +117,7 @@ TEST_CASE("Beam stub direction ignores bits above the ten beam levels", "[class]
     const auto detail = document->getDetails()->get<Target>(musx::dom::SCORE_PARTID, 42);
     REQUIRE(detail);
     CHECK(detail->mask == 0x03ff);
-    const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, 0, std::nullopt, 42);
+    const auto* field = report.findField<Target>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
     REQUIRE(field);
     CHECK(field->rawValue == 0xffff);
 }
@@ -147,7 +147,7 @@ TEST_CASE("Secondary beam break reads bytes in source order", "[class][special-t
             CHECK(detail->mask == 0x0140);
             CHECK_FALSE(detail->breakThrough);
             for (const auto* name : {"mask", "breakThrough"}) {
-                const auto* field = report.findField<Target>(name, musx::dom::SCORE_PARTID, 0, std::nullopt, 42);
+                const auto* field = report.findField<Target>(name, musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42));
                 REQUIRE(field);
                 CHECK(field->origin == (std::string_view(name) == "mask" ? ValueOrigin::LegacyMus : ValueOrigin::LegacyBehavior));
             }
@@ -176,8 +176,8 @@ TEST_CASE("Zlib beam stub and secondary break classes use the tagged payload lay
         CHECK(stub->mask == 0x03ff);
         CHECK(secondaryBreak->mask == 0x00ff);
         CHECK(secondaryBreak->breakThrough);
-        CHECK(stubReport.findField<Stub>("mask", musx::dom::SCORE_PARTID, 0, std::nullopt, 42));
-        CHECK(breakReport.findField<Break>("mask", musx::dom::SCORE_PARTID, 0, std::nullopt, 43));
+        CHECK(stubReport.findField<Stub>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(42)));
+        CHECK(breakReport.findField<Break>("mask", musx::dom::SCORE_PARTID, musx::dom::Cmper(0), std::nullopt, musx::dom::Cmper(43)));
     }
 }
 
