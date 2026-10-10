@@ -64,8 +64,7 @@ TEST_CASE("Stem alterations recover signed packed offsets for both selectors", "
         for (const auto order : {ByteOrder::BigEndian, ByteOrder::LittleEndian}) {
             auto session = musx::factory::DocumentFactory::begin();
             const auto document = session.getDocument();
-            const auto plainReport =
-                importStemDetail<Plain>(makeDetailContainer(epoch, 0, 42, {-12, 21, 0, 0, -2809}, "ST", order), epoch, document);
+            const auto plainReport = importStemDetail<Plain>(makeDetailContainer(epoch, 0, 42, {-12, 21, 0, 0, -2809}, "ST", order), epoch, document);
             const auto beamedReport =
                 importStemDetail<Beamed>(makeDetailContainer(epoch, 0, 43, {9, -15, 0, 0, std::int16_t(0x0efa)}, "St", order), epoch, document);
             const auto plain = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
@@ -100,9 +99,9 @@ TEST_CASE("Stem alterations recover zlib class records", "[class][special-tools]
     using Beamed = musx::dom::details::StemAlterationsUnderBeam;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    const auto plainReport = importStemDetail<Plain>(
-        makeDetailClassContainer(0, 42, musx::dom::SCORE_PARTID, {-12, 21, 0, 0, -2809}, ByteOrder::LittleEndian, 0x042a),
-        FormatEpoch::ZlibLegacy, document);
+    const auto plainReport =
+        importStemDetail<Plain>(makeDetailClassContainer(0, 42, musx::dom::SCORE_PARTID, {-12, 21, 0, 0, -2809}, ByteOrder::LittleEndian, 0x042a),
+            FormatEpoch::ZlibLegacy, document);
     const auto beamedReport = importStemDetail<Beamed>(
         makeDetailClassContainer(0, 43, musx::dom::SCORE_PARTID, {9, -15, 0, 0, std::int16_t(0x0efa)}, ByteOrder::LittleEndian, 0x03ff),
         FormatEpoch::ZlibLegacy, document);
@@ -150,9 +149,9 @@ TEST_CASE("Stem alterations retain the first detail before blank trailing rows",
     using Plain = musx::dom::details::StemAlterations;
     auto session = musx::factory::DocumentFactory::begin();
     const auto document = session.getDocument();
-    const auto report = importStemDetail<Plain>(
-        makeDetailContainer(FormatEpoch::UncompressedLegacy, 0, 42, {18, -6, 0, 0, -2809, 0, 0, 0, 0, 0}, "ST"),
-        FormatEpoch::UncompressedLegacy, document);
+    const auto report =
+        importStemDetail<Plain>(makeDetailContainer(FormatEpoch::UncompressedLegacy, 0, 42, {18, -6, 0, 0, -2809, 0, 0, 0, 0, 0}, "ST"),
+            FormatEpoch::UncompressedLegacy, document);
     const auto stem = document->getDetails()->get<Plain>(musx::dom::SCORE_PARTID, 42);
     REQUIRE(stem);
     CHECK(stem->upVertAdjust == 18);
